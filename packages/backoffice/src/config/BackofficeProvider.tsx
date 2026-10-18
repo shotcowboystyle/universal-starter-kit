@@ -16,7 +16,7 @@ import { FieldOverridesProvider, FrappeProvider } from '@repo/frappe-ui';
 import type { FieldRenderProps, FrappeProviderProps } from '@repo/frappe-ui';
 import type { i18n as I18nInstance } from 'i18next';
 import type { ComponentType, ReactNode } from 'react';
-import React, { createContext, useContext, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { registerBackofficeTranslations } from '../i18n';
 import { createNoopNavigator } from '../navigation/navigator';
@@ -62,12 +62,15 @@ export interface BackofficeFrappeConfig {
   fixtures?: FrappeProviderProps['fixtures'];
 }
 
+/** Color schemes the user menu's "Toggle Theme" can set. */
+export type BackofficeColorScheme = 'light' | 'dark' | 'system';
+
 /** Host color-scheme adapter (drives the user menu's "Toggle Theme"). */
 export interface BackofficeAppearance {
-  /** Current scheme value. */
-  scheme: 'light' | 'dark' | 'system' | (string & {});
+  /** Current scheme value (open string so host-specific schemes still type-check). */
+  scheme: BackofficeColorScheme | (string & Record<never, never>);
   /** Set the scheme. */
-  setScheme: (scheme: 'light' | 'dark' | 'system') => void;
+  setScheme: (scheme: BackofficeColorScheme) => void;
 }
 
 /** Result contract of a host navigation blocker (one's useBlocker shape). */
@@ -114,12 +117,10 @@ export interface BackofficeAction {
 }
 
 /** Registry filter: actions with a `doctypes` scope only apply to those. */
-export function actionsForDoctype(
+export const actionsForDoctype = (
   actions: readonly BackofficeAction[] | undefined,
   doctype: string,
-): BackofficeAction[] {
-  return (actions ?? []).filter((action) => !action.doctypes || action.doctypes.includes(doctype));
-}
+): BackofficeAction[] => (actions ?? []).filter((action) => !action.doctypes || action.doctypes.includes(doctype));
 
 export interface BackofficeActions {
   /** Extra actions on the document form toolbar. */
@@ -195,7 +196,9 @@ const DEFAULT_CONFIG: BackofficeConfig = {
   capabilities: resolveCapabilities(),
   actions: {},
   slots: {},
-  emitEvent: () => {},
+  emitEvent: () => {
+    // Inert outside a provider: there is no host listener to notify.
+  },
 };
 
 const BackofficeConfigContext = createContext<BackofficeConfig>(DEFAULT_CONFIG);
@@ -205,43 +208,35 @@ const BackofficeConfigContext = createContext<BackofficeConfig>(DEFAULT_CONFIG);
  * a fully-enabled default config with an inert navigator, so surfaces stay
  * mountable in isolation (stories, tests).
  */
-export function useBackofficeConfig(): BackofficeConfig {
-  return useContext(BackofficeConfigContext);
-}
+export const useBackofficeConfig = (): BackofficeConfig => useContext(BackofficeConfigContext);
 
-export function useBackofficeCapabilities(): ResolvedBackofficeCapabilities {
-  return useBackofficeConfig().capabilities;
-}
+export const useBackofficeCapabilities = (): ResolvedBackofficeCapabilities => useBackofficeConfig().capabilities;
 
-export function useBackofficeNavigator(): BackofficeNavigator {
-  return useBackofficeConfig().navigation;
-}
+export const useBackofficeNavigator = (): BackofficeNavigator => useBackofficeConfig().navigation;
 
-export function useBackofficePaths(): BackofficePaths {
-  return useBackofficeConfig().paths;
-}
+export const useBackofficePaths = (): BackofficePaths => useBackofficeConfig().paths;
 
-export function useBackofficeSlots(): BackofficeSlots {
-  return useBackofficeConfig().slots;
-}
+export const useBackofficeSlots = (): BackofficeSlots => useBackofficeConfig().slots;
 
 /** Current location from the navigation adapter (subscription-backed). */
-export function useBackofficeLocation(): BackofficeLocation {
+export const useBackofficeLocation = (): BackofficeLocation => {
   const navigator = useBackofficeNavigator();
-  return useSyncExternalStore(navigator.subscribe, navigator.getLocation, navigator.getLocation);
-}
+  const subscribe = useCallback((listener: () => void) => navigator.subscribe(listener), [navigator]);
+  const getLocation = useCallback(() => navigator.getLocation(), [navigator]);
+  return useSyncExternalStore(subscribe, getLocation, getLocation);
+};
 
 /** Is `doctype` reachable under the provider's doctype scope? */
-export function useIsDoctypeAllowed(): (doctype: string) => boolean {
+export const useIsDoctypeAllowed = (): ((doctype: string) => boolean) => {
   const { doctypes } = useBackofficeConfig();
   return useMemo(() => (doctype: string) => isDoctypeAllowed(doctypes, doctype), [doctypes]);
-}
+};
 
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
 
-export function BackofficeProvider({
+export const BackofficeProvider = ({
   children,
   frappe,
   navigation,
@@ -255,9 +250,10 @@ export function BackofficeProvider({
   integrations,
   onEvent,
   i18nInstance,
-}: BackofficeProviderProps) {
+}: BackofficeProviderProps) => {
   // Register the "backoffice" i18n namespace BEFORE children first render,
   // so useTranslation("backoffice") is ready on the first pass (idempotent).
+  // oxlint-disable-next-line react/hook-use-state -- lazy initializer used as a once-per-mount, render-phase registration; no state is read.
   useState(() => {
     registerBackofficeTranslations(i18nInstance);
     return true;
@@ -266,6 +262,7 @@ export function BackofficeProvider({
   // Keep the handler on a ref so the wrapped navigator's identity survives
   // inline `onEvent` props.
   const onEventRef = useRef<BackofficeEventHandler | undefined>(onEvent);
+  // oxlint-disable-next-line react/refs -- latest-ref pattern: child effects (which run before this component's effects) must see the current handler.
   onEventRef.current = onEvent;
 
   const emitEvent = useMemo(
@@ -277,8 +274,8 @@ export function BackofficeProvider({
 
   // Wrap the host navigator so every navigation the backoffice performs
   // lands on the event bus.
-  const wrappedNavigation = useMemo<BackofficeNavigator>(
-    () => ({
+  const wrappedNavigation = useMemo<BackofficeNavigator>(() => {
+    const wrapped: BackofficeNavigator = {
       navigate: (path) => {
         emitEvent({ type: 'navigate', path, mode: 'push' });
         navigation.navigate(path);
@@ -295,18 +292,16 @@ export function BackofficeProvider({
         });
         navigation.back();
       },
-      // Param merges are URL-state mirrors, not navigations — forwarded
-      // without a navigate event (and only when the host supports them).
-      ...(navigation.setParams
-        ? {
-            setParams: (params: Record<string, string | undefined>) => navigation.setParams?.(params),
-          }
-        : {}),
       getLocation: () => navigation.getLocation(),
       subscribe: (listener) => navigation.subscribe(listener),
-    }),
-    [navigation, emitEvent],
-  );
+    };
+    // Param merges are URL-state mirrors, not navigations — forwarded
+    // without a navigate event (and only when the host supports them).
+    if (navigation.setParams) {
+      wrapped.setParams = (params: Record<string, string | undefined>) => navigation.setParams?.(params);
+    }
+    return wrapped;
+  }, [navigation, emitEvent]);
 
   const paths = useMemo(() => createBackofficePaths(basePath), [basePath]);
   const resolvedCapabilities = useMemo(() => resolveCapabilities(capabilities), [capabilities]);
@@ -358,4 +353,4 @@ export function BackofficeProvider({
       </FrappeProvider>
     </BackofficeConfigContext.Provider>
   );
-}
+};

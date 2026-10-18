@@ -1,4 +1,3 @@
-import { AsyncSkeleton, ScrollView, Text, XStack, YStack } from '@repo/ui';
 /**
  * Meta-driven quick entry dialog — desk parity.
  *
@@ -6,7 +5,7 @@ import { AsyncSkeleton, ScrollView, Text, XStack, YStack } from '@repo/ui';
  * via the fixed contract below. Behavior:
  *
  * - Loads the doctype meta (shared getdoctype cache) and plans the compact
- *   field set (see quickEntryPlan.ts). When the doctype does not quick-enter
+ *   field set (see quick-entry-plan.ts). When the doctype does not quick-enter
  *   (quick_entry off, no usable fields, or a mandatory child table) it
  *   immediately closes and calls onEditFullForm() — desk routing.
  * - Renders a "New <Doctype>" dialog (Sheet on narrow viewports via
@@ -24,15 +23,16 @@ import { AdaptivePopup, Button } from '@repo/forms';
 import type { FrappeDocData } from '@repo/frappe';
 import { SchemaForm, useFrappeConfig } from '@repo/frappe-ui';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
+import { AsyncSkeleton, ScrollView, Text, XStack, YStack } from '@repo/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeCapabilities } from '../config/BackofficeProvider';
 import { FormErrorBoundary, wrapFieldWithErrorBoundary } from '../form/FormErrorBoundary';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import { useDoctypeMeta } from '../shared/useDoctypeMeta';
-import type { DocFieldMeta, DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useDoctypeMeta } from '../shared/use-doctype-meta';
+import type { DocFieldMeta, DoctypeMeta } from '../shared/use-doctype-meta';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 import {
   PROMPT_NAME_FIELD,
@@ -42,7 +42,8 @@ import {
   parseServerError,
   planQuickEntry,
   resolveCreatedName,
-} from './quickEntryPlan';
+} from './quick-entry-plan';
+import type { ParsedServerError, QuickEntryDraft } from './quick-entry-plan';
 
 export interface QuickEntryDialogProps {
   /** Proper-cased doctype name */
@@ -54,12 +55,101 @@ export interface QuickEntryDialogProps {
   /** Called when the user escapes to the full form (caller navigates) */
   onEditFullForm?: () => void;
   /** Extra field values merged over meta defaults when the dialog opens. */
-  defaults?: Record<string, unknown>;
+  defaults?: QuickEntryDraft;
   /** Meta override for stories / tests (skips the getdoctype fetch). */
   metaOverride?: DoctypeMeta;
 }
 
-export function QuickEntryDialog({
+/** Required-field errors for the draft's empty values, keyed by fieldname. */
+const collectRequiredErrors = (
+  fields: DocFieldMeta[],
+  draft: QuickEntryDraft,
+  requiredMessage: (field: DocFieldMeta) => string,
+) => {
+  const errors: Record<string, string> = {};
+  for (const field of fields) {
+    if (field.required === 1 && isEmptyFieldValue(draft[field.fieldname])) {
+      errors[field.fieldname] = requiredMessage(field);
+    }
+  }
+  return errors;
+};
+
+/** Insert payload: the prompt-name input becomes the doc `name`. */
+const toInsertValues = (draft: QuickEntryDraft): QuickEntryDraft => {
+  const { [PROMPT_NAME_FIELD]: promptName, ...values } = draft;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- draft values are untyped control output; typeof is the discriminant
+  if (typeof promptName === 'string' && promptName.trim() !== '') {
+    values.name = promptName.trim();
+  }
+  return values;
+};
+
+/**
+ * Maps a parsed server error onto the form: missing fields the form renders
+ * get inline errors; the rest are listed in the general slot.
+ */
+const mapServerErrors = (
+  parsed: ParsedServerError,
+  fields: DocFieldMeta[],
+  requiredMessage: (field: DocFieldMeta) => string,
+  unmappedMessage: (fieldnames: string) => string,
+) => {
+  const fieldsByName = new Map(fields.map((field) => [field.fieldname, field]));
+  const errors: Record<string, string> = {};
+  const unmapped: string[] = [];
+  for (const fieldname of parsed.missingFields) {
+    const field = fieldsByName.get(fieldname);
+    if (field) {
+      errors[fieldname] = requiredMessage(field);
+    } else {
+      unmapped.push(fieldname);
+    }
+  }
+  const general = parsed.general ?? (unmapped.length > 0 ? unmappedMessage(unmapped.join(', ')) : undefined);
+  if (general !== undefined && general !== '') {
+    errors.general = general;
+  }
+  return errors;
+};
+
+interface QuickEntryMetaErrorProps {
+  doctype: string;
+  message: string;
+  onEditFullForm: () => void;
+}
+
+/** Meta failed to load: say so and keep the full-form escape. */
+const QuickEntryMetaError = ({ doctype, message, onEditFullForm }: QuickEntryMetaErrorProps) => {
+  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <YStack {...knobProps.gap}>
+      <Text
+        role="alert"
+        color="$red10"
+        fontSize="$3">
+        {t('quickEntry.metaError', 'Could not load {{doctype}}', {
+          doctype,
+        })}
+      </Text>
+      <Text
+        color="$color10"
+        fontSize="$2">
+        {message}
+      </Text>
+      <XStack justifyContent="flex-end">
+        <Button
+          chromeless
+          onPress={onEditFullForm}>
+          {t('quickEntry.editFullForm', 'Edit Full Form')}
+        </Button>
+      </XStack>
+    </YStack>
+  );
+};
+
+export const QuickEntryDialog = ({
   doctype,
   open,
   onOpenChange,
@@ -67,7 +157,7 @@ export function QuickEntryDialog({
   onEditFullForm,
   defaults,
   metaOverride,
-}: QuickEntryDialogProps) {
+}: QuickEntryDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const config = useFrappeConfig();
@@ -86,13 +176,15 @@ export function QuickEntryDialog({
     return meta ? planQuickEntry(meta) : undefined;
   }, [meta, quickEntry.enabled]);
 
-  const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [draft, setDraft] = useState<QuickEntryDraft>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const draftRef = useRef(draft);
+  // oxlint-disable-next-line react/refs -- latest-value ref: handleCreate reads the current draft without re-binding per keystroke
   draftRef.current = draft;
   const openRef = useRef(open);
+  // oxlint-disable-next-line react/refs -- latest-value ref: the in-flight create checks whether the dialog was dismissed
   openRef.current = open;
   const deferredRef = useRef(false);
   const seededRef = useRef(false);
@@ -134,8 +226,11 @@ export function QuickEntryDialog({
   useEffect(() => {
     if (!open) {
       seededRef.current = false;
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react/set-state-in-effect -- close resets the draft; the dialog is hidden while closed, so nothing stale shows
       setDraft({});
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- part of the close reset above
       setErrors({});
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- part of the close reset above
       setSaving(false);
       return;
     }
@@ -146,16 +241,12 @@ export function QuickEntryDialog({
     setDraft(buildQuickEntryDefaults(plan.fields, defaults));
   }, [open, plan, defaults]);
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- SchemaForm's setValue contract; values are whatever each field control emits
   const setValue = useCallback((field: string, value: unknown) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => {
-      if (!(field in prev)) {
-        return prev;
-      }
-      const next = { ...prev };
-      delete next[field];
-      return next;
-    });
+    setErrors((prev) =>
+      field in prev ? Object.fromEntries(Object.entries(prev).filter(([key]) => key !== field)) : prev,
+    );
   }, []);
 
   const handleEditFullForm = useCallback(() => {
@@ -166,12 +257,12 @@ export function QuickEntryDialog({
   const canInsert = Boolean(config?.fixtures ?? app);
 
   const insertDoc = useCallback(
-    async (values: Record<string, unknown>): Promise<string> => {
+    async (values: QuickEntryDraft): Promise<string> => {
       if (config?.fixtures) {
         const created = await config.fixtures.createDoc<FrappeDocData>(doctype, {
           ...values,
           doctype,
-        } as Partial<FrappeDocData>);
+        });
         return resolveCreatedName(created);
       }
       if (!app) {
@@ -181,12 +272,13 @@ export function QuickEntryDialog({
       // wrapped in the whitelisted-method envelope; the collection insert
       // path never surfaces the real name, so quick entry posts directly.
       const endpoint = app.db().getEndpoints().createDoc;
-      const res = await app.call().post<Record<string, unknown>>(endpoint, {
+      const res = await app.call().post(endpoint, {
         ...values,
         doctype,
       });
       return resolveCreatedName(res.payload);
     },
+    // oxlint-disable-next-line react/preserve-manual-memoization -- `config?.fixtures` is the intended dependency; the compiler wants `config`
     [config?.fixtures, app, doctype, t],
   );
 
@@ -204,15 +296,7 @@ export function QuickEntryDialog({
     }
     const { current } = draftRef;
 
-    const requiredErrors: Record<string, string> = {};
-    for (const field of formFields) {
-      if (!field.required) {
-        continue;
-      }
-      if (isEmptyFieldValue(current[field.fieldname])) {
-        requiredErrors[field.fieldname] = requiredMessage(field);
-      }
-    }
+    const requiredErrors = collectRequiredErrors(formFields, current, requiredMessage);
     if (Object.keys(requiredErrors).length > 0) {
       setErrors(requiredErrors);
       return;
@@ -221,11 +305,7 @@ export function QuickEntryDialog({
     setSaving(true);
     setErrors({});
     try {
-      const { [PROMPT_NAME_FIELD]: promptName, ...values } = current;
-      if (typeof promptName === 'string' && promptName.trim()) {
-        values.name = promptName.trim();
-      }
-      const name = await insertDoc(values);
+      const name = await insertDoc(toInsertValues(current));
       // Dismissed mid-flight: the document exists, but surprising the user
       // with navigation after they closed the dialog would be dishonest.
       if (!openRef.current) {
@@ -245,27 +325,12 @@ export function QuickEntryDialog({
           doctype,
         }),
       );
-      const nextErrors: Record<string, string> = {};
-      const unmapped: string[] = [];
-      for (const fieldname of parsed.missingFields) {
-        const field = formFields.find((candidate) => candidate.fieldname === fieldname);
-        if (field) {
-          nextErrors[fieldname] = requiredMessage(field);
-        } else {
-          unmapped.push(fieldname);
-        }
-      }
-      const general =
-        parsed.general ??
-        (unmapped.length > 0
-          ? t('quickEntry.serverRequiresFields', 'Missing required fields: {{fields}}', {
-              fields: unmapped.join(', '),
-            })
-          : undefined);
-      if (general) {
-        nextErrors.general = general;
-      }
-      setErrors(nextErrors);
+      setErrors(
+        mapServerErrors(parsed, formFields, requiredMessage, (fields) =>
+          t('quickEntry.serverRequiresFields', 'Missing required fields: {{fields}}', { fields }),
+        ),
+      );
+      // oxlint-disable-next-line react/todo -- the compiler can't lower try/finally yet; it skips this callback, which stays manually memoized
     } finally {
       if (openRef.current) {
         setSaving(false);
@@ -279,6 +344,62 @@ export function QuickEntryDialog({
   }
 
   const showForm = plan?.kind === 'fields' && !!schema;
+
+  let body: React.ReactNode;
+  if (showForm) {
+    body = (
+      <YStack
+        {...knobProps.gap}
+        testID="quick-entry-form">
+        <ScrollView
+          maxHeight={sizeRecipeEscape(480, 'quick entry: the field list scrolls inside the dialog past this height')}>
+          <YStack {...knobProps.gap}>
+            {/* A crashing field degrades to its inline error slot (per-field
+              wrapper); a form-level crash costs the mini-form body only —
+              the dialog chrome and the "Edit Full Form" escape in the
+              footer stay alive (the desk-routing fallback must survive
+              exactly when the quick form is broken). */}
+            <FormErrorBoundary
+              errorTitle={t('quickEntry.formRenderError', 'This form failed to render')}
+              testID="quick-entry-form-error">
+              <SchemaForm
+                schema={schema}
+                doc={draft}
+                setValue={setValue}
+                errors={errors}
+                disabled={saving}
+                sectionHeadingLevel={3}
+                renderFieldWrapper={wrapFieldWithErrorBoundary}
+              />
+            </FormErrorBoundary>
+          </YStack>
+        </ScrollView>
+        {errors.general ? (
+          <Text
+            role="alert"
+            color="$red10"
+            fontSize="$3"
+            testID="quick-entry-error">
+            {errors.general}
+          </Text>
+        ) : null}
+      </YStack>
+    );
+  } else if (metaError && !meta) {
+    body = (
+      <QuickEntryMetaError
+        doctype={doctype}
+        message={metaError.message}
+        onEditFullForm={handleEditFullForm}
+      />
+    );
+  } else {
+    body = (
+      <YStack testID="quick-entry-skeleton">
+        <AsyncSkeleton layout="generic" />
+      </YStack>
+    );
+  }
 
   return (
     <AdaptivePopup
@@ -304,6 +425,7 @@ export function QuickEntryDialog({
               loading={saving}
               disabled={!canInsert || undefined}
               disabledReason={canInsert ? undefined : t('quickEntry.notConnected', 'Frappe is not configured')}
+              // oxlint-disable-next-line eslint/no-void -- fire-and-forget: handleCreate settles every failure into inline errors
               onPress={() => void handleCreate()}
               testID="quick-entry-create">
               {saving ? t('quickEntry.creating', 'Creating…') : t('quickEntry.create', 'Create')}
@@ -311,71 +433,7 @@ export function QuickEntryDialog({
           </XStack>
         ) : undefined
       }>
-      {showForm ? (
-        <YStack
-          {...knobProps.gap}
-          testID="quick-entry-form">
-          <ScrollView
-            maxHeight={sizeRecipeEscape(480, 'quick entry: the field list scrolls inside the dialog past this height')}>
-            <YStack {...knobProps.gap}>
-              {/* A crashing field degrades to its inline error slot (per-field
-                  wrapper); a form-level crash costs the mini-form body only —
-                  the dialog chrome and the "Edit Full Form" escape in the
-                  footer stay alive (the desk-routing fallback must survive
-                  exactly when the quick form is broken). */}
-              <FormErrorBoundary
-                errorTitle={t('quickEntry.formRenderError', 'This form failed to render')}
-                testID="quick-entry-form-error">
-                <SchemaForm
-                  schema={schema}
-                  doc={draft}
-                  setValue={setValue}
-                  errors={errors}
-                  disabled={saving}
-                  sectionHeadingLevel={3}
-                  renderFieldWrapper={wrapFieldWithErrorBoundary}
-                />
-              </FormErrorBoundary>
-            </YStack>
-          </ScrollView>
-          {errors.general ? (
-            <Text
-              role="alert"
-              color="$red10"
-              fontSize="$3"
-              testID="quick-entry-error">
-              {errors.general}
-            </Text>
-          ) : null}
-        </YStack>
-      ) : metaError && !meta ? (
-        <YStack {...knobProps.gap}>
-          <Text
-            role="alert"
-            color="$red10"
-            fontSize="$3">
-            {t('quickEntry.metaError', 'Could not load {{doctype}}', {
-              doctype,
-            })}
-          </Text>
-          <Text
-            color="$color10"
-            fontSize="$2">
-            {metaError.message}
-          </Text>
-          <XStack justifyContent="flex-end">
-            <Button
-              chromeless
-              onPress={handleEditFullForm}>
-              {t('quickEntry.editFullForm', 'Edit Full Form')}
-            </Button>
-          </XStack>
-        </YStack>
-      ) : (
-        <YStack testID="quick-entry-skeleton">
-          <AsyncSkeleton layout="generic" />
-        </YStack>
-      )}
+      {body}
     </AdaptivePopup>
   );
-}
+};

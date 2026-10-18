@@ -1,3 +1,6 @@
+import { FrappeKPICard } from '@repo/frappe-ui';
+import type { FrappeAggregateOperation, FrappeKPIDataSource } from '@repo/frappe-ui';
+import { useResolvedKnobs } from '@repo/theme';
 /**
  * Workspace number card block — renders a Number Card doc by name.
  *
@@ -10,17 +13,14 @@
  * rendered as an informational card for now (documented gap).
  */
 import { Card, Skeleton, Text, YStack } from '@repo/ui';
-import { FrappeKPICard } from '@repo/frappe-ui';
-import type { FrappeAggregateOperation, FrappeKPIDataSource } from '@repo/frappe-ui';
-import { useResolvedKnobs } from '@repo/theme';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { parseFrappeFilters } from './parseContent';
+import { parseFrappeFilters } from './parse-content';
 import type { WorkspaceNumberCardRow } from './types';
-import { useFrappeDoc } from './useWorkspaceDoc';
+import { useFrappeDoc } from './use-workspace-doc';
 
 export interface NumberCardDoc {
   name: string;
@@ -33,22 +33,23 @@ export interface NumberCardDoc {
   function?: string;
   aggregate_function_based_on?: string;
   filters_json?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a Frappe doc carries any number of extra fields
   [key: string]: unknown;
 }
 
-const FUNCTION_MAP: Record<string, FrappeAggregateOperation> = {
-  Count: 'count',
-  Sum: 'sum',
-  Average: 'avg',
-  Minimum: 'min',
-  Maximum: 'max',
-};
+const FUNCTION_MAP = new Map<string, FrappeAggregateOperation>([
+  ['Count', 'count'],
+  ['Sum', 'sum'],
+  ['Average', 'avg'],
+  ['Minimum', 'min'],
+  ['Maximum', 'max'],
+]);
 
 export interface WorkspaceNumberCardProps {
   row: WorkspaceNumberCardRow;
 }
 
-export function WorkspaceNumberCard({ row }: WorkspaceNumberCardProps) {
+export const WorkspaceNumberCard = ({ row }: WorkspaceNumberCardProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const { doc, isLoading, error } = useFrappeDoc<NumberCardDoc>('Number Card', row.number_card_name);
@@ -56,19 +57,17 @@ export function WorkspaceNumberCard({ row }: WorkspaceNumberCardProps) {
   const title = row.label ?? doc?.label ?? row.number_card_name;
 
   const dataSource = useMemo<FrappeKPIDataSource | undefined>(() => {
-    if (!doc?.document_type) {
-      return;
-    }
-    if (doc.type && doc.type !== 'Document Type') {
-      return;
-    }
-    const aggregate = FUNCTION_MAP[doc.function ?? 'Count'] ?? 'count';
-    return {
-      doctype: doc.document_type,
-      aggregate,
-      field: aggregate === 'count' ? undefined : doc.aggregate_function_based_on,
-      filters: parseFrappeFilters(doc.filters_json),
-    };
+    const documentType = doc?.document_type ?? '';
+    const isDocumentTypeCard = (doc?.type ?? '') === '' || doc?.type === 'Document Type';
+    const aggregate = FUNCTION_MAP.get(doc?.function ?? 'Count') ?? 'count';
+    return documentType === '' || !isDocumentTypeCard
+      ? undefined
+      : {
+          doctype: documentType,
+          aggregate,
+          field: aggregate === 'count' ? undefined : doc?.aggregate_function_based_on,
+          filters: parseFrappeFilters(doc?.filters_json),
+        };
   }, [doc]);
 
   if (isLoading) {
@@ -142,4 +141,4 @@ export function WorkspaceNumberCard({ row }: WorkspaceNumberCardProps) {
       flexGrow={1}
     />
   );
-}
+};

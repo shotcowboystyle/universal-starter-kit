@@ -1,3 +1,5 @@
+import { SearchInput, useViewportGtSm } from '@repo/forms';
+import { FOCUS_RING_MIN_WIDTH, ensureCompositeFocusRing, useResolvedKnobs } from '@repo/theme';
 /**
  * "Browse all" disclosure for the workspace link farm (MOD-11): the grouped
  * link cards render inside one collapsible region with a local type-to-filter
@@ -10,20 +12,18 @@
  * so a clip ancestor cannot sever the box ring.
  */
 import { EmptyState, Accordion, YStack } from '@repo/ui';
-import { SearchInput, useViewportGtSm } from '@repo/forms';
-import { FOCUS_RING_MIN_WIDTH, ensureCompositeFocusRing, useResolvedKnobs } from '@repo/theme';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { filterLinkGroup } from './parseContent';
+import { filterLinkGroup } from './parse-content';
 import type { WorkspaceLinkGroup } from './types';
 import { WorkspaceGrid } from './WorkspaceGrid';
 import type { WorkspaceGridItem } from './WorkspaceGrid';
 import { WorkspaceLinkCard } from './WorkspaceLinkCard';
 
-export { filterLinkGroup } from './parseContent';
+export { filterLinkGroup } from './parse-content';
 
 export interface WorkspaceLinkDirectoryItem {
   /** Stable key from the authored card block. */
@@ -39,7 +39,7 @@ export interface WorkspaceLinkDirectoryProps {
 
 const DIRECTORY_VALUE = 'links';
 
-export function WorkspaceLinkDirectory({ items }: WorkspaceLinkDirectoryProps) {
+export const WorkspaceLinkDirectory = ({ items }: WorkspaceLinkDirectoryProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const viewportGtSm = useViewportGtSm();
@@ -134,4 +134,4 @@ export function WorkspaceLinkDirectory({ items }: WorkspaceLinkDirectoryProps) {
       </Accordion.Item>
     </Accordion>
   );
-}
+};

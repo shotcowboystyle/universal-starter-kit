@@ -1,3 +1,4 @@
+import { getLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
 /**
  * 12-column workspace grid — desk parity for the editorjs block layout.
  *
@@ -10,7 +11,6 @@
  */
 import { XStack, YStack } from '@repo/ui';
 import type { YStackProps } from '@repo/ui';
-import { getLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -24,11 +24,12 @@ export interface WorkspaceGridItem {
   node: ReactNode;
 }
 
-function effectiveSpan(raw: number | undefined, width: number): number {
+const effectiveSpan = (raw: number | undefined, width: number): number => {
   const span = Math.min(Math.max(Math.round(raw ?? 12), 1), 12);
+  // Not measured yet — desk-wide layout.
   if (width <= 0) {
     return span;
-  } // not measured yet — desk-wide layout
+  }
   // `compact` is the canonical class below the house medium breakpoint (LC-28).
   if (getLayoutSizeClass(width) === 'compact') {
     return 12;
@@ -37,13 +38,13 @@ function effectiveSpan(raw: number | undefined, width: number): number {
     return span <= 6 ? 6 : 12;
   }
   return span;
-}
+};
 
 export interface WorkspaceGridProps extends YStackProps {
   items: WorkspaceGridItem[];
 }
 
-export function WorkspaceGrid({ items, ...stackProps }: WorkspaceGridProps) {
+export const WorkspaceGrid = ({ items, ...stackProps }: WorkspaceGridProps) => {
   const { knobProps } = useResolvedKnobs();
   const [width, setWidth] = useState(0);
 
@@ -102,4 +103,4 @@ export function WorkspaceGrid({ items, ...stackProps }: WorkspaceGridProps) {
       })}
     </YStack>
   );
-}
+};

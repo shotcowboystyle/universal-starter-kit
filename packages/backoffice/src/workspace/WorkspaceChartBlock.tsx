@@ -1,3 +1,6 @@
+import { ChartCard } from '@repo/frappe-ui';
+import type { ChartConfig, ChartType } from '@repo/frappe-ui';
+import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 /**
  * Workspace chart block — renders a Dashboard Chart by name using the desk
  * chart RPC for real series data, drawn with the catalog ChartCard.
@@ -9,23 +12,20 @@
  * the block renders an informational card instead.
  */
 import { AsyncBoundary, Card, Skeleton, Text, YStack } from '@repo/ui';
-import { ChartCard } from '@repo/frappe-ui';
-import type { ChartConfig, ChartType } from '@repo/frappe-ui';
-import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
 import type { WorkspaceChartRow } from './types';
-import { useDashboardChartData } from './useDashboardChart';
-import type { DashboardChartDoc } from './useDashboardChart';
-import { useFrappeDoc } from './useWorkspaceDoc';
+import { useDashboardChartData } from './use-dashboard-chart';
+import type { DashboardChartDoc } from './use-dashboard-chart';
+import { useFrappeDoc } from './use-workspace-doc';
 
 const chartHeight = sizeRecipeEscape(220, 'chart block: one plot height the chart and its loading bone share');
 
-function toChartType(frappeType: string | undefined): ChartType {
-  switch (frappeType) {
+const toChartType = (frappeType: string | undefined): ChartType => {
+  switch (frappeType ?? '') {
     case 'Line': {
       return 'line';
     }
@@ -39,13 +39,13 @@ function toChartType(frappeType: string | undefined): ChartType {
       return 'bar';
     }
   }
-}
+};
 
 export interface WorkspaceChartBlockProps {
   row: WorkspaceChartRow;
 }
 
-export function WorkspaceChartBlock({ row }: WorkspaceChartBlockProps) {
+export const WorkspaceChartBlock = ({ row }: WorkspaceChartBlockProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const title = row.label ?? row.chart_name;
@@ -58,23 +58,19 @@ export function WorkspaceChartBlock({ row }: WorkspaceChartBlockProps) {
   const { series, isLoading: dataLoading, error: dataError, unsupported } = useDashboardChartData(row.chart_name);
 
   const config = useMemo<ChartConfig | undefined>(() => {
-    if (!series) {
-      return;
-    }
-    const dataset = series.datasets?.[0];
-    if (!dataset) {
-      return;
-    }
-    return {
-      id: `workspace-chart-${row.name}`,
-      title,
-      type: toChartType(chartDoc?.type),
-      data: series.labels.map((label, index) => ({
-        label,
-        value: dataset.values[index] ?? 0,
-      })),
-      height: chartHeight,
-    };
+    const dataset = series?.datasets?.[0];
+    return series === undefined || dataset === undefined
+      ? undefined
+      : {
+          id: `workspace-chart-${row.name}`,
+          title,
+          type: toChartType(chartDoc?.type),
+          data: series.labels.map((label, index) => ({
+            label,
+            value: dataset.values[index] ?? 0,
+          })),
+          height: chartHeight,
+        };
   }, [series, chartDoc?.type, row.name, title]);
 
   if (unsupported) {
@@ -141,4 +137,4 @@ export function WorkspaceChartBlock({ row }: WorkspaceChartBlockProps) {
       flexGrow={1}
     />
   );
-}
+};

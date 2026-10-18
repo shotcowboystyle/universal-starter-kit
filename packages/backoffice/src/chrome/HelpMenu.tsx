@@ -7,11 +7,11 @@
 //
 // Catalog DropdownMenu (not a padded Popover of Buttons): SP-EDGE rows,
 // LC-71 keyboard ring on the focused item, LC-21 COMMIT close-on-pick.
-import { DropdownMenu } from '@repo/ui';
+import { BookOpenIcon, BugIcon, ChatsCircleIcon, InfoIcon, KeyboardIcon, QuestionIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { openUrl } from '@repo/platform';
 import { useResolvedKnobs } from '@repo/theme';
-import { BookOpenIcon, BugIcon, ChatsCircleIcon, InfoIcon, KeyboardIcon, QuestionIcon } from '@phosphor-icons/react';
+import { DropdownMenu } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,21 +24,21 @@ const DOCUMENTATION_URL = 'https://docs.frappe.io';
 const USER_FORUM_URL = 'https://discuss.frappe.io';
 const REPORT_ISSUE_URL = 'https://github.com/frappe/frappe/issues';
 
-export function HelpMenu() {
+const openLink = (url: string) => {
+  openUrl(url, '_blank');
+};
+
+const openDialog = (setOpen: (open: boolean) => void) => {
+  setOpen(true);
+};
+
+export const HelpMenu = () => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
+  const iconSize = knobProps.controlIcon?.width || 16;
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-  const openLink = (url: string) => {
-    openUrl(url, '_blank');
-  };
-
-  const openDialog = (setOpen: (open: boolean) => void) => {
-    setOpen(true);
-  };
 
   return (
     <>
@@ -112,4 +112,4 @@ export function HelpMenu() {
       />
     </>
   );
-}
+};

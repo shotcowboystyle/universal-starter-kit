@@ -1,3 +1,6 @@
+import { FunnelIcon } from '@phosphor-icons/react';
+import { standardFiltersFromMeta } from '@repo/frappe-ui';
+import { useResolvedKnobs } from '@repo/theme';
 /**
  * Compact list tools — the single "Filter" affordance the list header shows
  * on compact viewports (< 640, `useLayoutSizeClass() === "compact"`).
@@ -11,15 +14,12 @@
  * native (SortControl/SavedFiltersControl grow inline variants for this).
  */
 import { Button, SheetModal, SizableText, YStack, isWeb } from '@repo/ui';
-import { standardFiltersFromMeta } from '@repo/frappe-ui';
-import { useResolvedKnobs } from '@repo/theme';
-import { FunnelIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { FrappeFilters } from '../shared/types';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
 
 import { FilterEditorPanel } from './filter-editor';
 import { SavedFiltersControl } from './filter-saved';
@@ -36,19 +36,17 @@ export interface ListToolsButtonProps {
   onSortChange?: (field: string, order: 'asc' | 'desc') => void;
 }
 
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <SizableText
-      size="$1"
-      fontWeight="400"
-      color="$color10"
-      textTransform="uppercase">
-      {children}
-    </SizableText>
-  );
-}
+const SectionLabel = ({ children }: { children: string }) => (
+  <SizableText
+    size="$1"
+    fontWeight="400"
+    color="$color10"
+    textTransform="uppercase">
+    {children}
+  </SizableText>
+);
 
-export function ListToolsButton({
+export const ListToolsButton = ({
   doctype,
   meta,
   filters,
@@ -56,10 +54,10 @@ export function ListToolsButton({
   sortField,
   sortOrder,
   onSortChange,
-}: ListToolsButtonProps) {
+}: ListToolsButtonProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
+  const iconSize = knobProps.controlIcon?.width || 16;
   const [open, setOpen] = useState(false);
   // Bumped per open so per-open drafts (filter editor rows) reseed.
   const [openGen, setOpenGen] = useState(0);
@@ -84,6 +82,7 @@ export function ListToolsButton({
       }
     };
     document.addEventListener('keydown', onKeyDown);
+    // oxlint-disable-next-line typescript/consistent-return -- no listener to remove when none was added
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
@@ -178,4 +177,4 @@ export function ListToolsButton({
       </SheetModal>
     </>
   );
-}
+};

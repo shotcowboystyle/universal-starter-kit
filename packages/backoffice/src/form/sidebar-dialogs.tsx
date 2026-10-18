@@ -5,10 +5,10 @@
  * (doctype=User) through the ambient FrappeProvider.
  */
 
-import { ConfirmDialog, Text, XStack, YStack } from '@repo/ui';
 import { Input, Switch } from '@repo/forms';
 import { Link } from '@repo/frappe-ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { ConfirmDialog, Text, XStack, YStack } from '@repo/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +21,7 @@ export interface SidebarAssignDialogProps {
   onAssign: (user: string, description?: string) => void;
 }
 
-export function SidebarAssignDialog({ open, onOpenChange, onAssign }: SidebarAssignDialogProps) {
+export const SidebarAssignDialog = ({ open, onOpenChange, onAssign }: SidebarAssignDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [user, setUser] = useState('');
@@ -29,9 +29,12 @@ export function SidebarAssignDialog({ open, onOpenChange, onAssign }: SidebarAss
 
   // Reset on close (QuickEntryDialog pattern): the dialog content remounts on
   // open, so the uncontrolled forms Input must see the fresh draft at mount.
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
   useEffect(() => {
     if (!open) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
       setUser('');
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
       setDescription('');
     }
   }, [open]);
@@ -69,7 +72,7 @@ export function SidebarAssignDialog({ open, onOpenChange, onAssign }: SidebarAss
       </YStack>
     </ConfirmDialog>
   );
-}
+};
 
 export interface SidebarShareDialogProps {
   open: boolean;
@@ -77,16 +80,19 @@ export interface SidebarShareDialogProps {
   onShare: (user: string, canWrite: boolean) => void;
 }
 
-export function SidebarShareDialog({ open, onOpenChange, onShare }: SidebarShareDialogProps) {
+export const SidebarShareDialog = ({ open, onOpenChange, onShare }: SidebarShareDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [user, setUser] = useState('');
   const [canWrite, setCanWrite] = useState(false);
 
   // Reset on close — see SidebarAssignDialog.
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
   useEffect(() => {
     if (!open) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
       setUser('');
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; the dialog content remounts on open, so the stale value is never visible
       setCanWrite(false);
     }
   }, [open]);
@@ -125,7 +131,7 @@ export function SidebarShareDialog({ open, onOpenChange, onShare }: SidebarShare
             size="$2"
             checked={canWrite}
             onChange={(value) => {
-              setCanWrite(Boolean(value));
+              setCanWrite(value);
             }}
             switchProps={{ 'aria-label': t('canEdit', 'Can edit') }}
           />
@@ -133,4 +139,4 @@ export function SidebarShareDialog({ open, onOpenChange, onShare }: SidebarShare
       </YStack>
     </ConfirmDialog>
   );
-}
+};

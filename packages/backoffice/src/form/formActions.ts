@@ -11,4 +11,25 @@
 // following the ./dependsOn precedent: a deep, extension-less
 // "@repo/frappe-ui/src/*" import does NOT resolve under the
 // storybook workspace aliases (bare-name alias -> src/index.ts).
-export * from '@repo/frappe-ui/formActions';
+export {
+  addAssignment,
+  addComment,
+  addTag,
+  cancelDoc,
+  createHttpClient,
+  followDocument,
+  getCount,
+  getLoggedUser,
+  insertDoc,
+  removeAssignment,
+  removeAttachment,
+  removeTag,
+  renameDoc,
+  sendEmail,
+  submitDoc,
+  toggleLike,
+  unfollowDocument,
+  uploadAttachment,
+  validateLink,
+  type FrappeConnection,
+} from '@repo/frappe-ui/formActions';

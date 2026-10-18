@@ -51,6 +51,7 @@ export interface BackofficeCapabilities {
   attachments?: CapabilityInput;
   /** Form activity timeline (comments, versions, communications). */
   timeline?: CapabilityInput;
+  // oxlint-disable-next-line sonarjs/todo-tag -- the next line names a Frappe doctype, not a task marker.
   /** Assignment (ToDo) surfaces on forms and lists. */
   assignments?: CapabilityInput;
   /** Tag surfaces on forms and lists. */
@@ -96,34 +97,28 @@ export interface ResolvedBackofficeCapabilities {
   email: ResolvedCapability;
 }
 
-function resolveFlag<Resolved extends { enabled: boolean }>(
+const resolveFlag = <Resolved extends { enabled: boolean }>(
   input: boolean | (Partial<Resolved> & { enabled?: boolean }) | undefined,
   defaults: Resolved,
-): Resolved {
+): Resolved => {
   if (input === undefined) {
     return defaults;
   }
-  if (typeof input === 'boolean') {
+  if (input === true || input === false) {
     return { ...defaults, enabled: input };
   }
   // Undefined config values must not clobber defaults (exactOptionalPropertyTypes).
-  const merged: Record<string, unknown> = { ...defaults };
-  for (const [key, value] of Object.entries(input)) {
-    if (value !== undefined) {
-      merged[key] = value;
-    }
-  }
-  merged.enabled = input.enabled ?? true;
-  return merged as Resolved;
-}
+  const overrides = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined));
+  return { ...defaults, ...overrides, enabled: input.enabled ?? true };
+};
 
-function resolveExitToSite(
+const resolveExitToSite = (
   input: boolean | { enabled?: boolean; path?: string; label?: string } | undefined,
-): ResolvedExitToSite {
+): ResolvedExitToSite => {
   if (input === undefined) {
     return { enabled: true, path: '/' };
   }
-  if (typeof input === 'boolean') {
+  if (input === true || input === false) {
     return { enabled: input, path: '/' };
   }
   const resolved: ResolvedExitToSite = { enabled: input.enabled ?? true, path: input.path ?? '/' };
@@ -131,15 +126,16 @@ function resolveExitToSite(
     resolved.label = input.label;
   }
   return resolved;
-}
+};
 
-export function resolveCapabilities(input: BackofficeCapabilities = {}): ResolvedBackofficeCapabilities {
-  const userMenuInput = typeof input.userMenu === 'object' ? input.userMenu : undefined;
+export const resolveCapabilities = (input: BackofficeCapabilities = {}): ResolvedBackofficeCapabilities => {
+  const { userMenu } = input;
+  const userMenuInput = userMenu === undefined || userMenu === true || userMenu === false ? undefined : userMenu;
   return {
     awesomebar: resolveFlag<ResolvedCapability>(input.awesomebar, { enabled: true }),
     notifications: resolveFlag<ResolvedCapability>(input.notifications, { enabled: true }),
     userMenu: {
-      enabled: typeof input.userMenu === 'boolean' ? input.userMenu : (userMenuInput?.enabled ?? true),
+      enabled: userMenu === true || userMenu === false ? userMenu : (userMenuInput?.enabled ?? true),
       themeToggle: userMenuInput?.themeToggle ?? true,
       logout: userMenuInput?.logout ?? true,
       exitToSite: resolveExitToSite(userMenuInput?.exitToSite),
@@ -161,7 +157,7 @@ export function resolveCapabilities(input: BackofficeCapabilities = {}): Resolve
     print: resolveFlag<ResolvedCapability>(input.print, { enabled: true }),
     email: resolveFlag<ResolvedCapability>(input.email, { enabled: true }),
   };
-}
+};
 
 /** Doctype reachability scope (allow wins over deny being absent; deny always wins). */
 export interface BackofficeDoctypeScope {
@@ -171,7 +167,7 @@ export interface BackofficeDoctypeScope {
   deny?: readonly string[];
 }
 
-export function isDoctypeAllowed(scope: BackofficeDoctypeScope | undefined, doctype: string): boolean {
+export const isDoctypeAllowed = (scope: BackofficeDoctypeScope | undefined, doctype: string): boolean => {
   if (!scope) {
     return true;
   }
@@ -182,4 +178,4 @@ export function isDoctypeAllowed(scope: BackofficeDoctypeScope | undefined, doct
     return false;
   }
   return true;
-}
+};

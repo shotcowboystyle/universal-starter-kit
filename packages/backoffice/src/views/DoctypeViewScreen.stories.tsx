@@ -6,13 +6,14 @@
 // they mount their view without the header.
 //
 // Everything rides fixtures: getdoctype-shaped meta docs live in the fixture
-// provider's "DocType" collection (shared/useDoctypeMeta's fixture branch),
+// provider's "DocType" collection (shared/use-doctype-meta's fixture branch),
 // rows and Kanban Board docs in the same InMemoryFixtureProvider. Search-param
 // overrides (?board=, ?field=, ?f=) are read from the navigator's location,
 // so an arm sets them by seeding the MemoryNavigator path.
-import { YStack } from '@repo/ui';
+
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { sizeRecipeEscape } from '@repo/theme';
+import { YStack } from '@repo/ui';
 
 import { BackofficeProvider } from '../config/BackofficeProvider';
 import { createMemoryNavigator } from '../navigation/navigator';
@@ -32,7 +33,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Dispatches a doctype's alternate views — report, kanban, calendar, tree, image, dashboard — under one shared ViewHeader, and bounces a deep link to /view/list back to the list route. The switcher only offers views the doctype's meta actually supports (viewAvailability.ts), so a flat doctype never grows a Tree tab. Search-param overrides (?board=, ?field=, ?f=) are read here, never in the leaf views, so each view still mounts standalone.",
+          "Dispatches a doctype's alternate views — report, kanban, calendar, tree, image, dashboard — under one shared ViewHeader, and bounces a deep link to /view/list back to the list route. The switcher only offers views the doctype's meta actually supports (view-availability.ts), so a flat doctype never grows a Tree tab. Search-param overrides (?board=, ?field=, ?f=) are read here, never in the leaf views, so each view still mounts standalone.",
       },
     },
   },
@@ -211,23 +212,21 @@ const makeFixtures = () =>
 // Harness
 // ---------------------------------------------------------------------------
 
-function View({ doctype, view, path }: { doctype: string; view: BackofficeView; path?: string }) {
-  return (
-    <BackofficeProvider
-      frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
-      navigation={createMemoryNavigator(path ?? '/backoffice')}>
-      <YStack
-        flex={1}
-        height={frameHeight}
-        minHeight={0}>
-        <DoctypeViewScreen
-          doctype={doctype}
-          view={view}
-        />
-      </YStack>
-    </BackofficeProvider>
-  );
-}
+const View = ({ doctype, view, path }: { doctype: string; view: BackofficeView; path?: string }) => (
+  <BackofficeProvider
+    frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
+    navigation={createMemoryNavigator(path ?? '/backoffice')}>
+    <YStack
+      flex={1}
+      height={frameHeight}
+      minHeight={0}>
+      <DoctypeViewScreen
+        doctype={doctype}
+        view={view}
+      />
+    </YStack>
+  </BackofficeProvider>
+);
 
 // ---------------------------------------------------------------------------
 // One arm per view

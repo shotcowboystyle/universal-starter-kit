@@ -24,9 +24,4 @@ export {
   standardFiltersFromMeta,
   tupleToDraft,
 } from '@repo/frappe-ui';
-export type {
-  DeskOperator,
-  FilterFieldDescriptor,
-  FilterFieldKind,
-  FilterRowDraft,
-} from '@repo/frappe-ui';
+export type { DeskOperator, FilterFieldDescriptor, FilterFieldKind, FilterRowDraft } from '@repo/frappe-ui';

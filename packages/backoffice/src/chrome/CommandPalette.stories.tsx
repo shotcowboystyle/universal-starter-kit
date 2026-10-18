@@ -1,4 +1,3 @@
-import { Text, YStack } from '@repo/ui';
 // OWNER: backoffice screens workstream (MPO-189).
 // CommandPalette stories (MOD-01). The Awesomebar story only shows the
 // TRIGGER; these mount the palette itself, open, so the section model
@@ -14,6 +13,7 @@ import { Button } from '@repo/forms';
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { storage } from '@repo/store';
 import { sizeRecipeEscape } from '@repo/theme';
+import { Text, YStack } from '@repo/ui';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
@@ -87,7 +87,7 @@ const makeFixtures = () =>
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w = window as unknown as Record<string, boolean | undefined>;
   if (w.__commandPaletteRecentsSeeded) {
     return;
   }
@@ -102,6 +102,17 @@ const makeFixtures = () =>
   );
 })();
 
+type Json = string | number | boolean | null | Json[] | JsonObject;
+interface JsonObject {
+  [key: string]: Json | undefined;
+}
+
+const json = (body: Json) =>
+  Response.json(body, {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
 /**
  * Document hits need frappe.utils.global_search.search; everything else on
  * the mock host answers empty (and the session probe answers null, so the
@@ -111,19 +122,14 @@ const makeFixtures = () =>
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w = window as unknown as Record<string, boolean | undefined>;
   if (w.__commandPaletteMockFetch) {
     return;
   }
   w.__commandPaletteMockFetch = true;
   const realFetch = window.fetch.bind(window);
-  const json = (body: unknown) =>
-    new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : String(input);
     if (!urlStr.startsWith(MOCK_HOST)) {
       return await realFetch(input as RequestInfo, init);
     }
@@ -151,22 +157,20 @@ const makeFixtures = () =>
   };
 })();
 
-function Host({ children }: { children: ReactNode }) {
-  return (
-    <BackofficeProvider
-      frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
-      navigation={createMemoryNavigator('/backoffice')}>
-      <YStack
-        flex={1}
-        height={frameHeight}
-        padding="$4"
-        gap="$3"
-        backgroundColor="$color2">
-        {children}
-      </YStack>
-    </BackofficeProvider>
-  );
-}
+const Host = ({ children }: { children: ReactNode }) => (
+  <BackofficeProvider
+    frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
+    navigation={createMemoryNavigator('/backoffice')}>
+    <YStack
+      flex={1}
+      height={frameHeight}
+      padding="$4"
+      gap="$3"
+      backgroundColor="$color2">
+      {children}
+    </YStack>
+  </BackofficeProvider>
+);
 
 /**
  * Open on an empty query: the Recents section from the shared desk store.

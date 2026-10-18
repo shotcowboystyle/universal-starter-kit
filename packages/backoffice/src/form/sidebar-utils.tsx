@@ -9,17 +9,30 @@
 import { openUrl as platformOpenUrl } from '@repo/platform';
 
 /** i18next-compatible translate signature (key, default, interpolation). */
-export type SidebarTranslate = (key: string, defaultValue: string, options?: Record<string, unknown>) => string;
+export type SidebarTranslate = (key: string, defaultValue: string, options?: Record<string, string | number>) => string;
+
+/** Sidebar row type/icon/avatar steps for the density knob's size token ($3 compact, $5 roomy). */
+export const sidebarRowScale = (sizeToken: string) => {
+  if (sizeToken === '$3') {
+    return { fontSize: '$1', iconSize: 12, avatarSize: '$1' } as const;
+  }
+  if (sizeToken === '$5') {
+    return { fontSize: '$4', iconSize: 16, avatarSize: '$3' } as const;
+  }
+  return { fontSize: '$2', iconSize: 14, avatarSize: '$2' } as const;
+};
 
 /** Parse a frappe timestamp ("2026-08-12 09:35:15.684756" or ISO). */
-export function parseFrappeDate(value: unknown): Date | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary for raw docinfo timestamps
+export const parseFrappeDate = (value: unknown): Date | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: only a non-empty string is a timestamp
   if (typeof value !== 'string' || !value) {
     return undefined;
   }
   const iso = value.includes('T') ? value : value.replace(' ', 'T');
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? undefined : date;
-}
+};
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -32,7 +45,8 @@ const YEAR = 365 * DAY;
  * Desk-style relative time ("just now", "5 minutes ago", "3 weeks ago").
  * Future timestamps (clock skew) collapse to "just now".
  */
-export function formatRelativeTime(value: unknown, t: SidebarTranslate, nowMs = Date.now()): string | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards a raw docinfo timestamp to parseFrappeDate
+export const formatRelativeTime = (value: unknown, t: SidebarTranslate, nowMs = Date.now()): string | undefined => {
   const date = parseFrappeDate(value);
   if (!date) {
     return undefined;
@@ -59,27 +73,37 @@ export function formatRelativeTime(value: unknown, t: SidebarTranslate, nowMs = 
     return unit(Math.floor(diff / MONTH), ['monthAgo', '1 month ago'], ['monthsAgo', '{{count}} months ago']);
   }
   return unit(Math.floor(diff / YEAR), ['yearAgo', '1 year ago'], ['yearsAgo', '{{count}} years ago']);
-}
+};
 
 /**
  * docinfo `tags` is a comma-joined string ("probe-two,sidebar-probe" on the
  * live bench; older payloads may carry a leading comma or JSON "[]").
  */
-export function parseTagString(tags: unknown): string[] {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary for the raw docinfo `tags` payload
+export const parseTagString = (tags: unknown): string[] => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: only a non-empty string carries tags
   if (typeof tags !== 'string' || !tags) {
     return [];
   }
   let raw = tags;
   if (raw.trim().startsWith('[')) {
     try {
+      // SAFETY: widens JSON.parse's `any` to `unknown`; Array.isArray narrows it below
       const parsed = JSON.parse(raw) as unknown;
       if (Array.isArray(parsed)) {
-        return [...new Set(parsed.map(String).filter(Boolean))];
+        const unique = new Set<string>();
+        for (const entry of parsed) {
+          const tag = String(entry);
+          if (tag !== '') {
+            unique.add(tag);
+          }
+        }
+        return [...unique];
       }
     } catch {
       // fall through to comma parsing
     }
-    raw = raw.replaceAll(/[[\]"]/g, ',');
+    raw = raw.replaceAll(/[[\]"]/gu, ',');
   }
   return [
     ...new Set(
@@ -89,59 +113,60 @@ export function parseTagString(tags: unknown): string[] {
         .filter(Boolean),
     ),
   ];
-}
+};
 
 /** Resolve a (possibly relative) file_url against the bench base URL. */
-export function toAbsoluteUrl(baseURL: string | undefined, url: string): string {
-  if (/^https?:\/\//i.test(url) || !baseURL) {
+export const toAbsoluteUrl = (baseURL: string | undefined, url: string): string => {
+  if (/^https?:\/\//iu.test(url) || baseURL === undefined || baseURL === '') {
     return url;
   }
-  const base = baseURL.replace(/\/+$/, '');
-  return `${base}${url.startsWith('/') ? url : `/${url}`}`;
-}
+  // oxlint-disable-next-line sonarjs/super-linear-regex -- the bench base URL is short host config, never user-sized input
+  const base = baseURL.replace(/\/+$/u, '');
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+};
 
 /** External-URL capability — platform openUrl has a twin on every target. */
-export function canOpenUrl(): boolean {
-  return true;
-}
+export const canOpenUrl = (): boolean => true;
 
 /** Open a URL externally (web new tab / native Linking / GNOME Gio). */
-export function openUrl(url: string): boolean {
+export const openUrl = (url: string): boolean => {
   platformOpenUrl(url, '_blank');
   return true;
-}
+};
 
 /** True when a DOM file picker is available (web). */
-export function canPickFile(): boolean {
-  return typeof document !== 'undefined' && typeof document.createElement === 'function';
-}
+export const canPickFile = (): boolean =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof, typescript/no-deprecated -- feature detection of the host's DOM, not data parsing
+  typeof document !== 'undefined' && typeof document.createElement === 'function';
 
 /**
  * Web file picker via a transient `<input type="file">` (imperative — no DOM
  * JSX so native/GTK bundles never see browser intrinsics). Resolves with the
  * picked file, or undefined on cancel / unsupported platform.
  */
-export async function pickFile(accept?: string): Promise<File | undefined> {
+export const pickFile = async (accept?: string): Promise<File | undefined> => {
   if (!canPickFile()) {
     return undefined;
   }
-  return await new Promise((resolve) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    if (accept) {
-      input.accept = accept;
-    }
-    input.style.display = 'none';
-    input.onchange = () => {
-      resolve(input.files?.[0] ?? undefined);
-      input.remove();
-    };
-    // Modern browsers fire "cancel" when the dialog is dismissed.
-    input.addEventListener('cancel', () => {
-      resolve(undefined);
-      input.remove();
-    });
-    document.body.append(input);
-    input.click();
+  const { promise, resolve } = Promise.withResolvers<File | undefined>();
+  const input = document.createElement('input');
+  input.type = 'file';
+  if (accept !== undefined && accept !== '') {
+    input.accept = accept;
+  }
+  input.style.display = 'none';
+  input.addEventListener('change', () => {
+    resolve(input.files?.[0] ?? undefined);
+    input.remove();
   });
-}
+  // Modern browsers fire "cancel" when the dialog is dismissed.
+  input.addEventListener('cancel', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- resolve's parameter is required; omitting it is a type error
+    resolve(undefined);
+    input.remove();
+  });
+  document.body.append(input);
+  input.click();
+  return await promise;
+};

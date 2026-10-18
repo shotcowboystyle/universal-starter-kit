@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useBackofficeLocation, useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-export function NotFoundScreen() {
+export const NotFoundScreen = () => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
@@ -29,4 +29,4 @@ export function NotFoundScreen() {
       }
     />
   );
-}
+};

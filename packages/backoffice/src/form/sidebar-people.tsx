@@ -5,12 +5,14 @@
  * initials fallback — desk parity for user chips.
  */
 
-import { Avatar, Button, styled, Text, XStack, YStack } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 import { XIcon } from '@phosphor-icons/react';
+import { useResolvedKnobs } from '@repo/theme';
+import { Avatar, Button, styled, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
+
+import { sidebarRowScale } from './sidebar-utils';
 
 const SidebarAvatarSlot = styled(XStack, { name: 'SidebarAvatarSlot' });
 
@@ -36,12 +38,11 @@ export interface SidebarPeopleListProps {
   disabled?: boolean;
 }
 
-export function SidebarPeopleList({ items, emptyText, onRemove, disabled }: SidebarPeopleListProps) {
+export const SidebarPeopleList = ({ items, emptyText, onRemove, disabled }: SidebarPeopleListProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const sz = knobProps.sizeToken;
-  const avatarSize = sz === '$3' ? '$1' : sz === '$5' ? '$3' : '$2';
-  const labelFontSize = sz === '$3' ? '$1' : sz === '$5' ? '$4' : '$2';
+  const { avatarSize, fontSize: labelFontSize } = sidebarRowScale(sz);
   const subFontSize = sz === '$5' ? '$2' : '$1';
 
   if (items.length === 0) {
@@ -75,7 +76,7 @@ export function SidebarPeopleList({ items, emptyText, onRemove, disabled }: Side
               numberOfLines={1}>
               {item.label}
             </Text>
-            {item.sublabel ? (
+            {item.sublabel !== undefined && item.sublabel !== '' ? (
               <Text
                 fontSize={subFontSize}
                 color="$color11"
@@ -102,7 +103,7 @@ export function SidebarPeopleList({ items, emptyText, onRemove, disabled }: Side
       ))}
     </YStack>
   );
-}
+};
 
 export interface SidebarAvatarStripProps {
   items: { id: string; label: string; image?: string }[];
@@ -114,11 +115,11 @@ export interface SidebarAvatarStripProps {
 }
 
 /** Overlapping mini-avatar strip (Liked By, header cluster assignees). */
-export function SidebarAvatarStrip({ items, max }: SidebarAvatarStripProps) {
+export const SidebarAvatarStrip = ({ items, max }: SidebarAvatarStripProps) => {
   if (items.length === 0) {
     return null;
   }
-  const visible = typeof max === 'number' && max > 0 ? items.slice(0, max) : items;
+  const visible = max !== undefined && max > 0 ? items.slice(0, max) : items;
   const overflow = items.length - visible.length;
   return (
     <XStack alignItems="center">
@@ -152,4 +153,4 @@ export function SidebarAvatarStrip({ items, max }: SidebarAvatarStripProps) {
       )}
     </XStack>
   );
-}
+};

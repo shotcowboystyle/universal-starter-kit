@@ -1,5 +1,3 @@
-import { Button, SizableText, Text, XStack, isWeb } from '@repo/ui';
-import { useLayoutSizeClass } from '@repo/theme';
 // The navbar search affordance for the backoffice desk chrome. Since MOD-01
 // the results surface is a first-class command palette (CommandPalette):
 // this component renders the TRIGGER — a search-input-styled button with the
@@ -12,6 +10,8 @@ import { useLayoutSizeClass } from '@repo/theme';
 // a full-height sheet <sm, both fed by one section model
 // (chrome/command-palette-model.ts).
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
+import { useLayoutSizeClass } from '@repo/theme';
+import { Button, SizableText, Text, XStack, isWeb } from '@repo/ui';
 import type { Ref } from 'react';
 import { useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,14 +32,14 @@ export interface BackofficeAwesomebarProps {
 }
 
 /** Platform modifier label; SSR/native-safe (defaults to "Ctrl"). */
-function getModLabel(): string {
-  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform ?? ''))) {
+const getModLabel = (): string => {
+  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/iu.test(navigator.platform ?? '')) {
     return '\u2318';
   }
   return 'Ctrl';
-}
+};
 
-export function BackofficeAwesomebar({ focusRef }: BackofficeAwesomebarProps = {}) {
+export const BackofficeAwesomebar = ({ focusRef }: BackofficeAwesomebarProps = {}) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const isCompact = useLayoutSizeClass() === 'compact';
   const [open, setOpen] = useState(false);
@@ -105,4 +105,4 @@ export function BackofficeAwesomebar({ focusRef }: BackofficeAwesomebarProps = {
       />
     </>
   );
-}
+};

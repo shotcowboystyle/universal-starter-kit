@@ -1,3 +1,4 @@
+import { filterTupleLabel, filterableFieldsFromMeta } from '@repo/frappe-ui';
 /**
  * Active filter chips — desk shows every applied filter as a removable
  * chip under the list header (HONEST STATE: the chip is how the user sees
@@ -5,13 +6,12 @@
  * "Clear filters" drops them all.
  */
 import { Button, Chip, XStack } from '@repo/ui';
-import { filterTupleLabel, filterableFieldsFromMeta } from '@repo/frappe-ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { FrappeFilters } from '../shared/types';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
 
 export interface FilterChipsProps {
   meta?: DoctypeMeta;
@@ -19,7 +19,7 @@ export interface FilterChipsProps {
   onFiltersChange: (filters: FrappeFilters) => void;
 }
 
-export function FilterChips({ meta, filters, onFiltersChange }: FilterChipsProps) {
+export const FilterChips = ({ meta, filters, onFiltersChange }: FilterChipsProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const fields = useMemo(() => filterableFieldsFromMeta(meta), [meta]);
   if (!filters.length) {
@@ -32,6 +32,7 @@ export function FilterChips({ meta, filters, onFiltersChange }: FilterChipsProps
       alignItems="center">
       {filters.map((tuple, index) => (
         <Chip
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- tuples have no id and may repeat; the index keeps identical tuples distinct
           key={`${tuple[0]}-${tuple[1]}-${index}`}
           color="blue"
           onDismiss={() => {
@@ -52,4 +53,4 @@ export function FilterChips({ meta, filters, onFiltersChange }: FilterChipsProps
       )}
     </XStack>
   );
-}
+};

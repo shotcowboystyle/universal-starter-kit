@@ -11,18 +11,18 @@
  * toolbar, sidebar, and timeline all see the new counts.
  */
 
-import { XStack, useTheme } from '@repo/ui';
+import { BellIcon, HeartIcon, UserCirclePlusIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useFrappeConfig } from '@repo/frappe-ui';
 import { pressTargetStyle, useResolvedKnobs } from '@repo/theme';
-import { BellIcon, HeartIcon, UserCirclePlusIcon } from '@phosphor-icons/react';
+import { XStack, useTheme } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeCapabilities } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import type { DocInfo } from '../shared/useDocinfo';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import type { DocInfo, DocInfoRecord } from '../shared/use-docinfo';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 import { SidebarAssignDialog } from './sidebar-dialogs';
 import { SidebarAvatarStrip } from './sidebar-people';
@@ -42,15 +42,28 @@ export interface FormHeaderClusterProps {
   onRefresh: () => void;
 }
 
-export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefresh }: FormHeaderClusterProps) {
+type ClusterAction = 'assign' | 'like' | 'follow';
+
+/** Distinct non-empty `owner` ids of docinfo rows, in first-seen order. */
+const uniqueOwners = (rows: readonly DocInfoRecord[]): string[] => [
+  ...new Set(
+    rows.flatMap((row) =>
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent users/images, so only a non-empty string is usable
+      typeof row.owner === 'string' && row.owner ? [row.owner] : [],
+    ),
+  ),
+];
+
+// oxlint-disable-next-line eslint/complexity -- flat JSX branching over the three toggles; splitting it would scatter the shared busy/refresh state
+export const FormHeaderCluster = ({ doctype, name, docinfo, currentUser, onRefresh }: FormHeaderClusterProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
+  const iconSize = knobProps.controlIcon?.width ?? 16;
   const app = useFrappeApp();
   const config = useFrappeConfig();
   const capabilities = useBackofficeCapabilities();
   const theme = useTheme();
-  const [busy, setBusy] = useState<'assign' | 'like' | 'follow' | undefined>();
+  const [busy, setBusy] = useState<ClusterAction | undefined>();
   const [assignOpen, setAssignOpen] = useState(false);
 
   if (!docinfo) {
@@ -61,28 +74,20 @@ export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefre
   const userLabel = (id: string): string => userInfo[id]?.fullname ?? id;
   const userImage = (id: string): string | undefined => {
     const image = userInfo[id]?.image;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent users/images, so only a non-empty string is usable
     return typeof image === 'string' && image ? toAbsoluteUrl(config?.baseURL, image) : undefined;
   };
 
-  const assignees = [
-    ...new Set(
-      (docinfo.assignments ?? []).flatMap((assignment) =>
-        typeof assignment.owner === 'string' && assignment.owner ? [assignment.owner] : [],
-      ),
-    ),
-  ];
-  const likers = [
-    ...new Set(
-      (docinfo.like_logs ?? []).flatMap((log) => (typeof log.owner === 'string' && log.owner ? [log.owner] : [])),
-    ),
-  ];
-  const likedByMe = Boolean(currentUser) && likers.includes(currentUser!);
+  const assignees = uniqueOwners(docinfo.assignments ?? []);
+  const likers = uniqueOwners(docinfo.like_logs ?? []);
+  const signedIn = currentUser !== undefined && currentUser !== '';
+  const likedByMe = signedIn && likers.includes(currentUser);
   // NOTE: follow_document is a server-side no-op when document-follow
   // notifications are disabled (the local bench default) — the toggle then
   // snaps back on refresh, matching desk behavior.
   const isFollowed = Boolean(docinfo.is_document_followed);
 
-  const run = async (kind: 'assign' | 'like' | 'follow', action: () => Promise<unknown>) => {
+  const run = async (kind: ClusterAction, action: () => Promise<void>) => {
     if (busy || !app) {
       return;
     }
@@ -92,15 +97,16 @@ export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefre
     } catch {
       // Cluster mutations are non-critical; the refresh reflects the
       // server's actual state either way.
-    } finally {
-      onRefresh();
-      setBusy(undefined);
     }
+    onRefresh();
+    setBusy(undefined);
   };
 
   // Phosphor icons take resolved color strings (not tamagui tokens) so
   // native/GTK get a real color — same pattern as sidebar-attachments.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme values are loosely typed tokens; only a string is a usable color
   const mutedColor = typeof theme.color11?.val === 'string' ? theme.color11.val : undefined;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme values are loosely typed tokens; only a string is a usable color
   const likedColor = typeof theme.red10?.val === 'string' ? theme.red10.val : mutedColor;
 
   // Chromeless toggles keep a measurable ≥44px press floor via box size
@@ -161,12 +167,14 @@ export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefre
             aria-pressed={likedByMe}
             aria-label={likedByMe ? t('unlike', 'Unlike') : t('like', 'Like')}
             onPress={() => {
-              void run('like', async () => await toggleLike(app, doctype, name, !likedByMe));
+              void run('like', async () => {
+                await toggleLike(app, doctype, name, !likedByMe);
+              });
             }}
             testID="form-header-like">
             {likers.length > 0 ? String(likers.length) : undefined}
           </Button>
-          {currentUser && (
+          {signedIn && (
             // Hidden (not disabled) while the session probe resolves —
             // DG-ST-03 hide beats a flashing explained-disable in chrome.
             <Button
@@ -186,11 +194,11 @@ export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefre
               }
               onPress={() => {
                 const user = currentUser;
-                void run('follow', async () =>
-                  isFollowed
-                    ? await unfollowDocument(app, doctype, name, user)
-                    : await followDocument(app, doctype, name, user),
-                );
+                void run('follow', async () => {
+                  await (isFollowed
+                    ? unfollowDocument(app, doctype, name, user)
+                    : followDocument(app, doctype, name, user));
+                });
               }}
               testID="form-header-follow"
             />
@@ -199,11 +207,13 @@ export function FormHeaderCluster({ doctype, name, docinfo, currentUser, onRefre
             open={assignOpen}
             onOpenChange={setAssignOpen}
             onAssign={(user, description) => {
-              void run('assign', async () => await addAssignment(app, doctype, name, [user], description));
+              void run('assign', async () => {
+                await addAssignment(app, doctype, name, [user], description);
+              });
             }}
           />
         </>
       )}
     </XStack>
   );
-}
+};

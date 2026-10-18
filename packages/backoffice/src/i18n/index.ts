@@ -23,18 +23,26 @@ import { en } from './en';
 
 export const BACKOFFICE_I18N_NAMESPACE = 'backoffice';
 
-const BUNDLED_RESOURCES: Record<string, object> = { en };
+const BUNDLED_RESOURCES = { en };
 
 const registeredInstances = new WeakSet<I18nInstance>();
 
-function addBundles(instance: I18nInstance): void {
+const loadBackofficeNamespace = async (instance: I18nInstance): Promise<void> => {
+  try {
+    await instance.loadNamespaces(BACKOFFICE_I18N_NAMESPACE);
+  } catch {
+    // Safe to continue: a readiness hint only — the bundled resources are already registered.
+  }
+};
+
+const addBundles = (instance: I18nInstance): void => {
   for (const [lng, resources] of Object.entries(BUNDLED_RESOURCES)) {
     // deep merge, never overwrite — host-registered keys take precedence.
     instance.addResourceBundle(lng, BACKOFFICE_I18N_NAMESPACE, resources, true, false);
   }
   // Satisfy backends that lazy-load namespaces (react-i18next readiness).
-  void instance.loadNamespaces(BACKOFFICE_I18N_NAMESPACE).catch(() => {});
-}
+  void loadBackofficeNamespace(instance);
+};
 
 /**
  * Idempotently register the bundled backoffice translations on `instance`
@@ -42,7 +50,7 @@ function addBundles(instance: I18nInstance): void {
  * initializes i18next — registration is deferred to the `initialized` event.
  * Called automatically by BackofficeProvider.
  */
-export function registerBackofficeTranslations(instance: I18nInstance = i18next): void {
+export const registerBackofficeTranslations = (instance: I18nInstance = i18next): void => {
   if (registeredInstances.has(instance)) {
     return;
   }
@@ -59,7 +67,7 @@ export function registerBackofficeTranslations(instance: I18nInstance = i18next)
 
   // No host i18n at all: bring up a minimal instance so t() works. Guarded
   // against a host init that is merely in flight.
-  const initializing = (instance as { isInitializing?: boolean }).isInitializing;
+  const initializing = instance.isInitializing;
   if (!initializing && !instance.isInitialized) {
     void instance.use(initReactI18next).init({
       lng: 'en',
@@ -72,4 +80,4 @@ export function registerBackofficeTranslations(instance: I18nInstance = i18next)
       returnEmptyString: false,
     });
   }
-}
+};

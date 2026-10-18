@@ -7,7 +7,6 @@
  *  - JumpToFieldDialog → desk Ctrl/Cmd+J field picker
  */
 
-import { ConfirmDialog, ScrollView, Text, XStack, YStack } from '@repo/ui';
 import { Input, TextArea } from '@repo/forms';
 import { Link } from '@repo/frappe-ui';
 import {
@@ -17,6 +16,7 @@ import {
   stackRadiusProps,
   useResolvedKnobs,
 } from '@repo/theme';
+import { ConfirmDialog, ScrollView, Text, XStack, YStack } from '@repo/ui';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +27,15 @@ import { dialogBodyMinWidth } from '../shared/measures';
 // Rename
 // ---------------------------------------------------------------------------
 
+interface KeyPress {
+  key?: string;
+  preventDefault?: () => void;
+}
+
+// The DOM hands the key handler its event, but tamagui types `onKeyDown` as `() => void`.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- SAFETY: the DOM always invokes onKeyDown with a KeyboardEvent; only tamagui's prop type omits the parameter
+const asKeyDownProp = (handler: (e: KeyPress) => void): (() => void) => handler as unknown as () => void;
+
 export interface RenameDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,7 +43,7 @@ export interface RenameDialogProps {
   onRename: (newName: string) => void;
 }
 
-export function RenameDialog({ open, onOpenChange, currentName, onRename }: RenameDialogProps) {
+export const RenameDialog = ({ open, onOpenChange, currentName, onRename }: RenameDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [value, setValue] = useState(currentName);
@@ -43,6 +52,7 @@ export function RenameDialog({ open, onOpenChange, currentName, onRename }: Rena
   // uncontrolled forms Input must see the fresh draft at mount).
   useEffect(() => {
     if (!open) {
+      // oxlint-disable-next-line react/set-state-in-effect -- resets the draft while closed; ConfirmDialog remounts its body on open, so the stale value is never visible
       setValue(currentName);
     }
   }, [open, currentName]);
@@ -75,7 +85,7 @@ export function RenameDialog({ open, onOpenChange, currentName, onRename }: Rena
       </YStack>
     </ConfirmDialog>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Email
@@ -88,7 +98,7 @@ export interface EmailDialogProps {
   onSend: (args: { recipients: string; subject: string; content: string }) => void;
 }
 
-export function EmailDialog({ open, onOpenChange, defaultSubject, onSend }: EmailDialogProps) {
+export const EmailDialog = ({ open, onOpenChange, defaultSubject, onSend }: EmailDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [recipients, setRecipients] = useState('');
@@ -98,8 +108,10 @@ export function EmailDialog({ open, onOpenChange, defaultSubject, onSend }: Emai
   // Reset while closed — see RenameDialog.
   useEffect(() => {
     if (!open) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; ConfirmDialog remounts its body on open, so the stale value is never visible
       setRecipients('');
       setSubject(defaultSubject);
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; ConfirmDialog remounts its body on open, so the stale value is never visible
       setContent('');
     }
   }, [open, defaultSubject]);
@@ -135,7 +147,7 @@ export function EmailDialog({ open, onOpenChange, defaultSubject, onSend }: Emai
         />
         <TextArea
           value={content}
-          onChangeText={setContent}
+          onChange={setContent}
           placeholder={t('emailMessage', 'Message')}
           minRows={4}
           textAreaProps={{ 'aria-label': t('emailMessage', 'Message') }}
@@ -143,7 +155,7 @@ export function EmailDialog({ open, onOpenChange, defaultSubject, onSend }: Emai
       </YStack>
     </ConfirmDialog>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Assign
@@ -155,13 +167,15 @@ export interface AssignDialogProps {
   onAssign: (user: string) => void;
 }
 
-export function AssignDialog({ open, onOpenChange, onAssign }: AssignDialogProps) {
+export const AssignDialog = ({ open, onOpenChange, onAssign }: AssignDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [user, setUser] = useState('');
 
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- clears the previous pick each time the dialog opens
   useEffect(() => {
     if (open) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- clears the previous pick each time the dialog opens
       setUser('');
     }
   }, [open]);
@@ -184,14 +198,12 @@ export function AssignDialog({ open, onOpenChange, onAssign }: AssignDialogProps
           label={t('assignTo', 'Assign to')}
           doctype="User"
           value={user}
-          onChange={(value: unknown) => {
-            setUser(value === null || value === undefined ? '' : String(value));
-          }}
+          onChange={setUser}
         />
       </YStack>
     </ConfirmDialog>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Jump to field (desk Ctrl/Cmd+J)
@@ -211,13 +223,15 @@ export interface JumpToFieldDialogProps {
   onJump: (field: JumpToFieldTarget) => void;
 }
 
-export function JumpToFieldDialog({ open, onOpenChange, fields, onJump }: JumpToFieldDialogProps) {
+export const JumpToFieldDialog = ({ open, onOpenChange, fields, onJump }: JumpToFieldDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const [query, setQuery] = useState('');
 
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- resets the draft while closed; ConfirmDialog remounts its body on open, so the stale value is never visible
   useEffect(() => {
     if (!open) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- resets the draft while closed; ConfirmDialog remounts its body on open, so the stale value is never visible
       setQuery('');
     }
   }, [open]);
@@ -242,7 +256,7 @@ export function JumpToFieldDialog({ open, onOpenChange, fields, onJump }: JumpTo
       confirmDisabledReason={t('jumpToFieldNone', 'No matching fields')}
       allowManyActions
       onConfirm={() => {
-        if (matches[0]) {
+        if (matches.length > 0) {
           onJump(matches[0]);
         }
       }}>
@@ -274,6 +288,7 @@ export function JumpToFieldDialog({ open, onOpenChange, fields, onJump }: JumpTo
               return (
                 <XStack
                   key={`${field.tabKey}:${field.name}`}
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only button semantic
                   role="button"
                   tabIndex={0}
                   alignItems="center"
@@ -290,14 +305,12 @@ export function JumpToFieldDialog({ open, onOpenChange, fields, onJump }: JumpTo
                   onPress={() => {
                     onJump(field);
                   }}
-                  onKeyDown={
-                    ((e: { key?: string; preventDefault?: () => void }) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault?.();
-                        onJump(field);
-                      }
-                    }) as unknown as () => void
-                  }>
+                  onKeyDown={asKeyDownProp((e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault?.();
+                      onJump(field);
+                    }
+                  })}>
                   <YStack
                     flex={1}
                     minWidth={0}>
@@ -322,4 +335,4 @@ export function JumpToFieldDialog({ open, onOpenChange, fields, onJump }: JumpTo
       </YStack>
     </ConfirmDialog>
   );
-}
+};

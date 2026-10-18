@@ -17,10 +17,11 @@ import { useBackofficeConfig, useBackofficeLocation } from '../config/Backoffice
 import { parseBackofficeHref } from '../navigation/navigator';
 import { slugToDisplayName } from '../navigation/paths';
 import type { BackofficeView } from '../navigation/paths';
-import { useSlugTarget } from '../shared/useSlugTarget';
+import type { SlugTarget } from '../shared/types';
+import { useSlugTarget } from '../shared/use-slug-target';
 
-import { resolveDeskPath } from './resolveDeskPath';
-import type { DeskAddress, DeskViewParams } from './resolveDeskPath';
+import { isPresent, resolveDeskPath, stripTrailingSlashes } from './resolve-desk-path';
+import type { DeskAddress, DeskDocDefaults, DeskViewParams } from './resolve-desk-path';
 
 export type DeskTarget =
   | { kind: 'home' }
@@ -32,7 +33,7 @@ export type DeskTarget =
       view: Exclude<BackofficeView, 'list'>;
       params?: DeskViewParams;
     }
-  | { kind: 'new'; doctype: string; defaults?: Record<string, unknown> }
+  | { kind: 'new'; doctype: string; defaults?: DeskDocDefaults }
   | { kind: 'form'; doctype: string; name: string }
   | { kind: 'report'; reportName: string; filtersParam?: string }
   | { kind: 'not-found'; slug?: string };
@@ -47,17 +48,16 @@ export interface DeskPins {
   path?: string;
 }
 
-export function hasDeskPin(pins: DeskPins): boolean {
-  return Boolean(pins.doctype ?? pins.workspace ?? pins.report ?? pins.path);
-}
+export const hasDeskPin = (pins: DeskPins): boolean =>
+  Boolean(pins.doctype ?? pins.workspace ?? pins.report ?? pins.path);
 
 /** Pins → target, directly: pins carry proper-cased names, no slug hop. */
-function pinnedTarget(pins: DeskPins): DeskTarget | undefined {
-  if (pins.doctype) {
+const pinnedTarget = (pins: DeskPins): DeskTarget | undefined => {
+  if (isPresent(pins.doctype)) {
     if (pins.name === 'new') {
       return { kind: 'new', doctype: pins.doctype };
     }
-    if (pins.name) {
+    if (isPresent(pins.name)) {
       return { kind: 'form', doctype: pins.doctype, name: pins.name };
     }
     if (pins.view && pins.view !== 'list') {
@@ -65,40 +65,40 @@ function pinnedTarget(pins: DeskPins): DeskTarget | undefined {
     }
     return { kind: 'list', doctype: pins.doctype };
   }
-  if (pins.workspace) {
+  if (isPresent(pins.workspace)) {
     return { kind: 'workspace', workspace: pins.workspace };
   }
-  if (pins.report) {
+  if (isPresent(pins.report)) {
     return { kind: 'report', reportName: pins.report };
   }
   return undefined;
-}
+};
 
-/** Address + resolved slug → target. Ambiguous slugs stay `undefined` while
- * the index loads (the caller renders a spinner, exactly like SlugScreen). */
-function addressToTarget(
-  address: DeskAddress,
-  slugKind: 'workspace' | 'doctype' | 'loading' | 'not-found',
-  slugName: string | undefined,
-): DeskTarget | undefined {
-  switch (address.kind) {
-    case 'home': {
-      return { kind: 'home' };
-    }
-    case 'report': {
-      return { kind: 'report', reportName: address.reportName, filtersParam: address.filtersParam };
-    }
-    case 'not-found': {
-      return { kind: 'not-found' };
-    }
-    default: {
-      break;
-    }
+/** How far the slug index got with the address's slug. */
+type SlugKind = 'workspace' | 'doctype' | 'loading' | 'not-found';
+
+type SlugAddress = Extract<DeskAddress, { slug: string }>;
+
+const slugKindOf = (slugTarget: SlugTarget): SlugKind =>
+  slugTarget.status === 'resolved' ? slugTarget.kind : slugTarget.status;
+
+const slugNameOf = (slugTarget: SlugTarget): string | undefined => {
+  if (slugTarget.status !== 'resolved') {
+    return undefined;
   }
+  return slugTarget.kind === 'workspace' ? slugTarget.workspace : slugTarget.doctype;
+};
+
+/** Slug address + resolved slug → target; `undefined` while the index loads. */
+const slugAddressToTarget = (
+  address: SlugAddress,
+  slugKind: SlugKind,
+  slugName: string | undefined,
+): DeskTarget | undefined => {
   if (slugKind === 'loading') {
     return undefined;
   }
-  if (slugKind === 'not-found' || !slugName) {
+  if (slugKind === 'not-found' || !isPresent(slugName)) {
     return { kind: 'not-found', slug: address.slug };
   }
   if (slugKind === 'workspace') {
@@ -126,20 +126,52 @@ function addressToTarget(
     case 'slug-name': {
       return { kind: 'form', doctype: slugName, name: address.name };
     }
+    default: {
+      throw new Error(`Unhandled desk address: ${JSON.stringify(address satisfies never)}`);
+    }
   }
-}
+};
+
+/** Address + resolved slug → target. Ambiguous slugs stay `undefined` while
+ * the index loads (the caller renders a spinner, exactly like SlugScreen). */
+const addressToTarget = (
+  address: DeskAddress,
+  slugKind: SlugKind,
+  slugName: string | undefined,
+): DeskTarget | undefined => {
+  switch (address.kind) {
+    case 'home': {
+      return { kind: 'home' };
+    }
+    case 'report': {
+      return { kind: 'report', reportName: address.reportName, filtersParam: address.filtersParam };
+    }
+    case 'not-found': {
+      return { kind: 'not-found' };
+    }
+    case 'slug':
+    case 'slug-view':
+    case 'slug-new':
+    case 'slug-name': {
+      return slugAddressToTarget(address, slugKind, slugName);
+    }
+    default: {
+      throw new Error(`Unhandled desk address: ${JSON.stringify(address satisfies never)}`);
+    }
+  }
+};
 
 /**
  * Pure, best-effort address→target for pre-navigation interception
  * (`onNavigate`): the slug degrades to a title-cased doctype guess, the same
  * degrade `useSlugTarget` applies when the index is unavailable.
  */
-export function guessDeskTarget(path: string, basePath: string): DeskTarget {
+export const guessDeskTarget = (path: string, basePath: string): DeskTarget => {
   const { path: cleanPath, params } = parseBackofficeHref(path);
   const address = resolveDeskPath(cleanPath, basePath, params);
   const guess = 'slug' in address ? slugToDisplayName(address.slug) : undefined;
-  return addressToTarget(address, guess ? 'doctype' : 'not-found', guess) ?? { kind: 'not-found' };
-}
+  return addressToTarget(address, isPresent(guess) ? 'doctype' : 'not-found', guess) ?? { kind: 'not-found' };
+};
 
 /**
  * The desk's current target. `undefined` while an ambiguous slug is still
@@ -147,7 +179,7 @@ export function guessDeskTarget(path: string, basePath: string): DeskTarget {
  * BackofficeProvider (it reads the navigator location and the frappe
  * connection from context).
  */
-export function useDeskTarget(pins: DeskPins): DeskTarget | undefined {
+export const useDeskTarget = (pins: DeskPins): DeskTarget | undefined => {
   const { basePath } = useBackofficeConfig();
   const location = useBackofficeLocation();
 
@@ -156,21 +188,24 @@ export function useDeskTarget(pins: DeskPins): DeskTarget | undefined {
   // snapshots have stable identity until they change, so reference
   // equality against the mount-time snapshot is the "has it moved" test.
   const initialLocation = useRef(location);
+  // oxlint-disable-next-line react/refs -- mount-time snapshot, never written after mount; reading it in render is the "has it moved" test
   const entryActive = location === initialLocation.current;
 
   const address = useMemo<DeskAddress | undefined>(() => {
-    if (entryActive && pins.path) {
-      const prefix = basePath === '/' ? '' : basePath.replace(/\/+$/, '');
+    if (entryActive && isPresent(pins.path)) {
+      const prefix = basePath === '/' ? '' : stripTrailingSlashes(basePath);
       const { path, params } = parseBackofficeHref(`${prefix}${pins.path}`);
       return resolveDeskPath(path, basePath, params);
     }
     if (entryActive && hasDeskPin(pins)) {
+      // Pinned target, no address.
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the memo returns an address on other paths; a bare return trips consistent-return
       return undefined;
-    } // pinned target, no address
+    }
     return resolveDeskPath(location.path, basePath, location.params);
   }, [entryActive, pins, basePath, location]);
 
-  const pinned = entryActive && !pins.path ? pinnedTarget(pins) : undefined;
+  const pinned = entryActive && !isPresent(pins.path) ? pinnedTarget(pins) : undefined;
 
   const slug = !pinned && address && 'slug' in address ? address.slug : undefined;
   const slugTarget = useSlugTarget(slug);
@@ -180,16 +215,9 @@ export function useDeskTarget(pins: DeskPins): DeskTarget | undefined {
       return pinned;
     }
     if (!address) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the memo returns a target on other paths; a bare return trips consistent-return
       return undefined;
     }
-    const slugKind =
-      slugTarget.status === 'loading' ? 'loading' : slugTarget.status === 'not-found' ? 'not-found' : slugTarget.kind;
-    const slugName =
-      slugTarget.status === 'resolved'
-        ? slugTarget.kind === 'workspace'
-          ? slugTarget.workspace
-          : slugTarget.doctype
-        : undefined;
-    return addressToTarget(address, slugKind, slugName);
+    return addressToTarget(address, slugKindOf(slugTarget), slugNameOf(slugTarget));
   }, [pinned, address, slugTarget]);
-}
+};

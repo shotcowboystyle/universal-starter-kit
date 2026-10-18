@@ -1,3 +1,12 @@
+// Catalog Button: the inline save affordance disables while there is nothing
+// to save — the catalog `disabledReason` explains it (DG-ST-03) instead of a
+// bare dangle.
+import { Button, Input } from '@repo/forms';
+import type { FrappeApp } from '@repo/frappe';
+import { useFrappeConfig } from '@repo/frappe-ui';
+import { FilterManager, SavedFilterDropdown, useSavedFilters } from '@repo/table';
+import type { ParsedFilter, SavedFilter, SavedFiltersStorage } from '@repo/table';
+import { sizeRecipeEscape } from '@repo/theme';
 /**
  * Saved filters — desk parity via the `List Filter` doctype
  * (frappe.client.get_list / insert / delete — the same records desk's
@@ -7,21 +16,13 @@
  * Fixture mode (stories / no bench) runs in-memory.
  */
 import { XStack, YStack } from '@repo/ui';
-// Catalog Button: the inline save affordance disables while there is nothing
-// to save — the catalog `disabledReason` explains it (DG-ST-03) instead of a
-// bare dangle.
-import { Button, Input } from '@repo/forms';
-import { useFrappeConfig } from '@repo/frappe-ui';
-import { FilterManager, SavedFilterDropdown, useSavedFilters } from '@repo/table';
-import type { ParsedFilter, SavedFilter, SavedFiltersStorage } from '@repo/table';
-import { sizeRecipeEscape } from '@repo/theme';
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { FrappeFilters } from '../shared/types';
-import { useFrappeApp } from '../shared/useFrappeApp';
-import { useSessionUserId as useSessionUser } from '../shared/useSessionUserId';
+import { useFrappeApp } from '../shared/use-frappe-app';
+import { useSessionUserId as useSessionUser } from '../shared/use-session-user-id';
 
 export interface SavedFiltersControlProps {
   doctype: string;
@@ -38,55 +39,56 @@ export interface SavedFiltersControlProps {
   onFilterSaved?: (saved: { name: string; isGlobal: boolean; filters: FrappeFilters }) => void;
 }
 
+const LIST_FILTER_DOCTYPE = 'List Filter';
+
+const createListFilterStorage = (app: FrappeApp, doctype: string): SavedFiltersStorage => ({
+  load: async () => {
+    const res = await app.call().get<{ message?: SavedFilter[] }>('frappe.client.get_list', {
+      doctype: LIST_FILTER_DOCTYPE,
+      filters: JSON.stringify([['reference_doctype', '=', doctype]]),
+      fields: JSON.stringify(['name', 'filter_name', 'for_user', 'filters']),
+      limit_page_length: 0,
+    });
+    return res.payload?.message ?? [];
+  },
+  save: async (filter) => {
+    await app.call().post('frappe.client.insert', {
+      doc: {
+        doctype: LIST_FILTER_DOCTYPE,
+        reference_doctype: doctype,
+        filter_name: filter.filter_name ?? '',
+        for_user: filter.for_user ?? '',
+        filters: filter.filters ?? '[]',
+      },
+    });
+  },
+  remove: async (name) => {
+    await app.call().post('frappe.client.delete', { doctype: LIST_FILTER_DOCTYPE, name });
+  },
+});
+
 /**
  * SavedFiltersStorage adapter over the `List Filter` doctype. Undefined in
  * fixture mode / before the app is ready — useSavedFilters then keeps
  * filters in memory only.
  */
-function useListFilterStorage(doctype: string): SavedFiltersStorage | undefined {
+const useListFilterStorage = (doctype: string): SavedFiltersStorage | undefined => {
   const config = useFrappeConfig();
   const app = useFrappeApp();
   const fixtureMode = Boolean(config?.fixtures);
-  return useMemo(() => {
-    if (!app || fixtureMode) {
-      return;
-    }
-    const storage: SavedFiltersStorage = {
-      load: async () => {
-        const res = await app.call().get<{ message?: SavedFilter[] }>('frappe.client.get_list', {
-          doctype: 'List Filter',
-          filters: JSON.stringify([['reference_doctype', '=', doctype]]),
-          fields: JSON.stringify(['name', 'filter_name', 'for_user', 'filters']),
-          limit_page_length: 0,
-        });
-        return res.payload?.message ?? [];
-      },
-      save: async (filter) => {
-        await app.call().post('frappe.client.insert', {
-          doc: {
-            doctype: 'List Filter',
-            reference_doctype: doctype,
-            filter_name: filter.filter_name ?? '',
-            for_user: filter.for_user ?? '',
-            filters: filter.filters ?? '[]',
-          },
-        });
-      },
-      remove: async (name) => {
-        await app.call().post('frappe.client.delete', { doctype: 'List Filter', name });
-      },
-    };
-    return storage;
-  }, [app, fixtureMode, doctype]);
-}
+  return useMemo(
+    () => (app && !fixtureMode ? createListFilterStorage(app, doctype) : undefined),
+    [app, fixtureMode, doctype],
+  );
+};
 
-export function SavedFiltersControl({
+export const SavedFiltersControl = ({
   doctype,
   filters,
   onFiltersChange,
   inline,
   onFilterSaved,
-}: SavedFiltersControlProps) {
+}: SavedFiltersControlProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const storage = useListFilterStorage(doctype);
   const user = useSessionUser();
@@ -101,25 +103,32 @@ export function SavedFiltersControl({
       onSelectFilter={(filter) => {
         setSelected(filter);
         if (filter) {
-          onFiltersChange(filter.filters as FrappeFilters);
+          onFiltersChange(filter.filters);
         }
       }}
-      onDeleteFilter={(name) => void deleteFilter(name)}
+      onDeleteFilter={(name) => {
+        void deleteFilter(name);
+      }}
       placeholder={t('list.filters.savedFilters', 'Saved Filters')}
     />
   );
 
   if (inline) {
-    const handleInlineSave = () => {
+    const handleInlineSave = async () => {
       const name = draftName.trim();
       if (!name || filters.length === 0) {
         return;
       }
-      void Promise.resolve(saveFilter(name, filters, false)).then(() => {
-        setDraftName('');
-        onFilterSaved?.({ name, isGlobal: false, filters });
-      });
+      await saveFilter(name, filters, false);
+      setDraftName('');
+      onFilterSaved?.({ name, isGlobal: false, filters });
     };
+    let saveDisabledReason: string | undefined;
+    if (filters.length === 0) {
+      saveDisabledReason = t('list.filters.saveNeedsFilters', 'Apply filters to save them');
+    } else if (!draftName.trim()) {
+      saveDisabledReason = t('list.filters.saveNeedsName', 'Name the filter to save it');
+    }
     return (
       <YStack gap="$2">
         {/* Column wrappers stretch the fields to full width on native (a
@@ -143,14 +152,10 @@ export function SavedFiltersControl({
           <Button
             size="$3"
             disabled={filters.length === 0 || !draftName.trim()}
-            disabledReason={
-              filters.length === 0
-                ? t('list.filters.saveNeedsFilters', 'Apply filters to save them')
-                : draftName.trim()
-                  ? undefined
-                  : t('list.filters.saveNeedsName', 'Name the filter to save it')
-            }
-            onPress={handleInlineSave}>
+            disabledReason={saveDisabledReason}
+            onPress={() => {
+              void handleInlineSave();
+            }}>
             {t('list.filters.saveFilter', 'Save Filter')}
           </Button>
         </XStack>
@@ -176,14 +181,11 @@ export function SavedFiltersControl({
           currentFilters={filters}
           canCreateGlobal
           onSaveFilter={async (filterName, isGlobal) => {
-            const result = saveFilter(filterName, filters, isGlobal);
-            void Promise.resolve(result).then(() => {
-              onFilterSaved?.({ name: filterName, isGlobal, filters });
-            });
-            return await result;
+            await saveFilter(filterName, filters, isGlobal);
+            onFilterSaved?.({ name: filterName, isGlobal, filters });
           }}
         />
       ) : null}
     </XStack>
   );
-}
+};

@@ -1,13 +1,12 @@
-import { Avatar, DropdownMenu, SizableText, YStack, isWeb } from '@repo/ui';
-import { Button } from '@repo/forms';
-import { useFrappeConfig } from '@repo/frappe-ui';
-import { useResolvedKnobs } from '@repo/theme';
 // Navbar avatar menu (session user, my settings, toggle theme, logout;
 // desk parity). Theme toggling rides the provider's `appearance` adapter —
 // hosts without one get a disabled item (GJS/story parity). The logout and
 // theme items are individually gated by the userMenu capability config.
-import React from 'react';
-import { useCallback } from 'react';
+import { Button } from '@repo/forms';
+import { useFrappeConfig } from '@repo/frappe-ui';
+import { useResolvedKnobs } from '@repo/theme';
+import { Avatar, DropdownMenu, SizableText, YStack, isWeb } from '@repo/ui';
+import React, { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -17,7 +16,7 @@ import {
   useBackofficePaths,
 } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 import { clearSessionUserCache, useSessionUserInfo } from './user-session';
 
@@ -26,7 +25,19 @@ export interface UserMenuProps {
   defaultOpen?: boolean;
 }
 
-export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
+/** Avatar one step below the trigger button's size token. */
+const avatarSizeFor = (sizeToken: string) => {
+  if (sizeToken === '$5') {
+    return '$3';
+  }
+  if (sizeToken === '$3') {
+    return '$1';
+  }
+  return '$2';
+};
+
+// oxlint-disable-next-line eslint/complexity -- flat list of capability-gated menu items; each gate is one branch
+export const UserMenu = ({ defaultOpen }: UserMenuProps = {}) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const navigator = useBackofficeNavigator();
@@ -51,15 +62,25 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
     navigator.replace(paths.home());
   }, [app, navigator, paths]);
 
+  const handleLogoutSelect = useCallback(() => {
+    void handleLogout();
+  }, [handleLogout]);
+
+  const handleOpenOwnUser = useCallback(() => {
+    if (sessionUser !== undefined && sessionUser !== '') {
+      navigator.navigate(paths.form('User', sessionUser));
+    }
+  }, [navigator, paths, sessionUser]);
+
   const handleReload = useCallback(() => {
-    if (typeof location !== 'undefined' && typeof location.reload === 'function') {
+    if (typeof location !== 'undefined' && 'reload' in location) {
       location.reload();
     }
   }, []);
 
-  const websiteURL = frappeConfig?.baseURL;
+  const websiteURL = frappeConfig?.baseURL ?? '';
   const handleViewWebsite = useCallback(() => {
-    if (websiteURL && typeof window !== 'undefined' && typeof window.open === 'function') {
+    if (websiteURL !== '' && typeof window !== 'undefined' && 'open' in window) {
       window.open(websiteURL, '_blank', 'noopener,noreferrer');
     }
   }, [websiteURL]);
@@ -76,11 +97,19 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
     navigator.navigate(exitToSite.path);
   }, [navigator, exitToSite.path]);
 
-  const sessionGate = sessionUser
+  const sessionGate =
+    sessionUser !== undefined && sessionUser !== ''
+      ? {}
+      : {
+          disabled: true,
+          disabledReason: t('userMenu.sessionUnavailable', 'Session not loaded'),
+        };
+
+  const themeGate = appearance
     ? {}
     : {
         disabled: true,
-        disabledReason: t('userMenu.sessionUnavailable', 'Session not loaded'),
+        disabledReason: t('userMenu.themeUnavailable', 'Theme switching is unavailable on this platform'),
       };
 
   return (
@@ -94,7 +123,7 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
           size={knobProps.sizeToken}
           aria-label={t('userMenu.label', 'User menu')}>
           <Avatar
-            size={knobProps.sizeToken === '$5' ? '$3' : knobProps.sizeToken === '$3' ? '$1' : '$2'}
+            size={avatarSizeFor(knobProps.sizeToken)}
             src={info?.imageUrl}
             name={info?.fullName ?? info?.user}
           />
@@ -113,7 +142,7 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
                 numberOfLines={1}>
                 {info.fullName}
               </SizableText>
-              {info.email ? (
+              {info.email !== undefined && info.email !== '' ? (
                 <SizableText
                   size="$2"
                   color="$color10"
@@ -127,12 +156,12 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
         ) : null}
         <DropdownMenu.Item
           {...sessionGate}
-          onSelect={() => sessionUser && navigator.navigate(paths.form('User', sessionUser))}>
+          onSelect={handleOpenOwnUser}>
           {t('userMenu.myProfile', 'My Profile')}
         </DropdownMenu.Item>
         <DropdownMenu.Item
           {...sessionGate}
-          onSelect={() => sessionUser && navigator.navigate(paths.form('User', sessionUser))}>
+          onSelect={handleOpenOwnUser}>
           {t('userMenu.mySettings', 'My Settings')}
         </DropdownMenu.Item>
         {/* GAP: desk's Session Defaults dialog (frappe.core.doctype.session_default_settings)
@@ -145,17 +174,12 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
         {isWeb ? <DropdownMenu.Item onSelect={handleReload}>{t('userMenu.reload', 'Reload')}</DropdownMenu.Item> : null}
         {userMenu.themeToggle ? (
           <DropdownMenu.Item
-            {...(appearance
-              ? {}
-              : {
-                  disabled: true,
-                  disabledReason: t('userMenu.themeUnavailable', 'Theme switching is unavailable on this platform'),
-                })}
+            {...themeGate}
             onSelect={handleToggleTheme}>
             {t('userMenu.toggleTheme', 'Toggle Theme')}
           </DropdownMenu.Item>
         ) : null}
-        {isWeb && websiteURL ? (
+        {isWeb && websiteURL !== '' ? (
           <DropdownMenu.Item onSelect={handleViewWebsite}>
             {t('userMenu.viewWebsite', 'View Website')}
           </DropdownMenu.Item>
@@ -170,10 +194,10 @@ export function UserMenu({ defaultOpen }: UserMenuProps = {}) {
         {userMenu.logout ? (
           <>
             <DropdownMenu.Separator />
-            <DropdownMenu.Item onSelect={handleLogout}>{t('userMenu.logOut', 'Log Out')}</DropdownMenu.Item>
+            <DropdownMenu.Item onSelect={handleLogoutSelect}>{t('userMenu.logOut', 'Log Out')}</DropdownMenu.Item>
           </>
         ) : null}
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};

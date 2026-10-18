@@ -1,15 +1,4 @@
-import {
-  AsyncBoundary,
-  AsyncSkeleton,
-  Button,
-  ConfirmDialog,
-  EmptyState,
-  ScrollView,
-  Text,
-  XStack,
-  YStack,
-  notify,
-} from '@repo/ui';
+import { ListBulletsIcon } from '@phosphor-icons/react';
 /**
  * The document form page — desk form parity, as page chrome over FrappeForm.
  *
@@ -38,7 +27,18 @@ import {
 } from '@repo/frappe-ui';
 import type { DocShareGrant, FormTab } from '@repo/frappe-ui';
 import { useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
-import { ListBulletsIcon } from '@phosphor-icons/react';
+import {
+  AsyncBoundary,
+  AsyncSkeleton,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  ScrollView,
+  Text,
+  XStack,
+  YStack,
+  notify,
+} from '@repo/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -49,14 +49,14 @@ import {
   useBackofficeNavigator,
   useBackofficePaths,
 } from '../config/BackofficeProvider';
-import type { BackofficeAction } from '../config/BackofficeProvider';
+import type { BackofficeAction, BackofficeActionContext } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import { deskDocUrl } from '../shared/deskLinks';
-import { getListNavNeighbors } from '../shared/listNavContext';
-import type { ListNavNeighbors } from '../shared/listNavContext';
-import { invalidateDocinfo, useDocinfo } from '../shared/useDocinfo';
-import { useDoctypeMeta } from '../shared/useDoctypeMeta';
-import { useRecentVisit } from '../shared/useRecentVisit';
+import { deskDocUrl } from '../shared/desk-links';
+import { getListNavNeighbors } from '../shared/list-nav-context';
+import type { ListNavNeighbors } from '../shared/list-nav-context';
+import { invalidateDocinfo, useDocinfo } from '../shared/use-docinfo';
+import { useDoctypeMeta } from '../shared/use-doctype-meta';
+import { useRecentVisit } from '../shared/use-recent-visit';
 
 import { groupConnectionLinks } from './connections-data';
 import { setCreatePrefill } from './createPrefill';
@@ -78,7 +78,7 @@ import {
   useJumpToFieldShortcut,
   useNavigationDirtyGuard,
   useSaveShortcut,
-} from './platformHooks';
+} from './platform-hooks';
 import { htmlToText } from './timeline-utils';
 
 /** Host overrides for the form's ⋯ toolbar menu. */
@@ -93,7 +93,7 @@ export interface DocFormActionOverrides {
 }
 
 export interface DocFormScreenProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Sales Order") */
   doctype: string;
   /** Document name; the literal "new" renders create mode */
   name: string;
@@ -104,8 +104,10 @@ export interface DocFormScreenProps {
   /** Hide individual fields by name. */
   hiddenFields?: readonly string[];
   /** Create-mode field prefill (merged over meta defaults). */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open frappe field values; keys vary by doctype
   defaults?: Record<string, unknown>;
   /** After a successful save (create or update). `doc.name` is authoritative. */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the saved frappe doc; keys vary by doctype
   onSaved?: (doc: Record<string, unknown> & { name: string }) => void;
   /** After a successful delete. Replaces the default navigate-to-list. */
   onDeleted?: () => void;
@@ -115,9 +117,25 @@ export interface DocFormScreenProps {
 
 const CONNECTIONS_TAB = '__connections';
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- an open frappe doc; keys vary by doctype
 type DeskDoc = Record<string, unknown> & { name: string; doctype: string };
 
-export function DocFormScreen({
+type ConfirmAction = 'submit' | 'cancel' | 'delete';
+
+/** A non-empty string (route params, doc names and field values arrive as optional strings). */
+const present = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+/** Action/slot context for this doc; `name` only once the doc exists. */
+const docContext = (doctype: string, docName: string | undefined): BackofficeActionContext => {
+  const context: BackofficeActionContext = { doctype };
+  if (present(docName)) {
+    context.name = docName;
+  }
+  return context;
+};
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- the desk form page: toolbar, banners, body, panels and every dialog share one form controller
+export const DocFormScreen = ({
   doctype,
   name,
   readOnly,
@@ -127,8 +145,10 @@ export function DocFormScreen({
   onSaved,
   onDeleted,
   actionOverrides,
-}: DocFormScreenProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component note above
+}: DocFormScreenProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
+  const backToListLabel = t('backToList', 'Back to {{doctype}} list', { doctype });
   const { knobProps } = useResolvedKnobs();
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
@@ -153,10 +173,13 @@ export function DocFormScreen({
   // effect) so the values land before the form's create-mode seeding runs,
   // and keyed on content so re-renders don't re-stash consumed values.
   const defaultsKey = defaults ? JSON.stringify(defaults) : undefined;
+  // oxlint-disable-next-line react/void-use-memo -- deliberate render-phase stash (see above); an effect would run after seeding
   useMemo(() => {
-    if (!isCreate || !defaultsKey) {
+    if (!isCreate || defaultsKey === undefined) {
       return;
     }
+    // SAFETY: defaultsKey is JSON.stringify of the `defaults` record, so it parses back to that record
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-unsafe-dictionary-type -- see SAFETY above
     const parsed = JSON.parse(defaultsKey) as Record<string, unknown>;
     if (Object.keys(parsed).length > 0) {
       setCreatePrefill(doctype, parsed);
@@ -188,7 +211,7 @@ export function DocFormScreen({
   // passes the bundle down so cluster/sidebar mutations stay in sync.
   const { docinfo, reload: reloadDocinfo } = useDocinfo(doctype, name);
   const refreshDocinfo = useCallback(() => {
-    if (docName) {
+    if (present(docName)) {
       invalidateDocinfo(doctype, docName);
     }
     reloadDocinfo();
@@ -208,6 +231,7 @@ export function DocFormScreen({
     name: docName,
     meta: metaSource,
     rights,
+    // SAFETY: docinfo.shared rows are DocShare records, the shape DocShareGrant names
     shares: docinfo?.shared as DocShareGrant[] | undefined,
     readShares: false,
     disabled: readOnly,
@@ -226,19 +250,21 @@ export function DocFormScreen({
 
   // Refresh docinfo whenever the live doc's `modified` stamp moves —
   // an external edit usually lands with new versions/comments too.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the live doc is wire data; only a string is usable
   const modifiedStamp = typeof form.baseline?.modified === 'string' ? form.baseline.modified : undefined;
-  const stampRef = useRef<string | undefined>(undefined);
+  const stampRef = useRef<string | null>(null);
   useEffect(() => {
-    stampRef.current = undefined;
+    stampRef.current = null;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- doctype/name are the reset key for the stamp
   }, [doctype, name]);
   useEffect(() => {
-    if (!docName || !modifiedStamp) {
+    if (!present(docName) || !present(modifiedStamp)) {
       return;
     }
     if (stampRef.current === modifiedStamp) {
       return;
     }
-    const isFirstLoad = stampRef.current === undefined;
+    const isFirstLoad = stampRef.current === null;
     stampRef.current = modifiedStamp;
     if (!isFirstLoad) {
       invalidateDocinfo(doctype, docName);
@@ -276,7 +302,7 @@ export function DocFormScreen({
   // -----------------------------------------------------------------------
   // Actions
   // -----------------------------------------------------------------------
-  const [confirmAction, setConfirmAction] = useState<'submit' | 'cancel' | 'delete' | undefined>();
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | undefined>();
   const [renameOpen, setRenameOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [jumpOpen, setJumpOpen] = useState(false);
@@ -302,7 +328,7 @@ export function DocFormScreen({
       setValidationSummary(undefined);
     }
     const savedName = await form.save();
-    if (!savedName) {
+    if (!present(savedName)) {
       return;
     }
     setValidationSummary(undefined);
@@ -350,7 +376,7 @@ export function DocFormScreen({
 
   const handleRename = useCallback(
     async (newName: string) => {
-      if (!connection || !docName) {
+      if (!connection || !present(docName)) {
         return;
       }
       try {
@@ -371,13 +397,13 @@ export function DocFormScreen({
   // renamed doc) → no pager at all: no arrows beat dead arrows (LC-40).
   // -----------------------------------------------------------------------
   const docPager = useMemo<ListNavNeighbors>(
-    () => (docName ? getListNavNeighbors(doctype, docName) : { inList: false }),
+    () => (present(docName) ? getListNavNeighbors(doctype, docName) : { inList: false }),
     [doctype, docName],
   );
   const openNeighborDoc = useCallback(
     (target: string | undefined) => {
       // navigate() (not navigator.navigate) so the dirty guard can prompt.
-      if (target) {
+      if (present(target)) {
         navigate(paths.form(doctype, target));
       }
     },
@@ -393,15 +419,16 @@ export function DocFormScreen({
     },
   );
 
-  const titleFieldValue =
-    meta?.title_field && typeof form.doc[meta.title_field] === 'string'
-      ? // Title fields can hold rich text (e.g. ToDo.description = "<p>…</p>");
-        // strip to plain text so the breadcrumb + toolbar heading don't show
-        // literal HTML tags.
-        htmlToText(form.doc[meta.title_field] as string)
-      : undefined;
+  const titleFieldName = meta?.title_field ?? '';
+  const rawTitle = titleFieldName === '' ? undefined : form.doc[titleFieldName];
+  // Title fields can hold rich text (e.g. a to-do description = "<p>…</p>");
+  // strip to plain text so the breadcrumb + toolbar heading don't show
+  // literal HTML tags.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the live doc is wire data; only a string is usable
+  const titleFieldValue = typeof rawTitle === 'string' ? htmlToText(rawTitle) : undefined;
   const title = isCreate ? t('newDocTitle', 'New {{doctype}}', { doctype }) : (titleFieldValue ?? name);
 
+  // oxlint-disable-next-line eslint/complexity -- one guard per desk menu entry, in desk order
   const menuItems = useMemo<FormToolbarMenuItem[]>(() => {
     if (isCreate) {
       return [];
@@ -428,7 +455,7 @@ export function DocFormScreen({
         onSelect: handleDuplicate,
       });
     }
-    if (meta?.allow_rename && perms.write) {
+    if ((meta?.allow_rename ?? 0) !== 0 && perms.write) {
       items.push({
         key: 'rename',
         label: t('menuRename', 'Rename'),
@@ -446,7 +473,7 @@ export function DocFormScreen({
         label: t('menuPrint', 'Print'),
         icon: 'print',
         onSelect: () => {
-          const base = connection.baseURL.replace(/\/$/, '');
+          const base = connection.baseURL.replace(/\/$/u, '');
           openInNewTab(
             `${base}/printview?doctype=${encodeURIComponent(doctype)}&name=${encodeURIComponent(name)}&format=Standard`,
           );
@@ -498,7 +525,9 @@ export function DocFormScreen({
         key: 'desk',
         label: t('openInDesk', 'Open in Desk'),
         icon: 'desk',
-        onSelect: () => openInNewTab(deskDocUrl(connection.baseURL, doctype, name)),
+        onSelect: () => {
+          openInNewTab(deskDocUrl(connection.baseURL, doctype, name));
+        },
       });
     }
     if (capabilities.newDoc.enabled && perms.create) {
@@ -548,7 +577,7 @@ export function DocFormScreen({
   // removes built-ins by key (a host can replace "print" by hiding it and
   // injecting its own).
   const effectiveMenuItems = useMemo<FormToolbarMenuItem[]>(() => {
-    const hiddenKeys = new Set(actionOverrides?.hide ?? []);
+    const hiddenKeys = new Set(actionOverrides?.hide);
     const items = menuItems.filter((item) => !hiddenKeys.has(item.key));
     const injected: BackofficeAction[] = [
       ...actionsForDoctype(actions.form, doctype),
@@ -559,7 +588,7 @@ export function DocFormScreen({
         key: `host:${action.id}`,
         label: action.label,
         onSelect: () => {
-          action.onPress({ doctype, ...(docName ? { name: docName } : {}) });
+          action.onPress(docContext(doctype, docName));
         },
       });
     }
@@ -577,12 +606,15 @@ export function DocFormScreen({
 
   // Desk Jump-to-field: switch tab (lazyMount) then focus the LC-71 field shell.
   useEffect(() => {
-    if (!pendingJump) {
-      return;
+    if (!present(pendingJump)) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     if (typeof document === 'undefined') {
+      // oxlint-disable-next-line react/set-state-in-effect -- no DOM to focus in (native/GTK): drop the jump at once
       setPendingJump(undefined);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
     let cancelled = false;
     let tries = 0;
@@ -590,6 +622,7 @@ export function DocFormScreen({
       if (cancelled) {
         return;
       }
+      // oxlint-disable-next-line unicorn/prefer-query-selector -- the id embeds a raw field name; getElementById needs no CSS escaping
       const root = document.getElementById(`form-field-${pendingJump}`);
       if (root) {
         root.scrollIntoView({ block: 'center' });
@@ -600,7 +633,8 @@ export function DocFormScreen({
         setPendingJump(undefined);
         return;
       }
-      if (tries++ < 20) {
+      tries += 1;
+      if (tries <= 20) {
         requestAnimationFrame(tick);
       } else {
         setPendingJump(undefined);
@@ -615,7 +649,7 @@ export function DocFormScreen({
   // -----------------------------------------------------------------------
   // Early states
   // -----------------------------------------------------------------------
-  if (!config?.baseURL || !connection) {
+  if (!present(config?.baseURL) || !connection) {
     return (
       <YStack flex={1}>
         <EmptyState
@@ -665,7 +699,7 @@ export function DocFormScreen({
               onPress={() => {
                 navigator.navigate(paths.list(doctype));
               }}>
-              {t('backToList', 'Back to {{doctype}} list', { doctype })}
+              {backToListLabel}
             </Button>
           }
         />
@@ -686,7 +720,7 @@ export function DocFormScreen({
               onPress={() => {
                 navigator.navigate(paths.list(doctype));
               }}>
-              {t('backToList', 'Back to {{doctype}} list', { doctype })}
+              {backToListLabel}
             </Button>
           }
         />
@@ -709,7 +743,7 @@ export function DocFormScreen({
               onPress={() => {
                 navigator.navigate(paths.list(doctype));
               }}>
-              {t('backToList', 'Back to {{doctype}} list', { doctype })}
+              {backToListLabel}
             </Button>
           }
         />
@@ -736,14 +770,15 @@ export function DocFormScreen({
     isDirty: form.isDirty,
     docstatus: form.docstatus,
     isSubmittable,
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the live doc is wire data; only a string is usable
     statusValue: typeof form.doc.status === 'string' ? form.doc.status : undefined,
     states: meta?.states,
   });
   const canSave = !formReadOnly && (isCreate ? perms.create : perms.write && form.docstatus === 0);
-  const canSubmit =
-    !isCreate && isSubmittable && form.docstatus === 0 && !form.isDirty && perms.submit && !form.wasDeleted;
-  const canCancel = !isCreate && isSubmittable && form.docstatus === 1 && perms.cancel && !form.wasDeleted;
-  const canAmend = !isCreate && isSubmittable && form.docstatus === 2 && perms.amend && !form.wasDeleted;
+  const lifecycleOpen = !isCreate && isSubmittable && !form.wasDeleted;
+  const canSubmit = lifecycleOpen && form.docstatus === 0 && !form.isDirty && perms.submit;
+  const canCancel = lifecycleOpen && form.docstatus === 1 && perms.cancel;
+  const canAmend = lifecycleOpen && form.docstatus === 2 && perms.amend;
 
   const breadcrumbs = [
     { label: t('home', 'Home'), href: paths.home() },
@@ -812,8 +847,9 @@ export function DocFormScreen({
     </YStack>
   );
 
+  const showTimeline = capabilities.timeline.enabled && !isCreate && !metaRefused;
   const timeline =
-    capabilities.timeline.enabled && !isCreate && docName && !metaRefused ? (
+    showTimeline && present(docName) ? (
       // Composed mode: the screen's shared docinfo (and its refresh) feed
       // the timeline. Self-fetch mode subscribed the timeline to its OWN
       // cache entry, which the save path's invalidate+reload orphaned — the
@@ -830,7 +866,7 @@ export function DocFormScreen({
     ) : null;
 
   const sidebar =
-    !isCreate && docName && meta ? (
+    !isCreate && present(docName) && meta ? (
       <FormSidebarPanel
         doctype={doctype}
         name={docName}
@@ -843,6 +879,7 @@ export function DocFormScreen({
       />
     ) : null;
 
+  const canOpenDesk = !isCreate && !connection.fixtures && canOpenNewTab();
   const toolbar = (
     <FormToolbar
       breadcrumbs={breadcrumbs}
@@ -852,7 +889,7 @@ export function DocFormScreen({
       showIndicator={!!meta}
       isSaving={form.isSubmitting}
       cluster={
-        !isCreate && docName && !metaRefused ? (
+        !isCreate && present(docName) && !metaRefused ? (
           <FormHeaderCluster
             doctype={doctype}
             name={docName}
@@ -866,7 +903,9 @@ export function DocFormScreen({
       canSubmit={canSubmit}
       canCancel={canCancel}
       canAmend={canAmend}
-      onSave={() => void handleSave()}
+      onSave={() => {
+        void handleSave();
+      }}
       onSubmit={() => {
         setConfirmAction('submit');
       }}
@@ -876,8 +915,10 @@ export function DocFormScreen({
       onAmend={handleAmend}
       menuItems={effectiveMenuItems}
       onOpenDesk={
-        !isCreate && docName && connection && !connection.fixtures && canOpenNewTab()
-          ? () => openInNewTab(deskDocUrl(connection.baseURL, doctype, docName))
+        canOpenDesk && present(docName)
+          ? () => {
+              openInNewTab(deskDocUrl(connection.baseURL, doctype, docName));
+            }
           : undefined
       }
       {...(docPager.inList
@@ -888,24 +929,55 @@ export function DocFormScreen({
             onNextDoc: () => {
               openNeighborDoc(docPager.next);
             },
-            prevDocDisabled: !docPager.prev,
-            nextDocDisabled: !docPager.next,
+            prevDocDisabled: !present(docPager.prev),
+            nextDocDisabled: !present(docPager.next),
           }
         : {})}
     />
   );
 
+  const submitAndNotify = async () => {
+    if (await form.submitDocument()) {
+      notify({
+        severity: 'success',
+        scope: 'page',
+        body: t('submittedToast', 'Submitted'),
+      });
+      reloadDocinfo();
+    }
+  };
+
+  const cancelAndNotify = async () => {
+    if (await form.cancelDocument()) {
+      notify({
+        severity: 'success',
+        scope: 'page',
+        body: t('cancelledToast', 'Cancelled'),
+      });
+      reloadDocinfo();
+    }
+  };
+
+  const removeAndLeave = async () => {
+    const ok = await form.remove();
+    if (ok) {
+      invalidateDocinfo(doctype, name);
+      emitEvent({ type: 'doc-deleted', doctype, name });
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        navigator.replace(paths.list(doctype));
+      }
+    }
+  };
+
   return (
     <YStack flex={1}>
       {slots.renderFormHeader
-        ? slots.renderFormHeader({
-            doctype,
-            ...(docName ? { name: docName } : {}),
-            defaultContent: toolbar,
-          })
+        ? slots.renderFormHeader({ ...docContext(doctype, docName), defaultContent: toolbar })
         : toolbar}
 
-      {(form.wasDeleted || validationSummary || form.conflict) && (
+      {(form.wasDeleted || present(validationSummary) || form.conflict) && (
         <YStack paddingHorizontal="$3">
           {form.wasDeleted && (
             <XStack
@@ -921,7 +993,7 @@ export function DocFormScreen({
             </XStack>
           )}
 
-          {validationSummary && !form.wasDeleted && (
+          {present(validationSummary) && !form.wasDeleted && (
             <XStack
               role="alert"
               {...knobProps.containerRadius}
@@ -938,6 +1010,7 @@ export function DocFormScreen({
 
           {form.conflict && !form.wasDeleted && (
             <XStack
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only status semantic
               role="status"
               alignItems="center"
               justifyContent="space-between"
@@ -955,7 +1028,9 @@ export function DocFormScreen({
                 size="$2"
                 outlined
                 aria-label={t('reloadDoc', 'Reload')}
-                onPress={form.reset}>
+                onPress={() => {
+                  form.reset();
+                }}>
                 {t('reloadDoc', 'Reload')}
               </Button>
             </XStack>
@@ -996,7 +1071,11 @@ export function DocFormScreen({
       {/* Lifecycle confirms */}
       <ConfirmDialog
         open={confirmAction === 'submit'}
-        onOpenChange={(open) => !open && setConfirmAction(undefined)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(undefined);
+          }
+        }}
         title={t('submitConfirmTitle', 'Submit {{doctype}}?', { doctype })}
         body={t(
           'submitConfirmBody',
@@ -1006,21 +1085,16 @@ export function DocFormScreen({
         warning
         onConfirm={() => {
           setConfirmAction(undefined);
-          void form.submitDocument().then((ok) => {
-            if (ok) {
-              notify({
-                severity: 'success',
-                scope: 'page',
-                body: t('submittedToast', 'Submitted'),
-              });
-              reloadDocinfo();
-            }
-          });
+          void submitAndNotify();
         }}
       />
       <ConfirmDialog
         open={confirmAction === 'cancel'}
-        onOpenChange={(open) => !open && setConfirmAction(undefined)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(undefined);
+          }
+        }}
         title={t('cancelConfirmTitle', 'Cancel {{doctype}}?', { doctype })}
         body={t(
           'cancelConfirmBody',
@@ -1030,21 +1104,16 @@ export function DocFormScreen({
         destructive
         onConfirm={() => {
           setConfirmAction(undefined);
-          void form.cancelDocument().then((ok) => {
-            if (ok) {
-              notify({
-                severity: 'success',
-                scope: 'page',
-                body: t('cancelledToast', 'Cancelled'),
-              });
-              reloadDocinfo();
-            }
-          });
+          void cancelAndNotify();
         }}
       />
       <ConfirmDialog
         open={confirmAction === 'delete'}
-        onOpenChange={(open) => !open && setConfirmAction(undefined)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmAction(undefined);
+          }
+        }}
         title={t('deleteConfirmTitle', 'Delete {{doctype}} {{name}}?', {
           doctype,
           name: title,
@@ -1054,23 +1123,13 @@ export function DocFormScreen({
         destructive
         onConfirm={() => {
           setConfirmAction(undefined);
-          void form.remove().then((ok) => {
-            if (ok) {
-              invalidateDocinfo(doctype, name);
-              emitEvent({ type: 'doc-deleted', doctype, name });
-              if (onDeleted) {
-                onDeleted();
-              } else {
-                navigator.replace(paths.list(doctype));
-              }
-            }
-          });
+          void removeAndLeave();
         }}
       />
 
       {/* Unsaved-changes nav guard (in-app navigate() + router-level back) */}
       <ConfirmDialog
-        open={!!pendingNav || backGuard.blocked}
+        open={present(pendingNav) || backGuard.blocked}
         onOpenChange={(open) => {
           if (open) {
             return;
@@ -1089,7 +1148,7 @@ export function DocFormScreen({
           }
           const target = pendingNav;
           setPendingNav(undefined);
-          if (target) {
+          if (present(target)) {
             navigator.navigate(target);
           }
         }}
@@ -1110,18 +1169,22 @@ export function DocFormScreen({
         defaultSubject={`${doctype}: ${title}`}
         onSend={(args) => {
           setEmailOpen(false);
-          if (!docName) {
+          if (!present(docName)) {
             return;
           }
-          void sendEmail(createHttpClient(connection), {
-            doctype,
-            name: docName,
-            ...args,
-          })
-            .catch(() => {
+          const send = async () => {
+            try {
+              await sendEmail(createHttpClient(connection), {
+                doctype,
+                name: docName,
+                ...args,
+              });
+            } catch {
               // Email failures surface in the refreshed timeline / bench logs.
-            })
-            .finally(reloadDocinfo);
+            }
+            reloadDocinfo();
+          };
+          void send();
         }}
       />
       <JumpToFieldDialog
@@ -1132,4 +1195,4 @@ export function DocFormScreen({
       />
     </YStack>
   );
-}
+};

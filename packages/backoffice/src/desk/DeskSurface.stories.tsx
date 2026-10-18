@@ -1,17 +1,17 @@
+import { InMemoryFixtureProvider } from '@repo/frappe';
+import { sizeRecipeEscape } from '@repo/theme';
 // OWNER: backoffice screens workstream (MPO-189).
 // DeskSurface stories: the target→surface switch. One arm per DeskTarget
 // kind, so the whole dispatch table is visible in one place, plus the
 // override registry (per-kind and per-doctype).
 //
 // Everything rides fixtures: doctype meta through the fixture provider's
-// "DocType" collection (shared/useDoctypeMeta's fixture branch), rows and
+// "DocType" collection (shared/use-doctype-meta's fixture branch), rows and
 // Workspace docs through the same InMemoryFixtureProvider. Query reports
 // are the one surface with no fixture branch — they run three desk RPCs —
 // so a fetch mock scoped to this story's mock host answers those and keeps
 // every arm off the network.
 import { Text, YStack } from '@repo/ui';
-import { InMemoryFixtureProvider } from '@repo/frappe';
-import { sizeRecipeEscape } from '@repo/theme';
 import type { ReactNode } from 'react';
 
 import { BackofficeProvider } from '../config/BackofficeProvider';
@@ -139,6 +139,8 @@ const makeFixtures = () =>
 // once; stories only run on web. Same precedent as DeskShell.stories.
 // ---------------------------------------------------------------------------
 
+const REPORT_NAME = 'Open Tasks';
+
 const reportColumns = [
   { label: 'Task', fieldname: 'task', fieldtype: 'Data', width: '140' },
   { label: 'Status', fieldname: 'status', fieldtype: 'Data', width: '110' },
@@ -153,46 +155,46 @@ const reportRows = taskDocs.map((doc, i) => ({
   age: (i * 3) % 41,
 }));
 
-function jsonResponse(body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  return input instanceof Request ? input.url : input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w = globalThis as typeof globalThis & { __deskSurfaceMockFetch?: boolean };
   if (w.__deskSurfaceMockFetch) {
     return;
   }
   w.__deskSurfaceMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (!urlStr.startsWith(MOCK_HOST)) {
       return await realFetch(input as RequestInfo, init);
     }
     const { pathname } = new URL(urlStr);
     if (pathname.endsWith('frappe.desk.query_report.run')) {
-      return jsonResponse({ message: { columns: reportColumns, result: reportRows } });
+      return Response.json({ message: { columns: reportColumns, result: reportRows } });
     }
     if (pathname.endsWith('frappe.desk.query_report.get_script')) {
-      return jsonResponse({ message: { script: null } });
+      return Response.json({ message: { script: null } });
     }
     if (pathname.endsWith('frappe.client.get')) {
-      return jsonResponse({
-        message: { name: 'Open Tasks', report_name: 'Open Tasks', ref_doctype: TASK_DOCTYPE },
+      return Response.json({
+        message: { name: REPORT_NAME, report_name: REPORT_NAME, ref_doctype: TASK_DOCTYPE },
       });
     }
     // No session against the inert mock host: get_logged_user must answer
     // null, not a truthy docname (BackofficeShell.stories precedent).
     if (pathname.endsWith('frappe.auth.get_logged_user')) {
-      return jsonResponse({ message: null });
+      return Response.json({ message: null });
     }
-    return jsonResponse({ data: [], message: [] });
+    return Response.json({ data: [], message: [] });
   };
 })();
 
@@ -200,20 +202,18 @@ function jsonResponse(body: unknown): Response {
 // Harness
 // ---------------------------------------------------------------------------
 
-function Surface({ target, children }: { target?: DeskTarget; children?: ReactNode }) {
-  return (
-    <BackofficeProvider
-      frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
-      navigation={createMemoryNavigator('/backoffice')}>
-      <YStack
-        flex={1}
-        height={frameHeight}
-        minHeight={0}>
-        {children ?? (target ? <DeskSurface target={target} /> : null)}
-      </YStack>
-    </BackofficeProvider>
-  );
-}
+const Surface = ({ target, children }: { target?: DeskTarget; children?: ReactNode }) => (
+  <BackofficeProvider
+    frappe={{ baseURL: MOCK_HOST, fixtures: makeFixtures() }}
+    navigation={createMemoryNavigator('/backoffice')}>
+    <YStack
+      flex={1}
+      height={frameHeight}
+      minHeight={0}>
+      {children ?? (target ? <DeskSurface target={target} /> : null)}
+    </YStack>
+  </BackofficeProvider>
+);
 
 // ---------------------------------------------------------------------------
 // One arm per DeskTarget kind
@@ -247,7 +247,7 @@ export const NewDocument = () => (
 export const Form = () => <Surface target={{ kind: 'form', doctype: TASK_DOCTYPE, name: firstTaskName }} />;
 
 /** kind "report" — a Query/Script Report, served by the scoped RPC mock. */
-export const Report = () => <Surface target={{ kind: 'report', reportName: 'Open Tasks' }} />;
+export const Report = () => <Surface target={{ kind: 'report', reportName: REPORT_NAME }} />;
 
 /** kind "not-found" — a dead address. */
 export const NotFound = () => <Surface target={{ kind: 'not-found', slug: 'no-such-doctype' }} />;
@@ -263,21 +263,19 @@ export const Loading = () => (
 // Override registry
 // ---------------------------------------------------------------------------
 
-function TargetCard({ target }: DeskSurfaceProps) {
-  return (
-    <YStack
-      flex={1}
-      padding="$4"
-      gap="$2"
-      borderWidth={1}
-      borderColor="$borderColor"
-      borderRadius="$3"
-      backgroundColor="$color2">
-      <Text>{`host surface for kind "${target.kind}"`}</Text>
-      <Text>{JSON.stringify(target)}</Text>
-    </YStack>
-  );
-}
+const TargetCard = ({ target }: DeskSurfaceProps) => (
+  <YStack
+    flex={1}
+    padding="$4"
+    gap="$2"
+    borderWidth={1}
+    borderColor="$borderColor"
+    borderRadius="$3"
+    backgroundColor="$color2">
+    <Text>{`host surface for kind "${target.kind}"`}</Text>
+    <Text>{JSON.stringify(target)}</Text>
+  </YStack>
+);
 
 /**
  * Per-kind override: the host replaces the whole list surface. The override

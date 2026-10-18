@@ -14,6 +14,9 @@
 // text-entry control, which rings the whole SearchInput box). COMMIT-class
 // dismissal (LC-21): picking a row commits and closes; otherwise only
 // backdrop click / Escape / Mod+K dismiss.
+import { SearchInput } from '@repo/forms';
+import { addToRecent } from '@repo/frappe-ui';
+import { menuRowFrame, useLayoutSizeClass, useReadableTextOn, useResolvedKnobs } from '@repo/theme';
 import {
   Dialog,
   DialogContent,
@@ -26,9 +29,6 @@ import {
   YStack,
   isWeb,
 } from '@repo/ui';
-import { SearchInput } from '@repo/forms';
-import { addToRecent } from '@repo/frappe-ui';
-import { menuRowFrame, useLayoutSizeClass, useReadableTextOn, useResolvedKnobs } from '@repo/theme';
 import type { ComponentProps, ReactNode, RefObject } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,6 +52,9 @@ const LISTBOX_ID = 'backoffice-command-palette-listbox';
 
 const optionId = (index: number) => `backoffice-command-palette-option-${index}`;
 
+/** Selected-row fill (LC-71 SELECTED channel). */
+const ACCENT_BACKGROUND = '$accentBackground';
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -61,7 +64,331 @@ export interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+// ---------------------------------------------------------------------------
+// Match highlighting (Linear / Spotlight: bold the matched run)
+// ---------------------------------------------------------------------------
+
+const HighlightedText = ({
+  text,
+  query,
+  color,
+  fontSize,
+  opacity,
+}: {
+  text: string;
+  query: string;
+  color?: string;
+  fontSize?: string;
+  opacity?: number;
+}) => {
+  const { knobProps } = useResolvedKnobs();
+  const indices = query ? matchQueryIndices(query, text) : [];
+  const matchSet = new Set(indices);
+  if (!matchSet.size) {
+    return (
+      <Text
+        numberOfLines={1}
+        color={color}
+        fontSize={fontSize}
+        opacity={opacity}
+        {...knobProps.body}>
+        {text}
+      </Text>
+    );
+  }
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    const isMatch = matchSet.has(cursor);
+    let end = cursor + 1;
+    while (end < text.length && matchSet.has(end) === isMatch) {
+      end += 1;
+    }
+    nodes.push(
+      <Text
+        key={cursor}
+        fontWeight={isMatch ? '700' : '400'}
+        color={color}
+        fontSize={fontSize}
+        opacity={opacity}
+        {...(isMatch ? { 'data-match': 'true' } : {})}>
+        {text.slice(cursor, end)}
+      </Text>,
+    );
+    cursor = end;
+  }
+  return (
+    <Text
+      numberOfLines={1}
+      color={color}
+      fontSize={fontSize}
+      opacity={opacity}
+      {...knobProps.body}>
+      {nodes}
+    </Text>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Shared section list (one renderer for both containers)
+// ---------------------------------------------------------------------------
+
+interface PaletteResultsProps {
+  model: CommandPaletteModel;
+  highlight: number;
+  onHighlight: (index: number) => void;
+  onActivate: (item: CommandPaletteItem) => void;
+  itemNodesRef: RefObject<unknown[]>;
+}
+
+const PaletteResults = ({ model, highlight, onHighlight, onActivate, itemNodesRef }: PaletteResultsProps) => {
+  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
+  const { knobProps } = useResolvedKnobs();
+  // LC-71 SELECTED channel: the roving highlight is fill, never a ring
+  // (combobox focus stays on the search input). Accent + readable ink
+  // (LC-05) so selected + unselected stay one emphasis system.
+  const onAccent = useReadableTextOn(ACCENT_BACKGROUND);
+  const { sections, searching, hasQuery, noResults, query } = model;
+
+  let flatIndex = -1;
+
+  return (
+    <>
+      {sections.map((section) => (
+        <YStack
+          key={section.id}
+          data-testid={`backoffice-palette-section-${section.id}`}>
+          <Text
+            fontSize="$1"
+            color="$color10"
+            textTransform="uppercase"
+            letterSpacing={0.5}
+            paddingHorizontal="$3"
+            paddingTop="$2.5"
+            paddingBottom="$1.5"
+            // Sticky headers (Linear): stay visible while the section scrolls.
+            {...(isWeb
+              ? ({
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                  backgroundColor: '$background',
+                } as const)
+              : {})}
+            {...knobProps.body}>
+            {section.label}
+          </Text>
+          {section.items.map((item) => {
+            // oxlint-disable-next-line react/immutability -- render-local running index across sections, reset every render
+            flatIndex += 1;
+            const index = flatIndex;
+            const highlighted = index === highlight;
+            const Icon = item.icon;
+            const accentInk = highlighted && onAccent !== undefined && onAccent !== '' ? onAccent : undefined;
+            const ink = accentInk ?? '$color12';
+            const muted = accentInk ?? '$color10';
+            return (
+              <XStack
+                key={item.id}
+                id={optionId(index)}
+                ref={
+                  // SAFETY: the node is only stored (web element / native view) and read back by the scroll effect.
+                  // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-unknown-parameters -- see SAFETY above
+                  ((node: unknown) => {
+                    itemNodesRef.current[index] = node;
+                  }) as never
+                }
+                // SAFETY: Tamagui's role union lacks "option"; web renders the ARIA role verbatim.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+                role={'option' as 'listitem'}
+                aria-selected={highlighted}
+                data-highlighted={highlighted ? 'true' : undefined}
+                {...menuRowFrame}
+                gap="$2.5"
+                paddingVertical="$2"
+                minHeight={ROW_MIN_HEIGHT}
+                cursor="pointer"
+                backgroundColor={highlighted ? ACCENT_BACKGROUND : 'transparent'}
+                hoverStyle={{
+                  backgroundColor: highlighted ? ACCENT_BACKGROUND : '$color3',
+                }}
+                pressStyle={{ backgroundColor: ACCENT_BACKGROUND }}
+                onPress={() => {
+                  onActivate(item);
+                }}
+                onMouseEnter={() => {
+                  onHighlight(index);
+                }}>
+                {/* LC-08: one uniform leading media slot */}
+                <XStack
+                  width="$1"
+                  justifyContent="center"
+                  flexShrink={0}>
+                  <Icon
+                    size={16}
+                    color={accentInk}
+                  />
+                </XStack>
+                <YStack
+                  flex={1}
+                  minWidth={0}>
+                  <HighlightedText
+                    text={item.label}
+                    query={query}
+                    color={ink}
+                    fontSize="$3"
+                  />
+                  {item.description !== undefined && item.description !== '' ? (
+                    <HighlightedText
+                      text={item.description}
+                      query={query}
+                      color={muted}
+                      fontSize="$2"
+                      opacity={highlighted ? 0.8 : 1}
+                    />
+                  ) : null}
+                </YStack>
+                {item.badge !== undefined && item.badge !== '' ? (
+                  <XStack
+                    borderWidth={1}
+                    borderColor={accentInk ?? '$borderColor'}
+                    borderRadius="$2"
+                    paddingHorizontal="$1.5"
+                    paddingVertical="$1"
+                    flexShrink={0}
+                    opacity={highlighted ? 0.9 : 1}>
+                    <Text
+                      fontSize="$1"
+                      color={accentInk ?? '$color10'}
+                      {...knobProps.body}>
+                      {item.badge}
+                    </Text>
+                  </XStack>
+                ) : null}
+              </XStack>
+            );
+          })}
+        </YStack>
+      ))}
+
+      {hasQuery && searching && (
+        <XStack
+          alignItems="center"
+          gap="$2.5"
+          paddingHorizontal="$3"
+          paddingVertical="$2">
+          <Spinner
+            size="small"
+            color="$color10"
+          />
+          <Text
+            fontSize="$2"
+            color="$color10"
+            {...knobProps.body}>
+            {t('awesomebar.searching', 'Searching…')}
+          </Text>
+        </XStack>
+      )}
+
+      {noResults && (
+        <XStack
+          paddingHorizontal="$3"
+          paddingVertical="$3">
+          <Text
+            fontSize="$2"
+            color="$color10"
+            {...knobProps.body}>
+            {t('awesomebar.noResults', {
+              defaultValue: 'No results for “{{query}}”',
+              query: model.query,
+            })}
+          </Text>
+        </XStack>
+      )}
+
+      {!hasQuery && sections.length === 0 && (
+        <XStack
+          paddingHorizontal="$3"
+          paddingVertical="$3">
+          <Text
+            fontSize="$2"
+            color="$color10"
+            {...knobProps.body}>
+            {t('awesomebar.empty', 'Type to search…')}
+          </Text>
+        </XStack>
+      )}
+    </>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Footer hint bar (overlay container only — keyboard hints, DG discoverable)
+// ---------------------------------------------------------------------------
+
+const KeyCap = ({ label }: { label: string }) => (
+  <XStack
+    borderWidth={1}
+    borderColor="$borderColor"
+    backgroundColor="$color2"
+    borderRadius="$2"
+    paddingHorizontal="$1.5"
+    justifyContent="center">
+    <SizableText
+      size="$1"
+      fontWeight="600"
+      color="$color11">
+      {label}
+    </SizableText>
+  </XStack>
+);
+
+const PaletteFooter = () => {
+  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
+  return (
+    <XStack
+      alignItems="center"
+      gap="$3"
+      paddingHorizontal="$3"
+      paddingVertical="$2"
+      borderTopWidth={1}
+      borderTopColor="$borderColor">
+      <XStack
+        alignItems="center"
+        gap="$1.5">
+        <KeyCap label="↑↓" />
+        <SizableText
+          size="$1"
+          color="$color10">
+          {t('awesomebar.hintNavigate', 'navigate')}
+        </SizableText>
+      </XStack>
+      <XStack
+        alignItems="center"
+        gap="$1.5">
+        <KeyCap label="↵" />
+        <SizableText
+          size="$1"
+          color="$color10">
+          {t('awesomebar.hintOpen', 'open')}
+        </SizableText>
+      </XStack>
+      <XStack
+        alignItems="center"
+        gap="$1.5">
+        <KeyCap label="esc" />
+        <SizableText
+          size="$1"
+          color="$color10">
+          {t('awesomebar.hintClose', 'close')}
+        </SizableText>
+      </XStack>
+    </XStack>
+  );
+};
+
+// oxlint-disable-next-line react-doctor/no-giant-component -- one palette state machine (focus capture, roving highlight, commit) shared by both containers
+export const CommandPalette = ({ open, onOpenChange }: CommandPaletteProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const navigator = useBackofficeNavigator();
   const { knobProps } = useResolvedKnobs();
@@ -81,9 +408,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // the overlay mounts and moves focus), restore on close. ─────────────────
   const restoreFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
+  // oxlint-disable-next-line react/refs -- D-22 render-phase capture: focus must be read before the overlay mounts and steals it
   if (open && !wasOpenRef.current && isWeb && typeof document !== 'undefined') {
+    // oxlint-disable-next-line react/refs -- see D-22 above
     restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   }
+  // oxlint-disable-next-line react/refs -- see D-22 above
   wasOpenRef.current = open;
 
   const close = useCallback(() => {
@@ -126,7 +456,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // its own on web and settles on the first pass.
   useEffect(() => {
     if (!open || !isWeb || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
     let raf = 0;
@@ -152,14 +483,18 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // Keep the highlight on a real row as results stream in/out.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- streamed results arrive from the model; clamping on render would fight the roving highlight's own updates
     setHighlight((current) => (current < items.length ? current : 0));
   }, [items]);
 
   // Keep the keyboard-highlighted row scrolled into view (web).
+  // oxlint-disable-next-line react-doctor/no-effect-chain -- scrolling is a DOM side effect, not derived state
   useEffect(() => {
     if (!isWeb) {
       return;
     }
+    // SAFETY: on web the row ref callbacks store DOM elements (or null on unmount).
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     const node = itemNodesRef.current[highlight] as HTMLElement | undefined | null;
     node?.scrollIntoView?.({ block: 'nearest' });
   }, [highlight]);
@@ -189,10 +524,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // ── Input key handling (roving highlight, commit, dismiss, Linear toggle)
   const handleKeyDown = useCallback(
+    // oxlint-disable-next-line eslint/complexity -- one flat key switch (roving highlight, commit, dismiss, tab trap)
     (event: { key?: string; nativeEvent?: { key?: string }; preventDefault?: () => void }) => {
       const key = event.key ?? event.nativeEvent?.key;
+      // SAFETY: on web the input forwards the DOM KeyboardEvent; native events lack the modifier flags, which read falsy.
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
       const native = event as unknown as KeyboardEvent;
-      const withMod = Boolean(native.metaKey || native.ctrlKey);
+      const withMod = native.metaKey || native.ctrlKey;
       if (withMod && !native.altKey && !native.shiftKey) {
         const chord = key?.toLowerCase();
         if (chord === 'k' || chord === 'g') {
@@ -233,7 +571,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   // case where focus is outside the input (list-tools-sheet precedent).
   useEffect(() => {
     if (!asSheet || !isWeb || typeof document === 'undefined' || !open) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -244,6 +583,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- `close` is a stable useCallback; re-subscribing only happens when onOpenChange changes
   }, [asSheet, open, close]);
 
   const handleChange = useCallback((text: string) => {
@@ -260,8 +600,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     setHighlight(0);
   }, []);
 
-  const activeOptionId = items[highlight] ? optionId(highlight) : undefined;
+  const activeOptionId = highlight < items.length ? optionId(highlight) : undefined;
 
+  // SAFETY: SearchInput's inputProps type omits the DOM combobox ARIA attributes the web input accepts.
   const inputProps = useMemo(
     () =>
       ({
@@ -326,6 +667,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         }>
         <YStack
           id={LISTBOX_ID}
+          // SAFETY: Tamagui's role union lacks "listbox"; web renders the ARIA role verbatim.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
           role={'listbox' as 'list'}
           aria-label={t('awesomebar.results', 'Search results')}
           paddingBottom="$4"
@@ -379,6 +722,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <ScrollView maxHeight={RESULTS_MAX_HEIGHT}>
             <YStack
               id={LISTBOX_ID}
+              // SAFETY: Tamagui's role union lacks "listbox"; web renders the ARIA role verbatim.
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
               role={'listbox' as 'list'}
               aria-label={t('awesomebar.results', 'Search results')}>
               {results}
@@ -389,323 +734,4 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       </Dialog.Portal>
     </Dialog>
   );
-}
-
-// ---------------------------------------------------------------------------
-// Match highlighting (Linear / Spotlight: bold the matched run)
-// ---------------------------------------------------------------------------
-
-function HighlightedText({
-  text,
-  query,
-  color,
-  fontSize,
-  opacity,
-}: {
-  text: string;
-  query: string;
-  color?: string;
-  fontSize?: string;
-  opacity?: number;
-}) {
-  const { knobProps } = useResolvedKnobs();
-  const indices = query ? matchQueryIndices(query, text) : [];
-  const matchSet = new Set(indices ?? []);
-  if (!matchSet.size) {
-    return (
-      <Text
-        numberOfLines={1}
-        color={color}
-        fontSize={fontSize}
-        opacity={opacity}
-        {...knobProps.body}>
-        {text}
-      </Text>
-    );
-  }
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  while (cursor < text.length) {
-    const isMatch = matchSet.has(cursor);
-    let end = cursor + 1;
-    while (end < text.length && matchSet.has(end) === isMatch) {
-      end += 1;
-    }
-    nodes.push(
-      <Text
-        key={cursor}
-        fontWeight={isMatch ? '700' : '400'}
-        color={color}
-        fontSize={fontSize}
-        opacity={opacity}
-        {...(isMatch ? { 'data-match': 'true' } : {})}>
-        {text.slice(cursor, end)}
-      </Text>,
-    );
-    cursor = end;
-  }
-  return (
-    <Text
-      numberOfLines={1}
-      color={color}
-      fontSize={fontSize}
-      opacity={opacity}
-      {...knobProps.body}>
-      {nodes}
-    </Text>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Shared section list (one renderer for both containers)
-// ---------------------------------------------------------------------------
-
-interface PaletteResultsProps {
-  model: CommandPaletteModel;
-  highlight: number;
-  onHighlight: (index: number) => void;
-  onActivate: (item: CommandPaletteItem) => void;
-  itemNodesRef: RefObject<unknown[]>;
-}
-
-function PaletteResults({ model, highlight, onHighlight, onActivate, itemNodesRef }: PaletteResultsProps) {
-  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
-  const { knobProps } = useResolvedKnobs();
-  // LC-71 SELECTED channel: the roving highlight is fill, never a ring
-  // (combobox focus stays on the search input). Accent + readable ink
-  // (LC-05) so selected + unselected stay one emphasis system.
-  const onAccent = useReadableTextOn('$accentBackground');
-  const { sections, searching, hasQuery, noResults, query } = model;
-
-  let flatIndex = -1;
-
-  return (
-    <>
-      {sections.map((section) => (
-        <YStack
-          key={section.id}
-          data-testid={`backoffice-palette-section-${section.id}`}>
-          <Text
-            fontSize="$1"
-            color="$color10"
-            textTransform="uppercase"
-            letterSpacing={0.5}
-            paddingHorizontal="$3"
-            paddingTop="$2.5"
-            paddingBottom="$1.5"
-            // Sticky headers (Linear): stay visible while the section scrolls.
-            {...(isWeb
-              ? ({
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
-                  backgroundColor: '$background',
-                } as const)
-              : {})}
-            {...knobProps.body}>
-            {section.label}
-          </Text>
-          {section.items.map((item) => {
-            flatIndex += 1;
-            const index = flatIndex;
-            const highlighted = index === highlight;
-            const Icon = item.icon;
-            const ink = highlighted && onAccent ? onAccent : '$color12';
-            const muted = highlighted && onAccent ? onAccent : '$color10';
-            return (
-              <XStack
-                key={item.id}
-                id={optionId(index)}
-                ref={
-                  ((node: unknown) => {
-                    itemNodesRef.current[index] = node;
-                  }) as never
-                }
-                role={'option' as 'listitem'}
-                aria-selected={highlighted}
-                data-highlighted={highlighted ? 'true' : undefined}
-                {...menuRowFrame}
-                gap="$2.5"
-                paddingVertical="$2"
-                minHeight={ROW_MIN_HEIGHT}
-                cursor="pointer"
-                backgroundColor={highlighted ? '$accentBackground' : 'transparent'}
-                hoverStyle={{
-                  backgroundColor: highlighted ? '$accentBackground' : '$color3',
-                }}
-                pressStyle={{ backgroundColor: '$accentBackground' }}
-                onPress={() => {
-                  onActivate(item);
-                }}
-                onMouseEnter={() => {
-                  onHighlight(index);
-                }}>
-                {/* LC-08: one uniform leading media slot */}
-                <XStack
-                  width="$1"
-                  justifyContent="center"
-                  flexShrink={0}>
-                  <Icon
-                    size={16}
-                    color={highlighted && onAccent ? onAccent : undefined}
-                  />
-                </XStack>
-                <YStack
-                  flex={1}
-                  minWidth={0}>
-                  <HighlightedText
-                    text={item.label}
-                    query={query}
-                    color={ink}
-                    fontSize="$3"
-                  />
-                  {item.description ? (
-                    <HighlightedText
-                      text={item.description}
-                      query={query}
-                      color={muted}
-                      fontSize="$2"
-                      opacity={highlighted ? 0.8 : 1}
-                    />
-                  ) : null}
-                </YStack>
-                {item.badge ? (
-                  <XStack
-                    borderWidth={1}
-                    borderColor={highlighted && onAccent ? onAccent : '$borderColor'}
-                    borderRadius="$2"
-                    paddingHorizontal="$1.5"
-                    paddingVertical="$1"
-                    flexShrink={0}
-                    opacity={highlighted ? 0.9 : 1}>
-                    <Text
-                      fontSize="$1"
-                      color={highlighted && onAccent ? onAccent : '$color10'}
-                      {...knobProps.body}>
-                      {item.badge}
-                    </Text>
-                  </XStack>
-                ) : null}
-              </XStack>
-            );
-          })}
-        </YStack>
-      ))}
-
-      {hasQuery && searching && (
-        <XStack
-          alignItems="center"
-          gap="$2.5"
-          paddingHorizontal="$3"
-          paddingVertical="$2">
-          <Spinner
-            size="small"
-            color="$color10"
-          />
-          <Text
-            fontSize="$2"
-            color="$color10"
-            {...knobProps.body}>
-            {t('awesomebar.searching', 'Searching…')}
-          </Text>
-        </XStack>
-      )}
-
-      {noResults && (
-        <XStack
-          paddingHorizontal="$3"
-          paddingVertical="$3">
-          <Text
-            fontSize="$2"
-            color="$color10"
-            {...knobProps.body}>
-            {t('awesomebar.noResults', {
-              defaultValue: 'No results for “{{query}}”',
-              query: model.query,
-            })}
-          </Text>
-        </XStack>
-      )}
-
-      {!hasQuery && sections.length === 0 && (
-        <XStack
-          paddingHorizontal="$3"
-          paddingVertical="$3">
-          <Text
-            fontSize="$2"
-            color="$color10"
-            {...knobProps.body}>
-            {t('awesomebar.empty', 'Type to search…')}
-          </Text>
-        </XStack>
-      )}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Footer hint bar (overlay container only — keyboard hints, DG discoverable)
-// ---------------------------------------------------------------------------
-
-function KeyCap({ label }: { label: string }) {
-  return (
-    <XStack
-      borderWidth={1}
-      borderColor="$borderColor"
-      backgroundColor="$color2"
-      borderRadius="$2"
-      paddingHorizontal="$1.5"
-      justifyContent="center">
-      <SizableText
-        size="$1"
-        fontWeight="600"
-        color="$color11">
-        {label}
-      </SizableText>
-    </XStack>
-  );
-}
-
-function PaletteFooter() {
-  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
-  return (
-    <XStack
-      alignItems="center"
-      gap="$3"
-      paddingHorizontal="$3"
-      paddingVertical="$2"
-      borderTopWidth={1}
-      borderTopColor="$borderColor">
-      <XStack
-        alignItems="center"
-        gap="$1.5">
-        <KeyCap label="↑↓" />
-        <SizableText
-          size="$1"
-          color="$color10">
-          {t('awesomebar.hintNavigate', 'navigate')}
-        </SizableText>
-      </XStack>
-      <XStack
-        alignItems="center"
-        gap="$1.5">
-        <KeyCap label="↵" />
-        <SizableText
-          size="$1"
-          color="$color10">
-          {t('awesomebar.hintOpen', 'open')}
-        </SizableText>
-      </XStack>
-      <XStack
-        alignItems="center"
-        gap="$1.5">
-        <KeyCap label="esc" />
-        <SizableText
-          size="$1"
-          color="$color10">
-          {t('awesomebar.hintClose', 'close')}
-        </SizableText>
-      </XStack>
-    </XStack>
-  );
-}
+};

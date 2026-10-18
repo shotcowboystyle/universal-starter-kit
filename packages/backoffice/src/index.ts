@@ -1,5 +1,5 @@
 /**
- * @repo/backoffice — embeddable Frappe desk recreation.
+ * The `@repo/backoffice` package — embeddable Frappe desk recreation.
  *
  * Mount BackofficeProvider (frappe connection + navigation adapter +
  * capability flags) around the surfaces you want; BackofficeShell is the
@@ -47,8 +47,8 @@ export { Desk } from './desk/Desk';
 export type { DeskChrome, DeskProps } from './desk/Desk';
 export { DeskSurface } from './desk/DeskSurface';
 export type { DeskSurfaceKind, DeskSurfaceOverride, DeskSurfaceOverrides, DeskSurfaceProps } from './desk/DeskSurface';
-export { resolveDeskPath } from './desk/resolveDeskPath';
-export type { DeskAddress, DeskViewParams } from './desk/resolveDeskPath';
+export { resolveDeskPath } from './desk/resolve-desk-path';
+export type { DeskAddress, DeskViewParams } from './desk/resolve-desk-path';
 export { guessDeskTarget, useDeskTarget } from './desk/target';
 export type { DeskPins, DeskTarget } from './desk/target';
 export { DeskScopeProvider, useDeskScope, useScopedFilters } from './desk/scope';
@@ -99,9 +99,9 @@ export type { SlugScreenProps } from './shell/SlugScreen';
 export { NotFoundScreen } from './shell/NotFoundScreen';
 export { WORKSPACE_SIDEBAR_WIDTH, WorkspaceSidebar } from './shell/WorkspaceSidebar';
 export type { WorkspaceSidebarProps } from './shell/WorkspaceSidebar';
-export { useDefaultWorkspace, useSessionUser, useWorkspaces } from './shell/useWorkspaces';
-export type { WorkspaceDoc, WorkspacesResult } from './shell/useWorkspaces';
-export { workspaceIcon } from './shell/workspaceIcons';
+export { useDefaultWorkspace, useSessionUser, useWorkspaces } from './shell/use-workspaces';
+export type { WorkspaceDoc, WorkspacesResult } from './shell/use-workspaces';
+export { workspaceIcon } from './shell/workspace-icons';
 
 // Chrome
 export { BackofficeAwesomebar } from './chrome/BackofficeAwesomebar';
@@ -150,23 +150,23 @@ export { useBackofficeShortcuts } from './chrome/shortcuts';
 export type { BackofficeShortcutHandlers } from './chrome/shortcuts';
 
 // Shared
-export { useFrappeApp } from './shared/useFrappeApp';
+export { useFrappeApp } from './shared/use-frappe-app';
 export type { FrappeFilter, FrappeFilters, SlugTarget } from './shared/types';
-export { useDoctypeMeta } from './shared/useDoctypeMeta';
+export { useDoctypeMeta } from './shared/use-doctype-meta';
 export type {
   DocFieldMeta,
   DocLinkMeta,
   DocPermissionRule,
   DoctypeMeta,
   DoctypeMetaBundle,
-} from './shared/useDoctypeMeta';
-export { invalidateDocinfo, useDocinfo } from './shared/useDocinfo';
-export type { DocInfo, DocInfoComment } from './shared/useDocinfo';
-export { useSlugTarget } from './shared/useSlugTarget';
-export { useUserRoles } from './shared/useUserRoles';
-export { useRecentVisit } from './shared/useRecentVisit';
-export type { RecentVisit } from './shared/useRecentVisit';
-export { useSessionUserId } from './shared/useSessionUserId';
+} from './shared/use-doctype-meta';
+export { invalidateDocinfo, useDocinfo } from './shared/use-docinfo';
+export type { DocInfo, DocInfoComment } from './shared/use-docinfo';
+export { useSlugTarget } from './shared/use-slug-target';
+export { useUserRoles } from './shared/use-user-roles';
+export { useRecentVisit } from './shared/use-recent-visit';
+export type { RecentVisit } from './shared/use-recent-visit';
+export { useSessionUserId } from './shared/use-session-user-id';
 
 // Workspace surface
 export type {
@@ -190,16 +190,16 @@ export {
   parseFrappeFilters,
   parseWorkspaceContent,
   stripHtml,
-} from './workspace/parseContent';
-export type { WorkspaceComposition } from './workspace/parseContent';
-export { useFrappeDoc, useWorkspaceDoc } from './workspace/useWorkspaceDoc';
-export type { UseFrappeDocResult } from './workspace/useWorkspaceDoc';
-export { useDashboardChartData } from './workspace/useDashboardChart';
+} from './workspace/parse-content';
+export type { WorkspaceComposition } from './workspace/parse-content';
+export { useFrappeDoc, useWorkspaceDoc } from './workspace/use-workspace-doc';
+export type { UseFrappeDocResult } from './workspace/use-workspace-doc';
+export { useDashboardChartData } from './workspace/use-dashboard-chart';
 export type {
   DashboardChartDoc,
   DashboardChartSeries,
   UseDashboardChartDataResult,
-} from './workspace/useDashboardChart';
+} from './workspace/use-dashboard-chart';
 export { WorkspaceGrid } from './workspace/WorkspaceGrid';
 export type { WorkspaceGridItem, WorkspaceGridProps } from './workspace/WorkspaceGrid';
 export { WorkspaceLinkCard, resolveLinkTarget } from './workspace/WorkspaceLinkCard';
@@ -239,7 +239,7 @@ export {
   useBeforeUnloadGuard,
   useNavigationDirtyGuard,
   useSaveShortcut,
-} from './form/platformHooks';
+} from './form/platform-hooks';
 export { useFormEngine } from './form/useFormEngine';
 export type { FormEngine } from './form/useFormEngine';
 export {
@@ -298,8 +298,8 @@ export {
   planQuickEntry,
   PROMPT_NAME_FIELD,
   resolveCreatedName,
-} from './quickEntry/quickEntryPlan';
-export type { ParsedServerError, QuickEntryPlan } from './quickEntry/quickEntryPlan';
+} from './quickEntry/quick-entry-plan';
+export type { ParsedServerError, QuickEntryPlan } from './quickEntry/quick-entry-plan';
 export { QuickEntryDialog } from './quickEntry/QuickEntryDialog';
 export type { QuickEntryDialogProps } from './quickEntry/QuickEntryDialog';
 
@@ -313,9 +313,9 @@ export {
   sameFilterTuple,
   tableStateToFrappeFilters,
   toggleFilterTuple,
-} from './list/filterConversion';
-export { bulkAddTag, bulkAssign, bulkDelete, toggleLike } from './list/bulkActions';
-export type { BulkFailure, BulkResult } from './list/bulkActions';
+} from './list/filter-conversion';
+export { bulkAddTag, bulkAssign, bulkDelete, toggleLike } from './list/bulk-actions';
+export type { BulkFailure, BulkResult } from './list/bulk-actions';
 export { listFieldsToFetch, listViewFields } from './list/listFields';
 export {
   defaultOperatorForKind,
@@ -396,21 +396,21 @@ export {
   detectSelectField,
   selectFieldOptions,
   useViewMeta,
-} from './views/viewMeta';
-export type { AnyDoc, DetectedCardFields, DetectedDateFields } from './views/viewMeta';
-export { useCalendarViewSettings, useKanbanBoard } from './views/deskViewConfigs';
+} from './views/view-meta';
+export type { AnyDoc, DetectedCardFields, DetectedDateFields } from './views/view-meta';
+export { useCalendarViewSettings, useKanbanBoard } from './views/desk-view-configs';
 export type {
   CalendarViewDoc,
   ConfigDocResult,
   KanbanBoardColumnConfig,
   KanbanBoardDoc,
-} from './views/deskViewConfigs';
+} from './views/desk-view-configs';
 export { useViewConnection } from './views/connection';
 export type { ViewConnection } from './views/connection';
 export { kanbanFieldCandidates, KanbanFieldPicker, preferredKanbanField } from './views/kanban-field-picker';
 export type { KanbanFieldOption, KanbanFieldPickerProps } from './views/kanban-field-picker';
-export { addKanbanColumn, createKanbanBoard, parseBoardFilters, setKanbanColumnStatus } from './views/kanbanBoardOps';
-export type { CreateKanbanBoardInput } from './views/kanbanBoardOps';
+export { addKanbanColumn, createKanbanBoard, parseBoardFilters, setKanbanColumnStatus } from './views/kanban-board-ops';
+export type { CreateKanbanBoardInput } from './views/kanban-board-ops';
 export { CreateBoardDialog, KanbanBoardEnd, KanbanBoardPicker, KanbanColumnMenu } from './views/kanban-board-controls';
 export type {
   CreateBoardDialogProps,
@@ -438,8 +438,8 @@ export type { ViewErrorProps, ViewUnsupportedProps } from './views/ViewStates';
 export { useAvailableViews, ViewHeader } from './views/ViewHeader';
 export { useViewLabels, ViewSwitcherMenu } from './views/ViewSwitcherMenu';
 export type { ViewSwitcherMenuProps } from './views/ViewSwitcherMenu';
-export { deriveAvailableViews, isViewSupported } from './views/viewAvailability';
-export type { DeriveAvailableViewsOptions } from './views/viewAvailability';
+export { deriveAvailableViews, isViewSupported } from './views/view-availability';
+export type { DeriveAvailableViewsOptions } from './views/view-availability';
 export type { ViewHeaderProps } from './views/ViewHeader';
 export { parseReportFiltersParam, ReportView } from './views/ReportView';
 export type { ReportViewProps } from './views/ReportView';
@@ -482,7 +482,7 @@ export type {
   QueryReportRunMessage,
   ScriptFilterExtraction,
 } from './report/reportShapes';
-export { parseQueryReportFiltersParam, serializeQueryReportFiltersParam } from './report/queryReportUrlState';
+export { parseQueryReportFiltersParam, serializeQueryReportFiltersParam } from './report/query-report-url-state';
 export { useQueryReport } from './report/useQueryReport';
 export type { UseQueryReportOptions, UseQueryReportResult } from './report/useQueryReport';
 export { buildQueryReportColumns } from './report/queryReportColumns';

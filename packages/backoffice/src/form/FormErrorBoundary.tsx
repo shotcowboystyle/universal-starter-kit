@@ -1,3 +1,5 @@
+import type { FieldSchema } from '@repo/frappe-ui';
+import { ensureCompositeFocusRing, useResolvedKnobs } from '@repo/theme';
 /**
  * Render-error containment for the backoffice form surfaces.
  *
@@ -28,8 +30,6 @@
  * back in the slot (never the blank route), a transient one recovers.
  */
 import { AsyncBoundary, Text, YStack } from '@repo/ui';
-import type { FieldSchema } from '@repo/frappe-ui';
-import { ensureCompositeFocusRing, useResolvedKnobs } from '@repo/theme';
 import React, { Component, useEffect } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,12 +52,12 @@ export interface FormErrorBoundaryProps {
 }
 
 interface FormErrorBoundaryState {
-  error: Error | undefined;
+  error: Error | null;
   /** Bumped on retry so the children subtree remounts from scratch. */
   resetNonce: number;
 }
 
-function FormErrorFallback({
+const FormErrorFallback = ({
   label,
   errorTitle,
   error,
@@ -69,7 +69,7 @@ function FormErrorFallback({
   error: Error;
   onRetry: () => void;
   testID?: string;
-}) {
+}) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   return (
@@ -77,7 +77,7 @@ function FormErrorFallback({
       {...knobProps.gap}
       minWidth={0}
       testID={testID}>
-      {label ? (
+      {label !== undefined && label !== '' ? (
         <Text
           fontSize="$3"
           fontWeight="400"
@@ -94,22 +94,27 @@ function FormErrorFallback({
       />
     </YStack>
   );
-}
+};
 
 export class FormErrorBoundary extends Component<FormErrorBoundaryProps, FormErrorBoundaryState> {
   static getDerivedStateFromError(error: Error): Partial<FormErrorBoundaryState> {
     return { error };
   }
 
-  state: FormErrorBoundaryState = { error: undefined, resetNonce: 0 };
+  constructor(props: FormErrorBoundaryProps) {
+    super(props);
+    this.state = { error: null, resetNonce: 0 };
+  }
 
+  // oxlint-disable-next-line eslint/class-methods-use-this -- React lifecycle method; it must live on the instance
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Contained, not swallowed: keep the signal for devs / e2e consoles.
     logger.warn('[backoffice] form render error contained', { error, errorInfo });
   }
 
   handleRetry = () => {
-    this.setState((prev) => ({ error: undefined, resetNonce: prev.resetNonce + 1 }));
+    // oxlint-disable-next-line react/no-set-state -- error boundaries can only be class components
+    this.setState((prev) => ({ error: null, resetNonce: prev.resetNonce + 1 }));
   };
 
   render() {
@@ -139,7 +144,7 @@ export class FormErrorBoundary extends Component<FormErrorBoundaryProps, FormErr
  * ring stylesheet so catalog fields ring the control box (never the inner
  * native field) and exposes `form-field-${name}` for desk Jump-to-field.
  */
-function FieldFocusShell({ field, children }: { field: FieldSchema; children: ReactNode }) {
+const FieldFocusShell = ({ field, children }: { field: FieldSchema; children: ReactNode }) => {
   useEffect(() => {
     ensureCompositeFocusRing();
   }, []);
@@ -153,17 +158,15 @@ function FieldFocusShell({ field, children }: { field: FieldSchema; children: Re
       {children}
     </YStack>
   );
-}
+};
 
-export function wrapFieldWithErrorBoundary(rendered: ReactNode, field: FieldSchema): ReactNode {
-  return (
-    <FieldFocusShell field={field}>
-      <FormErrorBoundary
-        key={field.name}
-        label={field.label}
-        testID={`form-field-error-${field.name}`}>
-        {rendered}
-      </FormErrorBoundary>
-    </FieldFocusShell>
-  );
-}
+export const wrapFieldWithErrorBoundary = (rendered: ReactNode, field: FieldSchema): ReactNode => (
+  <FieldFocusShell field={field}>
+    <FormErrorBoundary
+      key={field.name}
+      label={field.label}
+      testID={`form-field-error-${field.name}`}>
+      {rendered}
+    </FormErrorBoundary>
+  </FieldFocusShell>
+);

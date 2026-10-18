@@ -8,10 +8,11 @@
 // external creates/updates/deletes re-slot events without a reload.
 // Event click opens the form; day/slot click starts a new document
 // prefilled with the clicked date (`?d=` param on the /new route).
-import { XStack, YStack } from '@repo/ui';
+
 import { FrappeCalendar, useDocRights, useFrappeConfig } from '@repo/frappe-ui';
 import type { FrappeCalendarProps } from '@repo/frappe-ui';
 import { formatCalendarDate, useResolvedKnobs } from '@repo/theme';
+import { XStack, YStack } from '@repo/ui';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,12 +22,13 @@ import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
 import { CalendarFieldSelector, calendarDateFieldCandidates } from './calendar-field-selector';
 import { useViewConnection } from './connection';
-import { useCalendarViewSettings } from './deskViewConfigs';
-import { detectDateFields, useViewMeta } from './viewMeta';
-import type { AnyDoc } from './viewMeta';
+import { useCalendarViewSettings } from './desk-view-configs';
+import { detectDateFields, isHiddenField, useViewMeta } from './view-meta';
+import type { AnyDoc } from './view-meta';
 import { ViewError, ViewLoading, ViewUnsupported } from './ViewStates';
 
 // The `one` compiler breaks explicit JSX generics — instantiate once.
+// SAFETY: FrappeCalendar is generic over its doc type; this pins that parameter to AnyDoc.
 const CalendarOfDoc = FrappeCalendar as (props: FrappeCalendarProps<AnyDoc>) => ReactElement;
 
 /**
@@ -34,12 +36,11 @@ const CalendarOfDoc = FrappeCalendar as (props: FrappeCalendarProps<AnyDoc>) => 
  * Datetime → "YYYY-MM-DD HH:mm:ss", Date → "YYYY-MM-DD" — local time, the
  * same convention FrappeCalendar uses when persisting drag-moves.
  */
-function toFrappeDateValue(date: Date, fieldtype: string | undefined): string {
-  return formatCalendarDate(date, fieldtype === 'Datetime' ? 'datetime' : 'date');
-}
+const toFrappeDateValue = (date: Date, fieldtype: string | undefined): string =>
+  formatCalendarDate(date, fieldtype === 'Datetime' ? 'datetime' : 'date');
 
 export interface CalendarViewProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
   /** Date field override (`?field=` search param). */
   dateField?: string;
@@ -58,12 +59,13 @@ export interface CalendarViewProps {
   onSlotCreate?: (date: Date) => void;
 }
 
-export function CalendarView({
+// oxlint-disable-next-line eslint/complexity -- view orchestration: one early return per load state, then field resolution
+export const CalendarView = ({
   doctype,
   dateField: fieldOverride,
   onDateFieldChange,
   onSlotCreate,
-}: CalendarViewProps) {
+}: CalendarViewProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const deskScope = useDeskScope();
   const navigator = useBackofficeNavigator();
@@ -103,12 +105,12 @@ export function CalendarView({
   // instead of mixing a range across two different field pairs.
   const endDateField =
     dateField === settingsDoc?.start_date_field &&
-    settingsDoc?.end_date_field &&
+    settingsDoc?.end_date_field !== undefined &&
     candidateNames.has(settingsDoc.end_date_field)
       ? settingsDoc.end_date_field
       : detected.endDateField;
 
-  if (!dateField) {
+  if (dateField === undefined || dateField === '') {
     return (
       <ViewUnsupported
         doctype={doctype}
@@ -124,24 +126,20 @@ export function CalendarView({
   // must not leak an unknown column into the fields list (the list endpoint
   // rejects the whole query on unknown fields).
   const subjectField =
-    settingsDoc?.subject_field && meta.fields.some((f) => f.fieldname === settingsDoc.subject_field)
+    settingsDoc?.subject_field !== undefined && meta.fields.some((f) => f.fieldname === settingsDoc.subject_field)
       ? settingsDoc.subject_field
       : undefined;
   const titleField = subjectField ?? meta.title_field ?? undefined;
   // Desk colors event chips by the doc's Color field when one exists
   // (e.g. Event.color); FrappeCalendar computes readable chip text per fill.
-  const colorField = meta.fields.find((f) => f.fieldtype === 'Color' && !f.hidden)?.fieldname;
+  const colorField = meta.fields.find((f) => f.fieldtype === 'Color' && !isHiddenField(f))?.fieldname;
   // Date vs Datetime decides the prefill serialization on day/slot clicks.
   const dateFieldType = meta.fields.find((f) => f.fieldname === dateField)?.fieldtype;
-  const fields = [
-    ...new Set([
-      'name',
-      dateField,
-      ...(endDateField ? [endDateField] : []),
-      ...(titleField ? [titleField] : []),
-      ...(colorField ? [colorField] : []),
-    ]),
-  ] as readonly (keyof AnyDoc)[];
+  const optionalFields = [endDateField, titleField, colorField].filter(
+    (field): field is string => field !== undefined && field !== '',
+  );
+  // SAFETY: every entry is a fieldname of this doctype, and AnyDoc keys are its fieldnames.
+  const fields = [...new Set(['name', dateField, ...optionalFields])] as readonly (keyof AnyDoc)[];
 
   return (
     <YStack
@@ -184,8 +182,9 @@ export function CalendarView({
         showViewSwitcher
         enableEventDrag={rights.write}
         onEventClick={(doc) => {
-          if (doc.name) {
-            navigator.navigate(paths.form(doctype, doc.name));
+          const { name } = doc;
+          if (name != null && name !== '') {
+            navigator.navigate(paths.form(doctype, name));
           }
         }}
         // Desk parity: desk seeds its new-event form with the clicked day
@@ -201,6 +200,7 @@ export function CalendarView({
               }
             : undefined)
         }
+        // oxlint-disable-next-line react/no-unstable-nested-components -- render callback FrappeCalendar calls with the error, not a component type
         error={(err) => (
           <ViewError
             doctype={doctype}
@@ -210,4 +210,4 @@ export function CalendarView({
       />
     </YStack>
   );
-}
+};

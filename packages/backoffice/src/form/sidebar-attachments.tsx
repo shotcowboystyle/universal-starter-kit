@@ -1,4 +1,4 @@
-import { Button, Text, XStack, YStack, useTheme } from '@repo/ui';
+import { LockSimpleIcon, PaperclipIcon, UploadSimpleIcon, XIcon } from '@phosphor-icons/react';
 /**
  * Desk-style compact attachment rows for the form sidebar: private files get
  * a lock glyph, filenames open the file via the platform openUrl (new tab on
@@ -7,13 +7,13 @@ import { Button, Text, XStack, YStack, useTheme } from '@repo/ui';
  * document-picker gap).
  */
 import { useResolvedKnobs } from '@repo/theme';
-import { LockSimpleIcon, PaperclipIcon, UploadSimpleIcon, XIcon } from '@phosphor-icons/react';
+import { Button, Text, XStack, YStack, useTheme } from '@repo/ui';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { canOpenUrl, canPickFile, openUrl, pickFile, toAbsoluteUrl } from './sidebar-utils';
+import { canOpenUrl, canPickFile, openUrl, pickFile, sidebarRowScale, toAbsoluteUrl } from './sidebar-utils';
 
 export interface SidebarAttachmentItem {
   /** File doc name (remove_attach fid). */
@@ -35,26 +35,25 @@ export interface SidebarAttachmentsProps {
   onRemove?: (item: SidebarAttachmentItem) => void;
 }
 
-export function SidebarAttachments({
+export const SidebarAttachments = ({
   items,
   baseURL,
   maxAttachments,
   disabled,
   onUpload,
   onRemove,
-}: SidebarAttachmentsProps) {
+}: SidebarAttachmentsProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const theme = useTheme();
   // Phosphor icons take a resolved color string, not a tamagui token —
   // read the theme value so native/GTK get a real color (not a CSS var).
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme values are loosely typed tokens; only a string is a usable color
   const iconColor = typeof theme.color11?.val === 'string' ? theme.color11.val : undefined;
-  const sz = knobProps.sizeToken;
-  const fontSize = sz === '$3' ? '$1' : sz === '$5' ? '$4' : '$2';
-  const iconSize = sz === '$3' ? 12 : sz === '$5' ? 16 : 14;
+  const { fontSize, iconSize } = sidebarRowScale(knobProps.sizeToken);
   const linkable = canOpenUrl();
 
-  const atLimit = typeof maxAttachments === 'number' && maxAttachments > 0 && items.length >= maxAttachments;
+  const atLimit = maxAttachments !== undefined && maxAttachments > 0 && items.length >= maxAttachments;
   const showUpload = Boolean(onUpload) && canPickFile();
 
   const handlePick = async () => {
@@ -103,7 +102,9 @@ export function SidebarAttachments({
                         cursor: 'pointer',
                         textDecorationLine: 'underline',
                         role: 'link' as const,
-                        onPress: () => openUrl(url),
+                        onPress: () => {
+                          openUrl(url);
+                        },
                       }
                     : {})}>
                   {item.fileName}
@@ -141,10 +142,12 @@ export function SidebarAttachments({
                   disabledReason: t('attachmentLimit', 'Attachment limit reached'),
                 }
               : {})}
-            onPress={() => void handlePick()}>
+            onPress={() => {
+              void handlePick();
+            }}>
             {t('attachFile', 'Attach File')}
           </Button>
-          {typeof maxAttachments === 'number' && maxAttachments > 0 && (
+          {maxAttachments !== undefined && maxAttachments > 0 && (
             <Text
               fontSize="$1"
               color="$color11">
@@ -155,4 +158,4 @@ export function SidebarAttachments({
       )}
     </YStack>
   );
-}
+};

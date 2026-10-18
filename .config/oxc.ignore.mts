@@ -19,7 +19,6 @@ export const baseIgnorePatterns = [
   'apps/api/**',
   'apps/mobile/**',
   'apps/web/**',
-  'packages/backoffice/**',
   'packages/cli/**',
   'packages/config/**',
   'packages/desktop/**',

@@ -6,9 +6,7 @@
 // (calendar month/week/day, Pokemon image/list); seven doctype views as
 // segments dominated the toolbar. This is the desk shape: one trigger
 // showing the current view, the rest inside the menu, current check-marked.
-import { DropdownMenu } from '@repo/ui';
-import type { DropdownMenuEntry } from '@repo/ui';
-import { Button } from '@repo/forms';
+
 import {
   CalendarBlankIcon,
   CaretDownIcon,
@@ -20,6 +18,9 @@ import {
   TreeStructureIcon,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
+import { Button } from '@repo/forms';
+import { DropdownMenu } from '@repo/ui';
+import type { DropdownMenuEntry } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
@@ -36,7 +37,7 @@ const VIEW_ICONS: Record<BackofficeView, Icon> = {
   dashboard: SquaresFourIcon,
 };
 
-export function useViewLabels(): Record<BackofficeView, string> {
+export const useViewLabels = (): Record<BackofficeView, string> => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   return {
     list: t('views.list', 'List'),
@@ -47,7 +48,7 @@ export function useViewLabels(): Record<BackofficeView, string> {
     image: t('views.image', 'Image'),
     dashboard: t('views.dashboard', 'Dashboard'),
   };
-}
+};
 
 export interface ViewSwitcherMenuProps {
   views: readonly BackofficeView[];
@@ -60,7 +61,7 @@ export interface ViewSwitcherMenuProps {
  * Hidden when there is nothing to switch to. The current view is always
  * check-marked; picking another fires `onViewChange`.
  */
-export function ViewSwitcherMenu({ views, current, onViewChange }: ViewSwitcherMenuProps) {
+export const ViewSwitcherMenu = ({ views, current, onViewChange }: ViewSwitcherMenuProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const labels = useViewLabels();
   if (views.length <= 1) {
@@ -97,4 +98,4 @@ export function ViewSwitcherMenu({ views, current, onViewChange }: ViewSwitcherM
       </Button>
     </DropdownMenu>
   );
-}
+};

@@ -112,11 +112,11 @@ export interface UseCommandPaletteModelOptions {
   open: boolean;
 }
 
-export function useCommandPaletteModel({
+export const useCommandPaletteModel = ({
   query,
   debouncedQuery,
   open,
-}: UseCommandPaletteModelOptions): CommandPaletteModel {
+}: UseCommandPaletteModelOptions): CommandPaletteModel => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const paths = useBackofficePaths();
   const capabilities = useBackofficeCapabilities();
@@ -124,20 +124,23 @@ export function useCommandPaletteModel({
 
   const { catalog } = useAwesomebarCatalog();
   const { hits, searching } = useGlobalSearch(debouncedQuery);
-  const [recent, setRecents] = useState<RecentItem[]>([]);
+  const [recents, setRecents] = useState<RecentItem[]>([]);
 
   // Fresh recent on every open (another surface may have pushed a visit
   // since the last open).
   useEffect(() => {
     if (!open) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
-    void readRecentItems().then((stored) => {
+    const load = async () => {
+      const stored = await readRecentItems();
       if (!cancelled) {
         setRecents(stored);
       }
-    });
+    };
+    void load();
     return () => {
       cancelled = true;
     };
@@ -145,13 +148,14 @@ export function useCommandPaletteModel({
 
   const trimmed = query.trim();
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one linear pass building the four palette sections in order; splitting it scatters the shared ranking state
   const sections = useMemo<CommandPaletteSection[]>(() => {
     const next: CommandPaletteSection[] = [];
 
     // ── Recents ──────────────────────────────────────────────────────────
     const matchingRecents = trimmed
-      ? recent.filter((recent) => matchQueryIndices(trimmed, recent.label) !== null).slice(0, maxRecentsWithQuery)
-      : recent.slice(0, maxRecentsEmptyQuery);
+      ? recents.filter((recent) => matchQueryIndices(trimmed, recent.label) !== null).slice(0, maxRecentsWithQuery)
+      : recents.slice(0, maxRecentsEmptyQuery);
     if (matchingRecents.length > 0) {
       next.push({
         id: 'recent',
@@ -168,7 +172,7 @@ export function useCommandPaletteModel({
     if (trimmed) {
       const scopedDoctypes = (catalog?.doctypes ?? []).filter(isDoctypeAllowed);
       const rankedDoctypes = rankNameMatches(trimmed, scopedDoctypes, maxNavDoctypes + 1);
-      const topDoctype = rankedDoctypes[0];
+      const [topDoctype] = rankedDoctypes;
 
       // ── Actions: contextual commands for the best doctype match ────────
       const actionItems: CommandPaletteItem[] = [];
@@ -271,7 +275,7 @@ export function useCommandPaletteModel({
     }
 
     return next;
-  }, [trimmed, recent, catalog, hits, capabilities, paths, isDoctypeAllowed, t]);
+  }, [trimmed, recents, catalog, hits, capabilities, paths, isDoctypeAllowed, t]);
 
   const items = useMemo(() => sections.flatMap((section) => section.items), [sections]);
 
@@ -283,4 +287,4 @@ export function useCommandPaletteModel({
     hasQuery: Boolean(trimmed),
     noResults: Boolean(trimmed) && !searching && items.length === 0,
   };
-}
+};

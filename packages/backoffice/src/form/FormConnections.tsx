@@ -1,17 +1,4 @@
-// Contract: the desk "Connections" dashboard — linked doctypes (meta.links)
-// grouped with counts; items navigate to filtered lists / linked docs.
-// Keep props stable — form-core imports this.
-import {
-  Button,
-  Card,
-  Chip,
-  EmptyState,
-  Separator,
-  SizableText,
-  Skeleton,
-  XStack,
-  YStack,
-} from '@repo/ui';
+import { PlusIcon } from '@phosphor-icons/react';
 import {
   ensureFocusVisibleRing,
   getGroupPosition,
@@ -19,14 +6,17 @@ import {
   stackRadiusProps,
   useResolvedKnobs,
 } from '@repo/theme';
-import { PlusIcon } from '@phosphor-icons/react';
+// Contract: the desk "Connections" dashboard — linked doctypes (meta.links)
+// grouped with counts; items navigate to filtered lists / linked docs.
+// Keep props stable — form-core imports this.
+import { Button, Card, Chip, EmptyState, Separator, SizableText, Skeleton, XStack, YStack } from '@repo/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useDoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
+import { useDoctypeMeta } from '../shared/use-doctype-meta';
 
 import {
   connectionListHref,
@@ -42,6 +32,17 @@ export interface FormConnectionsProps {
   meta?: DoctypeMeta;
 }
 
+const BONE_ESCAPE_REASON = 'loading bones sized to the connection card rows they stand in for';
+
+interface KeyPress {
+  key?: string;
+  preventDefault?: () => void;
+}
+
+// The DOM hands the key handler its event, but tamagui types `onKeyDown` as `() => void`.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- SAFETY: the DOM always invokes onKeyDown with a KeyboardEvent; only tamagui's prop type omits the parameter
+const asKeyDownProp = (handler: (e: KeyPress) => void): (() => void) => handler as unknown as () => void;
+
 interface ConnectionRowProps {
   link: ConnectionLink;
   docname: string;
@@ -51,7 +52,7 @@ interface ConnectionRowProps {
   total: number;
 }
 
-function ConnectionRow({ link, docname, count, countsLoading, index, total }: ConnectionRowProps) {
+const ConnectionRow = ({ link, docname, count, countsLoading, index, total }: ConnectionRowProps) => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { knobProps } = useResolvedKnobs();
@@ -60,11 +61,12 @@ function ConnectionRow({ link, docname, count, countsLoading, index, total }: Co
   const openText = formatConnectionCount(count?.openCount);
   // Desk parity: an internal link without collected names has nowhere to
   // navigate (its filter is `name in (...)`), so the row press is disabled.
-  const disabled = link.isChildTable && !count?.names?.length;
+  const disabled = link.isChildTable && (count?.names?.length ?? 0) === 0;
   const position = getGroupPosition(index, total);
   const corners = stackRadiusProps(position, knobProps.borderRadius.borderRadius);
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only link semantic
       role="link"
       aria-label={link.targetDoctype}
       onPress={
@@ -93,12 +95,12 @@ function ConnectionRow({ link, docname, count, countsLoading, index, total }: Co
       onKeyDown={
         disabled
           ? undefined
-          : (((e: { key?: string; preventDefault?: () => void }) => {
+          : asKeyDownProp((e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault?.();
                 navigator.navigate(connectionListHref(paths, link, docname, count?.names));
               }
-            }) as unknown as () => void)
+            })
       }>
       <SizableText
         size="$3"
@@ -112,7 +114,7 @@ function ConnectionRow({ link, docname, count, countsLoading, index, total }: Co
         <Skeleton
           variant="rounded"
           width="$2"
-          height={sizeRecipeEscape(18, 'loading bones sized to the connection card rows they stand in for')}
+          height={sizeRecipeEscape(18, BONE_ESCAPE_REASON)}
         />
       ) : (
         <>
@@ -156,7 +158,7 @@ function ConnectionRow({ link, docname, count, countsLoading, index, total }: Co
       />
     </XStack>
   );
-}
+};
 
 interface ConnectionGroupCardProps {
   group: ConnectionGroup;
@@ -165,7 +167,7 @@ interface ConnectionGroupCardProps {
   countsLoading: boolean;
 }
 
-function ConnectionGroupCard({ group, docname, counts, countsLoading }: ConnectionGroupCardProps) {
+const ConnectionGroupCard = ({ group, docname, counts, countsLoading }: ConnectionGroupCardProps) => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   return (
@@ -199,9 +201,9 @@ function ConnectionGroupCard({ group, docname, counts, countsLoading }: Connecti
       </YStack>
     </Card>
   );
-}
+};
 
-function ConnectionsSkeleton() {
+const ConnectionsSkeleton = () => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Card
@@ -212,30 +214,30 @@ function ConnectionsSkeleton() {
         {...knobProps.panelPadding}
         {...knobProps.gap}>
         <Skeleton
-          width={sizeRecipeEscape(120, 'loading bones sized to the connection card rows they stand in for')}
-          height={sizeRecipeEscape(18, 'loading bones sized to the connection card rows they stand in for')}
+          width={sizeRecipeEscape(120, BONE_ESCAPE_REASON)}
+          height={sizeRecipeEscape(18, BONE_ESCAPE_REASON)}
         />
         <Separator />
         <YStack gap="$2">
           <Skeleton
             width="82%"
-            height={sizeRecipeEscape(16, 'loading bones sized to the connection card rows they stand in for')}
+            height={sizeRecipeEscape(16, BONE_ESCAPE_REASON)}
           />
           <Skeleton
             width="64%"
-            height={sizeRecipeEscape(16, 'loading bones sized to the connection card rows they stand in for')}
+            height={sizeRecipeEscape(16, BONE_ESCAPE_REASON)}
           />
           <Skeleton
             width="73%"
-            height={sizeRecipeEscape(16, 'loading bones sized to the connection card rows they stand in for')}
+            height={sizeRecipeEscape(16, BONE_ESCAPE_REASON)}
           />
         </YStack>
       </YStack>
     </Card>
   );
-}
+};
 
-export function FormConnections({ doctype, name, meta: metaProp }: FormConnectionsProps) {
+export const FormConnections = ({ doctype, name, meta: metaProp }: FormConnectionsProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   // form-core usually passes meta; fetch it only when it didn't.
@@ -292,4 +294,4 @@ export function FormConnections({ doctype, name, meta: metaProp }: FormConnectio
       ))}
     </XStack>
   );
-}
+};

@@ -1,13 +1,13 @@
 // Navbar bell button + notifications panel (Notification Log, unread badge,
 // mark-as-read; desk parity). Self-contained: reads frappe context + the
 // backoffice navigator internally; the shell mounts it props-less.
-import { Badge } from '@repo/ui';
+import { BellIcon } from '@phosphor-icons/react';
 // House Button: the raw tamagui Button (components re-export) misses the
 // house 44px press floor; the 36px bell also crowded the count badge into
 // its own glyph (LC-54, LC-53 icon slot).
 import { Button, FloatingPanel, useViewportGtSm } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { BellIcon } from '@phosphor-icons/react';
+import { Badge } from '@repo/ui';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,7 +21,7 @@ import { NotificationsPanel } from './notifications-panel';
 /** Fixed content width when the panel floats (sheet mode fills instead). */
 const PANEL_WIDTH = 400;
 
-export function NotificationsButton() {
+export const NotificationsButton = () => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const navigator = useBackofficeNavigator();
@@ -37,12 +37,19 @@ export function NotificationsButton() {
       if (item.unread) {
         // Fire-and-forget (desk parity): navigation must not wait on the RPC;
         // the optimistic override reverts itself if the write fails.
-        markAsRead(item.name).catch((error) => {
-          emitEvent({ type: 'error', error, context: 'notifications.markAsRead' });
-        });
+        const markItemRead = async () => {
+          try {
+            await markAsRead(item.name);
+          } catch (error: unknown) {
+            emitEvent({ type: 'error', error, context: 'notifications.markAsRead' });
+          }
+        };
+        void markItemRead();
       }
-      if (item.document_type && item.document_name) {
-        navigator.navigate(paths.form(item.document_type, item.document_name));
+      const doctype = item.document_type ?? '';
+      const docname = item.document_name ?? '';
+      if (doctype !== '' && docname !== '') {
+        navigator.navigate(paths.form(doctype, docname));
       }
       setOpen(false);
     },
@@ -50,9 +57,14 @@ export function NotificationsButton() {
   );
 
   const handleMarkAllRead = useCallback(() => {
-    markAllAsRead().catch((error) => {
-      emitEvent({ type: 'error', error, context: 'notifications.markAllAsRead' });
-    });
+    const markAll = async () => {
+      try {
+        await markAllAsRead();
+      } catch (error: unknown) {
+        emitEvent({ type: 'error', error, context: 'notifications.markAllAsRead' });
+      }
+    };
+    void markAll();
   }, [markAllAsRead, emitEvent]);
 
   const label = t('notifications.title', 'Notifications');
@@ -63,7 +75,7 @@ export function NotificationsButton() {
       onOpenChange={setOpen}
       scrollable
       sizing="fill"
-      fitContent
+      widthMode="fit-content"
       contentPadding="none"
       triggerA11y={{ label }}
       trigger={
@@ -89,4 +101,4 @@ export function NotificationsButton() {
       />
     </FloatingPanel>
   );
-}
+};

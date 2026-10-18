@@ -5,13 +5,15 @@
 //   - ReportToolbar: column add/remove picker across all meta fields,
 //     group-by + aggregation pickers, page-size selector, filter chips
 //   - ReportFooter: totals strip, an "Open" record jump, numbered pagination
-import { Button, Chip, DropdownMenu, Pagination, Text, XStack, YStack } from '@repo/ui';
+
+import { ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { REPORT_NUMERIC_FIELDTYPES, REPORT_PAGE_SIZES } from '@repo/frappe-ui';
 import type { GroupByConfig, ReportColumn } from '@repo/frappe-ui';
 import { formatCurrency, formatNumber, formatPercent, useResolvedKnobs } from '@repo/theme';
-import { ArrowSquareOutIcon } from '@phosphor-icons/react';
+import { Button, Chip, DropdownMenu, Pagination, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
+import { isPresent } from '../desk/resolve-desk-path';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { overlayListMaxHeight } from '../shared/measures';
 import type { FrappeFilters } from '../shared/types';
@@ -20,16 +22,23 @@ export { REPORT_NUMERIC_FIELDTYPES, REPORT_PAGE_SIZES } from '@repo/frappe-ui';
 
 const AGGREGATIONS: GroupByConfig['aggregation'][] = ['count', 'sum', 'avg', 'min', 'max'];
 
+const LIKE_WILDCARD_EDGES = /^%|%$/gu;
+
+/** Display text for a filter tuple's value (LIKE wildcards stripped). */
+const filterValueText = (value: FrappeFilters[number][2]): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- filter values are arbitrary URL-param payloads; typeof is the discriminant
+  if (typeof value === 'string') {
+    return value.replaceAll(LIKE_WILDCARD_EDGES, '');
+  }
+  if (Array.isArray(value)) {
+    return value.map(String).join(', ');
+  }
+  return JSON.stringify(value);
+};
+
 /** Human-readable chip text for a frappe filter tuple. */
-function filterChipLabel([fieldname, operator, value]: FrappeFilters[number]): string {
-  const rendered =
-    typeof value === 'string'
-      ? value.replaceAll(/^%|%$/g, '')
-      : Array.isArray(value)
-        ? value.map(String).join(', ')
-        : JSON.stringify(value);
-  return `${fieldname} ${operator} ${rendered}`;
-}
+const filterChipLabel = ([fieldname, operator, value]: FrappeFilters[number]): string =>
+  `${fieldname} ${operator} ${filterValueText(value)}`;
 
 export interface ReportToolbarProps {
   /** All pickable report columns; `enabled` reflects the current selection. */
@@ -44,7 +53,7 @@ export interface ReportToolbarProps {
   onClearFilters?: () => void;
 }
 
-export function ReportToolbar({
+export const ReportToolbar = ({
   columns,
   onToggleColumn,
   groupBy,
@@ -53,14 +62,15 @@ export function ReportToolbar({
   onPageSizeChange,
   filters,
   onClearFilters,
-}: ReportToolbarProps) {
+}: ReportToolbarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const enabledCount = columns.filter((column) => column.enabled).length;
   const numericColumns = columns.filter((column) => REPORT_NUMERIC_FIELDTYPES.has(column.fieldtype));
   const groupByColumn = groupBy ? columns.find((column) => column.fieldname === groupBy.field) : undefined;
-  const aggregationFieldColumn = groupBy?.aggregationField
-    ? columns.find((column) => column.fieldname === groupBy.aggregationField)
+  const aggregationField = groupBy?.aggregationField;
+  const aggregationFieldColumn = isPresent(aggregationField)
+    ? columns.find((column) => column.fieldname === aggregationField)
     : undefined;
 
   const aggregationLabels: Record<GroupByConfig['aggregation'], string> = {
@@ -72,7 +82,7 @@ export function ReportToolbar({
   };
 
   const selectGroupField = (fieldname: string | null) => {
-    if (!fieldname) {
+    if (fieldname === null || fieldname === '') {
       onGroupByChange(null);
       return;
     }
@@ -238,6 +248,7 @@ export function ReportToolbar({
       {/* Base filter chips (?f= URL param) */}
       {filters.map((tuple, index) => (
         <Chip
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- tuples can repeat; index kept so a lint-only pass does not change remount behavior
           key={`${tuple[0]}-${index}`}
           size="$2"
           variant="subtle"
@@ -282,7 +293,7 @@ export function ReportToolbar({
       </DropdownMenu>
     </XStack>
   );
-}
+};
 
 export interface ReportRecordRef {
   name: string;
@@ -320,7 +331,7 @@ const OPEN_MENU_LIMIT = 50;
  * register stays symbol-less here — a column total across mixed-currency
  * rows must not invent a unit the data does not carry.
  */
-function formatTotalValue(value: number, fieldtype: string): string {
+const formatTotalValue = (value: number, fieldtype: string): string => {
   switch (fieldtype) {
     case 'Currency': {
       return formatCurrency(value);
@@ -335,9 +346,9 @@ function formatTotalValue(value: number, fieldtype: string): string {
       return formatNumber(value);
     }
   }
-}
+};
 
-export function ReportFooter({
+export const ReportFooter = ({
   page,
   pageCount,
   pageSize,
@@ -346,7 +357,7 @@ export function ReportFooter({
   records,
   onOpenRecord,
   totals,
-}: ReportFooterProps) {
+}: ReportFooterProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const openRecords = records.slice(0, OPEN_MENU_LIMIT);
@@ -448,4 +459,4 @@ export function ReportFooter({
       </XStack>
     </YStack>
   );
-}
+};

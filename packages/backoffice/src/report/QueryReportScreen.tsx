@@ -1,14 +1,14 @@
-import {
-  Button,
-  EmptyState,
-  PageHeader,
-  ScrollView,
-  Spinner,
-  Text,
-  XStack,
-  YStack,
-  isWeb,
-} from '@repo/ui';
+// Desk /app/query-report/<name> parity surface: report title header +
+// refresh, a sticky declared-filter band (queryReportFilterBar — Metabase /
+// Looker / Desk page-form / Linear insights), and the query_report.run
+// result in the catalog DataTable (client-side sort/search/pagination —
+// desk also loads query-report rows in one shot).
+//
+// Filters apply on change for discrete controls (select/link/date/check);
+// text waits for Enter/blur/Apply. Applied values mirror into `?filters=`
+// so reload/deep-link reproduces the run. Mandatory empties gate the run
+// behind an honest empty state; a filtered-empty grid offers Clear all.
+import { DownloadSimpleIcon } from '@phosphor-icons/react';
 import {
   buildQueryReportColumns,
   buildQueryReportCsv,
@@ -22,26 +22,15 @@ import type { QueryReportFilters, QueryReportFixture } from '@repo/frappe-ui';
 import { downloadBlob } from '@repo/platform';
 import { DataTable, DataTablePagination } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
-import { DownloadSimpleIcon } from '@phosphor-icons/react';
-// Desk /app/query-report/<name> parity surface: report title header +
-// refresh, a sticky declared-filter band (queryReportFilterBar — Metabase /
-// Looker / Desk page-form / Linear insights), and the query_report.run
-// result in the catalog DataTable (client-side sort/search/pagination —
-// desk also loads query-report rows in one shot).
-//
-// Filters apply on change for discrete controls (select/link/date/check);
-// text waits for Enter/blur/Apply. Applied values mirror into `?filters=`
-// so reload/deep-link reproduces the run. Mandatory empties gate the run
-// behind an honest empty state; a filtered-empty grid offers Clear all.
-import React from 'react';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Button, EmptyState, PageHeader, ScrollView, Spinner, Text, XStack, YStack, isWeb } from '@repo/ui';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeLocation, useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { QueryReportFilterBar, queryReportFilterLabel } from './queryReportFilterBar';
-import { parseQueryReportFiltersParam, serializeQueryReportFiltersParam } from './queryReportUrlState';
+import { QueryReportFilterBar, queryReportFilterLabel } from './query-report-filter-bar';
+import { parseQueryReportFiltersParam, serializeQueryReportFiltersParam } from './query-report-url-state';
 
 export interface QueryReportScreenProps {
   /** Report document name (proper-cased, e.g. "Permitted Documents For User"). */
@@ -58,24 +47,25 @@ export interface QueryReportScreenProps {
 
 const PAGE_SIZES = [20, 100, 500];
 
-export function QueryReportScreen({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one state-machine body per report state; splitting it would scatter the shared header/filter chrome
+export const QueryReportScreen = ({
   reportName,
   fixture,
   initialFilters,
   hiddenColumns,
   onRowOpen,
-}: QueryReportScreenProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the note on the component
+}: QueryReportScreenProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { params } = useBackofficeLocation();
 
-  // `?filters=` deep link (queryReportUrlState.ts): wins over the host's
+  // `?filters=` deep link (query-report-url-state.ts): wins over the host's
   // initialFilters prop at mount, mirrors applied changes back out, and
   // inbound changes (back/forward, pasted links) are adopted below.
-  const rawFiltersParam =
-    typeof params.filters === 'string' ? params.filters : Array.isArray(params.filters) ? params.filters[0] : undefined;
+  const rawFiltersParam = Array.isArray(params.filters) ? params.filters[0] : params.filters;
   const initialFilterValues = useMemo(() => {
     const fromParam = parseQueryReportFiltersParam(rawFiltersParam);
     if (Object.keys(fromParam).length > 0) {
@@ -103,9 +93,12 @@ export function QueryReportScreen({
   // deep link) adopts into state; param removal restores declared defaults.
   // Report swaps are the hook's job (it reseeds from initialFilters), and
   // echoes of our own outbound writes no-op on the serialized comparison.
+  // Latest-value refs synced during render; read only inside the adoption effect.
   const filtersRef = useRef(report.filters);
+  // oxlint-disable-next-line react/refs -- see above
   filtersRef.current = report.filters;
   const filterMetaRef = useRef(report.filterMeta);
+  // oxlint-disable-next-line react/refs -- see above
   filterMetaRef.current = report.filterMeta;
   const lastAdopted = useRef({ report: reportName, param: rawFiltersParam });
   useEffect(() => {
@@ -121,6 +114,7 @@ export function QueryReportScreen({
     if (serializeQueryReportFiltersParam(next) === serializeQueryReportFiltersParam(filtersRef.current)) {
       return;
     }
+    // oxlint-disable-next-line react-doctor/no-pass-data-to-parent -- adopts an inbound URL change into the hook's state; there is no render-time source for it
     setFilters(next);
   }, [reportName, rawFiltersParam, setFilters]);
 
@@ -136,7 +130,7 @@ export function QueryReportScreen({
   );
 
   const tableColumns = useMemo(() => {
-    const hidden = new Set(hiddenColumns ?? []);
+    const hidden = new Set(hiddenColumns);
     const visible = hidden.size ? report.columns.filter((column) => !hidden.has(column.fieldname)) : report.columns;
     return buildQueryReportColumns({ columns: visible, onOpenLink: handleOpenLink });
   }, [report.columns, handleOpenLink, hiddenColumns]);
@@ -169,11 +163,13 @@ export function QueryReportScreen({
 
   const subtitle = useMemo(() => {
     if (report.loading) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- other paths return the subtitle; a bare return trips consistent-return
+      return undefined;
     }
     const bits: string[] = [];
-    if (report.meta?.ref_doctype) {
-      bits.push(report.meta.ref_doctype);
+    const refDoctype = report.meta?.ref_doctype;
+    if (refDoctype !== undefined && refDoctype !== '') {
+      bits.push(refDoctype);
     }
     if (!report.error && report.missingRequired.length === 0) {
       bits.push(
@@ -182,7 +178,7 @@ export function QueryReportScreen({
           count: report.rows.length,
         }),
       );
-      if (typeof report.executionTime === 'number') {
+      if (report.executionTime !== undefined) {
         bits.push(
           t('queryReport.executionTime', {
             defaultValue: 'ran in {{seconds}}s',
@@ -194,6 +190,7 @@ export function QueryReportScreen({
     return bits.length > 0 ? bits.join(' · ') : undefined;
   }, [report, t]);
 
+  const handleReload = report.reload;
   let body: React.ReactNode;
   if (report.loading) {
     body = (
@@ -241,7 +238,7 @@ export function QueryReportScreen({
           action={
             <Button
               theme="accent"
-              onPress={report.reload}>
+              onPress={handleReload}>
               {t('queryReport.retry', 'Retry')}
             </Button>
           }
@@ -289,7 +286,7 @@ export function QueryReportScreen({
           ) : (
             <Button
               chromeless
-              onPress={report.reload}>
+              onPress={handleReload}>
               {t('queryReport.refresh', 'Refresh')}
             </Button>
           )
@@ -336,7 +333,7 @@ export function QueryReportScreen({
                 <Button
                   size="$2"
                   chromeless
-                  onPress={report.reload}
+                  onPress={handleReload}
                   disabled={report.loading}>
                   {t('queryReport.refresh', 'Refresh')}
                 </Button>
@@ -353,7 +350,7 @@ export function QueryReportScreen({
           </XStack>
         }
       />
-      {report.serverMessage ? (
+      {report.serverMessage !== undefined && report.serverMessage !== '' ? (
         <Text
           fontSize="$2"
           color="$color10">
@@ -397,4 +394,4 @@ export function QueryReportScreen({
   // Native has no page-level scroll (DoctypeListScreen precedent) — wrap so
   // rows below the fold stay reachable. Web keeps the flex layout.
   return isWeb ? content : <ScrollView flex={1}>{content}</ScrollView>;
-}
+};

@@ -13,74 +13,74 @@
 // drag = pointer/keyboard on web, long-press on native); card click opens
 // the form; the per-column "+" (anchored in each column header) opens the
 // new-doc form prefilled with the clicked column (`?d=`).
-import { Alert, Button, Text, XStack, YStack, notify } from '@repo/ui';
+
+import { PlusIcon } from '@phosphor-icons/react';
 import { FrappeKanban, useDocRights, useFrappeConfig } from '@repo/frappe-ui';
 import type { FrappeKanbanProps, KanbanColumn } from '@repo/frappe-ui';
 import { useResolvedKnobs } from '@repo/theme';
-import { PlusIcon } from '@phosphor-icons/react';
+import { Alert, Button, Text, XStack, YStack, notify } from '@repo/ui';
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeCapabilities, useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
+import { isPresent } from '../desk/resolve-desk-path';
 import { useDeskScope } from '../desk/scope';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
 import { useViewConnection } from './connection';
-import { useKanbanBoard } from './deskViewConfigs';
-import type { KanbanBoardDoc } from './deskViewConfigs';
+import { useKanbanBoard } from './desk-view-configs';
+import type { KanbanBoardDoc } from './desk-view-configs';
 import { CreateBoardDialog, KanbanBoardEnd, KanbanBoardPicker, KanbanColumnMenu } from './kanban-board-controls';
+import { addKanbanColumn, createKanbanBoard, parseBoardFilters, setKanbanColumnStatus } from './kanban-board-ops';
 import { KanbanFieldPicker, kanbanFieldCandidates, preferredKanbanField } from './kanban-field-picker';
 import type { KanbanFieldOption } from './kanban-field-picker';
-import { addKanbanColumn, createKanbanBoard, parseBoardFilters, setKanbanColumnStatus } from './kanbanBoardOps';
-import { detectCardFields, selectFieldOptions, useViewMeta } from './viewMeta';
-import type { AnyDoc } from './viewMeta';
+import { detectCardFields, selectFieldOptions, useViewMeta } from './view-meta';
+import type { AnyDoc, DetectedCardFields } from './view-meta';
 import { ViewError, ViewLoading, ViewUnsupported } from './ViewStates';
 
 // The `one` compiler breaks explicit JSX generics (it injects
 // data-one-source attributes), so instantiate the generic wrapper once.
+// SAFETY: FrappeKanban is generic over its doc type; this pins that parameter to AnyDoc.
 const KanbanOfDoc = FrappeKanban as (props: FrappeKanbanProps<AnyDoc>) => ReactElement;
 
 /**
  * Desk indicator color names (Kanban Board Column.indicator Select options)
  * mapped to theme tokens — hex literals are banned in features/**.
  */
-const INDICATOR_TOKENS: Record<string, string> = {
-  Blue: '$blue9',
-  Cyan: '$blue8',
-  Gray: '$gray9',
-  Green: '$green9',
-  'Light Blue': '$blue7',
-  Orange: '$orange9',
-  Pink: '$pink9',
-  Purple: '$purple9',
-  Red: '$red9',
-  Yellow: '$yellow9',
-};
+const INDICATOR_TOKENS = new Map([
+  ['Blue', '$blue9'],
+  ['Cyan', '$blue8'],
+  ['Gray', '$gray9'],
+  ['Green', '$green9'],
+  ['Light Blue', '$blue7'],
+  ['Orange', '$orange9'],
+  ['Pink', '$pink9'],
+  ['Purple', '$purple9'],
+  ['Red', '$red9'],
+  ['Yellow', '$yellow9'],
+]);
 
-function indicatorToken(indicator: string | undefined): string | undefined {
-  if (!indicator) {
-    return undefined;
-  }
-  return INDICATOR_TOKENS[indicator];
-}
+const indicatorToken = (indicator: string | undefined): string | undefined =>
+  indicator === undefined ? undefined : INDICATOR_TOKENS.get(indicator);
 
 /** Active (non-archived) board columns in board order, indicator → token. */
-function boardDrivenColumns(board: KanbanBoardDoc | undefined): KanbanColumn[] {
-  if (!board?.field_name) {
+const boardDrivenColumns = (board: KanbanBoardDoc | undefined): KanbanColumn[] => {
+  if (!isPresent(board?.field_name)) {
     return [];
   }
-  return (board.columns ?? [])
-    .filter((column) => column.status !== 'Archived' && column.column_name)
-    .map((column) => ({
-      value: column.column_name!,
-      title: column.column_name!,
-      color: indicatorToken(column.indicator),
-    }));
-}
+  const columns: KanbanColumn[] = [];
+  for (const column of board?.columns ?? []) {
+    const name = column.column_name;
+    if (column.status !== 'Archived' && isPresent(name)) {
+      columns.push({ value: name, title: name, color: indicatorToken(column.indicator) });
+    }
+  }
+  return columns;
+};
 
 export interface KanbanViewProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
   /** Kanban Board doc name override (`?board=` search param). */
   board?: string;
@@ -90,7 +90,8 @@ export interface KanbanViewProps {
   readOnly?: boolean;
 }
 
-export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly }: KanbanViewProps) {
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity, react-doctor/no-giant-component -- board/axis resolution plus board-management handlers; splitting it is a separate refactor
+export const KanbanView = ({ doctype, board: boardOverride, onCardOpen, readOnly }: KanbanViewProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
@@ -119,6 +120,7 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
   }
 
   const board = boards.doc;
+  const boardFieldName = board?.field_name;
   const boardColumns = boardDrivenColumns(board);
   const hasBoard = Boolean(board?.field_name) && boardColumns.length > 0;
   const candidates = meta ? kanbanFieldCandidates(meta) : [];
@@ -126,11 +128,11 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
   // Grouping axes on offer: the board's field first (desk behavior), then
   // every visible Select field with options, deduped by fieldname.
   const axisOptions: KanbanFieldOption[] = [];
-  if (hasBoard && board?.field_name) {
-    const boardField = meta?.fields.find((field) => field.fieldname === board.field_name);
+  if (hasBoard && isPresent(boardFieldName)) {
+    const boardField = meta?.fields.find((field) => field.fieldname === boardFieldName);
     axisOptions.push({
-      fieldname: board.field_name,
-      label: boardField?.label ?? board.field_name,
+      fieldname: boardFieldName,
+      label: boardField?.label ?? boardFieldName,
     });
   }
   for (const field of candidates) {
@@ -157,7 +159,7 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
   // indicator colors), else the Select options newline list in declaration
   // order.
   let columns: KanbanColumn[] = [];
-  if (statusField) {
+  if (isPresent(statusField)) {
     if (boardGoverns) {
       columns = boardColumns;
     } else {
@@ -260,7 +262,7 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
     }
   };
 
-  if (!statusField || columns.length === 0) {
+  if (!isPresent(statusField) || columns.length === 0) {
     return (
       <ViewUnsupported
         doctype={doctype}
@@ -274,16 +276,19 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
     );
   }
 
-  const { titleField, extraFields } = meta
+  const { titleField, extraFields }: DetectedCardFields = meta
     ? detectCardFields(meta, [statusField])
-    : { titleField: 'name', extraFields: [] as string[] };
+    : { titleField: 'name', extraFields: [] };
+  // SAFETY: every entry is a fieldname of this doctype, and AnyDoc keys are its fieldnames.
   const fields = [...new Set(['name', statusField, titleField, ...extraFields])] as readonly (keyof AnyDoc)[];
 
   const boardFilters = boardGoverns ? parseBoardFilters(board?.filters) : [];
   // Desk scope (GL-5) ANDs into the card query alongside board filters.
   const cardFilters = [...deskScope, ...boardFilters];
   const manageBoard = boardGoverns && !readOnly && Boolean(board);
-  const archivedColumns = (board?.columns ?? []).filter((column) => column.status === 'Archived' && column.column_name);
+  const archivedColumns = (board?.columns ?? []).filter(
+    (column) => column.status === 'Archived' && isPresent(column.column_name),
+  );
   const existingColumns = (board?.columns ?? [])
     .map((column) => column.column_name)
     .filter((name): name is string => Boolean(name));
@@ -361,7 +366,7 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
         statusField={statusField}
         titleField={titleField}
         fields={fields}
-        {...(cardFilters && { filters: cardFilters })}
+        filters={cardFilters}
         renderCard={(item) => (
           <YStack
             {...knobProps.panelPadding}
@@ -370,7 +375,10 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
               {...knobProps.label}
               fontWeight="400"
               numberOfLines={3}>
-              {String(item[titleField] ?? item.name ?? '')}
+              {
+                // oxlint-disable-next-line typescript/no-base-to-string -- card cells are scalar doc values; String() is the display coercion
+                String(item[titleField] ?? item.name ?? '')
+              }
             </Text>
             {extraFields.map((fieldname) => {
               const value = item[fieldname];
@@ -384,20 +392,24 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
                   fontWeight="400"
                   color="$color10"
                   numberOfLines={1}>
-                  {String(value)}
+                  {
+                    // oxlint-disable-next-line typescript/no-base-to-string -- card cells are scalar doc values; String() is the display coercion
+                    String(value)
+                  }
                 </Text>
               );
             })}
           </YStack>
         )}
         onCardClick={(card) => {
-          if (!card.name) {
+          const { name } = card;
+          if (!isPresent(name)) {
             return;
           }
           if (onCardOpen) {
-            onCardOpen(doctype, card.name);
+            onCardOpen(doctype, name);
           } else {
-            navigator.navigate(paths.form(doctype, card.name));
+            navigator.navigate(paths.form(doctype, name));
           }
         }}
         readOnly={readOnly ?? !rights.write}
@@ -416,7 +428,9 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
             column.id === '__unassigned__' ? null : (
               <KanbanColumnMenu
                 column={column.id}
-                onArchive={() => void handleColumnStatus(column.id, 'Archived')}
+                onArchive={() => {
+                  void handleColumnStatus(column.id, 'Archived');
+                }}
               />
             ),
           boardEnd: (
@@ -424,10 +438,13 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
               archivedColumns={archivedColumns}
               existingColumns={existingColumns}
               onAddColumn={handleAddColumn}
-              onRestoreColumn={(name) => void handleColumnStatus(name, 'Active')}
+              onRestoreColumn={(name) => {
+                void handleColumnStatus(name, 'Active');
+              }}
             />
           ),
         })}
+        // oxlint-disable-next-line react/no-unstable-nested-components -- render callback FrappeKanban calls with the error, not a component type
         error={(err) => (
           <ViewError
             doctype={doctype}
@@ -447,4 +464,4 @@ export function KanbanView({ doctype, board: boardOverride, onCardOpen, readOnly
       />
     </YStack>
   );
-}
+};

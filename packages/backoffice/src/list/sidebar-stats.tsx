@@ -4,7 +4,7 @@
  *
  * - `frappe.desk.listview.get_group_by_count` (POST {doctype,
  *   current_filters, field}) → `{ message: [{ name, count }] }`, ordered by
- *   count desc. For `field: "assigned_to"` the server aggregates the ToDo
+ *   count desc. For `field: "assigned_to"` the server aggregates the to-do
  *   assignment table per user (System Users, non-cancelled assignments) —
  *   the proper desk semantics for the JSON-array `_assign` column. Used for
  *   the Assigned To and Created By facets (desk list_sidebar_group_by.js
@@ -28,7 +28,7 @@ import { useFrappeConfig } from '@repo/frappe-ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { FrappeFilter, FrappeFilters } from '../shared/types';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 /**
  * Server-side label of the pseudo tag row (frappe translates it, so this
@@ -70,30 +70,28 @@ export interface UseSidebarStatsOptions {
 }
 
 /** Tuples on `fieldname` removed — the "other" filters for that facet. */
-export function filtersExcludingField(filters: FrappeFilters, fieldname: string): FrappeFilters {
-  return filters.filter((filter) => filter[0] !== fieldname);
-}
+export const filtersExcludingField = (filters: FrappeFilters, fieldname: string): FrappeFilters =>
+  filters.filter((filter) => filter[0] !== fieldname);
 
 /** Exact-tuple active check (fieldname + operator + stringified value). */
-export function isFacetFilterActive(filters: FrappeFilters, tuple: FrappeFilter): boolean {
-  return filters.some(
+export const isFacetFilterActive = (filters: FrappeFilters, tuple: FrappeFilter): boolean =>
+  filters.some(
     (filter) =>
       filter[0] === tuple[0] &&
-      String(filter[1]).toLowerCase() === String(tuple[1]).toLowerCase() &&
+      filter[1].toLowerCase() === tuple[1].toLowerCase() &&
       String(filter[2]) === String(tuple[2]),
   );
-}
 
 /**
  * Desk toggle semantics (list_sidebar_group_by.js setup_filter_by): clicking
  * a row first clears every filter on that facet's fieldname, then applies
  * the row's tuple unless it was already active (toggle off / replace).
  */
-export function toggleFacetFilter(filters: FrappeFilters, tuple: FrappeFilter): FrappeFilters {
+export const toggleFacetFilter = (filters: FrappeFilters, tuple: FrappeFilter): FrappeFilters => {
   const active = isFacetFilterActive(filters, tuple);
   const rest = filtersExcludingField(filters, tuple[0]);
   return active ? rest : [...rest, tuple];
-}
+};
 
 // ── Server fetchers ───────────────────────────────────────────
 
@@ -102,12 +100,12 @@ interface GroupByCountRow {
   count: number;
 }
 
-async function fetchGroupByCount(
+const fetchGroupByCount = async (
   app: FrappeApp,
   doctype: string,
   currentFilters: FrappeFilters,
   field: 'assigned_to' | 'owner',
-): Promise<SidebarFacetCount[]> {
+): Promise<SidebarFacetCount[]> => {
   const res = await app.call().post<{ message?: GroupByCountRow[] }>('frappe.desk.listview.get_group_by_count', {
     doctype,
     current_filters: JSON.stringify(currentFilters),
@@ -118,16 +116,16 @@ async function fetchGroupByCount(
   // session-user scrub happens at render time (scrubUserFacetRows) so rows
   // don't need a refetch when the session user resolves.
   return rows
-    .filter((row): row is GroupByCountRow & { name: string } => !!row.name && row.count !== 0)
-    .map((row) => ({ value: row.name, count: Number(row.count) || 0 }));
-}
+    .filter((row): row is GroupByCountRow & { name: string } => row.name !== null && row.name !== '' && row.count !== 0)
+    .map((row) => ({ value: row.name, count: row.count || 0 }));
+};
 
-async function fetchColumnStats(
+const fetchColumnStats = async (
   app: FrappeApp,
   doctype: string,
   fieldname: string,
   currentFilters: FrappeFilters,
-): Promise<[string, number][]> {
+): Promise<[string, number][]> => {
   const res = await app
     .call()
     .post<{ message?: { stats?: Record<string, [string, number][]> } }>('frappe.desk.reportview.get_sidebar_stats', {
@@ -136,7 +134,7 @@ async function fetchColumnStats(
       filters: JSON.stringify(currentFilters),
     });
   return res.payload?.message?.stats?.[fieldname] ?? [];
-}
+};
 
 /**
  * Desk scrub for the user facets (list_sidebar_group_by.js): hide the
@@ -144,103 +142,80 @@ async function fetchColumnStats(
  * the top ("Me"). Pure, applied at render time; skipped entirely while the
  * session user is unknown so an Administrator-only bench still shows rows.
  */
-export function scrubUserFacetRows(rows: SidebarFacetCount[], sessionUser?: string): SidebarFacetCount[] {
-  if (!sessionUser) {
+export const scrubUserFacetRows = (rows: SidebarFacetCount[], sessionUser?: string): SidebarFacetCount[] => {
+  if (sessionUser === undefined || sessionUser === '') {
     return rows;
   }
   const current = rows.find((row) => row.value === sessionUser);
   const rest = rows.filter((row) => !['Guest', 'Administrator', sessionUser].includes(row.value));
   return current ? [current, ...rest] : rest;
-}
+};
 
-function mapTagStats(entries: [string, number][]): SidebarFacetCount[] {
-  return entries
-    .map(([label, count]) => ({
-      value: String(label),
-      count: Number(count) || 0,
-      isNoTags: String(label) === NO_TAGS_LABEL,
-    }))
-    .filter((row) => row.value !== '' && (!row.isNoTags || row.count > 0));
-}
+const mapTagStats = (entries: [string, number][]): SidebarFacetCount[] => {
+  const rows: SidebarFacetCount[] = [];
+  for (const [label, count] of entries) {
+    const row = { value: label, count: count || 0, isNoTags: label === NO_TAGS_LABEL };
+    if (row.value !== '' && (!row.isNoTags || row.count > 0)) {
+      rows.push(row);
+    }
+  }
+  return rows;
+};
 
-function mapStatusStats(entries: [string, number][]): SidebarFacetCount[] {
-  return entries
-    .map(([value, count]) => ({ value: String(value), count: Number(count) || 0 }))
-    .filter((row) => row.value !== '')
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-}
+const byCountThenValue = (a: SidebarFacetCount, b: SidebarFacetCount): number =>
+  b.count - a.count || a.value.localeCompare(b.value);
+
+const mapStatusStats = (entries: [string, number][]): SidebarFacetCount[] => {
+  const rows: SidebarFacetCount[] = [];
+  for (const [value, count] of entries) {
+    if (value !== '') {
+      rows.push({ value, count: count || 0 });
+    }
+  }
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh array; toSorted is not guaranteed on every Hermes runtime this ships to
+  return rows.sort(byCountThenValue);
+};
 
 // ── Fixture mode (Storybook / tests) ──────────────────────────
 
 interface FixtureLister {
-  getList(doctype: string): Promise<unknown[]>;
+  getList: (doctype: string) => Promise<unknown[]>;
 }
 
-function parseAssignedUsers(raw: unknown): string[] {
+/** Fixture rows are untyped JSON documents. */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- fixture documents carry arbitrary doctype fields
+type FixtureRow = Record<string, unknown>;
+
+const isUserId = (user: unknown): user is string => typeof user === 'string' && user !== '';
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- `raw` is the untyped `_assign` column (array or JSON string); this is its parser
+const parseAssignedUsers = (raw: unknown): string[] => {
   if (Array.isArray(raw)) {
-    return raw.filter((user): user is string => typeof user === 'string' && !!user);
+    return raw.filter(isUserId);
   }
-  if (typeof raw !== 'string' || !raw) {
+  if (!isUserId(raw)) {
     return [];
   }
   try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((user): user is string => typeof user === 'string' && !!user) : [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isUserId) : [];
   } catch {
+    // Malformed `_assign` JSON counts as unassigned, like desk.
     return [];
   }
-}
+};
 
-function toSortedCounts(counts: Map<string, number>): SidebarFacetCount[] {
-  return [...counts.entries()]
-    .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-}
+const toSortedCounts = (counts: Map<string, number>): SidebarFacetCount[] =>
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh array; toSorted is not guaranteed on every Hermes runtime this ships to
+  Array.from(counts.entries(), ([value, count]) => ({ value, count })).sort(byCountThenValue);
 
-interface FixtureFacets {
-  assigned: SidebarFacetCount[];
-  owner: SidebarFacetCount[];
-  tags: SidebarFacetCount[];
-  status?: SidebarFacetCount[];
-}
-
-async function fetchFixtureFacets(
-  fixtures: FixtureLister,
-  doctype: string,
-  filters: FrappeFilters,
-  statusFieldname?: string,
-): Promise<FixtureFacets> {
-  const all = (await fixtures.getList(doctype)) as Record<string, unknown>[];
-  const rowsFor = (fieldname: string) => {
-    const others = filtersExcludingField(filters, fieldname);
-    if (others.length === 0) {
-      return all;
-    }
-    // matchesFilters implements the frappe operator set (like/not like/…),
-    // which the fixture provider's own getList filtering does not.
-    return all.filter((row) =>
-      matchesFilters(row as Parameters<typeof matchesFilters>[0], others as Parameters<typeof matchesFilters>[1]),
-    );
-  };
-
-  const assignedCounts = new Map<string, number>();
-  for (const row of rowsFor('_assign')) {
-    for (const user of parseAssignedUsers(row._assign)) {
-      assignedCounts.set(user, (assignedCounts.get(user) ?? 0) + 1);
-    }
-  }
-
-  const ownerCounts = new Map<string, number>();
-  for (const row of rowsFor('owner')) {
-    if (typeof row.owner === 'string' && row.owner) {
-      ownerCounts.set(row.owner, (ownerCounts.get(row.owner) ?? 0) + 1);
-    }
-  }
-
+const countTags = (rows: FixtureRow[]): SidebarFacetCount[] => {
   const tagCounts = new Map<string, number>();
   let noTagCount = 0;
-  for (const row of rowsFor('_user_tags')) {
-    const tags = String((row._user_tags as string | undefined) ?? '')
+  for (const row of rows) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `_user_tags` of an untyped fixture row; anything but a string is untagged
+    const raw = typeof row._user_tags === 'string' ? row._user_tags : '';
+    const tags = raw
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean);
@@ -256,26 +231,76 @@ async function fetchFixtureFacets(
   if (tags.length > 0 && noTagCount > 0) {
     tags.push({ value: NO_TAGS_LABEL, count: noTagCount, isNoTags: true });
   }
+  return tags;
+};
 
-  let status: SidebarFacetCount[] | undefined;
-  if (statusFieldname) {
-    const statusCounts = new Map<string, number>();
-    for (const row of rowsFor(statusFieldname)) {
-      const value = row[statusFieldname];
-      if (value !== undefined && value !== null && value !== '') {
-        statusCounts.set(String(value), (statusCounts.get(String(value)) ?? 0) + 1);
-      }
+const countValues = (rows: FixtureRow[], fieldname: string): SidebarFacetCount[] => {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const value = row[fieldname];
+    if (value !== undefined && value !== null && value !== '') {
+      // oxlint-disable-next-line typescript/no-base-to-string -- status/select fixture values are scalars
+      const key = String(value);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    status = toSortedCounts(statusCounts);
+  }
+  return toSortedCounts(counts);
+};
+
+interface FixtureFacets {
+  assigned: SidebarFacetCount[];
+  owner: SidebarFacetCount[];
+  tags: SidebarFacetCount[];
+  status?: SidebarFacetCount[];
+}
+
+const fetchFixtureFacets = async (
+  fixtures: FixtureLister,
+  doctype: string,
+  filters: FrappeFilters,
+  statusFieldname?: string,
+): Promise<FixtureFacets> => {
+  // SAFETY: fixture getList resolves to the stored documents, which are plain objects
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  const all = (await fixtures.getList(doctype)) as FixtureRow[];
+  const rowsFor = (fieldname: string) => {
+    const others = filtersExcludingField(filters, fieldname);
+    if (others.length === 0) {
+      return all;
+    }
+    // matchesFilters implements the frappe operator set (like/not like/…),
+    // which the fixture provider's own getList filtering does not.
+    // SAFETY: fixture rows are documents and FrappeFilters are the tuples matchesFilters evaluates
+    return all.filter((row) =>
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      matchesFilters(row as Parameters<typeof matchesFilters>[0], others as Parameters<typeof matchesFilters>[1]),
+    );
+  };
+
+  const assignedCounts = new Map<string, number>();
+  for (const row of rowsFor('_assign')) {
+    for (const user of parseAssignedUsers(row._assign)) {
+      assignedCounts.set(user, (assignedCounts.get(user) ?? 0) + 1);
+    }
+  }
+
+  const ownerCounts = new Map<string, number>();
+  for (const row of rowsFor('owner')) {
+    if (isUserId(row.owner)) {
+      ownerCounts.set(row.owner, (ownerCounts.get(row.owner) ?? 0) + 1);
+    }
   }
 
   return {
     assigned: toSortedCounts(assignedCounts),
     owner: toSortedCounts(ownerCounts),
-    tags,
-    status,
+    tags: countTags(rowsFor('_user_tags')),
+    status:
+      statusFieldname === undefined || statusFieldname === ''
+        ? undefined
+        : countValues(rowsFor(statusFieldname), statusFieldname),
   };
-}
+};
 
 // ── Hook ──────────────────────────────────────────────────────
 
@@ -291,11 +316,11 @@ const INITIAL_STATE: SidebarStatsState = {
  * (serialized) filters, or the status field change; per-facet results land
  * independently so fast facets render before slow ones.
  */
-export function useSidebarStats({
+export const useSidebarStats = ({
   doctype,
   filters,
   statusFieldname,
-}: UseSidebarStatsOptions): SidebarStatsState & { refresh: () => void } {
+}: UseSidebarStatsOptions): SidebarStatsState & { refresh: () => void } => {
   const app = useFrappeApp();
   const config = useFrappeConfig();
   const fixtures = config?.fixtures;
@@ -305,28 +330,22 @@ export function useSidebarStats({
   // Value-identity key: list-core may pass a new array each render.
   const filtersKey = JSON.stringify(filters);
 
+  // oxlint-disable-next-line react-doctor/no-derived-state-effect -- the effect starts fetches; the reset below is their loading state, not derived state
   useEffect(() => {
-    if (!doctype || (!app && !fixtures)) {
-      return;
-    }
     let cancelled = false;
-    // Filter tuples round-trip through JSON on the wire anyway, so parsing
-    // the key back is lossless and keeps the effect deps value-exact.
+    const hasStatus = statusFieldname !== undefined && statusFieldname !== '';
+    // SAFETY: filtersKey is JSON.stringify(filters); filter tuples round-trip through JSON on
+    // the wire anyway, so parsing the key back is lossless and keeps the effect deps value-exact.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     const activeFilters = JSON.parse(filtersKey) as FrappeFilters;
 
-    setState({
-      assigned: { loading: true },
-      owner: { loading: true },
-      tags: { loading: true },
-      status: { loading: Boolean(statusFieldname) },
-    });
-
-    const done = (key: 'assigned' | 'owner' | 'tags' | 'status', rows: SidebarFacetCount[]) => {
+    const done = (key: keyof SidebarStatsState, rows: SidebarFacetCount[]) => {
       if (!cancelled) {
         setState((prev) => ({ ...prev, [key]: { rows, loading: false } }));
       }
     };
-    const fail = (key: 'assigned' | 'owner' | 'tags' | 'status', error: unknown) => {
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever a failed fetch rejected with
+    const fail = (key: keyof SidebarStatsState, error: unknown) => {
       if (!cancelled) {
         setState((prev) => ({
           ...prev,
@@ -337,68 +356,78 @@ export function useSidebarStats({
         }));
       }
     };
-
-    if (fixtures) {
-      fetchFixtureFacets(fixtures, doctype, activeFilters, statusFieldname)
-        .then((facets) => {
-          done('assigned', facets.assigned);
-          done('owner', facets.owner);
-          done('tags', facets.tags);
-          if (statusFieldname) {
-            done('status', facets.status ?? []);
-          }
-        })
-        .catch((error) => {
-          fail('assigned', error);
-          fail('owner', error);
-          fail('tags', error);
-          if (statusFieldname) {
-            fail('status', error);
-          }
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const liveApp = app!;
-    fetchGroupByCount(liveApp, doctype, filtersExcludingField(activeFilters, '_assign'), 'assigned_to')
-      .then((rows) => {
-        done('assigned', rows);
-      })
-      .catch((error) => {
+    const load = async (key: keyof SidebarStatsState, fetchRows: () => Promise<SidebarFacetCount[]>) => {
+      try {
+        done(key, await fetchRows());
+      } catch (error) {
+        // The facet renders its error state; the other facets are unaffected.
+        fail(key, error);
+      }
+    };
+    const loadFixtures = async (lister: FixtureLister) => {
+      try {
+        const facets = await fetchFixtureFacets(lister, doctype, activeFilters, statusFieldname);
+        done('assigned', facets.assigned);
+        done('owner', facets.owner);
+        done('tags', facets.tags);
+        if (hasStatus) {
+          done('status', facets.status ?? []);
+        }
+      } catch (error) {
+        // Every facet renders its error state.
         fail('assigned', error);
-      });
-
-    fetchGroupByCount(liveApp, doctype, filtersExcludingField(activeFilters, 'owner'), 'owner')
-      .then((rows) => {
-        done('owner', rows);
-      })
-      .catch((error) => {
         fail('owner', error);
-      });
-
-    fetchColumnStats(liveApp, doctype, '_user_tags', filtersExcludingField(activeFilters, '_user_tags'))
-      .then((entries) => {
-        done('tags', mapTagStats(entries));
-      })
-      .catch((error) => {
         fail('tags', error);
-      });
-
-    if (statusFieldname) {
-      fetchColumnStats(liveApp, doctype, statusFieldname, filtersExcludingField(activeFilters, statusFieldname))
-        .then((entries) => {
-          done('status', mapStatusStats(entries));
-        })
-        .catch((error) => {
+        if (hasStatus) {
           fail('status', error);
-        });
+        }
+      }
+    };
+
+    if (doctype !== '' && (app !== undefined || fixtures !== undefined)) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-derived-state -- resets every facet to loading as its refetch starts
+      setState({
+        assigned: { loading: true },
+        owner: { loading: true },
+        tags: { loading: true },
+        status: { loading: hasStatus },
+      });
+      if (fixtures !== undefined) {
+        void loadFixtures(fixtures);
+      } else if (app !== undefined) {
+        void load(
+          'assigned',
+          async () =>
+            await fetchGroupByCount(app, doctype, filtersExcludingField(activeFilters, '_assign'), 'assigned_to'),
+        );
+        void load(
+          'owner',
+          async () => await fetchGroupByCount(app, doctype, filtersExcludingField(activeFilters, 'owner'), 'owner'),
+        );
+        void load('tags', async () =>
+          mapTagStats(
+            await fetchColumnStats(app, doctype, '_user_tags', filtersExcludingField(activeFilters, '_user_tags')),
+          ),
+        );
+        if (hasStatus) {
+          void load('status', async () =>
+            mapStatusStats(
+              await fetchColumnStats(
+                app,
+                doctype,
+                statusFieldname,
+                filtersExcludingField(activeFilters, statusFieldname),
+              ),
+            ),
+          );
+        }
+      }
     }
 
     return () => {
       cancelled = true;
     };
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `generation` is the refresh() trigger
   }, [app, fixtures, doctype, filtersKey, statusFieldname, generation]);
 
   const refresh = useCallback(() => {
@@ -406,4 +435,4 @@ export function useSidebarStats({
   }, []);
 
   return useMemo(() => ({ ...state, refresh }), [state, refresh]);
-}
+};

@@ -1,22 +1,21 @@
-import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 import type { FrappeApp } from '@repo/frappe';
 import { Check, Data, Date as DateInput, Link, LongText, Numeric, Select } from '@repo/frappe-ui';
 import type { NumericType } from '@repo/frappe-ui';
+import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 // Bulk edit dialog (desk "Bulk Edit"): pick an editable field, enter the new
 // value (the control follows the fieldtype), then frappe.client.set_value per
 // selected document. Per-row failures surface in the result toast — desk's
 // bulk_update endpoint hides per-row outcomes and backgrounds ≥20 docs, so
 // the per-doc loop keeps reporting honest (same trade-off as bulkDelete).
-import React from 'react';
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { dialogBodyMinWidth } from '../shared/measures';
-import type { DocFieldMeta, DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import type { DocFieldMeta, DoctypeMeta } from '../shared/use-doctype-meta';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
-import type { BulkResult } from './bulkActions';
+import type { BulkResult } from './bulk-actions';
 
 /**
  * Fieldtypes with no stored value (layout / display / child rows) plus
@@ -41,19 +40,15 @@ export const BULK_EDIT_EXCLUDED_FIELDTYPES = new Set([
   'Read Only',
 ]);
 
-/** Editable (writable, visible, value-bearing) fields for bulk edit. */
-export function bulkEditableFields(meta?: DoctypeMeta): DocFieldMeta[] {
-  if (!meta?.fields) {
-    return [];
+const isBulkEditable = (field: DocFieldMeta): boolean => {
+  if (field.fieldname === '' || BULK_EDIT_EXCLUDED_FIELDTYPES.has(field.fieldtype)) {
+    return false;
   }
-  return meta.fields.filter(
-    (field) =>
-      Boolean(field.fieldname) &&
-      !BULK_EDIT_EXCLUDED_FIELDTYPES.has(field.fieldtype) &&
-      !field.read_only &&
-      !field.hidden,
-  );
-}
+  return !(field.read_only ?? 0) && !(field.hidden ?? 0);
+};
+
+/** Editable (writable, visible, value-bearing) fields for bulk edit. */
+export const bulkEditableFields = (meta?: DoctypeMeta): DocFieldMeta[] => meta?.fields?.filter(isBulkEditable) ?? [];
 
 export type BulkEditValue = string | number | boolean | undefined;
 
@@ -62,13 +57,13 @@ export type BulkEditValue = string | number | boolean | undefined;
  * (POST {doctype, name, fieldname, value}); failures collected per row.
  * Empty string clears the field (desk sends `value || null`).
  */
-export async function bulkSetValue(
+export const bulkSetValue = async (
   app: FrappeApp,
   doctype: string,
   names: string[],
   fieldname: string,
   value: BulkEditValue,
-): Promise<BulkResult> {
+): Promise<BulkResult> => {
   const payloadValue = value === '' || value === undefined ? null : value;
   const settled = await Promise.allSettled(
     names.map(
@@ -77,33 +72,36 @@ export async function bulkSetValue(
     ),
   );
   const result: BulkResult = { succeeded: [], failed: [] };
-  settled.forEach((outcome, index) => {
+  for (const [index, outcome] of settled.entries()) {
     const name = names[index];
     if (outcome.status === 'fulfilled') {
       result.succeeded.push(name);
     } else {
-      const { reason } = outcome;
+      const reason: unknown = outcome.reason;
       result.failed.push({
         name,
         message: reason instanceof Error ? reason.message : String(reason),
       });
     }
-  });
+  }
   return result;
-}
-
-const NUMERIC_FIELDTYPES: Record<string, NumericType> = {
-  Int: 'Int',
-  Float: 'Float',
-  Currency: 'Currency',
-  Percent: 'Percent',
 };
 
-const DATE_FIELDTYPES: Record<string, 'date' | 'datetime' | 'time'> = {
-  Date: 'date',
-  Datetime: 'datetime',
-  Time: 'time',
-};
+const NUMERIC_FIELDTYPES = new Map<string, NumericType>([
+  ['Int', 'Int'],
+  ['Float', 'Float'],
+  ['Currency', 'Currency'],
+  ['Percent', 'Percent'],
+]);
+
+const DATE_FIELDTYPES = new Map<string, 'date' | 'datetime' | 'time'>([
+  ['Date', 'date'],
+  ['Datetime', 'datetime'],
+  ['Time', 'time'],
+]);
+
+const isText = (value: BulkEditValue): value is string => typeof value === 'string';
+const isNumber = (value: BulkEditValue): value is number => typeof value === 'number';
 
 const MULTILINE_FIELDTYPES = new Set([
   'Long Text',
@@ -126,7 +124,7 @@ export interface BulkEditDialogProps {
   onDone?: () => void;
 }
 
-export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDone }: BulkEditDialogProps) {
+export const BulkEditDialog = ({ doctype, meta, names, open, onOpenChange, onDone }: BulkEditDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const app = useFrappeApp();
   const [fieldname, setFieldname] = useState('');
@@ -143,7 +141,7 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
     setBusy(true);
     try {
       // Check fields store 0/1 ints server-side.
-      const outgoing = field.fieldtype === 'Check' ? (value ? 1 : 0) : value;
+      const outgoing = field.fieldtype === 'Check' ? Number(Boolean(value)) : value;
       const result = await bulkSetValue(app, doctype, names, field.fieldname, outgoing);
       if (result.failed.length > 0) {
         notify({
@@ -181,9 +179,9 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
         scope: 'page',
         body: error instanceof Error ? error.message : t('list.editFailed', 'Bulk edit failed'),
       });
-    } finally {
-      setBusy(false);
     }
+    // Not a `finally`: the catch above never rethrows, and the React Compiler skips try/finally.
+    setBusy(false);
   };
 
   const valueLabel = t('list.editValue', 'Value');
@@ -208,46 +206,48 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
         <Select
           label={valueLabel}
           options={options}
-          value={typeof value === 'string' ? value : undefined}
+          value={isText(value) ? value : undefined}
           onChange={(next) => {
+            // oxlint-disable-next-line typescript/no-unsafe-argument -- Select's onChange intersects a DOM ChangeEventHandler, so `next` infers as any; it is the option string
             setValue(next);
           }}
           placeholder={t('list.editSelectPlaceholder', 'Select a value')}
         />
       );
     }
-    if (field.fieldtype === 'Link' && field.options) {
+    const linkTarget = field.options ?? '';
+    if (field.fieldtype === 'Link' && linkTarget !== '') {
       return (
         <Link
           label={valueLabel}
-          doctype={field.options}
-          value={typeof value === 'string' ? value : ''}
+          doctype={linkTarget}
+          value={isText(value) ? value : ''}
           onChange={(next) => {
             setValue(next);
           }}
         />
       );
     }
-    const numericType = NUMERIC_FIELDTYPES[field.fieldtype];
-    if (numericType) {
+    const numericType = NUMERIC_FIELDTYPES.get(field.fieldtype);
+    if (numericType !== undefined) {
       return (
         <Numeric
           label={valueLabel}
           type={numericType}
-          value={typeof value === 'number' ? value : undefined}
+          value={isNumber(value) ? value : undefined}
           onChange={(next) => {
             setValue(next);
           }}
         />
       );
     }
-    const dateType = DATE_FIELDTYPES[field.fieldtype];
-    if (dateType) {
+    const dateType = DATE_FIELDTYPES.get(field.fieldtype);
+    if (dateType !== undefined) {
       return (
         <DateInput
           label={valueLabel}
           type={dateType}
-          value={typeof value === 'string' ? value : ''}
+          value={isText(value) ? value : ''}
           onChange={(next) => {
             setValue(next);
           }}
@@ -258,8 +258,9 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
       return (
         <LongText
           label={valueLabel}
-          value={typeof value === 'string' ? value : ''}
+          value={isText(value) ? value : ''}
           onChange={(next) => {
+            // oxlint-disable-next-line typescript/no-unsafe-argument -- LongText's onChange intersects a DOM ChangeEventHandler, so `next` infers as any; it is the text
             setValue(next);
           }}
         />
@@ -268,7 +269,7 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
     return (
       <Data
         label={valueLabel}
-        value={typeof value === 'string' ? value : ''}
+        value={isText(value) ? value : ''}
         onChange={(next) => {
           setValue(next);
         }}
@@ -307,6 +308,7 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
           }))}
           value={fieldname || undefined}
           onChange={(next) => {
+            // oxlint-disable-next-line typescript/no-unsafe-argument -- Select's onChange intersects a DOM ChangeEventHandler, so `next` infers as any; it is the option string
             setFieldname(next);
             setValue(undefined);
           }}
@@ -316,4 +318,4 @@ export function BulkEditDialog({ doctype, meta, names, open, onOpenChange, onDon
       </YStack>
     </ConfirmDialog>
   );
-}
+};

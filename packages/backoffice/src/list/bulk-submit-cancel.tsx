@@ -16,12 +16,12 @@ export interface BulkSubmitCancelResult {
   attempted: number;
 }
 
-export async function bulkSubmitCancel(
+export const bulkSubmitCancel = async (
   app: FrappeApp,
   doctype: string,
   names: string[],
   action: BulkDocstatusAction,
-): Promise<BulkSubmitCancelResult> {
+): Promise<BulkSubmitCancelResult> => {
   const res = await app.call().post<{
     message?: string[] | null;
   }>('frappe.desk.doctype.bulk_update.bulk_update.submit_cancel_or_update_docs', {
@@ -35,4 +35,4 @@ export async function bulkSubmitCancel(
     queued: !Array.isArray(failed),
     attempted: names.length,
   };
-}
+};

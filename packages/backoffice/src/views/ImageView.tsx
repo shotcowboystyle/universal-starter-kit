@@ -1,9 +1,10 @@
 // Desk "image" view parity: card grid over meta.image_field (falling back
 // to the first Attach Image field). Doctypes without any image field get a
 // graceful unsupported state; card click opens the form.
-import { YStack } from '@repo/ui';
+
 import { FrappeImageView } from '@repo/frappe-ui';
 import type { FrappeImageViewProps } from '@repo/frappe-ui';
+import { YStack } from '@repo/ui';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -11,19 +12,20 @@ import { useBackofficeNavigator, useBackofficePaths } from '../config/Backoffice
 import { useDeskScope } from '../desk/scope';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { detectCardFields, detectImageField, useViewMeta } from './viewMeta';
-import type { AnyDoc } from './viewMeta';
+import { detectCardFields, detectImageField, useViewMeta } from './view-meta';
+import type { AnyDoc } from './view-meta';
 import { ViewError, ViewLoading, ViewUnsupported } from './ViewStates';
 
 // The `one` compiler breaks explicit JSX generics — instantiate once.
+// SAFETY: FrappeImageView is generic over its doc type; this pins that parameter to AnyDoc.
 const ImageGridOfDoc = FrappeImageView as (props: FrappeImageViewProps<AnyDoc>) => ReactElement;
 
 export interface ImageViewProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
 }
 
-export function ImageView({ doctype }: ImageViewProps) {
+export const ImageView = ({ doctype }: ImageViewProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const deskScope = useDeskScope();
   const navigator = useBackofficeNavigator();
@@ -46,7 +48,7 @@ export function ImageView({ doctype }: ImageViewProps) {
   }
 
   const imageField = detectImageField(meta);
-  if (!imageField) {
+  if (imageField === undefined || imageField === '') {
     return (
       <ViewUnsupported
         doctype={doctype}
@@ -69,12 +71,13 @@ export function ImageView({ doctype }: ImageViewProps) {
         titleField={titleField}
         subtitleField={extraFields[0]}
         onItemClick={(doc) => {
-          if (doc.name) {
-            navigator.navigate(paths.form(doctype, doc.name));
+          const { name } = doc;
+          if (name != null && name !== '') {
+            navigator.navigate(paths.form(doctype, name));
           }
         }}
         flex={1}
       />
     </YStack>
   );
-}
+};

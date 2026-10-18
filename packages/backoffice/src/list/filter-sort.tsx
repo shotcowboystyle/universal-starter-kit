@@ -1,3 +1,8 @@
+import { CaretDownIcon, SortAscendingIcon, SortDescendingIcon } from '@phosphor-icons/react';
+// House Button: the raw tamagui Button (components re-export) never gets the
+// house 44px press floor (LC-54 origin failure mode) — sort chrome takes the
+// forms Button so the floor and the icon slot (LC-53) apply.
+import { Button, Select } from '@repo/forms';
 /**
  * Sort control — desk's sort selector: a dropdown of sortable fields
  * (standard doc fields + the doctype's value-type fields) and an asc/desc
@@ -6,17 +11,12 @@
  */
 import { DropdownMenu, XStack, YStack } from '@repo/ui';
 import type { DropdownMenuEntry } from '@repo/ui';
-// House Button: the raw tamagui Button (components re-export) never gets the
-// house 44px press floor (LC-54 origin failure mode) — sort chrome takes the
-// forms Button so the floor and the icon slot (LC-53) apply.
-import { Button, Select } from '@repo/forms';
-import { CaretDownIcon, SortAscendingIcon, SortDescendingIcon } from '@phosphor-icons/react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { overlayListMaxHeight } from '../shared/measures';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
 
 export interface SortControlProps {
   meta?: DoctypeMeta;
@@ -54,8 +54,10 @@ interface SortOption {
   label: string;
 }
 
+const isSingleValue = (next: string | string[]): next is string => typeof next === 'string';
+
 /** Standard sortable doc fields + the doctype's sortable value fields. */
-export function sortableFieldsFromMeta(meta?: DoctypeMeta): SortOption[] {
+export const sortableFieldsFromMeta = (meta?: DoctypeMeta): SortOption[] => {
   const out: SortOption[] = [
     { fieldname: 'modified', label: 'Last Updated On' },
     { fieldname: 'creation', label: 'Created On' },
@@ -63,23 +65,25 @@ export function sortableFieldsFromMeta(meta?: DoctypeMeta): SortOption[] {
   ];
   const seen = new Set(out.map((option) => option.fieldname));
   for (const field of meta?.fields ?? []) {
-    if (!field.fieldname || seen.has(field.fieldname)) {
-      continue;
-    }
-    if (field.hidden === 1 || !SORTABLE_FIELDTYPES.has(String(field.fieldtype))) {
+    const sortable =
+      Boolean(field.fieldname) &&
+      !seen.has(field.fieldname) &&
+      field.hidden !== 1 &&
+      SORTABLE_FIELDTYPES.has(field.fieldtype);
+    if (!sortable) {
       continue;
     }
     seen.add(field.fieldname);
     out.push({ fieldname: field.fieldname, label: field.label ?? field.fieldname });
   }
   return out;
-}
+};
 
 /** First fieldname of meta.sort_field ("modified desc" / "a, b desc" forms). */
-function metaDefaultSortField(meta?: DoctypeMeta): string {
+const metaDefaultSortField = (meta?: DoctypeMeta): string => {
   const raw = (meta?.sort_field ?? 'modified').split(',')[0]?.trim() ?? 'modified';
   return raw.split(' ')[0] || 'modified';
-}
+};
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -91,40 +95,39 @@ type Translate = (key: string, fallback: string) => string;
  * fieldname (no-raw-fieldname rule candidate, parity audit pair 04/16):
  * unknown fieldnames degrade to a title-cased form, not the identifier.
  */
-export function sortFieldLabel(meta: DoctypeMeta | undefined, fieldname: string, t: Translate): string {
-  const standardLabels: Record<string, string> = {
-    modified: t('list.lastUpdated', 'Last Updated On'),
-    creation: t('list.createdOn', 'Created On'),
-    name: t('list.idColumn', 'ID'),
-    owner: t('list.createdBy', 'Created By'),
-    modified_by: t('list.lastUpdatedBy', 'Last Updated By'),
-    _liked_by: t('list.likedBy', 'Liked By'),
-    _assign: t('list.assignedTo', 'Assigned To'),
-    _user_tags: t('list.tags', 'Tags'),
-    _comments: t('list.comments', 'Comments'),
-  };
-  const standard = standardLabels[fieldname];
-  if (standard) {
+export const sortFieldLabel = (meta: DoctypeMeta | undefined, fieldname: string, t: Translate): string => {
+  const standardLabels = new Map<string, string>([
+    ['modified', t('list.lastUpdated', 'Last Updated On')],
+    ['creation', t('list.createdOn', 'Created On')],
+    ['name', t('list.idColumn', 'ID')],
+    ['owner', t('list.createdBy', 'Created By')],
+    ['modified_by', t('list.lastUpdatedBy', 'Last Updated By')],
+    ['_liked_by', t('list.likedBy', 'Liked By')],
+    ['_assign', t('list.assignedTo', 'Assigned To')],
+    ['_user_tags', t('list.tags', 'Tags')],
+    ['_comments', t('list.comments', 'Comments')],
+  ]);
+  const standard = standardLabels.get(fieldname);
+  if (standard !== undefined && standard !== '') {
     return standard;
   }
-  const metaField = meta?.fields?.find((field) => field.fieldname === fieldname);
-  if (metaField?.label) {
-    return metaField.label;
+  const metaLabel = meta?.fields?.find((field) => field.fieldname === fieldname)?.label;
+  if (metaLabel !== undefined && metaLabel !== '') {
+    return metaLabel;
   }
   const pretty = fieldname
-    .replace(/^_+/, '')
+    .replace(/^_+/u, '')
     .split('_')
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
   return pretty || fieldname;
-}
+};
 
-function metaDefaultSortOrder(meta?: DoctypeMeta): 'asc' | 'desc' {
-  return (meta?.sort_order ?? 'DESC').toLowerCase() === 'asc' ? 'asc' : 'desc';
-}
+const metaDefaultSortOrder = (meta?: DoctypeMeta): 'asc' | 'desc' =>
+  (meta?.sort_order ?? 'DESC').toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-export function SortControl({ meta, sortField, sortOrder, onSortChange, inline }: SortControlProps) {
+export const SortControl = ({ meta, sortField, sortOrder, onSortChange, inline }: SortControlProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   // One label channel for every fieldname the control can display
   // (sortFieldLabel: t()-standard fields → meta labels → title-case).
@@ -165,7 +168,7 @@ export function SortControl({ meta, sortField, sortOrder, onSortChange, inline }
           <Select
             value={field}
             onChange={(next) => {
-              if (typeof next === 'string' && next) {
+              if (isSingleValue(next) && next) {
                 onSortChange(next, order);
               }
             }}
@@ -238,4 +241,4 @@ export function SortControl({ meta, sortField, sortOrder, onSortChange, inline }
       />
     </XStack>
   );
-}
+};

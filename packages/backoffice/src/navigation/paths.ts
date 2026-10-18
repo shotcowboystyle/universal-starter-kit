@@ -28,27 +28,24 @@ export const BACKOFFICE_VIEWS = ['list', 'report', 'kanban', 'calendar', 'tree',
 
 export type BackofficeView = (typeof BACKOFFICE_VIEWS)[number];
 
-export function isBackofficeView(value: string): value is BackofficeView {
-  return (BACKOFFICE_VIEWS as readonly string[]).includes(value);
-}
+export const isBackofficeView = (value: string): value is BackofficeView =>
+  BACKOFFICE_VIEWS.some((view) => view === value);
 
 /** frappe.router.slug: "Sales Order" → "sales-order" */
-export function toSlug(name: string): string {
-  return name.toLowerCase().replaceAll(' ', '-');
-}
+export const toSlug = (name: string): string => name.toLowerCase().replaceAll(' ', '-');
 
 /** Best-effort display name from a slug: "sales-order" → "Sales Order" */
-export function slugToDisplayName(slug: string): string {
-  return slug.replaceAll('-', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
-}
+export const slugToDisplayName = (slug: string): string =>
+  slug.replaceAll('-', ' ').replaceAll(/\b\w/gu, (c) => c.toUpperCase());
 
 /**
  * Parse the `?d=` new-doc defaults query (urlencoded JSON object). The
  * router usually decodes the param already, so the raw value is tried first.
  * Malformed or non-object input degrades to no defaults.
  */
-export function parseDocDefaults(raw: string | undefined): Record<string, unknown> | undefined {
-  if (!raw) {
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- new-doc defaults are arbitrary DocField values keyed by fieldname
+export const parseDocDefaults = (raw: string | undefined): Record<string, unknown> | undefined => {
+  if (raw === undefined || raw === '') {
     return undefined;
   }
   const candidates = [raw];
@@ -63,7 +60,10 @@ export function parseDocDefaults(raw: string | undefined): Record<string, unknow
   for (const candidate of candidates) {
     try {
       const parsed: unknown = JSON.parse(candidate);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- JSON.parse output is the I/O boundary this function parses
+      if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        // SAFETY: parsed is a non-null, non-array object from JSON.parse, so every key holds a JSON value
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-unsafe-dictionary-type -- see SAFETY above
         return parsed as Record<string, unknown>;
       }
     } catch {
@@ -71,29 +71,33 @@ export function parseDocDefaults(raw: string | undefined): Record<string, unknow
     }
   }
   return undefined;
-}
+};
 
 /** Path builders bound to a mount prefix. */
 export interface BackofficePaths {
   /** The mount prefix these builders are bound to (no trailing slash). */
   base: string;
-  home(): string;
-  workspace(workspaceName: string): string;
-  list(doctype: string): string;
-  view(doctype: string, view: BackofficeView): string;
+  home: () => string;
+  workspace: (workspaceName: string) => string;
+  list: (doctype: string) => string;
+  view: (doctype: string, view: BackofficeView) => string;
   /**
    * New-document route. Optional `defaults` become the create form's initial
    * field values, carried as `?d=<urlencoded JSON object>` — desk parity for
    * creating from context (kanban column "+", calendar day click, …).
    */
-  newDoc(doctype: string, defaults?: Record<string, unknown>): string;
-  form(doctype: string, name: string): string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- arbitrary DocField values keyed by fieldname
+  newDoc: (doctype: string, defaults?: Record<string, unknown>) => string;
+  form: (doctype: string, name: string) => string;
   /** Query/Script Report page (desk /app/query-report/<name>). */
-  queryReport(reportName: string): string;
+  queryReport: (reportName: string) => string;
 }
 
-export function createBackofficePaths(basePath: string = BACKOFFICE_BASE): BackofficePaths {
-  const base = basePath.replace(/\/+$/, '') || '/';
+// oxlint-disable-next-line sonarjs/super-linear-regex -- anchored single-class run; mount prefixes are short config strings
+const TRAILING_SLASHES = /\/+$/u;
+
+export const createBackofficePaths = (basePath: string = BACKOFFICE_BASE): BackofficePaths => {
+  const base = basePath.replace(TRAILING_SLASHES, '') || '/';
   const prefix = base === '/' ? '' : base;
   return {
     base,
@@ -112,7 +116,7 @@ export function createBackofficePaths(basePath: string = BACKOFFICE_BASE): Backo
     form: (doctype, name) => `${prefix}/${toSlug(doctype)}/${encodeURIComponent(name)}`,
     queryReport: (reportName) => `${prefix}/query-report/${encodeURIComponent(reportName)}`,
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Default-bound helpers ("/backoffice" prefix — one-router typed-route compat)
@@ -120,33 +124,35 @@ export function createBackofficePaths(basePath: string = BACKOFFICE_BASE): Backo
 
 const defaultPaths = createBackofficePaths(BACKOFFICE_BASE);
 
-export function homePath(): BackofficePath {
-  return defaultPaths.home() as BackofficePath;
-}
+const isBackofficeSubPath = (path: string): path is BackofficeSubPath => path.startsWith(`${BACKOFFICE_BASE}/`);
 
-export function workspacePath(workspaceName: string): BackofficeSubPath {
-  return defaultPaths.workspace(workspaceName) as BackofficeSubPath;
-}
+/** Narrows a default-bound builder result; every builder output starts with the "/backoffice/" prefix. */
+const toSubPath = (path: string): BackofficeSubPath => {
+  if (isBackofficeSubPath(path)) {
+    return path;
+  }
+  throw new Error(`Expected a ${BACKOFFICE_BASE} sub-path, got "${path}"`);
+};
 
-export function listPath(doctype: string): BackofficeSubPath {
-  return defaultPaths.list(doctype) as BackofficeSubPath;
-}
+export const homePath = (): BackofficePath => BACKOFFICE_BASE;
 
-export function viewPath(doctype: string, view: BackofficeView): BackofficeSubPath {
-  return defaultPaths.view(doctype, view) as BackofficeSubPath;
-}
+export const workspacePath = (workspaceName: string): BackofficeSubPath =>
+  toSubPath(defaultPaths.workspace(workspaceName));
 
-export function newDocPath(doctype: string, defaults?: Record<string, unknown>): BackofficeSubPath {
-  return defaultPaths.newDoc(doctype, defaults) as BackofficeSubPath;
-}
+export const listPath = (doctype: string): BackofficeSubPath => toSubPath(defaultPaths.list(doctype));
 
-export function formPath(doctype: string, name: string): BackofficeSubPath {
-  return defaultPaths.form(doctype, name) as BackofficeSubPath;
-}
+export const viewPath = (doctype: string, view: BackofficeView): BackofficeSubPath =>
+  toSubPath(defaultPaths.view(doctype, view));
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- arbitrary DocField values keyed by fieldname
+export const newDocPath = (doctype: string, defaults?: Record<string, unknown>): BackofficeSubPath =>
+  toSubPath(defaultPaths.newDoc(doctype, defaults));
+
+export const formPath = (doctype: string, name: string): BackofficeSubPath =>
+  toSubPath(defaultPaths.form(doctype, name));
 
 export const QUERY_REPORT_BASE = '/backoffice/query-report';
 
 /** `/backoffice/query-report/<encoded report name>` (desk /app/query-report/<name>). */
-export function queryReportPath(reportName: string): BackofficeSubPath {
-  return defaultPaths.queryReport(reportName) as BackofficeSubPath;
-}
+export const queryReportPath = (reportName: string): BackofficeSubPath =>
+  toSubPath(defaultPaths.queryReport(reportName));

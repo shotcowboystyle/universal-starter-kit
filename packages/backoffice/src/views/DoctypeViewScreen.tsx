@@ -29,7 +29,7 @@ import { ViewHeader } from './ViewHeader';
 import { ViewLoading } from './ViewStates';
 
 export interface DoctypeViewScreenProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
   view: BackofficeView;
 }
@@ -40,20 +40,20 @@ export interface DoctypeViewScreenProps {
  * URL never enters history); the effect is client-only so SSR just paints
  * the loading state.
  */
-function ListRedirect({ doctype }: { doctype: string }) {
+const ListRedirect = ({ doctype }: { doctype: string }) => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   useEffect(() => {
     navigator.replace(paths.list(doctype));
   }, [navigator, paths, doctype]);
   return <ViewLoading />;
-}
+};
 
-function ViewBody({ doctype, view }: { doctype: string; view: Exclude<BackofficeView, 'list'> }) {
+const ViewBody = ({ doctype, view }: { doctype: string; view: Exclude<BackofficeView, 'list'> }) => {
   const { params } = useBackofficeLocation();
-  const board = typeof params.board === 'string' ? params.board : undefined;
-  const field = typeof params.field === 'string' ? params.field : undefined;
-  const filtersParam = typeof params.f === 'string' ? params.f : params.f?.[0];
+  const board = Array.isArray(params.board) ? undefined : params.board;
+  const field = Array.isArray(params.field) ? undefined : params.field;
+  const filtersParam = Array.isArray(params.f) ? params.f[0] : params.f;
 
   switch (view) {
     case 'report': {
@@ -89,10 +89,13 @@ function ViewBody({ doctype, view }: { doctype: string; view: Exclude<Backoffice
     case 'dashboard': {
       return <DashboardView doctype={doctype} />;
     }
+    default: {
+      return null;
+    }
   }
-}
+};
 
-export function DoctypeViewScreen({ doctype, view }: DoctypeViewScreenProps) {
+export const DoctypeViewScreen = ({ doctype, view }: DoctypeViewScreenProps) => {
   if (view === 'list') {
     return <ListRedirect doctype={doctype} />;
   }
@@ -112,4 +115,4 @@ export function DoctypeViewScreen({ doctype, view }: DoctypeViewScreenProps) {
       </YStack>
     </YStack>
   );
-}
+};

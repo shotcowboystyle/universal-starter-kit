@@ -3,11 +3,12 @@
 // the page title, a single primary "New {doctype}" (desk "Add {doctype}"),
 // and ListViewSelect as one dropdown — never a segment per view. Catalog
 // PageHeader is the same primitive the list screen uses (LC-16).
-import { PageHeader, YStack } from '@repo/ui';
+
+import { ArrowSquareOutIcon, PlusIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useDocRights, useFrappeConfig } from '@repo/frappe-ui';
 import { useResolvedKnobs } from '@repo/theme';
-import { ArrowSquareOutIcon, PlusIcon } from '@phosphor-icons/react';
+import { PageHeader, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -16,39 +17,39 @@ import {
   useBackofficeNavigator,
   useBackofficePaths,
 } from '../config/BackofficeProvider';
-import { openInNewTab } from '../form/platformHooks';
+import { openInNewTab } from '../form/platform-hooks';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { BackofficeView } from '../navigation/paths';
-import { deskViewUrl } from '../shared/deskLinks';
+import { deskViewUrl } from '../shared/desk-links';
 
-import { deriveAvailableViews } from './viewAvailability';
-import { useViewMeta } from './viewMeta';
+import { deriveAvailableViews } from './view-availability';
+import { useViewMeta } from './view-meta';
 import { ViewSwitcherMenu } from './ViewSwitcherMenu';
 
 export { useViewLabels } from './ViewSwitcherMenu';
 
 /**
  * Views this doctype can actually render, derived from meta by
- * `deriveAvailableViews` (viewAvailability.ts documents each view's desk
+ * `deriveAvailableViews` (view-availability.ts documents each view's desk
  * precondition). The provider's `capabilities.views.allow` gates the offer
  * list too. Conditional views stay hidden until meta confirms them;
  * `current` is always included so the switcher stays honest about where you
  * are (e.g. a deep link to /view/tree on a flat doctype, which renders its
  * own unsupported state).
  */
-export function useAvailableViews(doctype: string, current?: BackofficeView): BackofficeView[] {
+export const useAvailableViews = (doctype: string, current?: BackofficeView): BackofficeView[] => {
   const { meta } = useViewMeta(doctype);
   const { views } = useBackofficeCapabilities();
   return deriveAvailableViews(meta, { current, allow: views.enabled ? views.allow : [] });
-}
+};
 
 export interface ViewHeaderProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
   view: BackofficeView;
 }
 
-export function ViewHeader({ doctype, view }: ViewHeaderProps) {
+export const ViewHeader = ({ doctype, view }: ViewHeaderProps) => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { newDoc } = useBackofficeCapabilities();
@@ -59,7 +60,10 @@ export function ViewHeader({ doctype, view }: ViewHeaderProps) {
   const { meta } = useViewMeta(doctype);
   const { rights } = useDocRights(useFrappeConfig(), meta);
   // Desk counterpart of this exact view (fixture mode has no desk).
-  const deskHref = frappe?.baseURL && !frappe.fixtures ? deskViewUrl(frappe.baseURL, doctype, view) : undefined;
+  const deskHref =
+    frappe?.baseURL !== undefined && frappe.baseURL !== '' && !frappe.fixtures
+      ? deskViewUrl(frappe.baseURL, doctype, view)
+      : undefined;
 
   return (
     <YStack
@@ -69,16 +73,18 @@ export function ViewHeader({ doctype, view }: ViewHeaderProps) {
         title={doctype}
         actions={
           <>
-            {deskHref ? (
+            {deskHref === undefined ? null : (
               <Button
                 size={knobProps.sizeToken}
                 circular
                 chromeless
                 icon={ArrowSquareOutIcon}
-                onPress={() => openInNewTab(deskHref)}
+                onPress={() => {
+                  openInNewTab(deskHref);
+                }}
                 aria-label={t('views.openInDesk', 'Open in Desk')}
               />
-            ) : null}
+            )}
             <ViewSwitcherMenu
               views={availableViews}
               current={view}
@@ -106,4 +112,4 @@ export function ViewHeader({ doctype, view }: ViewHeaderProps) {
       />
     </YStack>
   );
-}
+};

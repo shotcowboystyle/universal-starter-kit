@@ -17,11 +17,12 @@
  * never a child's box-border that stops at content. Selected workspace is
  * fill (WorkspaceSidebar / LC-71); the rail does not paint selection chrome.
  */
-import { SizableText, SkipLink, XStack, YStack, isWeb } from '@repo/ui';
-import * as componentsBarrel from '@repo/ui';
+import { ListIcon, XIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { hairline, sizeRecipeEscape, useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
-import { ListIcon, XIcon } from '@phosphor-icons/react';
+import { SizableText, SkipLink, XStack, YStack, isWeb } from '@repo/ui';
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- the barrel is capability-checked for ToastViewport below
+import * as componentsBarrel from '@repo/ui';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,7 @@ import { WORKSPACE_SIDEBAR_WIDTH, WorkspaceSidebar } from './WorkspaceSidebar';
 // components shim deliberately omits ToastViewport (the @tamagui/toast portal
 // machinery stays out of the GJS graph), so on that target the shell simply
 // mounts no toast host (ListToastHost precedent in features/pokemon).
+// SAFETY: Partial only widens the barrel type, so the missing export reads as undefined
 const { ToastViewport } = componentsBarrel as Partial<typeof componentsBarrel>;
 
 export interface BackofficeShellProps {
@@ -62,24 +64,31 @@ export interface BackofficeShellProps {
  * width < NARROW_BREAKPOINT (640) — matchMedia on web, window dimensions on
  * native, so phones get the drawer instead of a permanent desktop rail.
  */
-function useIsNarrow(): boolean {
-  return useLayoutSizeClass() === 'compact';
-}
+const useIsNarrow = (): boolean => useLayoutSizeClass() === 'compact';
+
+/** Banner height one step above the knob size token (Frappe navbar proportions). */
+const bannerHeightFor = (sizeToken: string) => {
+  if (sizeToken === '$5') {
+    return '$7';
+  }
+  if (sizeToken === '$3') {
+    return '$5';
+  }
+  return '$6';
+};
 
 /** Standalone pane rule — full width (banner) or full height (rail). */
-function ShellHairline({ axis, testId }: { axis: 'horizontal' | 'vertical'; testId: string }) {
-  return (
-    <YStack
-      {...(axis === 'horizontal' ? hairline.line : hairline.vline)}
-      alignSelf="stretch"
-      {...(axis === 'horizontal' ? { width: '100%' } : { height: '100%' })}
-      flexShrink={0}
-      data-testid={testId}
-    />
-  );
-}
+const ShellHairline = ({ axis, testId }: { axis: 'horizontal' | 'vertical'; testId: string }) => (
+  <YStack
+    {...(axis === 'horizontal' ? hairline.line : hairline.vline)}
+    alignSelf="stretch"
+    {...(axis === 'horizontal' ? { width: '100%' } : { height: '100%' })}
+    flexShrink={0}
+    data-testid={testId}
+  />
+);
 
-export function BackofficeShell({ children, activePath, onNavigate }: BackofficeShellProps) {
+export const BackofficeShell = ({ children, activePath, onNavigate }: BackofficeShellProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const capabilities = useBackofficeCapabilities();
@@ -105,6 +114,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
   // Leaving the narrow range always closes the drawer.
   useEffect(() => {
     if (!isNarrow) {
+      // oxlint-disable-next-line react/set-state-in-effect -- the drawer must stay closed when the viewport narrows again
       setDrawerOpen(false);
     }
   }, [isNarrow]);
@@ -112,7 +122,8 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
   // Escape dismisses the drawer (web-only keyboard listener).
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined' || !drawerOpen) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -132,7 +143,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
     navigate(path);
   };
 
-  const bannerHeight = knobProps.sizeToken === '$5' ? '$7' : knobProps.sizeToken === '$3' ? '$5' : '$6';
+  const bannerHeight = bannerHeightFor(knobProps.sizeToken);
 
   const sidebarContent = (
     <YStack
@@ -224,6 +235,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
 
   const rail = (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack: `role` also sets the native accessibility role, a tag is web-only
       role="navigation"
       flexShrink={0}
       height="100%"
@@ -249,6 +261,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
 
       {/* Top navbar — Frappe inverted-L: full width above the rail. */}
       <XStack
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack: `role` also sets the native accessibility role, a tag is web-only
         role="banner"
         {...knobProps.surface}
         borderWidth={0}
@@ -290,6 +303,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
               data-testid="backoffice-sidebar-scrim"
             />
             <XStack
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack: `role` also sets the native accessibility role, a tag is web-only
               role="navigation"
               position="absolute"
               top={0}
@@ -309,6 +323,7 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
 
         {/* Routed content — pages own their own headers/breadcrumbs */}
         <YStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack: `role` also sets the native accessibility role, a tag is web-only
           role="main"
           id="backoffice-main"
           tabIndex={-1}
@@ -327,4 +342,4 @@ export function BackofficeShell({ children, activePath, onNavigate }: Backoffice
       {ToastViewport ? <ToastViewport /> : null}
     </YStack>
   );
-}
+};

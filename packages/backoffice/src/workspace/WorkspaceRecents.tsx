@@ -1,5 +1,3 @@
-import { Card, PageSection, Text, XStack, useTheme } from '@repo/ui';
-import { TOUCH_HEIGHT_FLOOR, ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
 /**
  * "Continue where you left off" strip (MOD-11) — a wrapping band of chips
  * for the most recent backoffice visits, read from the shared desk recent
@@ -14,6 +12,8 @@ import { TOUCH_HEIGHT_FLOOR, ensureFocusVisibleRing, useResolvedKnobs } from '@r
  * too) are filtered out so every chip stays navigable in this app.
  */
 import { ClockCounterClockwiseIcon } from '@phosphor-icons/react';
+import { TOUCH_HEIGHT_FLOOR, ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
+import { Card, PageSection, Text, XStack, useTheme } from '@repo/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,17 +25,18 @@ import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 /** Last N visits shown (MOD-11: "last 5 items from the shared recent store"). */
 const MAX_RECENTS = 5;
 
-export function WorkspaceRecents() {
+export const WorkspaceRecents = () => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
+  const iconSize = knobProps.controlIcon?.width || 16;
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const theme = useTheme();
   // Phosphor icons take a resolved color string, not a tamagui token —
   // read the theme value so native/GTK get a real color (not a CSS var).
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme values are string | number; only a string is a color
   const iconColor = typeof theme.color11?.val === 'string' ? theme.color11.val : undefined;
-  const [recent, setRecents] = useState<RecentItem[]>([]);
+  const [recents, setRecents] = useState<RecentItem[]>([]);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -46,25 +47,26 @@ export function WorkspaceRecents() {
   }, []);
 
   const { base } = paths;
-  const refresh = useCallback(() => {
-    void readRecentItems().then((stored) => {
-      if (!mountedRef.current) {
-        return;
-      }
-      setRecents(stored.filter((item) => item.path.startsWith(base)).slice(0, MAX_RECENTS));
-    });
+  const refresh = useCallback(async () => {
+    const stored = await readRecentItems();
+    if (!mountedRef.current) {
+      return;
+    }
+    setRecents(stored.filter((item) => item.path.startsWith(base)).slice(0, MAX_RECENTS));
   }, [base]);
 
   // Fresh on mount and whenever the window regains focus (another surface
   // may have pushed a visit since) — same staleness contract as the
   // awesomebar's refresh-on-open.
   useEffect(() => {
-    refresh();
+    void refresh();
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- SSR / native guard: window or its event API may be absent
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onFocus = () => {
-      refresh();
+      void refresh();
     };
     window.addEventListener('focus', onFocus);
     return () => {
@@ -72,7 +74,7 @@ export function WorkspaceRecents() {
     };
   }, [refresh]);
 
-  if (recent.length === 0) {
+  if (recents.length === 0) {
     return null;
   }
 
@@ -85,7 +87,7 @@ export function WorkspaceRecents() {
       <XStack
         flexWrap="wrap"
         {...knobProps.gap}>
-        {recent.map((item) => (
+        {recents.map((item) => (
           <Card
             key={item.path}
             // Chip-scale surface: eject the Card's default panelPadding —
@@ -97,6 +99,7 @@ export function WorkspaceRecents() {
             cursor="pointer"
             hoverStyle={{ borderColor: '$accentBackground' }}
             pressStyle={{ scale: 0.98 }}
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui Card; there is no <a> on native
             role="link"
             aria-label={item.label}
             tabIndex={0}
@@ -128,4 +131,4 @@ export function WorkspaceRecents() {
       </XStack>
     </PageSection>
   );
-}
+};

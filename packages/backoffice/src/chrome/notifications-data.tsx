@@ -16,11 +16,11 @@
  *   {doctype: "Notification Log", name, fieldname: "read", value: 1}
  */
 import { Order, useFrappeCollection, useLiveQuery } from '@repo/frappe';
-import type { FixtureProvider, FrappeApp } from '@repo/frappe';
+import type { FrappeApp } from '@repo/frappe';
 import { useFrappeConfig } from '@repo/frappe-ui';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 import { parseFrappeTimestamp, stripHtmlToText } from './notifications-utils';
 
@@ -75,7 +75,7 @@ interface SessionUserState {
   resolved: boolean;
 }
 
-function useNotificationsSessionUser(fixtureMode: boolean): SessionUserState {
+const useNotificationsSessionUser = (fixtureMode: boolean): SessionUserState => {
   const app = useFrappeApp();
   const [state, setState] = useState<SessionUserState>({ resolved: false });
 
@@ -84,68 +84,77 @@ function useNotificationsSessionUser(fixtureMode: boolean): SessionUserState {
     // No app (no provider config) settles the same way so the panel never
     // skeletons forever.
     if (fixtureMode || !app) {
+      // oxlint-disable-next-line react/set-state-in-effect -- no session endpoint to probe; settle immediately
       setState({ resolved: true });
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
     let promise = sessionUserCache.get(app);
     if (!promise) {
-      promise = app
-        .call()
-        .get<{ message?: string }>('frappe.auth.get_logged_user')
-        .then((res) => {
-          const user = res.payload?.message;
-          return user && user !== 'Guest' ? user : undefined;
-        })
-        .catch(() => {
+      const probe = async (): Promise<string | undefined> => {
+        try {
+          const res = await app.call().get<{ message?: string }>('frappe.auth.get_logged_user');
+          const user = res.payload?.message ?? '';
+          return user !== '' && user !== 'Guest' ? user : undefined;
+        } catch {
           // Evict failed probes so a later mount can retry.
           sessionUserCache.delete(app);
           return undefined;
-        });
+        }
+      };
+      promise = probe();
       sessionUserCache.set(app, promise);
     }
-    promise.then((user) => {
+    const session = promise;
+    const settle = async () => {
+      const user = await session;
       if (!cancelled) {
         setState({ user, resolved: true });
       }
-    });
+    };
+    void settle();
     return () => {
       cancelled = true;
     };
   }, [app, fixtureMode]);
 
   return state;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Mark-as-read RPCs
 // ---------------------------------------------------------------------------
 
-async function setReadViaSetValue(app: FrappeApp, name: string): Promise<void> {
+const setReadViaSetValue = async (app: FrappeApp, name: string): Promise<void> => {
   await app.call().post('frappe.client.set_value', {
     doctype: 'Notification Log',
     name,
     fieldname: 'read',
     value: 1,
   });
-}
+};
 
-async function markAsReadOnServer(app: FrappeApp, name: string): Promise<void> {
+const markAsReadOnServer = async (app: FrappeApp, name: string): Promise<void> => {
   try {
     await app.call().post(MARK_AS_READ_METHOD, { docname: name });
   } catch {
     // Desk RPC unavailable (older bench / stripped app) — plain doc write.
     await setReadViaSetValue(app, name);
   }
-}
+};
 
-async function markAllAsReadOnServer(app: FrappeApp, unreadNames: readonly string[]): Promise<void> {
+const markAllAsReadOnServer = async (app: FrappeApp, unreadNames: readonly string[]): Promise<void> => {
   try {
     await app.call().post(MARK_ALL_AS_READ_METHOD, {});
   } catch {
-    await Promise.all(unreadNames.map(async (name) => await setReadViaSetValue(app, name)));
+    await Promise.all(
+      unreadNames.map(async (name) => {
+        await setReadViaSetValue(app, name);
+      }),
+    );
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -164,7 +173,7 @@ export interface UseNotificationsResult {
   markAllAsRead: () => Promise<void>;
 }
 
-export function useNotifications(): UseNotificationsResult {
+export const useNotifications = (): UseNotificationsResult => {
   const config = useFrappeConfig();
   const app = useFrappeApp();
   const fixtureMode = Boolean(config?.fixtures);
@@ -190,10 +199,10 @@ export function useNotifications(): UseNotificationsResult {
 
   // Live mode waits for the session user (the for_user filter needs it);
   // fixture mode reads the fixture set unfiltered.
-  const ready = Boolean(connectionConfig) && (fixtureMode || Boolean(sessionUser));
+  const ready = Boolean(connectionConfig) && (fixtureMode || sessionUser !== undefined);
   const collection = useFrappeCollection<NotificationLogDoc>(ready ? connectionConfig : undefined, 'Notification Log', {
     fields: NOTIFICATION_FIELDS,
-    filters: !fixtureMode && sessionUser ? [['for_user', '=', sessionUser]] : undefined,
+    filters: !fixtureMode && sessionUser !== undefined ? [['for_user', '=', sessionUser]] : undefined,
     orderBy: { field: 'creation', order: Order.Desc },
     limit: NOTIFICATION_WINDOW_LIMIT,
   });
@@ -207,25 +216,31 @@ export function useNotifications(): UseNotificationsResult {
   const [readOverrides, setReadOverrides] = useState<ReadonlySet<string>>(new Set());
 
   const items = useMemo<NotificationItem[]>(() => {
+    // SAFETY: the live query selects from the Notification Log collection typed as NotificationLogDoc.
     const docs = (rawData as NotificationLogDoc[] | undefined) ?? [];
-    return docs
-      .filter((doc) => doc.name)
-      .map((doc) => ({
+    const prepared: NotificationItem[] = [];
+    for (const doc of docs) {
+      if (!doc.name) {
+        continue;
+      }
+      prepared.push({
         ...doc,
-        unread: !doc.read && !readOverrides.has(doc.name),
+        unread: doc.read !== 1 && !readOverrides.has(doc.name),
         subjectText: stripHtmlToText(doc.subject),
         timestampMs: parseFrappeTimestamp(doc.creation),
-      }))
-      .sort((a, b) => (b.timestampMs ?? 0) - (a.timestampMs ?? 0) || a.name.localeCompare(b.name));
+      });
+    }
+    // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh array; toSorted is not guaranteed on every Hermes runtime this ships to
+    return prepared.sort((a, b) => (b.timestampMs ?? 0) - (a.timestampMs ?? 0) || a.name.localeCompare(b.name));
   }, [rawData, readOverrides]);
 
   const unreadCount = useMemo(() => items.filter((item) => item.unread).length, [items]);
 
-  const isLoading =
-    (Boolean(connectionConfig) && !fixtureMode && !sessionResolved) ||
-    // Session resolved without a user (Guest / unreachable bench): settle on
-    // an empty feed instead of skeleting forever.
-    (ready && (collection === undefined || Boolean(queryLoading)));
+  const awaitingSession = Boolean(connectionConfig) && !fixtureMode && !sessionResolved;
+  // Session resolved without a user (Guest / unreachable bench): settle on
+  // an empty feed instead of skeleting forever.
+  const awaitingQuery = ready && (collection === undefined || queryLoading);
+  const isLoading = awaitingSession || awaitingQuery;
 
   const addOverrides = useCallback((names: readonly string[]) => {
     if (!names.length) {
@@ -270,7 +285,12 @@ export function useNotifications(): UseNotificationsResult {
   );
 
   const markAllAsRead = useCallback(async () => {
-    const unreadNames = items.filter((item) => item.unread).map((item) => item.name);
+    const unreadNames: string[] = [];
+    for (const item of items) {
+      if (item.unread) {
+        unreadNames.push(item.name);
+      }
+    }
     if (!unreadNames.length) {
       return;
     }
@@ -290,4 +310,4 @@ export function useNotifications(): UseNotificationsResult {
     () => ({ items, unreadCount, isLoading, markAsRead, markAllAsRead }),
     [items, unreadCount, isLoading, markAsRead, markAllAsRead],
   );
-}
+};

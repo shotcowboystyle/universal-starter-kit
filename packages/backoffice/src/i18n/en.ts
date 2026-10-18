@@ -1,3 +1,4 @@
+/* oxlint-disable sonarjs/no-duplicate-string -- translation values repeat across keys by design. */
 /**
  * Bundled English resources for the "backoffice" i18n namespace.
  *

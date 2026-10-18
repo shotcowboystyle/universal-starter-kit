@@ -4,6 +4,14 @@
  * newest-first Notification Log list. Presentational — data, routing, and
  * the popover/sheet shell live in NotificationsButton.
  */
+import { GearSixIcon } from '@phosphor-icons/react';
+import {
+  ensureFocusVisibleRing,
+  formatRelativeTimestamp,
+  menuRowFrame,
+  sizeRecipeEscape,
+  useResolvedKnobs,
+} from '@repo/theme';
 import {
   Avatar,
   Button,
@@ -17,14 +25,6 @@ import {
   XStack,
   YStack,
 } from '@repo/ui';
-import {
-  ensureFocusVisibleRing,
-  formatRelativeTimestamp,
-  menuRowFrame,
-  sizeRecipeEscape,
-  useResolvedKnobs,
-} from '@repo/theme';
-import { GearSixIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
@@ -40,7 +40,7 @@ export interface NotificationsPanelProps {
   onMarkAllRead: () => void;
 }
 
-function NotificationRow({ item, onPress }: { item: NotificationItem; onPress: () => void }) {
+const NotificationRow = ({ item, onPress }: { item: NotificationItem; onPress: () => void }) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const subject = item.subjectText || t('notifications.untitled', 'Notification');
@@ -57,12 +57,15 @@ function NotificationRow({ item, onPress }: { item: NotificationItem; onPress: (
       pressStyle={{ backgroundColor: '$color4' }}
       focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
       cursor="pointer"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack row (web div / native View); a <button> cannot host the avatar + text layout cross-platform
       role="button"
       tabIndex={0}
       aria-label={subject}
       data-testid="backoffice-notification-row"
       onPress={onPress}
       onKeyDown={
+        // SAFETY: on web Tamagui forwards the DOM KeyboardEvent to onKeyDown; its prop type omits the event argument.
+        // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
         ((event: KeyboardEvent) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -108,35 +111,39 @@ function NotificationRow({ item, onPress }: { item: NotificationItem; onPress: (
       )}
     </XStack>
   );
-}
+};
 
-function NotificationSkeletonRows() {
-  return (
-    <YStack data-testid="backoffice-notifications-loading">
-      {Array.from({ length: 3 }, (_, index) => (
-        <XStack
-          key={index}
-          alignItems="center"
-          gap="$3"
-          paddingHorizontal="$3"
-          paddingVertical="$2.5">
-          <SkeletonCircle size={28} />
-          <YStack
-            flex={1}
-            gap="$1.5">
-            <Skeleton width="85%" />
-            <Skeleton
-              height={sizeRecipeEscape(10, 'timestamp bone: the height of the small caption it stands in for')}
-              width="$6"
-            />
-          </YStack>
-        </XStack>
-      ))}
-    </YStack>
-  );
-}
+const NotificationSkeletonRows = () => (
+  <YStack data-testid="backoffice-notifications-loading">
+    {Array.from({ length: 3 }, (_, index) => (
+      <XStack
+        key={index}
+        alignItems="center"
+        gap="$3"
+        paddingHorizontal="$3"
+        paddingVertical="$2.5">
+        <SkeletonCircle size={28} />
+        <YStack
+          flex={1}
+          gap="$1.5">
+          <Skeleton width="85%" />
+          <Skeleton
+            height={sizeRecipeEscape(10, 'timestamp bone: the height of the small caption it stands in for')}
+            width="$6"
+          />
+        </YStack>
+      </XStack>
+    ))}
+  </YStack>
+);
 
-export function NotificationsPanel({ items, isLoading, width, onItemPress, onMarkAllRead }: NotificationsPanelProps) {
+export const NotificationsPanel = ({
+  items,
+  isLoading,
+  width,
+  onItemPress,
+  onMarkAllRead,
+}: NotificationsPanelProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const hasUnread = items.some((item) => item.unread);
@@ -181,9 +188,11 @@ export function NotificationsPanel({ items, isLoading, width, onItemPress, onMar
         />
       </XStack>
       <Separator />
+      {/* oxlint-disable-next-line eslint/no-nested-ternary -- three-state body: loading, empty, list */}
       {isLoading ? (
         <NotificationSkeletonRows />
-      ) : items.length === 0 ? (
+      ) : // oxlint-disable-next-line sonarjs/no-nested-conditional -- three-state body: loading, empty, list
+      items.length === 0 ? (
         <EmptyState
           compact
           paddingVertical="$6"
@@ -205,4 +214,4 @@ export function NotificationsPanel({ items, isLoading, width, onItemPress, onMar
       )}
     </YStack>
   );
-}
+};

@@ -117,22 +117,23 @@ interface BuildOptions {
 
 // ── small helpers ──────────────────────────────────────────────────────────
 
-function str(value: unknown): string | undefined {
-  return typeof value === 'string' && value ? value : undefined;
-}
+/** A docinfo cell as a non-empty string, else undefined. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, anti-slop/no-runtime-typeof -- parse boundary for raw docinfo cells; only a non-empty string is text
+const str = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined);
 
-function resolveImage(image: string | undefined, baseURL?: string): string | undefined {
-  if (!image) {
+const resolveImage = (image: string | undefined, baseURL?: string): string | undefined => {
+  if (image === undefined || image === '') {
     return undefined;
   }
-  if (/^(https?:)?\/\//.test(image) || image.startsWith('data:')) {
+  if (/^(?:https?:)?\/\//u.test(image) || image.startsWith('data:')) {
     return image;
   }
-  if (!baseURL) {
+  if (baseURL === undefined || baseURL === '') {
     return image;
   }
-  return `${baseURL.replace(/\/+$/, '')}${image.startsWith('/') ? '' : '/'}${image}`;
-}
+  // oxlint-disable-next-line sonarjs/super-linear-regex -- the bench base URL is short host config, never user-sized input
+  return `${baseURL.replace(/\/+$/u, '')}${image.startsWith('/') ? '' : '/'}${image}`;
+};
 
 interface AuthorFields {
   author: string;
@@ -141,29 +142,30 @@ interface AuthorFields {
   image?: string;
 }
 
-function authorFields(userId: string | undefined, options: BuildOptions): AuthorFields {
-  const info = userId ? options.userInfo?.[userId] : undefined;
+const authorFields = (userId: string | undefined, options: BuildOptions): AuthorFields => {
+  const info = userId === undefined || userId === '' ? undefined : options.userInfo?.[userId];
   return {
     author: userId ?? 'unknown',
     authorName: str(info?.fullname),
     authorEmail: str(info?.email),
     image: resolveImage(str(info?.image), options.baseURL),
   };
-}
+};
 
 interface TimestampFields {
   timestamp: string;
   epoch: number;
 }
 
-function timestampFields(raw: unknown): TimestampFields {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- docinfo rows are wire data: a frappe datetime or anything else
+const timestampFields = (raw: unknown): TimestampFields => {
   const date = parseFrappeDate(raw);
   return {
     // ISO keeps downstream Date() parsing safe on every JS engine
     timestamp: date ? date.toISOString() : (str(raw) ?? ''),
     epoch: date?.getTime() ?? 0,
   };
-}
+};
 
 interface DisplayValue {
   text?: string;
@@ -172,7 +174,7 @@ interface DisplayValue {
 }
 
 /** Looks like markup (an opening/closing tag) — worth an htmlToText pass. */
-const HTML_TAG = /<[a-z!/][^>]*>/i;
+const HTML_TAG = /<[a-z!/][^>]*>/iu;
 
 /**
  * Display form of a version diff value: objects JSON-stringify, HTML strips
@@ -180,10 +182,12 @@ const HTML_TAG = /<[a-z!/][^>]*>/i;
  * the feed), and everything truncates. Markup with no extractable text
  * flags `rich` so the renderer can show an honest placeholder.
  */
-function displayValue(value: unknown): DisplayValue {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: a Version diff cell is any JSON value
+const displayValue = (value: unknown): DisplayValue => {
   if (value === null || value === undefined) {
     return {};
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: JSON objects/arrays stringify, primitives print
   if (typeof value === 'object') {
     try {
       return { text: truncateText(JSON.stringify(value)) };
@@ -191,6 +195,7 @@ function displayValue(value: unknown): DisplayValue {
       return {};
     }
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- objects returned above; only JSON primitives reach here
   const text = String(value).trim();
   if (!text) {
     return {};
@@ -200,76 +205,112 @@ function displayValue(value: unknown): DisplayValue {
     return stripped ? { text: truncateText(stripped) } : { rich: true };
   }
   return { text: truncateText(text) };
-}
+};
 
 // ── version data parsing ───────────────────────────────────────────────────
+
+/** The keys parseVersionData reads from a Version doc's JSON; each is validated before use. */
+interface VersionPayload {
+  changed?: unknown;
+  added?: unknown;
+  removed?: unknown;
+  row_changed?: unknown;
+}
+
+/** One `changed` row (`[fieldname, from, to]`), or undefined when it names no field. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: a raw `changed` row
+const versionFieldChange = (row: unknown): VersionFieldChange | undefined => {
+  if (!Array.isArray(row) || row.length === 0) {
+    return undefined;
+  }
+  const field = str(row[0]);
+  if (field === undefined) {
+    return undefined;
+  }
+  const from = displayValue(row[1]);
+  const to = displayValue(row[2]);
+  const change: VersionFieldChange = { field };
+  if (from.text !== undefined) {
+    change.from = from.text;
+  }
+  if (to.text !== undefined) {
+    change.to = to.text;
+  }
+  if (from.rich) {
+    change.fromRich = true;
+  }
+  if (to.rich) {
+    change.toRich = true;
+  }
+  return change;
+};
+
+/** Distinct fieldnames of an added/removed/row_changed list (`[[fieldname, row], …]`). */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: a raw table-change list
+const versionTableFields = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const fields = new Set<string>();
+  for (const row of value) {
+    const field = Array.isArray(row) && row.length > 0 ? str(row[0]) : undefined;
+    if (field !== undefined) {
+      fields.add(field);
+    }
+  }
+  return [...fields];
+};
 
 /**
  * Parse a Version doc's `data` JSON string defensively — malformed or empty
  * payloads yield undefined and render as a plain "made changes" row.
  */
-export function parseVersionData(data: unknown): ParsedVersionData | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary for a Version doc's raw `data` cell
+export const parseVersionData = (data: unknown): ParsedVersionData | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: only a non-empty string holds the JSON
   if (typeof data !== 'string' || !data) {
     return undefined;
   }
-  let parsed: Record<string, unknown>;
+  let parsed: VersionPayload;
   try {
     const raw: unknown = JSON.parse(data);
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: the payload must be a JSON object
+    if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
       return undefined;
     }
-    parsed = raw as Record<string, unknown>;
+    parsed = raw;
   } catch {
     return undefined;
   }
   const changed: VersionFieldChange[] = [];
   if (Array.isArray(parsed.changed)) {
     for (const row of parsed.changed) {
-      if (!Array.isArray(row) || row.length === 0) {
-        continue;
+      const change = versionFieldChange(row);
+      if (change) {
+        changed.push(change);
       }
-      const field = str(row[0]);
-      if (!field) {
-        continue;
-      }
-      const from = displayValue(row[1]);
-      const to = displayValue(row[2]);
-      changed.push({
-        field,
-        ...(from.text === undefined ? {} : { from: from.text }),
-        ...(to.text === undefined ? {} : { to: to.text }),
-        ...(from.rich ? { fromRich: true } : {}),
-        ...(to.rich ? { toRich: true } : {}),
-      });
     }
   }
-  const tableFields = (value: unknown): string[] => {
-    if (!Array.isArray(value)) {
-      return [];
-    }
-    const fields = value
-      .filter((row): row is unknown[] => Array.isArray(row) && row.length > 0)
-      .map((row) => str(row[0]))
-      .filter((field): field is string => Boolean(field));
-    return [...new Set(fields)];
-  };
-  const added = tableFields(parsed.added);
-  const removed = tableFields(parsed.removed);
-  const rowChanged = tableFields(parsed.row_changed);
+  const added = versionTableFields(parsed.added);
+  const removed = versionTableFields(parsed.removed);
+  const rowChanged = versionTableFields(parsed.row_changed);
   if (!changed.length && !added.length && !removed.length && !rowChanged.length) {
     return undefined;
   }
   return { changed, added, removed, rowChanged };
-}
+};
 
-export type TimelineTranslate = (key: string, options: { defaultValue: string } & Record<string, unknown>) => string;
+export type TimelineTranslate = (
+  key: string,
+  options: { defaultValue: string } & Record<string, string | number>,
+) => string;
 
 /**
  * Display form of one side of a field change: value text, or an honest
  * placeholder — "(empty)" for a truly empty value, "(formatted content)"
  * for rich markup that strips to no text (never the raw tags).
  */
-function changeSideLabel(text: string | undefined, rich: boolean | undefined, translate: TimelineTranslate): string {
+const changeSideLabel = (text: string | undefined, rich: boolean, translate: TimelineTranslate): string => {
   if (text !== undefined) {
     return text;
   }
@@ -277,7 +318,7 @@ function changeSideLabel(text: string | undefined, rich: boolean | undefined, tr
     return translate('timeline.richContent', { defaultValue: '(formatted content)' });
   }
   return translate('timeline.emptyValue', { defaultValue: '(empty)' });
-}
+};
 
 /**
  * Desk-parity version sentence: every changed field renders its old → new
@@ -286,17 +327,18 @@ function changeSideLabel(text: string | undefined, rich: boolean | undefined, tr
  * Z"). Values arrive pre-truncated and markup-stripped from
  * parseVersionData.
  */
-export function versionSummary(version: ParsedVersionData, translate: TimelineTranslate): string {
+const fieldList = (fields: string[]) => fields.map(humanizeFieldname).join(', ');
+
+export const versionSummary = (version: ParsedVersionData, translate: TimelineTranslate): string => {
   const parts: string[] = [];
-  const fieldList = (fields: string[]) => fields.map(humanizeFieldname).join(', ');
   if (version.changed.length === 1) {
-    const change = version.changed[0];
+    const [change] = version.changed;
     parts.push(
       translate('timeline.changedValue', {
         defaultValue: 'changed value of {{field}} from {{from}} to {{to}}',
         field: humanizeFieldname(change.field),
-        from: changeSideLabel(change.from, change.fromRich, translate),
-        to: changeSideLabel(change.to, change.toRich, translate),
+        from: changeSideLabel(change.from, change.fromRich === true, translate),
+        to: changeSideLabel(change.to, change.toRich === true, translate),
       }),
     );
   } else if (version.changed.length > 1) {
@@ -306,8 +348,8 @@ export function versionSummary(version: ParsedVersionData, translate: TimelineTr
       translate('timeline.changedValueItem', {
         defaultValue: '{{field}} from {{from}} to {{to}}',
         field: humanizeFieldname(change.field),
-        from: changeSideLabel(change.from, change.fromRich, translate),
-        to: changeSideLabel(change.to, change.toRich, translate),
+        from: changeSideLabel(change.from, change.fromRich === true, translate),
+        to: changeSideLabel(change.to, change.toRich === true, translate),
       }),
     );
     parts.push(
@@ -342,17 +384,17 @@ export function versionSummary(version: ParsedVersionData, translate: TimelineTr
     );
   }
   return parts.join(', ');
-}
+};
 
 // ── entry builders ─────────────────────────────────────────────────────────
 
-function commentEntry(row: TimelineRowLike, options: BuildOptions): TimelineFeedEntry | undefined {
+const commentEntry = (row: TimelineRowLike, options: BuildOptions): TimelineFeedEntry | undefined => {
   const docname = str(row.name);
-  if (!docname) {
+  if (docname === undefined) {
     return undefined;
   }
   const html = str(row.content);
-  return {
+  const entry: TimelineFeedEntry = {
     id: `comment:${docname}`,
     type: 'comment',
     kind: 'comment',
@@ -362,13 +404,16 @@ function commentEntry(row: TimelineRowLike, options: BuildOptions): TimelineFeed
     ...timestampFields(row.creation),
     content: htmlToText(html),
     html,
-    ...(row.__optimistic === true ? { pending: true } : {}),
   };
-}
+  if (row.__optimistic === true) {
+    entry.pending = true;
+  }
+  return entry;
+};
 
-function versionEntry(row: TimelineRowLike, options: BuildOptions): TimelineFeedEntry | undefined {
+const versionEntry = (row: TimelineRowLike, options: BuildOptions): TimelineFeedEntry | undefined => {
   const docname = str(row.name);
-  if (!docname) {
+  if (docname === undefined) {
     return undefined;
   }
   return {
@@ -381,15 +426,15 @@ function versionEntry(row: TimelineRowLike, options: BuildOptions): TimelineFeed
     ...timestampFields(row.creation),
     version: parseVersionData(row.data),
   };
-}
+};
 
-function communicationEntry(
+const communicationEntry = (
   row: TimelineRowLike,
   kind: 'communication' | 'automated',
   options: BuildOptions,
-): TimelineFeedEntry | undefined {
+): TimelineFeedEntry | undefined => {
   const docname = str(row.name);
-  if (!docname) {
+  if (docname === undefined) {
     return undefined;
   }
   const sender = str(row.sender) ?? str(row.owner);
@@ -407,19 +452,16 @@ function communicationEntry(
     subject: htmlToText(str(row.subject)),
     content: htmlToText(str(row.content)),
   };
-}
+};
 
-function logEntry(
-  row: TimelineRowLike,
-  kind: 'assignment' | 'attachment' | 'like' | 'info',
-  options: BuildOptions,
-): TimelineFeedEntry | undefined {
+type LogKind = 'assignment' | 'attachment' | 'like' | 'info';
+
+const logEntry = (row: TimelineRowLike, kind: LogKind, options: BuildOptions): TimelineFeedEntry | undefined => {
   const docname = str(row.name);
-  if (!docname) {
+  if (docname === undefined) {
     return undefined;
   }
-  const type: TimelineEntry['type'] =
-    kind === 'assignment' ? 'assignment' : kind === 'attachment' ? 'attachment' : 'info';
+  const type: TimelineEntry['type'] = kind === 'like' ? 'info' : kind;
   return {
     id: `${kind}:${docname}`,
     type,
@@ -430,15 +472,15 @@ function logEntry(
     ...timestampFields(row.creation),
     content: htmlToText(str(row.content)),
   };
-}
+};
 
 // ── public API ─────────────────────────────────────────────────────────────
 
 /** Merge every docinfo activity stream into one newest-first feed. */
-export function buildTimelineFeed(
+export const buildTimelineFeed = (
   docinfo: TimelineDocinfoLike | undefined,
   options: BuildOptions = {},
-): TimelineFeedEntry[] {
+): TimelineFeedEntry[] => {
   if (!docinfo) {
     return [];
   }
@@ -472,11 +514,11 @@ export function buildTimelineFeed(
   for (const row of docinfo.info_logs ?? []) {
     push(logEntry(row, 'info', options));
   }
-  return entries.sort((a, b) => b.epoch - a.epoch);
-}
+  return entries.toSorted((a, b) => b.epoch - a.epoch);
+};
 
 /** Apply the All / Comments / Edits filter tabs. */
-export function filterTimelineFeed(entries: TimelineFeedEntry[], filter: TimelineFilterValue): TimelineFeedEntry[] {
+export const filterTimelineFeed = (entries: TimelineFeedEntry[], filter: TimelineFilterValue): TimelineFeedEntry[] => {
   if (filter === 'comments') {
     return entries.filter((entry) => entry.kind === 'comment');
   }
@@ -484,4 +526,4 @@ export function filterTimelineFeed(entries: TimelineFeedEntry[], filter: Timelin
     return entries.filter((entry) => entry.kind === 'version');
   }
   return entries;
-}
+};

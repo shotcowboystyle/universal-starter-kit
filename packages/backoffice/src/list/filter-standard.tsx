@@ -1,3 +1,12 @@
+import { Checkbox, Input, Select } from '@repo/forms';
+import {
+  Link as LinkField,
+  quickFilterValue,
+  selectOptionsFromField,
+  setFieldFilter,
+  standardFiltersFromMeta,
+} from '@repo/frappe-ui';
+import type { FilterFieldDescriptor } from '@repo/frappe-ui';
 /**
  * Quick standard filters — the inline controls desk renders in the list
  * header for fields flagged `in_standard_filter`: Select → dropdown,
@@ -8,19 +17,12 @@
  * filter editor) are the removal surface for the dropdown kinds.
  */
 import { XStack, YStack } from '@repo/ui';
-import { Checkbox, Input, Select } from '@repo/forms';
-import {
-  Link as LinkField,
-  quickFilterValue,
-  selectOptionsFromField,
-  setFieldFilter,
-  standardFiltersFromMeta,
-} from '@repo/frappe-ui';
-import type { FilterFieldDescriptor } from '@repo/frappe-ui';
 import { useEffect, useRef, useState } from 'react';
 
 import type { FrappeFilter, FrappeFilters } from '../shared/types';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
+
+const isSingleValue = (next: string | string[]): next is string => typeof next === 'string';
 
 export interface StandardFiltersProps {
   meta?: DoctypeMeta;
@@ -30,32 +32,70 @@ export interface StandardFiltersProps {
   vertical?: boolean;
 }
 
-export function StandardFilters({ meta, filters, onFiltersChange, vertical }: StandardFiltersProps) {
-  const fields = standardFiltersFromMeta(meta);
-  if (!fields.length) {
-    return null;
-  }
-  const controls = fields.map((field) => (
-    <StandardFilterControl
-      key={field.fieldname}
-      field={field}
-      filters={filters}
-      onFiltersChange={onFiltersChange}
-      vertical={vertical}
-    />
-  ));
-  if (vertical) {
-    return <YStack gap="$2">{controls}</YStack>;
-  }
-  return (
-    <XStack
-      gap="$1.5"
-      flexWrap="wrap"
-      alignItems="center">
-      {controls}
-    </XStack>
-  );
+interface DebouncedTextFilterProps {
+  field: FilterFieldDescriptor;
+  externalValue: string;
+  commit: (tuple?: FrappeFilter) => void;
+  vertical?: boolean;
 }
+
+/**
+ * Text-ish quick filter (Data / date / number kinds). Local draft commits
+ * after a 400ms pause (desk debounces its standard filter inputs too);
+ * external changes (chip removal, editor apply) reset the draft.
+ */
+const DebouncedTextFilter = ({ field, externalValue, commit, vertical }: DebouncedTextFilterProps) => {
+  const [draft, setDraft] = useState(externalValue);
+  const committedRef = useRef(externalValue);
+  const commitRef = useRef(commit);
+  // oxlint-disable-next-line react/refs -- latest-callback mirror, read only by the debounce timer
+  commitRef.current = commit;
+
+  useEffect(() => {
+    if (externalValue !== committedRef.current) {
+      committedRef.current = externalValue;
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- external filter changes (chip removal, editor apply) must reset the local draft
+      setDraft(externalValue);
+    }
+  }, [externalValue]);
+
+  useEffect(() => {
+    if (draft === committedRef.current) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      committedRef.current = draft;
+      const text = draft.trim();
+      if (!text) {
+        commitRef.current();
+      } else if (field.kind === 'text') {
+        commitRef.current([field.fieldname, 'like', `%${text}%`]);
+      } else {
+        commitRef.current([field.fieldname, '=', text]);
+      }
+    }, 400);
+    // oxlint-disable-next-line typescript/consistent-return -- nothing to clean up when the draft is already committed
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [draft, field.fieldname, field.kind]);
+
+  const input = (
+    <Input
+      value={draft}
+      onChangeText={setDraft}
+      placeholder={field.kind === 'date' ? `${field.label} (YYYY-MM-DD)` : field.label}
+      size="$3"
+      compact
+      aria-label={field.label}
+      {...(field.kind === 'number' ? { keyboardType: 'numeric' as const } : {})}
+    />
+  );
+  // Column wrapper stretches the field on native (see StandardFilterControl);
+  // the horizontal band lets the field's own width dial size it (no fixed
+  // pixel wrapper — see StandardFilterControl).
+  return vertical ? <YStack width="100%">{input}</YStack> : input;
+};
 
 interface StandardFilterControlProps {
   field: FilterFieldDescriptor;
@@ -64,7 +104,7 @@ interface StandardFilterControlProps {
   vertical?: boolean;
 }
 
-function StandardFilterControl({ field, filters, onFiltersChange, vertical }: StandardFilterControlProps) {
+const StandardFilterControl = ({ field, filters, onFiltersChange, vertical }: StandardFilterControlProps) => {
   const value = quickFilterValue(filters, field.fieldname);
   const commit = (tuple?: FrappeFilter) => {
     onFiltersChange(setFieldFilter(filters, field.fieldname, tuple));
@@ -73,13 +113,14 @@ function StandardFilterControl({ field, filters, onFiltersChange, vertical }: St
   // Vertical wrappers are COLUMN stacks: only the column cross-axis
   // stretches the field to full width on native (a row wrapper leaves the
   // field at intrinsic width — it collapsed to a sliver in the sheet).
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- the text-ish kinds (text/date/number) share the default branch
   switch (field.kind) {
     case 'select': {
       const select = (
         <Select
           value={value}
           onChange={(next) => {
-            if (typeof next !== 'string') {
+            if (!isSingleValue(next)) {
               return;
             }
             commit(next ? [field.fieldname, '=', next] : undefined);
@@ -115,7 +156,7 @@ function StandardFilterControl({ field, filters, onFiltersChange, vertical }: St
         <Checkbox
           label={field.label}
           checked={value === '1' || value === 'true'}
-          onCheckedChange={(checked) => {
+          onChange={(checked) => {
             commit(checked === true ? [field.fieldname, '=', 1] : undefined);
           }}
         />
@@ -132,66 +173,31 @@ function StandardFilterControl({ field, filters, onFiltersChange, vertical }: St
       );
     }
   }
-}
+};
 
-interface DebouncedTextFilterProps {
-  field: FilterFieldDescriptor;
-  externalValue: string;
-  commit: (tuple?: FrappeFilter) => void;
-  vertical?: boolean;
-}
-
-/**
- * Text-ish quick filter (Data / date / number kinds). Local draft commits
- * after a 400ms pause (desk debounces its standard filter inputs too);
- * external changes (chip removal, editor apply) reset the draft.
- */
-function DebouncedTextFilter({ field, externalValue, commit, vertical }: DebouncedTextFilterProps) {
-  const [draft, setDraft] = useState(externalValue);
-  const committedRef = useRef(externalValue);
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
-
-  useEffect(() => {
-    if (externalValue !== committedRef.current) {
-      committedRef.current = externalValue;
-      setDraft(externalValue);
-    }
-  }, [externalValue]);
-
-  useEffect(() => {
-    if (draft === committedRef.current) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      committedRef.current = draft;
-      const text = draft.trim();
-      if (!text) {
-        commitRef.current();
-      } else if (field.kind === 'text') {
-        commitRef.current([field.fieldname, 'like', `%${text}%`]);
-      } else {
-        commitRef.current([field.fieldname, '=', text]);
-      }
-    }, 400);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [draft, field.fieldname, field.kind]);
-
-  const input = (
-    <Input
-      value={draft}
-      onChangeText={setDraft}
-      placeholder={field.kind === 'date' ? `${field.label} (YYYY-MM-DD)` : field.label}
-      size="$3"
-      compact
-      aria-label={field.label}
-      {...(field.kind === 'number' ? { keyboardType: 'numeric' as const } : {})}
+export const StandardFilters = ({ meta, filters, onFiltersChange, vertical }: StandardFiltersProps) => {
+  const fields = standardFiltersFromMeta(meta);
+  if (!fields.length) {
+    return null;
+  }
+  const controls = fields.map((field) => (
+    <StandardFilterControl
+      key={field.fieldname}
+      field={field}
+      filters={filters}
+      onFiltersChange={onFiltersChange}
+      vertical={vertical}
     />
+  ));
+  if (vertical) {
+    return <YStack gap="$2">{controls}</YStack>;
+  }
+  return (
+    <XStack
+      gap="$1.5"
+      flexWrap="wrap"
+      alignItems="center">
+      {controls}
+    </XStack>
   );
-  // Column wrapper stretches the field on native (see StandardFilterControl);
-  // the horizontal band lets the field's own width dial size it (no fixed
-  // pixel wrapper — see StandardFilterControl).
-  return vertical ? <YStack width="100%">{input}</YStack> : input;
-}
+};

@@ -1,3 +1,4 @@
+import { ensureFocusVisibleRing, getGroupPosition, useResolvedKnobs } from '@repo/theme';
 /**
  * Workspace link card — desk parity for the `card` content block: a titled
  * card listing the Link rows that follow the matching "Card Break" row in
@@ -16,7 +17,6 @@
  * navigations) are hidden entirely when the `views` capability is off.
  */
 import { Card, Text, XStack, YStack } from '@repo/ui';
-import { ensureFocusVisibleRing, getGroupPosition, useResolvedKnobs } from '@repo/theme';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,10 +30,16 @@ import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { createBackofficePaths } from '../navigation/paths';
 import type { BackofficePaths } from '../navigation/paths';
 
-import { collapseLinkRows } from './parseContent';
+import { collapseLinkRows } from './parse-content';
 import type { WorkspaceLinkGroup, WorkspaceLinkRow } from './types';
 
 const defaultPaths = createBackofficePaths();
+
+/** Where a Workspace Link row navigates, or that it is inert. */
+export interface WorkspaceLinkTarget {
+  path?: string;
+  disabled?: boolean;
+}
 
 /**
  * Resolve a Workspace Link row to a router path (basePath-aware when the
@@ -44,19 +50,16 @@ const defaultPaths = createBackofficePaths();
  * - Page → `{base}/<link_to>` (page names are already slugs)
  * - anything else → disabled
  */
-export function resolveLinkTarget(
+export const resolveLinkTarget = (
   row: WorkspaceLinkRow,
   paths: BackofficePaths = defaultPaths,
-): {
-  path?: string;
-  disabled?: boolean;
-} {
+): WorkspaceLinkTarget => {
   const target = row.link_to ?? '';
   if (!target) {
     return { disabled: true };
   }
   const prefix = paths.base === '/' ? '' : paths.base;
-  switch (row.link_type) {
+  switch (row.link_type ?? '') {
     case 'DocType': {
       return { path: paths.list(target) };
     }
@@ -70,18 +73,18 @@ export function resolveLinkTarget(
       return { disabled: true };
     }
   }
-}
+};
 
-function activateOnEnterOrSpace(onPress: () => void) {
-  return ((e: { key?: string; preventDefault?: () => void }) => {
+const activateOnEnterOrSpace =
+  (onPress: () => void) =>
+  (e: { key?: string; preventDefault?: () => void }): void => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault?.();
       onPress();
     }
-  }) as unknown as () => void;
-}
+  };
 
-function LinkRow({
+const LinkRow = ({
   row,
   index,
   total,
@@ -91,7 +94,7 @@ function LinkRow({
   index: number;
   total: number;
   pad: string | number;
-}) {
+}) => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { knobProps } = useResolvedKnobs();
@@ -99,7 +102,7 @@ function LinkRow({
   const position = getGroupPosition(index, total);
   const disabled = !!target.disabled;
   const go = () => {
-    if (!disabled && target.path) {
+    if (!disabled && target.path !== undefined && target.path !== '') {
       navigator.navigate(target.path);
     }
   };
@@ -113,6 +116,7 @@ function LinkRow({
       paddingHorizontal={pad}
       minHeight="$3"
       alignItems="center"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack; there is no <a> on native
       role="link"
       aria-label={row.label}
       overflow="hidden"
@@ -135,7 +139,7 @@ function LinkRow({
       </Text>
     </XStack>
   );
-}
+};
 
 export interface WorkspaceLinkCardProps {
   group: WorkspaceLinkGroup;
@@ -147,7 +151,7 @@ export interface WorkspaceLinkCardProps {
   collapse?: boolean;
 }
 
-export function WorkspaceLinkCard({ group, collapse = true }: WorkspaceLinkCardProps) {
+export const WorkspaceLinkCard = ({ group, collapse = true }: WorkspaceLinkCardProps) => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { views } = useBackofficeCapabilities();
@@ -163,7 +167,12 @@ export function WorkspaceLinkCard({ group, collapse = true }: WorkspaceLinkCardP
       if (!views.enabled) {
         return false;
       }
-      if (row.link_type === 'DocType' && row.link_to && !isDoctypeAllowed(row.link_to)) {
+      if (
+        row.link_type === 'DocType' &&
+        row.link_to !== undefined &&
+        row.link_to !== '' &&
+        !isDoctypeAllowed(row.link_to)
+      ) {
         return false;
       }
     }
@@ -240,6 +249,7 @@ export function WorkspaceLinkCard({ group, collapse = true }: WorkspaceLinkCardP
               paddingHorizontal={pad}
               minHeight="$3"
               alignItems="center"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack; there is no <button> on native
               role="button"
               aria-expanded={expanded}
               overflow="hidden"
@@ -268,4 +278,4 @@ export function WorkspaceLinkCard({ group, collapse = true }: WorkspaceLinkCardP
       )}
     </Card>
   );
-}
+};

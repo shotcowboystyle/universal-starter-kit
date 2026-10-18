@@ -31,97 +31,108 @@ interface MessagePayload<T = unknown> {
 // Assignments
 // ---------------------------------------------------------------------------
 
-export async function addAssignment(
+/** frappe.desk.form.assign_to.add arguments. */
+interface AssignToAddBody {
+  doctype: string;
+  name: string;
+  assign_to: string[];
+  description?: string;
+}
+
+export const addAssignment = async (
   app: FrappeApp,
   doctype: string,
   name: string,
   users: string[],
   description?: string,
-): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.form.assign_to.add', {
+): Promise<void> => {
+  const body: AssignToAddBody = {
     doctype,
     name,
     assign_to: users,
-    ...(description ? { description } : {}),
-  });
-}
+  };
+  if (description !== undefined && description !== '') {
+    body.description = description;
+  }
+  await app.call().post<MessagePayload>('frappe.desk.form.assign_to.add', body);
+};
 
-export async function removeAssignment(app: FrappeApp, doctype: string, name: string, user: string): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.form.assign_to.remove', {
+export const removeAssignment = async (app: FrappeApp, doctype: string, name: string, user: string): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.form.assign_to.remove', {
     doctype,
     name,
     assign_to: user,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tags
 // ---------------------------------------------------------------------------
 
-export async function addTag(app: FrappeApp, doctype: string, name: string, tag: string): Promise<unknown> {
-  return await app.call().post<MessagePayload<string>>('frappe.desk.doctype.tag.tag.add_tag', {
+export const addTag = async (app: FrappeApp, doctype: string, name: string, tag: string): Promise<void> => {
+  await app.call().post<MessagePayload<string>>('frappe.desk.doctype.tag.tag.add_tag', {
     tag,
     dt: doctype,
     dn: name,
   });
-}
+};
 
-export async function removeTag(app: FrappeApp, doctype: string, name: string, tag: string): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.doctype.tag.tag.remove_tag', {
+export const removeTag = async (app: FrappeApp, doctype: string, name: string, tag: string): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.doctype.tag.tag.remove_tag', {
     tag,
     dt: doctype,
     dn: name,
   });
-}
+};
 
 /** All existing tag names for the doctype (sidebar add-tag suggestions). */
-export async function fetchTagSuggestions(app: FrappeApp, doctype: string): Promise<string[]> {
+export const fetchTagSuggestions = async (app: FrappeApp, doctype: string): Promise<string[]> => {
   const res = await app
     .call()
     .get<MessagePayload<string[]>>('frappe.desk.doctype.tag.tag.get_tags', { doctype, txt: '' });
   return res.payload?.message ?? [];
-}
+};
 
 // ---------------------------------------------------------------------------
 // Like / Follow
 // ---------------------------------------------------------------------------
 
-export async function toggleLike(app: FrappeApp, doctype: string, name: string, add: boolean): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.like.toggle_like', {
+export const toggleLike = async (app: FrappeApp, doctype: string, name: string, add: boolean): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.like.toggle_like', {
     doctype,
     name,
     add: add ? 'Yes' : 'No',
   });
-}
+};
 
-export async function followDocument(app: FrappeApp, doctype: string, name: string, user: string): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.form.document_follow.follow_document', {
+export const followDocument = async (app: FrappeApp, doctype: string, name: string, user: string): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.form.document_follow.follow_document', {
     doctype,
     doc_name: name,
     user,
   });
-}
+};
 
-export async function unfollowDocument(app: FrappeApp, doctype: string, name: string, user: string): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.form.document_follow.unfollow_document', {
+export const unfollowDocument = async (app: FrappeApp, doctype: string, name: string, user: string): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.form.document_follow.unfollow_document', {
     doctype,
     doc_name: name,
     user,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Shares
 // ---------------------------------------------------------------------------
 
-export async function addShare(
+export const addShare = async (
   app: FrappeApp,
   doctype: string,
   name: string,
   user: string,
   options: { write?: boolean } = {},
-): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.share.add', {
+): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.share.add', {
     doctype,
     name,
     user,
@@ -130,44 +141,44 @@ export async function addShare(
     share: 0,
     notify: 0,
   });
-}
+};
 
 /** Dropping read cascades server-side and deletes the DocShare row. */
-export async function removeShare(app: FrappeApp, doctype: string, name: string, user: string): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.share.set_permission', {
+export const removeShare = async (app: FrappeApp, doctype: string, name: string, user: string): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.share.set_permission', {
     doctype,
     name,
     user,
     permission_to: 'read',
     value: 0,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Attachments
 // ---------------------------------------------------------------------------
 
-export async function uploadAttachment(
+export const uploadAttachment = async (
   app: FrappeApp,
   file: File | Blob,
   doctype: string,
   name: string,
-): Promise<unknown> {
-  return await app.file().uploadFile(file, { doctype, docname: name });
-}
+): Promise<void> => {
+  await app.file().uploadFile(file, { doctype, docname: name });
+};
 
-export async function removeAttachment(
+export const removeAttachment = async (
   app: FrappeApp,
   fileId: string,
   doctype: string,
   name: string,
-): Promise<unknown> {
-  return await app.call().post<MessagePayload>('frappe.desk.form.utils.remove_attach', {
+): Promise<void> => {
+  await app.call().post<MessagePayload>('frappe.desk.form.utils.remove_attach', {
     fid: fileId,
     dt: doctype,
     dn: name,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Session user
@@ -175,38 +186,53 @@ export async function removeAttachment(
 
 const loggedUserCache = new WeakMap<FrappeApp, Promise<string>>();
 
+const fetchLoggedUser = async (app: FrappeApp): Promise<string> => {
+  try {
+    const res = await app.call().get<MessagePayload<string>>('frappe.auth.get_logged_user');
+    return res.payload?.message ?? 'Guest';
+  } catch (error) {
+    // Evict failed probes so a later mount can retry; callers still see the failure.
+    loggedUserCache.delete(app);
+    throw error;
+  }
+};
+
+/** The session user probe, shared per FrappeApp. */
+const sessionUser = async (app: FrappeApp): Promise<string> => {
+  let promise = loggedUserCache.get(app);
+  if (!promise) {
+    promise = fetchLoggedUser(app);
+    loggedUserCache.set(app, promise);
+  }
+  return await promise;
+};
+
 /** Session user via frappe.auth.get_logged_user, cached per FrappeApp. */
-export function useCurrentUser(app: FrappeApp | undefined, override?: string): string | undefined {
+export const useCurrentUser = (app: FrappeApp | undefined, override?: string): string | undefined => {
   const [user, setUser] = useState<string | undefined>(override);
 
   useEffect(() => {
-    if (override || !app) {
-      return;
+    if ((override !== undefined && override !== '') || !app) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
-    let promise = loggedUserCache.get(app);
-    if (!promise) {
-      promise = app
-        .call()
-        .get<MessagePayload<string>>('frappe.auth.get_logged_user')
-        .then((res) => res.payload?.message ?? 'Guest');
-      loggedUserCache.set(app, promise);
-      promise.catch(() => loggedUserCache.delete(app));
-    }
-    promise
-      .then((value) => {
+    const load = async () => {
+      try {
+        const value = await sessionUser(app);
         if (!cancelled) {
           setUser(value);
         }
-      })
-      .catch(() => {
+      } catch {
         // Session probe failed (bench down / unauthenticated): leave undefined
         // so user-scoped affordances (follow) stay disabled.
-      });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
   }, [app, override]);
 
   return override ?? user;
-}
+};

@@ -1,16 +1,15 @@
-import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 import { Link, LongText } from '@repo/frappe-ui';
+import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 // Assign-to dialog (desk bulk "Assign To"): pick a user, optional note,
 // then frappe.desk.form.assign_to.add_multiple across the selection.
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { dialogBodyMinWidth } from '../shared/measures';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
-import { bulkAssign } from './bulkActions';
+import { bulkAssign } from './bulk-actions';
 
 export interface AssignToDialogProps {
   doctype: string;
@@ -22,7 +21,7 @@ export interface AssignToDialogProps {
   onDone?: () => void;
 }
 
-export function AssignToDialog({ doctype, names, open, onOpenChange, onDone }: AssignToDialogProps) {
+export const AssignToDialog = ({ doctype, names, open, onOpenChange, onDone }: AssignToDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const app = useFrappeApp();
   const [user, setUser] = useState('');
@@ -57,9 +56,9 @@ export function AssignToDialog({ doctype, names, open, onOpenChange, onDone }: A
         scope: 'page',
         body: error instanceof Error ? error.message : t('list.assignFailed', 'Assignment failed'),
       });
-    } finally {
-      setBusy(false);
     }
+    // Not a `finally`: the catch above never rethrows, and the React Compiler skips try/finally.
+    setBusy(false);
   };
 
   return (
@@ -95,10 +94,11 @@ export function AssignToDialog({ doctype, names, open, onOpenChange, onDone }: A
           label={t('list.assignComment', 'Comment')}
           value={description}
           onChange={(value) => {
+            // oxlint-disable-next-line typescript/no-unsafe-argument -- LongText's onChange intersects a DOM ChangeEventHandler, so `value` infers as any; it is the text
             setDescription(value);
           }}
         />
       </YStack>
     </ConfirmDialog>
   );
-}
+};

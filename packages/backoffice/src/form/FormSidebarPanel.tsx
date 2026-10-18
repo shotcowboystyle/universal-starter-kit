@@ -1,14 +1,12 @@
 import {
-  Accordion,
-  AsyncSkeleton,
-  Chip,
-  Image,
-  Tags,
-  Text,
-  XStack,
-  YStack,
-  useTheme,
-} from '@repo/ui';
+  ClockIcon,
+  HeartIcon,
+  PaperclipIcon,
+  PlusIcon,
+  ShareNetworkIcon,
+  TagIcon,
+  UsersIcon,
+} from '@phosphor-icons/react';
 /**
  * Form page metadata rail (MOD-07): Assigned To / Attachments / Tags /
  * Shared With / Liked By as accordion sections with live count badges —
@@ -24,7 +22,7 @@ import {
  * affordances).
  *
  * Collaboration blocks ride the frappe-ui components (roadmap adoption,
- * 2026-08-12): "Assigned To" embeds `FrappeAssignment` (live ToDo
+ * 2026-08-12): "Assigned To" embeds `FrappeAssignment` (live to-do
  * collection, assign_to add/close/remove parity, backend-searched user
  * combobox) and "Liked By" embeds `FrappeLikedBy` (live `_liked_by` heart +
  * avatar cluster over `toggle_like`). Both refresh the shared docinfo via
@@ -39,6 +37,7 @@ import {
  * like toggle + assigned_by attribution; resolved server-side when omitted).
  */
 import { Button } from '@repo/forms';
+import type { FrappeApp } from '@repo/frappe';
 import { FrappeAssignment, FrappeLikedBy, parseLikedBy, useFrappeConfig } from '@repo/frappe-ui';
 import {
   ensureFocusVisibleRing,
@@ -47,25 +46,17 @@ import {
   stackEdgeRadius,
   useResolvedKnobs,
 } from '@repo/theme';
-import {
-  ClockIcon,
-  HeartIcon,
-  PaperclipIcon,
-  PlusIcon,
-  ShareNetworkIcon,
-  TagIcon,
-  UsersIcon,
-} from '@phosphor-icons/react';
+import { Accordion, AsyncSkeleton, Chip, Image, Tags, Text, XStack, YStack, useTheme } from '@repo/ui';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeCapabilities } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import { invalidateDocinfo, useDocinfo } from '../shared/useDocinfo';
-import type { DocInfo } from '../shared/useDocinfo';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { invalidateDocinfo, useDocinfo } from '../shared/use-docinfo';
+import type { DocInfo, DocInfoRecord } from '../shared/use-docinfo';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 import { FormErrorBoundary } from './FormErrorBoundary';
 import { SidebarAttachments } from './sidebar-attachments';
@@ -83,6 +74,7 @@ import {
   uploadAttachment,
 } from './sidebar-rpc';
 import { formatRelativeTime, parseTagString, toAbsoluteUrl } from './sidebar-utils';
+import type { SidebarTranslate } from './sidebar-utils';
 
 const RAIL_WIDTH = 280;
 
@@ -101,6 +93,7 @@ export interface FormSidebarPanelProps {
   name: string;
   meta?: DoctypeMeta | FormSidebarPanelMetaLike;
   /** Current document values (owner, modified_by, timestamps, …) */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- an open frappe document whose keys vary by doctype
   doc?: Record<string, unknown>;
   /** Full-width variant without the end rail (stacks under the form). */
   stacked?: boolean;
@@ -137,7 +130,7 @@ interface SidebarAccordionSection {
  * Accordion child so the root can count positions — a custom Item wrapper
  * is opaque and would collapse every row to "only".
  */
-export function SidebarAccordionTrigger({
+export const SidebarAccordionTrigger = ({
   section,
   index,
   count,
@@ -147,7 +140,7 @@ export function SidebarAccordionTrigger({
   index: number;
   count: number;
   open: boolean;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   const position = getGroupPosition(index, count);
   const corners = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
@@ -189,9 +182,86 @@ export function SidebarAccordionTrigger({
       </XStack>
     </Accordion.Trigger>
   );
+};
+
+interface ShareLabels {
+  everyone: string;
+  canEdit: string;
+  canView: string;
 }
 
-export function FormSidebarPanel({
+/** Shared With rows from docinfo.shared: one per user share, plus the Everyone share. */
+const toShareItems = (
+  rows: readonly DocInfoRecord[],
+  labels: ShareLabels,
+  userLabel: (id: string) => string,
+  userImage: (id: string) => string | undefined,
+): SidebarPersonItem[] =>
+  rows.flatMap((share) => {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
+    const rowName = typeof share.name === 'string' ? share.name : undefined;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
+    const user = typeof share.user === 'string' ? share.user : '';
+    const everyone = Boolean(share.everyone);
+    if (user === '' && !everyone) {
+      return [];
+    }
+    const canWrite = Boolean(share.write);
+    const canRead = Boolean(share.read);
+    let sublabel: string | undefined;
+    if (canWrite) {
+      sublabel = labels.canEdit;
+    } else if (canRead) {
+      sublabel = labels.canView;
+    }
+    return [
+      {
+        id: rowName ?? (user || 'everyone'),
+        user,
+        label: everyone ? labels.everyone : userLabel(user),
+        sublabel,
+        image: everyone || user === '' ? undefined : userImage(user),
+        removable: !everyone && user !== '',
+      },
+    ];
+  });
+
+/** "Created … by …" / "Last edited … by …" footer lines from the doc's stamps. */
+const bylineEntries = (
+  doc: FormSidebarPanelProps['doc'],
+  t: SidebarTranslate,
+  userLabel: (id: string) => string,
+): { key: string; label: string }[] => {
+  const metadata: { key: string; label: string }[] = [];
+  const created = formatRelativeTime(doc?.creation, t) ?? '';
+  if (created !== '') {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
+    const owner = typeof doc?.owner === 'string' ? doc.owner : '';
+    metadata.push({
+      key: 'created',
+      label:
+        owner === ''
+          ? t('createdWhen', 'Created {{when}}', { when: created })
+          : t('createdByline', 'Created {{when}} by {{user}}', { when: created, user: userLabel(owner) }),
+    });
+  }
+  const edited = formatRelativeTime(doc?.modified, t) ?? '';
+  if (edited !== '') {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
+    const editor = typeof doc?.modified_by === 'string' ? doc.modified_by : '';
+    metadata.push({
+      key: 'edited',
+      label:
+        editor === ''
+          ? t('editedWhen', 'Last edited {{when}}', { when: edited })
+          : t('editedByline', 'Last edited {{when}} by {{user}}', { when: edited, user: userLabel(editor) }),
+    });
+  }
+  return metadata;
+};
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one accordion of five sibling sections over shared docinfo/busy state; each section is already a component
+export const FormSidebarPanel = ({
   doctype,
   name,
   meta,
@@ -201,10 +271,10 @@ export function FormSidebarPanel({
   onRefresh,
   docinfoOverride,
   currentUser,
-}: FormSidebarPanelProps) {
+}: FormSidebarPanelProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 14;
+  const iconSize = knobProps.controlIcon?.width ?? 14;
   const theme = useTheme();
   const app = useFrappeApp();
   const config = useFrappeConfig();
@@ -230,18 +300,21 @@ export function FormSidebarPanel({
   // Existing tag names for the add-tag autocomplete (best-effort).
   useEffect(() => {
     if (!app || !doctype || docinfoOverride) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
-    fetchTagSuggestions(app, doctype)
-      .then((names) => {
+    const load = async () => {
+      try {
+        const names = await fetchTagSuggestions(app, doctype);
         if (!cancelled) {
           setTagSuggestions(names);
         }
-      })
-      .catch(() => {
+      } catch {
         // Suggestions are sugar; typing a new tag still works.
-      });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
@@ -253,26 +326,26 @@ export function FormSidebarPanel({
     onRefresh?.();
   };
 
-  const run = async (action: () => Promise<unknown>) => {
+  const run = async (action: (client: FrappeApp) => Promise<void>) => {
     if (busy || !app) {
       return;
     }
     setBusy(true);
     try {
-      await action();
+      await action(app);
     } catch {
       // Sidebar mutations are non-critical; the refresh below reflects the
       // server's actual state either way.
-    } finally {
-      refresh();
-      setBusy(false);
     }
+    refresh();
+    setBusy(false);
   };
 
   const userInfo = docinfo?.user_info ?? {};
   const userLabel = (id: string): string => userInfo[id]?.fullname ?? id;
   const userImage = (id: string): string | undefined => {
     const image = userInfo[id]?.image;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
     return typeof image === 'string' && image ? toAbsoluteUrl(baseURL, image) : undefined;
   };
 
@@ -280,55 +353,48 @@ export function FormSidebarPanel({
   // The section body is the live FrappeAssignment widget; docinfo only feeds
   // the accordion badge (desk parity: open assignments count) and refreshes
   // through the widget's mutation callbacks.
-  const assignedCount = (docinfo?.assignments ?? []).filter((assignment) => !!assignment.owner).length;
+  const assignedCount = (docinfo?.assignments ?? []).filter((assignment) => (assignment.owner ?? '') !== '').length;
 
   // -- Attachments ----------------------------------------------------------
   const attachments: SidebarAttachmentItem[] = (docinfo?.attachments ?? []).flatMap((file) => {
-    if (!file.name || !file.file_url) {
+    const id = file.name ?? '';
+    const fileUrl = file.file_url ?? '';
+    if (id === '' || fileUrl === '') {
       return [];
     }
     return [
       {
-        id: file.name,
-        fileName: file.file_name ?? file.file_url.split('/').pop() ?? file.name,
-        fileUrl: file.file_url,
+        id,
+        fileName: file.file_name ?? fileUrl.split('/').pop() ?? id,
+        fileUrl,
         isPrivate: Boolean(file.is_private),
       },
     ];
   });
-  const maxAttachments = typeof meta?.max_attachments === 'number' ? meta.max_attachments : undefined;
+  const maxAttachments = meta?.max_attachments ?? undefined;
 
   // -- Tags -------------------------------------------------------------------
   const tags = parseTagString(docinfo?.tags);
 
   // -- Shared With ------------------------------------------------------------
-  const shares: SidebarPersonItem[] = (docinfo?.shared ?? []).flatMap((share) => {
-    const rowName = typeof share.name === 'string' ? share.name : undefined;
-    const user = typeof share.user === 'string' ? share.user : undefined;
-    const everyone = Boolean(share.everyone);
-    if (!user && !everyone) {
-      return [];
-    }
-    return [
-      {
-        id: rowName ?? user ?? 'everyone',
-        user: user ?? '',
-        label: everyone ? t('everyone', 'Everyone') : userLabel(user ?? ''),
-        sublabel: share.write ? t('canEdit', 'Can edit') : share.read ? t('canView', 'Can view') : undefined,
-        image: everyone || !user ? undefined : userImage(user),
-        removable: !everyone && Boolean(user),
-      },
-    ];
-  });
+  const shares = toShareItems(
+    docinfo?.shared ?? [],
+    { everyone: t('everyone', 'Everyone'), canEdit: t('canEdit', 'Can edit'), canView: t('canView', 'Can view') },
+    userLabel,
+    userImage,
+  );
 
   // -- Liked By ----------------------------------------------------------------
   // The section body is the live FrappeLikedBy widget (`_liked_by` heart +
   // avatar cluster). The badge prefers the doc's current `_liked_by`; when
   // the doc payload lacks it (older fixtures) fall back to distinct
   // like-log owners from docinfo.
-  const likedByField = doc ? (doc as { _liked_by?: unknown })._liked_by : undefined;
+  const likedByField = doc?._liked_by;
   const likeLogOwners = new Set(
-    (docinfo?.like_logs ?? []).flatMap((log) => (typeof log.owner === 'string' && log.owner ? [log.owner] : [])),
+    (docinfo?.like_logs ?? []).flatMap((log) =>
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
+      typeof log.owner === 'string' && log.owner ? [log.owner] : [],
+    ),
   );
   const likeCount = likedByField === undefined ? likeLogOwners.size : parseLikedBy(likedByField).length;
 
@@ -358,6 +424,7 @@ export function FormSidebarPanel({
     if (likeCount > 0) {
       defaults.push('liked');
     }
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- one-shot default from the first docinfo; user toggles win afterwards
     setOpenSections(defaults);
   }, [hasDocinfo, assignedCount, attachmentCount, tagCount, shareCount, likeCount]);
 
@@ -378,6 +445,7 @@ export function FormSidebarPanel({
 
   // Phosphor icons take resolved color strings (not tamagui tokens) so
   // native/GTK get a real color — same pattern as sidebar-attachments.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme values are loosely typed tokens; only a string is a usable color
   const iconColor = typeof theme.color11?.val === 'string' ? theme.color11.val : undefined;
 
   const allSections: SidebarAccordionSection[] = [
@@ -435,10 +503,14 @@ export function FormSidebarPanel({
           maxAttachments={maxAttachments}
           disabled={busy}
           onUpload={(file) => {
-            void run(async () => await uploadAttachment(app!, file, doctype, name));
+            void run(async (client) => {
+              await uploadAttachment(client, file, doctype, name);
+            });
           }}
           onRemove={(item) => {
-            void run(async () => await removeAttachment(app!, item.id, doctype, name));
+            void run(async (client) => {
+              await removeAttachment(client, item.id, doctype, name);
+            });
           }}
         />
       ),
@@ -461,10 +533,14 @@ export function FormSidebarPanel({
           disabled={busy}
           enableAdd
           onAdd={(tagName) => {
-            void run(async () => await addTag(app!, doctype, name, tagName));
+            void run(async (client) => {
+              await addTag(client, doctype, name, tagName);
+            });
           }}
           onRemove={(tag) => {
-            void run(async () => await removeTag(app!, doctype, name, tag.label));
+            void run(async (client) => {
+              await removeTag(client, doctype, name, tag.label);
+            });
           }}
           labels={{
             addTag: t('addTag', 'Add Tag'),
@@ -495,7 +571,9 @@ export function FormSidebarPanel({
             emptyText={t('notShared', 'Not shared')}
             disabled={busy}
             onRemove={(item) => {
-              void run(async () => await removeShare(app!, doctype, name, item.user));
+              void run(async (client) => {
+                await removeShare(client, doctype, name, item.user);
+              });
             }}
           />
           <XStack>
@@ -545,51 +623,24 @@ export function FormSidebarPanel({
   ];
 
   // Host capability flags gate whole sections (provider `capabilities`).
-  const sectionEnabled: Record<string, boolean> = {
-    assigned: capabilities.assignments.enabled,
-    attachments: capabilities.attachments.enabled,
-    tags: capabilities.tags.enabled,
-    shared: capabilities.shares.enabled,
-  };
-  const sections = allSections.filter((section) => sectionEnabled[section.key]);
+  const sectionEnabled = new Map<string, boolean>([
+    ['assigned', capabilities.assignments.enabled],
+    ['attachments', capabilities.attachments.enabled],
+    ['tags', capabilities.tags.enabled],
+    ['shared', capabilities.shares.enabled],
+  ]);
+  const sections = allSections.filter((section) => sectionEnabled.get(section.key) === true);
 
   // -- Byline footer ----------------------------------------------------------
-  const metadata: { key: string; label: string }[] = [];
-  if (doc?.creation) {
-    const rel = formatRelativeTime(doc.creation, t);
-    const owner = typeof doc.owner === 'string' ? doc.owner : undefined;
-    if (rel) {
-      metadata.push({
-        key: 'created',
-        label: owner
-          ? t('createdByline', 'Created {{when}} by {{user}}', {
-              when: rel,
-              user: userLabel(owner),
-            })
-          : t('createdWhen', 'Created {{when}}', { when: rel }),
-      });
-    }
-  }
-  if (doc?.modified) {
-    const rel = formatRelativeTime(doc.modified, t);
-    const editor = typeof doc.modified_by === 'string' ? doc.modified_by : undefined;
-    if (rel) {
-      metadata.push({
-        key: 'edited',
-        label: editor
-          ? t('editedByline', 'Last edited {{when}} by {{user}}', {
-              when: rel,
-              user: userLabel(editor),
-            })
-          : t('editedWhen', 'Last edited {{when}}', { when: rel }),
-      });
-    }
-  }
+  const metadata = bylineEntries(doc, t, userLabel);
 
   // -- Document image ---------------------------------------------------------
-  const imageField = meta?.image_field;
-  const imageValue = imageField && doc ? doc[imageField] : undefined;
+  const imageField = meta?.image_field ?? '';
+  const imageValue = imageField !== '' && doc ? doc[imageField] : undefined;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- docinfo is wire data; frappe sends null for absent values, so only a non-empty string is usable
   const imageUrl = typeof imageValue === 'string' && imageValue ? toAbsoluteUrl(baseURL, imageValue) : undefined;
+
+  const openSectionSet = new Set(openSections);
 
   return (
     <>
@@ -598,7 +649,7 @@ export function FormSidebarPanel({
         {...(stacked ? { width: '100%' } : { width: RAIL_WIDTH, flexShrink: 0 })}
         {...knobProps.gap}
         testID="form-sidebar">
-        {imageUrl && (
+        {imageUrl !== undefined && (
           <Image
             src={imageUrl}
             alt={t('documentImage', 'Document image')}
@@ -622,7 +673,7 @@ export function FormSidebarPanel({
                 section={section}
                 index={index}
                 count={sections.length}
-                open={openSections.includes(section.key)}
+                open={openSectionSet.has(section.key)}
               />
               <Accordion.Content
                 paddingTop={0}
@@ -662,9 +713,11 @@ export function FormSidebarPanel({
         open={shareOpen}
         onOpenChange={setShareOpen}
         onShare={(user, canWrite) => {
-          void run(async () => await addShare(app!, doctype, name, user, { write: canWrite }));
+          void run(async (client) => {
+            await addShare(client, doctype, name, user, { write: canWrite });
+          });
         }}
       />
     </>
   );
-}
+};

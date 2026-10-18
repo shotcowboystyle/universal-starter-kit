@@ -1,17 +1,16 @@
-import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 import { Data } from '@repo/frappe-ui';
+import { ConfirmDialog, Text, YStack, notify } from '@repo/ui';
 // Add-tag dialog (desk bulk "Add Tags"): pick or type a tag, then
 // frappe.desk.doctype.tag.tag.add_tag per selected document (the server
 // creates unknown tags). Per-row failures surface in the result toast.
-import React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { dialogBodyMinWidth } from '../shared/measures';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
-import { bulkAddTag } from './bulkActions';
+import { bulkAddTag } from './bulk-actions';
 
 export interface AddTagsDialogProps {
   doctype: string;
@@ -23,7 +22,7 @@ export interface AddTagsDialogProps {
   onDone?: () => void;
 }
 
-export function AddTagsDialog({ doctype, names, open, onOpenChange, onDone }: AddTagsDialogProps) {
+export const AddTagsDialog = ({ doctype, names, open, onOpenChange, onDone }: AddTagsDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const app = useFrappeApp();
   const [tag, setTag] = useState('');
@@ -71,9 +70,9 @@ export function AddTagsDialog({ doctype, names, open, onOpenChange, onDone }: Ad
         scope: 'page',
         body: error instanceof Error ? error.message : t('list.tagFailed', 'Tagging failed'),
       });
-    } finally {
-      setBusy(false);
     }
+    // Not a `finally`: the catch above never rethrows, and the React Compiler skips try/finally.
+    setBusy(false);
   };
 
   return (
@@ -110,4 +109,4 @@ export function AddTagsDialog({ doctype, names, open, onOpenChange, onDone }: Ad
       </YStack>
     </ConfirmDialog>
   );
-}
+};

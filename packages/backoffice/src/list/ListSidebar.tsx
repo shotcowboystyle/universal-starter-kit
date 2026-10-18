@@ -1,3 +1,4 @@
+import { sizeRecipeEscape } from '@repo/theme';
 // Contract: desk list-view left sidebar — facet filters (assigned to,
 // created by, tags, status) with counts; clicking applies filters. Keep
 // props stable — list-core imports this.
@@ -16,19 +17,18 @@
 //   unless it was already active (desk toggle/replace semantics).
 // - "No Tags" applies desk's `["_user_tags", "not like", "%,%"]` tuple.
 import { Accordion, SizableText, YStack } from '@repo/ui';
-import { sizeRecipeEscape } from '@repo/theme';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeCapabilities } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { FrappeFilter, FrappeFilters } from '../shared/types';
-import type { DocFieldMeta, DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useSessionUserId as useSessionUser } from '../shared/useSessionUserId';
+import type { DocFieldMeta, DoctypeMeta } from '../shared/use-doctype-meta';
+import { useSessionUserId as useSessionUser } from '../shared/use-session-user-id';
 
 import { SidebarFacetRow, SidebarSectionChrome, SidebarSectionSkeleton } from './sidebar-section';
 import { isFacetFilterActive, scrubUserFacetRows, toggleFacetFilter, useSidebarStats } from './sidebar-stats';
-import type { SidebarFacetCount, SidebarFacetState } from './sidebar-stats';
+import type { SidebarFacetCount, SidebarFacetState, SidebarStatsState } from './sidebar-stats';
 
 /** Facet sections a host can hide from the list sidebar. */
 export type ListSidebarSection = 'assigned' | 'owner' | 'tags' | 'status';
@@ -46,7 +46,7 @@ export interface ListSidebarProps {
 }
 
 /** The Select field powering the status facet (plain status or workflow state). */
-function findStatusField(meta?: DoctypeMeta): DocFieldMeta | undefined {
+const findStatusField = (meta?: DoctypeMeta): DocFieldMeta | undefined => {
   const fields = meta?.fields;
   if (!fields) {
     return undefined;
@@ -55,10 +55,10 @@ function findStatusField(meta?: DoctypeMeta): DocFieldMeta | undefined {
     fields.find((field) => field.fieldtype === 'Select' && field.fieldname === 'status') ??
     fields.find((field) => field.fieldtype === 'Select' && field.fieldname === 'workflow_state')
   );
-}
+};
 
 interface FacetSectionModel {
-  key: 'assigned' | 'owner' | 'tags' | 'status';
+  key: keyof SidebarStatsState;
   title: string;
   state: SidebarFacetState;
   /** Render-ready rows (scrubbed / empties collapsed). */
@@ -69,7 +69,7 @@ interface FacetSectionModel {
 
 const SECTION_KEYS = ['assigned', 'owner', 'tags', 'status'];
 
-export function ListSidebar({ doctype, meta, filters, onFiltersChange, hiddenSections }: ListSidebarProps) {
+export const ListSidebar = ({ doctype, meta, filters, onFiltersChange, hiddenSections }: ListSidebarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const sessionUser = useSessionUser();
   const capabilities = useBackofficeCapabilities();
@@ -79,7 +79,7 @@ export function ListSidebar({ doctype, meta, filters, onFiltersChange, hiddenSec
   // Section visibility: host prop + capability flags (assignments → the
   // Assigned To facet, tags → the Tags facet).
   const hidden = useMemo(() => {
-    const set = new Set<ListSidebarSection>(hiddenSections ?? []);
+    const set = new Set<ListSidebarSection>(hiddenSections);
     if (!capabilities.assignments.enabled) {
       set.add('assigned');
     }
@@ -132,7 +132,7 @@ export function ListSidebar({ doctype, meta, filters, onFiltersChange, hiddenSec
       },
     ];
     const statusFieldname = statusField?.fieldname;
-    if (statusFieldname) {
+    if (statusField !== undefined && statusFieldname !== undefined && statusFieldname !== '') {
       models.push({
         key: 'status',
         title: statusField.label ?? t('list.status', 'Status'),
@@ -151,7 +151,7 @@ export function ListSidebar({ doctype, meta, filters, onFiltersChange, hiddenSec
   }
 
   // Whole surface unavailable — every facet errored (e.g. no read perm).
-  const unavailable = sections.every((section) => !section.state.loading && section.state.error);
+  const unavailable = sections.every((section) => !section.state.loading && section.state.error !== undefined);
 
   return (
     <YStack
@@ -207,4 +207,4 @@ export function ListSidebar({ doctype, meta, filters, onFiltersChange, hiddenSec
       )}
     </YStack>
   );
-}
+};

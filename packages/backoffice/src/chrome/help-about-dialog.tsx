@@ -6,22 +6,13 @@
  * Versions are fetched lazily on first open and kept for the dialog's
  * lifetime; a failed fetch retries on the next open.
  */
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  Paragraph,
-  SizableText,
-  Spinner,
-  XStack,
-  YStack,
-} from '@repo/ui';
 import { sizeRecipeEscape } from '@repo/theme';
+import { Button, Dialog, DialogContent, Paragraph, SizableText, Spinner, XStack, YStack } from '@repo/ui';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 export interface FrappeAppVersion {
   title?: string;
@@ -39,7 +30,17 @@ export interface HelpAboutDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function HelpAboutDialog({ open, onOpenChange }: HelpAboutDialogProps) {
+/** "v1.2.3 (main)", "v1.2.3", the bare branch, or an em dash when neither is known. */
+const formatVersion = (info: FrappeAppVersion): string => {
+  const version = info.version ?? '';
+  const branch = info.branch ?? '';
+  if (version === '') {
+    return info.branch ?? '—';
+  }
+  return branch === '' ? `v${version}` : `v${version} (${branch})`;
+};
+
+export const HelpAboutDialog = ({ open, onOpenChange }: HelpAboutDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const app = useFrappeApp();
   const [versions, setVersions] = useState<Record<string, FrappeAppVersion> | undefined>();
@@ -48,31 +49,29 @@ export function HelpAboutDialog({ open, onOpenChange }: HelpAboutDialogProps) {
 
   useEffect(() => {
     if (!open || !app || versions) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     let cancelled = false;
+    // oxlint-disable-next-line react/set-state-in-effect -- opening the dialog starts the versions fetch; the loading/failed flags reset with it
     setLoading(true);
     setFailed(false);
-    app
-      .call()
-      .get<GetVersionsPayload>('frappe.utils.change_log.get_versions')
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-        setVersions(response.payload?.message ?? {});
-      })
-      .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setFailed(true);
-      })
-      .finally(() => {
+    const load = async () => {
+      try {
+        const response = await app.call().get<GetVersionsPayload>('frappe.utils.change_log.get_versions');
         if (!cancelled) {
+          setVersions(response.payload?.message ?? {});
           setLoading(false);
         }
-      });
+      } catch {
+        // The dialog renders an "unavailable" state instead of surfacing the error.
+        if (!cancelled) {
+          setFailed(true);
+          setLoading(false);
+        }
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
@@ -149,7 +148,7 @@ export function HelpAboutDialog({ open, onOpenChange }: HelpAboutDialogProps) {
                     size="$3"
                     color="$color11"
                     flexShrink={0}>
-                    {info.version ? `v${info.version}${info.branch ? ` (${info.branch})` : ''}` : (info.branch ?? '—')}
+                    {formatVersion(info)}
                   </SizableText>
                 </XStack>
               ))}
@@ -165,4 +164,4 @@ export function HelpAboutDialog({ open, onOpenChange }: HelpAboutDialogProps) {
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

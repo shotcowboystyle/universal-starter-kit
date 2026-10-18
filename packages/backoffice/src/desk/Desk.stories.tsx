@@ -1,3 +1,5 @@
+import { InMemoryFixtureProvider } from '@repo/frappe';
+import { sizeRecipeEscape } from '@repo/theme';
 // OWNER: backoffice screens workstream (MPO-189).
 // <Desk /> stories: the whole desk as one component. One required prop, and
 // that prop is nothing — `<Desk />` renders the full desk, and every other
@@ -11,8 +13,6 @@
 // network. Navigation is internal: with no `navigation` prop Desk seeds its
 // own MemoryNavigator from the pins, so the host URL never moves.
 import { Text, YStack } from '@repo/ui';
-import { InMemoryFixtureProvider } from '@repo/frappe';
-import { sizeRecipeEscape } from '@repo/theme';
 import type { ReactNode } from 'react';
 
 import { Desk } from './Desk';
@@ -151,6 +151,13 @@ const makeFixtures = () =>
 
 const frappe = () => ({ baseURL: MOCK_HOST, fixtures: makeFixtures() });
 
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  return input instanceof Request ? input.url : input;
+};
+
 /**
  * Quiet fetch mock for the mock host (navbar session probe, catalog reads),
  * so no arm ever hits the network. The session probe must answer null: the
@@ -161,14 +168,14 @@ const frappe = () => ({ baseURL: MOCK_HOST, fixtures: makeFixtures() });
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w = globalThis as typeof globalThis & { __deskStoriesMockFetch?: boolean };
   if (w.__deskStoriesMockFetch) {
     return;
   }
   w.__deskStoriesMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (!urlStr.startsWith(MOCK_HOST)) {
       return await realFetch(input as RequestInfo, init);
     }
@@ -176,22 +183,17 @@ const frappe = () => ({ baseURL: MOCK_HOST, fixtures: makeFixtures() });
       new URL(urlStr).pathname === '/api/method/frappe.auth.get_logged_user'
         ? { message: null }
         : { data: [], message: [] };
-    return new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return Response.json(body);
   };
 })();
 
-function Frame({ children }: { children: ReactNode }) {
-  return (
-    <YStack
-      height={frameHeight}
-      minHeight={0}>
-      {children}
-    </YStack>
-  );
-}
+const Frame = ({ children }: { children: ReactNode }) => (
+  <YStack
+    height={frameHeight}
+    minHeight={0}>
+    {children}
+  </YStack>
+);
 
 // ---------------------------------------------------------------------------
 // Arms
@@ -316,21 +318,19 @@ export const ScopedToOneTenant = () => (
   </Frame>
 );
 
-function HostSurface({ target }: DeskSurfaceProps) {
-  return (
-    <YStack
-      flex={1}
-      padding="$4"
-      gap="$2"
-      borderWidth={1}
-      borderColor="$borderColor"
-      borderRadius="$3"
-      backgroundColor="$color2">
-      <Text>{`host-rendered surface for kind "${target.kind}"`}</Text>
-      <Text>{JSON.stringify(target)}</Text>
-    </YStack>
-  );
-}
+const HostSurface = ({ target }: DeskSurfaceProps) => (
+  <YStack
+    flex={1}
+    padding="$4"
+    gap="$2"
+    borderWidth={1}
+    borderColor="$borderColor"
+    borderRadius="$3"
+    backgroundColor="$color2">
+    <Text>{`host-rendered surface for kind "${target.kind}"`}</Text>
+    <Text>{JSON.stringify(target)}</Text>
+  </YStack>
+);
 
 /**
  * `surfaces` replaces a whole screen. Overrides are per-Desk by

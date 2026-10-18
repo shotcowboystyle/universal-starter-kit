@@ -1,16 +1,4 @@
-import {
-  AsyncBoundary,
-  EmptyState,
-  H1,
-  PageHeader,
-  Paragraph,
-  ScrollView,
-  Spinner,
-  XStack,
-  YStack,
-  isWeb,
-  notify,
-} from '@repo/ui';
+import { ArrowSquareOutIcon, ArrowsClockwiseIcon, PlusIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
 // Catalog action Button — `accent` renders the active accent intent, the
 // house expression of the one page primary (LC-05 ONE-EMPHASIS; quick entry
 // "Create" precedent). The components Button above stays for neutral chrome.
@@ -25,18 +13,25 @@ import {
   sessionDocRights,
   useFrappeAggregate,
   useFrappeConfig,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- frappe-ui's exported hook name
   useRecordShape,
 } from '@repo/frappe-ui';
 import type { ListDoc, ListRow } from '@repo/frappe-ui';
-import type {
-  BulkAction,
-  DataTableColumn,
-  DataTableState,
-  FilterableField,
-  TableFilter,
-} from '@repo/table';
+import type { BulkAction, DataTableColumn, DataTableState, FilterableField, TableFilter } from '@repo/table';
 import { useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
-import { ArrowSquareOutIcon, ArrowsClockwiseIcon, PlusIcon, SidebarSimpleIcon } from '@phosphor-icons/react';
+import {
+  AsyncBoundary,
+  EmptyState,
+  H1,
+  PageHeader,
+  Paragraph,
+  ScrollView,
+  Spinner,
+  XStack,
+  YStack,
+  isWeb,
+  notify,
+} from '@repo/ui';
 // Contract: the primary list view for a doctype (desk list parity —
 // filters, sort, pagination, bulk actions, tags, view switcher, New).
 //
@@ -45,8 +40,7 @@ import { ArrowSquareOutIcon, ArrowsClockwiseIcon, PlusIcon, SidebarSimpleIcon } 
 // chrome (header + live count, refresh, view switcher, New → QuickEntry,
 // facet sidebar, sort selector). Fixture mode (Storybook / tests) degrades
 // to the client-mode live collection and hides bench-only surfaces.
-import React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -62,39 +56,39 @@ import { useDeskScope } from '../desk/scope';
 // Permlevel role matrix (desk perm.js parity) — shared with the form surface
 // via the UI-free fieldPermissions module; drives list column pruning.
 import { buildPermLevelMatrix } from '../form/fieldPermissions';
-import { openInNewTab } from '../form/platformHooks';
+import { openInNewTab } from '../form/platform-hooks';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { BackofficeView } from '../navigation/paths';
 import { QuickEntryDialog } from '../quickEntry/QuickEntryDialog';
-import { deskViewUrl } from '../shared/deskLinks';
-import { setListNavContext } from '../shared/listNavContext';
+import { deskViewUrl } from '../shared/desk-links';
+import { setListNavContext } from '../shared/list-nav-context';
 import type { FrappeFilters } from '../shared/types';
-import { useDoctypeMeta } from '../shared/useDoctypeMeta';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useFrappeApp } from '../shared/useFrappeApp';
-import { useRecentVisit } from '../shared/useRecentVisit';
-import { useSessionUserId as useSessionUser } from '../shared/useSessionUserId';
-import { useUserRoles } from '../shared/useUserRoles';
-import { deriveAvailableViews } from '../views/viewAvailability';
+import { useDoctypeMeta } from '../shared/use-doctype-meta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
+import { useFrappeApp } from '../shared/use-frappe-app';
+import { useRecentVisit } from '../shared/use-recent-visit';
+import { useSessionUserId as useSessionUser } from '../shared/use-session-user-id';
+import { useUserRoles } from '../shared/use-user-roles';
+import { deriveAvailableViews } from '../views/view-availability';
 import { ViewSwitcherMenu } from '../views/ViewSwitcherMenu';
 
 import { AddTagsDialog } from './AddTagsDialog';
 import { AssignToDialog } from './AssignToDialog';
+import { bulkDelete, toggleLike } from './bulk-actions';
 import { BulkEditDialog } from './bulk-edit-dialog';
 import { bulkExportCsv } from './bulk-export';
 import { bulkSubmitCancel } from './bulk-submit-cancel';
 import type { BulkDocstatusAction } from './bulk-submit-cancel';
-import { bulkDelete, toggleLike } from './bulkActions';
 import { FilterChips } from './filter-chips';
-import { frappeFiltersToTableFilters, sameFilterTuple, tableStateToFrappeFilters } from './filterConversion';
+import { frappeFiltersToTableFilters, sameFilterTuple, tableStateToFrappeFilters } from './filter-conversion';
+import { parseFiltersParam, parseSortParam, serializeFiltersParam, serializeSortParam } from './list-url-state';
+import type { ListSortState } from './list-url-state';
 import { ListFilterBar } from './ListFilterBar';
 import { ListSidebar } from './ListSidebar';
-import { parseFiltersParam, parseSortParam, serializeFiltersParam, serializeSortParam } from './listUrlState';
-import type { ListSortState } from './listUrlState';
 import { toggleFacetFilter } from './sidebar-stats';
 
 export interface DoctypeListScreenProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
   /**
    * Raw `?f=` deep-link query value (urlencoded JSON FrappeFilters) —
@@ -102,11 +96,11 @@ export interface DoctypeListScreenProps {
    * by the route wrapper (SlugScreen); the screen itself stays search-param
    * free so it mounts outside a One navigation container (stories/tests).
    * Bidirectional: the screen writes filter changes back through
-   * `navigator.setParams` (listUrlState.ts documents the schema).
+   * `navigator.setParams` (list-url-state.ts documents the schema).
    */
   filtersParam?: string;
   /**
-   * Raw `?sort=` query value (`<fieldname>.<asc|desc>`, see listUrlState.ts)
+   * Raw `?sort=` query value (`<fieldname>.<asc|desc>`, see list-url-state.ts)
    * — same route-wrapper contract and write-back channel as `filtersParam`.
    */
   sortParam?: string;
@@ -160,15 +154,49 @@ const PAGE_SIZES = [20, 100, 500];
 // annotation transform; instantiate the type argument outside JSX instead.
 const ListTable = FrappeTable<ListDoc>;
 
-function sameFilters(a: FrappeFilters, b: FrappeFilters): boolean {
-  return a.length === b.length && a.every((tuple, index) => sameFilterTuple(tuple, b[index]));
-}
+const sameFilters = (a: FrappeFilters, b: FrappeFilters): boolean =>
+  a.length === b.length && a.every((tuple, index) => sameFilterTuple(tuple, b[index]));
 
-function sameSort(a: ListSortState | null, b: ListSortState | null): boolean {
-  return (a?.field ?? null) === (b?.field ?? null) && (a?.order ?? null) === (b?.order ?? null);
-}
+const sameSort = (a: ListSortState | null, b: ListSortState | null): boolean => {
+  if (a === null || b === null) {
+    return a === b;
+  }
+  return a.field === b.field && a.order === b.order;
+};
 
-export function DoctypeListScreen({
+/** Names of the selected rows (rows without a name are skipped). */
+const selectedNames = (items: ListRow[]): string[] => {
+  const names: string[] = [];
+  for (const item of items) {
+    if (item.name !== undefined && item.name !== '') {
+      names.push(item.name);
+    }
+  }
+  return names;
+};
+
+const isNamedRow = (row: unknown): row is { name: string } => {
+  if (typeof row !== 'object' || row === null || !('name' in row)) {
+    return false;
+  }
+  return typeof row.name === 'string' && row.name.length > 0;
+};
+
+/** Display-order names of the table's resolved rows. */
+const rowNames = (rows: readonly unknown[]): string[] => {
+  const names: string[] = [];
+  for (const row of rows) {
+    if (isNamedRow(row)) {
+      names.push(row.name);
+    }
+  }
+  return names;
+};
+
+const NEW_DOC_DEFAULT = 'New {{doctype}}';
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- the list page composes many desk surfaces; splitting it is a separate refactor
+export const DoctypeListScreen = ({
   doctype,
   filtersParam,
   sortParam,
@@ -181,7 +209,8 @@ export function DoctypeListScreen({
   onRowOpen,
   hideNewButton,
   toolbarActions,
-}: DoctypeListScreenProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the no-giant-component note above
+}: DoctypeListScreenProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const navigator = useBackofficeNavigator();
@@ -194,7 +223,8 @@ export function DoctypeListScreen({
   const fixtureMode = Boolean(config?.fixtures);
   // Desk counterpart of this list — every backoffice surface links back to
   // its native desk twin (fixture mode has no desk to hop to).
-  const deskHref = config?.baseURL && !fixtureMode ? deskViewUrl(config.baseURL, doctype) : undefined;
+  const deskBaseURL = fixtureMode ? undefined : config?.baseURL;
+  const deskHref = deskBaseURL === undefined || deskBaseURL === '' ? undefined : deskViewUrl(deskBaseURL, doctype);
   const sessionUser = useSessionUser();
   // Compact list chrome below 640 (theme `compact` size class — matchMedia
   // on web, window dimensions on native; BackofficeShell drawer precedent):
@@ -216,17 +246,18 @@ export function DoctypeListScreen({
   // the list then lays them out from one record's own fields, read-only, and
   // offers nothing that needs the meta.
   const metaRefused = !meta && metaError !== undefined && isPermissionError(metaError);
-  const recordShape = useRecordShape(config, doctype, metaRefused);
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- frappe-ui's exported hook name
+  const recordLayout = useRecordShape(config, doctype, metaRefused);
   const layoutMeta = useMemo<DoctypeMeta | undefined>(
     () =>
       meta ??
-      (recordShape.fields
+      (recordLayout.fields
         ? {
             name: doctype,
-            fields: recordShape.fields.map((field) => ({ ...field, in_list_view: 1 as const })),
+            fields: recordLayout.fields.map((field) => ({ ...field, in_list_view: 1 as const })),
           }
         : undefined),
-    [meta, recordShape.fields, doctype],
+    [meta, recordLayout.fields, doctype],
   );
 
   // Operational errors reach the host bus (never replaces the inline state).
@@ -286,6 +317,8 @@ export function DoctypeListScreen({
   // The ambient desk scope (GL-5, the tenant seam) joins the same channel.
   const deskScope = useDeskScope();
   const fixedFiltersKey = JSON.stringify([...deskScope, ...(fixedFilters ?? [])]);
+  // SAFETY: fixedFiltersKey is JSON.stringify of FrappeFilters tuples, so it parses back losslessly
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const fixedTuples = useMemo(() => JSON.parse(fixedFiltersKey) as FrappeFilters, [fixedFiltersKey]);
   const withFixed = useCallback(
     (filters: FrappeFilters): FrappeFilters => (fixedTuples.length > 0 ? [...fixedTuples, ...filters] : filters),
@@ -294,12 +327,15 @@ export function DoctypeListScreen({
 
   // Seeds on doctype/param swaps (refs — prop identity must not retrigger).
   const initialFiltersRef = useRef(initialFilters);
+  // oxlint-disable-next-line react/refs -- render-synced mirror, read only by effects/handlers
   initialFiltersRef.current = initialFilters;
   // Render-synced mirrors so imperative handlers (URL writes, the table's
   // onStateChange) read current state without re-subscribing.
   const baseFiltersRef = useRef(baseFilters);
+  // oxlint-disable-next-line react/refs -- render-synced mirror, read only by handlers
   baseFiltersRef.current = baseFilters;
   const sortRef = useRef(sort);
+  // oxlint-disable-next-line react/refs -- render-synced mirror, read only by handlers
   sortRef.current = sort;
 
   // URL round-trip, outbound half (desk parity: list_view.js
@@ -339,12 +375,8 @@ export function DoctypeListScreen({
     lastSortParam.current = sortParam;
     if (doctypeChanged || filtersParamChanged) {
       const fromParam = parseFiltersParam(filtersParam);
-      const next =
-        fromParam.length > 0
-          ? fromParam
-          : doctypeChanged && initialFiltersRef.current
-            ? [...initialFiltersRef.current]
-            : fromParam;
+      const seed = initialFiltersRef.current;
+      const next = fromParam.length === 0 && doctypeChanged && seed !== undefined ? [...seed] : fromParam;
       if (doctypeChanged || !sameFilters(next, baseFiltersRef.current)) {
         setBaseFilters(next);
         setEffectiveFilters(withFixed(next));
@@ -352,6 +384,7 @@ export function DoctypeListScreen({
     }
     if (doctypeChanged) {
       setSort(parseSortParam(sortParam) ?? null);
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- the URL is the source of truth; this adopts an inbound doctype/deep-link swap in place
       setLikeOverrides({});
       return;
     }
@@ -369,6 +402,7 @@ export function DoctypeListScreen({
   // onStateChange mirror compares against THIS so the seeded initial sort
   // never echoes a redundant `?sort=` into the URL on mount.
   const effectiveSortRef = useRef<ListSortState>({ field: sortField, order: sortOrder });
+  // oxlint-disable-next-line react/refs -- render-synced mirror, read only by onStateChange
   effectiveSortRef.current = { field: sortField, order: sortOrder };
   const currentFilters = effectiveFilters ?? withFixed(baseFilters);
 
@@ -387,14 +421,20 @@ export function DoctypeListScreen({
       if (!app || fixtureMode) {
         return;
       }
-      toggleLike(app, doctype, name, nextLiked).catch(() => {
-        setLikeOverrides((previous) => ({ ...previous, [name]: !nextLiked }));
-        notify({
-          severity: 'error',
-          scope: 'page',
-          body: t('list.likeFailed', 'Could not update liked state'),
-        });
-      });
+      const persistLike = async () => {
+        try {
+          await toggleLike(app, doctype, name, nextLiked);
+        } catch {
+          // Roll the optimistic override back and tell the user.
+          setLikeOverrides((previous) => ({ ...previous, [name]: !nextLiked }));
+          notify({
+            severity: 'error',
+            scope: 'page',
+            body: t('list.likeFailed', 'Could not update liked state'),
+          });
+        }
+      };
+      void persistLike();
     },
     [app, fixtureMode, doctype, t],
   );
@@ -406,6 +446,7 @@ export function DoctypeListScreen({
   const permMatrix = useMemo(() => buildPermLevelMatrix(meta?.permissions, roles), [meta?.permissions, roles]);
 
   const columns = useMemo(() => {
+    // oxlint-disable-next-line react/refs -- the ref is read inside the onFilterClick handler, not during render
     const built = buildListColumns({
       meta: layoutMeta,
       t: (key, fallback) => t(key, fallback),
@@ -483,12 +524,7 @@ export function DoctypeListScreen({
       // Mirror the resolved page's display order into the shared prev/next
       // pager context (read by DocFormScreen). The store dedupes identical
       // writes and ignores the fetch-in-flight empty passes.
-      setListNavContext(
-        doctype,
-        (state.data ?? [])
-          .map((row) => (row as { name?: unknown }).name)
-          .filter((value): value is string => typeof value === 'string' && value.length > 0),
-      );
+      setListNavContext(doctype, rowNames(state.data ?? []));
       const nextFilters = tableStateToFrappeFilters(state);
       setEffectiveFilters((previous) => (previous && sameFilters(previous, nextFilters) ? previous : nextFilters));
       // Header-sort clicks stay internal to the table; mirror them into the
@@ -497,7 +533,7 @@ export function DoctypeListScreen({
       // a real header sort also mirrors into the URL (write-once — the
       // effective ref updates on the next render).
       const sorting = state.sorting?.[0];
-      if (sorting) {
+      if (sorting !== undefined) {
         const order = sorting.desc ? ('desc' as const) : ('asc' as const);
         const effective = effectiveSortRef.current;
         if (effective.field !== sorting.id || effective.order !== order) {
@@ -517,7 +553,7 @@ export function DoctypeListScreen({
 
   const handleRowClick = useCallback(
     (row: ListRow) => {
-      if (!row.name) {
+      if (row.name === undefined || row.name === '') {
         return;
       }
       if (onRowOpen) {
@@ -646,189 +682,177 @@ export function DoctypeListScreen({
       id: action.id,
       label: action.label,
       onExecute: (items: ListRow[]) => {
-        const names = items.map((item) => item.name).filter(Boolean) as string[];
+        const names = selectedNames(items);
         action.onPress({ doctype, selection: names });
       },
     }));
   }, [actions.list, toolbarActions, doctype]);
 
-  const bulkActions = useMemo<BulkAction<ListRow>[]>(
-    () => [
-      // Assignment/tag actions ride their capability flags.
-      ...(capabilities.assignments.enabled
-        ? ([
-            {
-              id: 'assign',
-              label: t('list.assignTitle', 'Assign To'),
-              onExecute: (items, clearSelection) => {
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length > 0) {
-                  setPendingDialog({ type: 'assign', names, clear: clearSelection });
-                }
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      ...(capabilities.tags.enabled
-        ? ([
-            {
-              id: 'tag',
-              label: t('list.tagTitle', 'Add Tags'),
-              onExecute: (items, clearSelection) => {
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length > 0) {
-                  setPendingDialog({ type: 'tag', names, clear: clearSelection });
-                }
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      ...(rights.write
-        ? ([
-            {
-              id: 'edit',
-              label: t('list.editTitle', 'Bulk Edit'),
-              onExecute: (items, clearSelection) => {
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length > 0) {
-                  setPendingDialog({ type: 'edit', names, clear: clearSelection });
-                }
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      {
-        id: 'export',
-        label: t('list.export', 'Export CSV'),
-        onExecute: async (items) => {
-          const names = items.map((item) => item.name).filter(Boolean) as string[];
+  const bulkActions = useMemo<BulkAction<ListRow>[]>(() => {
+    const list: BulkAction<ListRow>[] = [];
+    // Assignment/tag actions ride their capability flags.
+    if (capabilities.assignments.enabled) {
+      list.push({
+        id: 'assign',
+        label: t('list.assignTitle', 'Assign To'),
+        onExecute: (items, clearSelection) => {
+          const names = selectedNames(items);
           if (names.length > 0) {
-            await handleBulkExport(names);
+            setPendingDialog({ type: 'assign', names, clear: clearSelection });
           }
         },
+      });
+    }
+    if (capabilities.tags.enabled) {
+      list.push({
+        id: 'tag',
+        label: t('list.tagTitle', 'Add Tags'),
+        onExecute: (items, clearSelection) => {
+          const names = selectedNames(items);
+          if (names.length > 0) {
+            setPendingDialog({ type: 'tag', names, clear: clearSelection });
+          }
+        },
+      });
+    }
+    if (rights.write) {
+      list.push({
+        id: 'edit',
+        label: t('list.editTitle', 'Bulk Edit'),
+        onExecute: (items, clearSelection) => {
+          const names = selectedNames(items);
+          if (names.length > 0) {
+            setPendingDialog({ type: 'edit', names, clear: clearSelection });
+          }
+        },
+      });
+    }
+    list.push({
+      id: 'export',
+      label: t('list.export', 'Export CSV'),
+      onExecute: async (items) => {
+        const names = selectedNames(items);
+        if (names.length > 0) {
+          await handleBulkExport(names);
+        }
       },
-      ...(isSubmittable && rights.submit
-        ? ([
-            {
-              id: 'submit',
-              label: t('list.submit', 'Submit'),
-              requiresConfirmation: true,
-              confirmTitle: t('list.submitTitle', 'Submit documents'),
-              confirmMessage: t('list.submitConfirm', {
-                defaultValue: 'Submit the selected {{doctype}} documents?',
-                doctype,
+    });
+    if (isSubmittable && rights.submit) {
+      list.push({
+        id: 'submit',
+        label: t('list.submit', 'Submit'),
+        requiresConfirmation: true,
+        confirmTitle: t('list.submitTitle', 'Submit documents'),
+        confirmMessage: t('list.submitConfirm', {
+          defaultValue: 'Submit the selected {{doctype}} documents?',
+          doctype,
+        }),
+        onExecute: async (items, clearSelection) => {
+          const names = selectedNames(items);
+          if (names.length === 0) {
+            return;
+          }
+          await handleBulkDocstatus(names, 'submit');
+          clearSelection();
+        },
+      });
+    }
+    if (isSubmittable && rights.cancel) {
+      list.push({
+        id: 'cancel',
+        label: t('list.cancel', 'Cancel'),
+        requiresConfirmation: true,
+        confirmTitle: t('list.cancelTitle', 'Cancel documents'),
+        confirmMessage: t('list.cancelBody', {
+          defaultValue: 'Cancel the selected submitted {{doctype}} documents?',
+          doctype,
+        }),
+        onExecute: async (items, clearSelection) => {
+          const names = selectedNames(items);
+          if (names.length === 0) {
+            return;
+          }
+          await handleBulkDocstatus(names, 'cancel');
+          clearSelection();
+        },
+      });
+    }
+    if (rights.delete) {
+      list.push({
+        id: 'delete',
+        label: t('list.delete', 'Delete'),
+        variant: 'destructive',
+        requiresConfirmation: true,
+        confirmTitle: t('list.deleteTitle', 'Delete documents'),
+        confirmMessage: t('list.deleteConfirm', {
+          defaultValue: 'Permanently delete the selected {{doctype}} documents?',
+          doctype,
+        }),
+        onExecute: async (items, clearSelection) => {
+          if (!app) {
+            return;
+          }
+          const names = selectedNames(items);
+          if (names.length === 0) {
+            return;
+          }
+          const result = await bulkDelete(app, doctype, names);
+          if (result.failed.length > 0) {
+            notify({
+              severity: 'warning',
+              scope: 'page',
+              body: t('list.deletePartial', {
+                count: result.succeeded.length,
+                total: names.length,
+                names: result.failed.map((failure) => failure.name).join(', '),
+                defaultValue: 'Deleted {{count}} of {{total}} documents; failed: {{names}}',
               }),
-              onExecute: async (items, clearSelection) => {
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length === 0) {
-                  return;
-                }
-                await handleBulkDocstatus(names, 'submit');
-                clearSelection();
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      ...(isSubmittable && rights.cancel
-        ? ([
-            {
-              id: 'cancel',
-              label: t('list.cancel', 'Cancel'),
-              requiresConfirmation: true,
-              confirmTitle: t('list.cancelTitle', 'Cancel documents'),
-              confirmMessage: t('list.cancelBody', {
-                defaultValue: 'Cancel the selected submitted {{doctype}} documents?',
-                doctype,
+            });
+          } else {
+            notify({
+              severity: 'success',
+              scope: 'page',
+              body: t('list.deleteDone', {
+                count: result.succeeded.length,
+                defaultValue_one: 'Deleted {{count}} document',
+                defaultValue_other: 'Deleted {{count}} documents',
               }),
-              onExecute: async (items, clearSelection) => {
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length === 0) {
-                  return;
-                }
-                await handleBulkDocstatus(names, 'cancel');
-                clearSelection();
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      ...(rights.delete
-        ? ([
-            {
-              id: 'delete',
-              label: t('list.delete', 'Delete'),
-              variant: 'destructive',
-              requiresConfirmation: true,
-              confirmTitle: t('list.deleteTitle', 'Delete documents'),
-              confirmMessage: t('list.deleteConfirm', {
-                defaultValue: 'Permanently delete the selected {{doctype}} documents?',
-                doctype,
-              }),
-              onExecute: async (items, clearSelection) => {
-                if (!app) {
-                  return;
-                }
-                const names = items.map((item) => item.name).filter(Boolean) as string[];
-                if (names.length === 0) {
-                  return;
-                }
-                const result = await bulkDelete(app, doctype, names);
-                if (result.failed.length > 0) {
-                  notify({
-                    severity: 'warning',
-                    scope: 'page',
-                    body: t('list.deletePartial', {
-                      count: result.succeeded.length,
-                      total: names.length,
-                      names: result.failed.map((failure) => failure.name).join(', '),
-                      defaultValue: 'Deleted {{count}} of {{total}} documents; failed: {{names}}',
-                    }),
-                  });
-                } else {
-                  notify({
-                    severity: 'success',
-                    scope: 'page',
-                    body: t('list.deleteDone', {
-                      count: result.succeeded.length,
-                      defaultValue_one: 'Deleted {{count}} document',
-                      defaultValue_other: 'Deleted {{count}} documents',
-                    }),
-                  });
-                }
-                clearSelection();
-                count.refresh();
-              },
-            },
-          ] as BulkAction<ListRow>[])
-        : []),
-      ...hostListActions,
-    ],
-    [
-      t,
-      app,
-      doctype,
-      count,
-      isSubmittable,
-      handleBulkExport,
-      handleBulkDocstatus,
-      capabilities.assignments.enabled,
-      capabilities.tags.enabled,
-      hostListActions,
-      rights,
-    ],
-  );
+            });
+          }
+          clearSelection();
+          count.refresh();
+        },
+      });
+    }
+    list.push(...hostListActions);
+    return list;
+  }, [
+    t,
+    app,
+    doctype,
+    count,
+    isSubmittable,
+    handleBulkExport,
+    handleBulkDocstatus,
+    capabilities.assignments.enabled,
+    capabilities.tags.enabled,
+    hostListActions,
+    rights,
+  ]);
 
   // Selection + the bulk bar ride the bulkActions capability as one unit.
   const bulkActionsEnabled = capabilities.bulkActions.enabled && !metaRefused;
 
-  // View switcher options: meta-derived availability (viewAvailability.ts
+  // View switcher options: meta-derived availability (view-availability.ts
   // documents each view's desk precondition) ∩ capability allowlist ∩ the
   // `views` prop. "list" is the current view, so it always survives.
   const availableViews = useMemo(() => {
     if (!capabilities.views.enabled) {
       return [];
     }
-    const permitted = viewsAllowlist
-      ? capabilities.views.allow.filter((view) => viewsAllowlist.includes(view))
+    const allowlist = viewsAllowlist ? new Set(viewsAllowlist) : undefined;
+    const permitted = allowlist
+      ? capabilities.views.allow.filter((view) => allowlist.has(view))
       : capabilities.views.allow;
     // Without meta only the report lays itself out from the rows (LC-96).
     const allow = metaRefused ? permitted.filter((view) => view === 'report') : permitted;
@@ -868,7 +892,7 @@ export function DoctypeListScreen({
     );
   }
 
-  if (metaRefused && !layoutMeta && recordShape.status !== 'pending') {
+  if (metaRefused && !layoutMeta && recordLayout.status !== 'pending') {
     return (
       <YStack flex={1}>
         <EmptyState
@@ -895,6 +919,8 @@ export function DoctypeListScreen({
     );
   }
 
+  const fixtureFilterProps = fixtureMode ? { filters: withFixed(baseFilters) } : {};
+  const bulkActionProps = bulkActionsEnabled ? { bulkActions } : {};
   const showCreateFirst = !count.isLoading && count.value === 0 && currentFilters.length === 0;
 
   // i18next plural forms — never the lazy "(s)" suffix (the count picks the
@@ -957,13 +983,15 @@ export function DoctypeListScreen({
         current="list"
         onViewChange={handleViewChange}
       />
-      {deskHref && (
+      {deskHref !== undefined && (
         <ActionButton
           size="$3"
           circular
           chromeless
           icon={ArrowSquareOutIcon}
-          onPress={() => openInNewTab(deskHref)}
+          onPress={() => {
+            openInNewTab(deskHref);
+          }}
           aria-label={t('list.openInDesk', 'Open in Desk')}
         />
       )}
@@ -984,10 +1012,10 @@ export function DoctypeListScreen({
             setQuickEntryOpen(true);
           }}
           aria-label={t('list.new', {
-            defaultValue: 'New {{doctype}}',
+            defaultValue: NEW_DOC_DEFAULT,
             doctype,
           })}>
-          {compactChrome ? t('list.newShort', 'New') : t('list.new', { defaultValue: 'New {{doctype}}', doctype })}
+          {compactChrome ? t('list.newShort', 'New') : t('list.new', { defaultValue: NEW_DOC_DEFAULT, doctype })}
         </ActionButton>
       )}
     </XStack>
@@ -1013,7 +1041,7 @@ export function DoctypeListScreen({
               minWidth={0}>
               {doctype}
             </H1>
-            {countText ? (
+            {countText !== undefined && countText !== '' ? (
               <Paragraph
                 size="$2"
                 color="$color10"
@@ -1079,7 +1107,7 @@ export function DoctypeListScreen({
                             setQuickEntryOpen(true);
                           }}>
                           {t('list.new', {
-                            defaultValue: 'New {{doctype}}',
+                            defaultValue: NEW_DOC_DEFAULT,
                             doctype,
                           })}
                         </ActionButton>
@@ -1094,13 +1122,14 @@ export function DoctypeListScreen({
                   columns={columns}
                   fields={fields}
                   serverSide={!fixtureMode}
-                  {...(fixtureMode ? { filters: withFixed(baseFilters) } : {})}
+                  {...fixtureFilterProps}
                   filterableFields={filterableFields}
                   initialState={{
                     sorting: [{ id: sortField, desc: sortOrder === 'desc' }],
                     filters: initialTableFilters,
                     pagination: {
                       pageIndex: 0,
+                      // oxlint-disable-next-line react/refs -- seeds the table's initial page size only; later picks live in the table
                       pageSize: fixtureMode ? 500 : pageSizeRef.current,
                     },
                     columnVisibility: { modified: false },
@@ -1125,7 +1154,7 @@ export function DoctypeListScreen({
                   enableGlobalSearch={false}
                   enableSorting
                   enableRowSelection={bulkActionsEnabled}
-                  {...(bulkActionsEnabled ? { bulkActions } : {})}
+                  {...bulkActionProps}
                   onRowClick={handleRowClick}
                   onStateChange={handleStateChange}
                   rights={rights}
@@ -1204,4 +1233,4 @@ export function DoctypeListScreen({
       />
     </YStack>
   );
-}
+};

@@ -1,3 +1,5 @@
+import { FrappeList } from '@repo/frappe-ui';
+import { TOUCH_HEIGHT_FLOOR, ensureFocusVisibleRing, FOCUS_RING_HALO_OFFSET, useResolvedKnobs } from '@repo/theme';
 /**
  * Workspace quick list block — a compact live list of a doctype with the
  * row's `quick_list_filter` applied, plus a "View All" jump to the full
@@ -6,20 +8,13 @@
  * fetch (documented simplification).
  */
 import { Card, Separator, Text, XStack, YStack } from '@repo/ui';
-import { FrappeList } from '@repo/frappe-ui';
-import {
-  TOUCH_HEIGHT_FLOOR,
-  ensureFocusVisibleRing,
-  FOCUS_RING_HALO_OFFSET,
-  useResolvedKnobs,
-} from '@repo/theme';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { parseFrappeFilters } from './parseContent';
+import { parseFrappeFilters } from './parse-content';
 import type { WorkspaceQuickListRow } from './types';
 
 interface QuickListDoc {
@@ -38,7 +33,7 @@ export interface WorkspaceQuickListProps {
   row: WorkspaceQuickListRow;
 }
 
-export function WorkspaceQuickList({ row }: WorkspaceQuickListProps) {
+export const WorkspaceQuickList = ({ row }: WorkspaceQuickListProps) => {
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
   const { knobProps } = useResolvedKnobs();
@@ -79,6 +74,7 @@ export function WorkspaceQuickList({ row }: WorkspaceQuickListProps) {
             fontWeight="400"
             color="$color11"
             cursor="pointer"
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui Text; there is no <a> on native
             role="link"
             tabIndex={0}
             outlineWidth={0}
@@ -108,6 +104,8 @@ export function WorkspaceQuickList({ row }: WorkspaceQuickListProps) {
         <QuickList
           doctype={row.document_type}
           fields={['name']}
+          // SAFETY: QuickList types filters by its `fields`; Frappe validates the authored field names server-side.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
           filters={filters as ['name', string, unknown][] | undefined}
           pageSize={4}
           height={QUICK_LIST_HEIGHT}
@@ -128,7 +126,12 @@ export function WorkspaceQuickList({ row }: WorkspaceQuickListProps) {
               outlineWidth={0}
               focusStyle={{ outlineWidth: 0 }}
               focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
-              onPress={() => item.name && navigator.navigate(paths.form(row.document_type, item.name))}
+              onPress={() => {
+                if (item.name !== undefined && item.name !== '') {
+                  navigator.navigate(paths.form(row.document_type, item.name));
+                }
+              }}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack; there is no <a> on native
               role="link"
               aria-label={item.name}>
               <Text
@@ -144,4 +147,4 @@ export function WorkspaceQuickList({ row }: WorkspaceQuickListProps) {
       </YStack>
     </Card>
   );
-}
+};

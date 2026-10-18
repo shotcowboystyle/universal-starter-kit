@@ -14,9 +14,4 @@
 // the node-environment specs next door from dragging the full frappe-ui barrel
 // (FrappeTable → table dist → react-native) into a DOM-less run, while still
 // resolving under Vite/Storybook (the old extension-less "./src/*" path did not).
-export {
-  compileDependsOn,
-  evaluateDependsOn,
-  type DependsDoc,
-  type DependsEvaluator,
-} from '@repo/frappe-ui/dependsOn';
+export { compileDependsOn, evaluateDependsOn, type DependsDoc, type DependsEvaluator } from '@repo/frappe-ui/dependsOn';

@@ -1,9 +1,9 @@
-import { ConfirmDialog, Text, XStack, notify } from '@repo/ui';
 // Catalog action Button — `error` renders the destructive intent from the
 // semantic ramp instead of a hardcoded named hue (LC-05 ONE-EMPHASIS).
 import { Button } from '@repo/forms';
 import { sessionDocRights, useFrappeConfig } from '@repo/frappe-ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { ConfirmDialog, Text, XStack, notify } from '@repo/ui';
 // Contract: appears when rows are selected — bulk edit / export CSV / assign /
 // tag / submit / cancel / delete actions (desk parity). Keep props stable —
 // list-core imports this.
@@ -17,17 +17,17 @@ import { useTranslation } from 'react-i18next';
 
 import { actionsForDoctype, useBackofficeCapabilities, useBackofficeConfig } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
-import { useFrappeApp } from '../shared/useFrappeApp';
-import { useUserRoles } from '../shared/useUserRoles';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
+import { useFrappeApp } from '../shared/use-frappe-app';
+import { useUserRoles } from '../shared/use-user-roles';
 
 import { AddTagsDialog } from './AddTagsDialog';
 import { AssignToDialog } from './AssignToDialog';
+import { bulkDelete } from './bulk-actions';
 import { BulkEditDialog } from './bulk-edit-dialog';
 import { bulkExportCsv } from './bulk-export';
 import { bulkSubmitCancel } from './bulk-submit-cancel';
 import type { BulkDocstatusAction } from './bulk-submit-cancel';
-import { bulkDelete } from './bulkActions';
 
 export interface ListBulkActionsBarProps {
   doctype: string;
@@ -39,13 +39,14 @@ export interface ListBulkActionsBarProps {
   onActionComplete: () => void;
 }
 
-export function ListBulkActionsBar({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one bar wiring every desk bulk action and its dialogs; splitting it is a separate refactor
+export const ListBulkActionsBar = ({
   doctype,
   meta,
   selectedNames,
   onClearSelection,
   onActionComplete,
-}: ListBulkActionsBarProps) {
+}: ListBulkActionsBarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const app = useFrappeApp();
@@ -82,6 +83,8 @@ export function ListBulkActionsBar({
   const showAssign = capabilities.assignments.enabled;
   const showTags = capabilities.tags.enabled;
   const hostActions = actionsForDoctype(actions.list, doctype);
+  const submitLabel = t('list.submit', 'Submit');
+  const cancelLabel = t('list.cancel', 'Cancel');
 
   const handleDelete = async () => {
     if (!app) {
@@ -113,9 +116,12 @@ export function ListBulkActionsBar({
       }
       onClearSelection();
       onActionComplete();
-    } finally {
+    } catch (error) {
+      // Not a `finally` (the React Compiler skips try/finally): reset, then let the failure propagate.
       setDeleting(false);
+      throw error;
     }
+    setDeleting(false);
   };
 
   const handleExport = async () => {
@@ -126,9 +132,8 @@ export function ListBulkActionsBar({
     try {
       const result = await bulkExportCsv(app, doctype, selectedNames, meta);
       if (result.cancelled) {
-        return;
-      }
-      if (!result.downloaded) {
+        // The save picker was dismissed — nothing to report.
+      } else if (!result.downloaded) {
         // KNOWN GAP: no save path on GTK yet.
         notify({
           severity: 'warning',
@@ -161,9 +166,9 @@ export function ListBulkActionsBar({
         scope: 'page',
         body: error instanceof Error ? error.message : t('list.exportFailed', 'CSV export failed'),
       });
-    } finally {
-      setExporting(false);
     }
+    // Not a `finally`: the catch above never rethrows, and the React Compiler skips try/finally.
+    setExporting(false);
   };
 
   const handleDocstatusAction = async (action: BulkDocstatusAction) => {
@@ -179,7 +184,7 @@ export function ListBulkActionsBar({
           scope: 'page',
           body: t('list.docstatusQueued', {
             defaultValue: '{{action}} of {{count}} document(s) queued in the background',
-            action: action === 'submit' ? t('list.submit', 'Submit') : t('list.cancel', 'Cancel'),
+            action: action === 'submit' ? submitLabel : cancelLabel,
             count: result.attempted,
           }),
         });
@@ -218,9 +223,9 @@ export function ListBulkActionsBar({
         scope: 'page',
         body: error instanceof Error ? error.message : t('list.docstatusFailed', 'Bulk action failed'),
       });
-    } finally {
-      setDocstatusBusy(false);
     }
+    // Not a `finally`: the catch above never rethrows, and the React Compiler skips try/finally.
+    setDocstatusBusy(false);
   };
 
   return (
@@ -292,7 +297,7 @@ export function ListBulkActionsBar({
           onPress={() => {
             setDocstatusAction('submit');
           }}>
-          {t('list.submit', 'Submit')}
+          {submitLabel}
         </Button>
       )}
       {isSubmittable && rights.cancel && (
@@ -302,7 +307,7 @@ export function ListBulkActionsBar({
           onPress={() => {
             setDocstatusAction('cancel');
           }}>
-          {t('list.cancel', 'Cancel')}
+          {cancelLabel}
         </Button>
       )}
       {/* Busy is derived state — `loading` shows the spinner and skips the
@@ -406,7 +411,7 @@ export function ListBulkActionsBar({
                   doctype,
                 })
           }
-          confirmLabel={docstatusAction === 'cancel' ? t('list.cancel', 'Cancel') : t('list.submit', 'Submit')}
+          confirmLabel={docstatusAction === 'cancel' ? cancelLabel : submitLabel}
           onConfirm={() => {
             const action = docstatusAction;
             setDocstatusAction(undefined);
@@ -418,4 +423,4 @@ export function ListBulkActionsBar({
       )}
     </XStack>
   );
-}
+};

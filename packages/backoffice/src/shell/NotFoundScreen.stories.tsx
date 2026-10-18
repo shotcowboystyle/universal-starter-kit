@@ -4,9 +4,9 @@
 // path becomes the description line) plus its navigator and paths (the "Go
 // to workspaces" action), so an empty InMemoryFixtureProvider and a
 // MemoryNavigator seeded at the dead path are the whole harness.
-import { YStack } from '@repo/ui';
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { sizeRecipeEscape } from '@repo/theme';
+import { YStack } from '@repo/ui';
 import type { ReactNode } from 'react';
 
 import { BackofficeProvider } from '../config/BackofficeProvider';
@@ -39,20 +39,24 @@ const deepLink = createMemoryNavigator('/backoffice/sales-invoice/SI-0001/edit')
 const bareSlug = createMemoryNavigator('/backoffice/no-such-thing');
 const rootPath = createMemoryNavigator('/backoffice');
 
-function Host({ navigation, children }: { navigation: ReturnType<typeof createMemoryNavigator>; children: ReactNode }) {
-  return (
-    <BackofficeProvider
-      frappe={{ baseURL: MOCK_HOST, fixtures: new InMemoryFixtureProvider({}) }}
-      navigation={navigation}>
-      <YStack
-        flex={1}
-        height={frameHeight}
-        justifyContent="center">
-        {children}
-      </YStack>
-    </BackofficeProvider>
-  );
-}
+const Host = ({
+  navigation,
+  children,
+}: {
+  navigation: ReturnType<typeof createMemoryNavigator>;
+  children: ReactNode;
+}) => (
+  <BackofficeProvider
+    frappe={{ baseURL: MOCK_HOST, fixtures: new InMemoryFixtureProvider({}) }}
+    navigation={navigation}>
+    <YStack
+      flex={1}
+      height={frameHeight}
+      justifyContent="center">
+      {children}
+    </YStack>
+  </BackofficeProvider>
+);
 
 /** A malformed deep link: the whole path is echoed back as the description. */
 export const Main = () => (

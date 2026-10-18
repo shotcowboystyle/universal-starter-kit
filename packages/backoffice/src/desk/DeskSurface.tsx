@@ -22,6 +22,8 @@ import { NotFoundScreen } from '../shell/NotFoundScreen';
 import { DoctypeViewScreen } from '../views/DoctypeViewScreen';
 import { WorkspaceScreen } from '../workspace/WorkspaceScreen';
 
+import { isPresent } from './resolve-desk-path';
+import type { DeskDocDefaults } from './resolve-desk-path';
 import type { DeskTarget } from './target';
 
 export type DeskSurfaceKind = DeskTarget['kind'];
@@ -37,36 +39,39 @@ export type DeskSurfaceOverride = ComponentType<DeskSurfaceProps> | Record<strin
 
 export type DeskSurfaceOverrides = Partial<Record<DeskSurfaceKind, DeskSurfaceOverride>>;
 
-function resolveOverride(
+const resolveOverride = (
   overrides: DeskSurfaceOverrides | undefined,
   target: DeskTarget,
-): ComponentType<DeskSurfaceProps> | undefined {
+): ComponentType<DeskSurfaceProps> | undefined => {
   const entry = overrides?.[target.kind];
   if (!entry) {
     return undefined;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- a component (function) vs a per-doctype map; typeof is the discriminant
   if (typeof entry === 'function') {
     return entry;
   }
   const doctype = 'doctype' in target ? target.doctype : undefined;
-  return doctype ? entry[doctype] : undefined;
-}
+  return isPresent(doctype) ? entry[doctype] : undefined;
+};
 
 /** Create mode, `?d=`/pin defaults routed through the ONE prefill stash. */
-function NewDocSurface({
+const NewDocSurface = ({
   doctype,
   defaults,
   readOnly,
 }: {
   doctype: string;
-  defaults?: Record<string, unknown>;
+  defaults?: DeskDocDefaults;
   readOnly?: boolean;
-}) {
+}) => {
   const defaultsKey = JSON.stringify(defaults ?? null);
   // Stash in a memo (not an effect) so the values land before
   // DocFormScreen's create-mode seeding runs — same contract as the old
   // host route screen this replaces.
+  // oxlint-disable-next-line react/void-use-memo -- deliberate render-phase side effect, see above
   useMemo(() => {
+    // oxlint-disable-next-line react/memo-dependencies -- keyed on the serialized defaults, not their identity
     if (defaults && Object.keys(defaults).length > 0) {
       setCreatePrefill(doctype, defaults);
     }
@@ -82,7 +87,7 @@ function NewDocSurface({
       readOnly={readOnly}
     />
   );
-}
+};
 
 export interface DeskSurfaceHostProps extends DeskSurfaceProps {
   overrides?: DeskSurfaceOverrides;
@@ -92,10 +97,11 @@ export interface DeskSurfaceHostProps extends DeskSurfaceProps {
   views?: readonly BackofficeView[];
 }
 
-export function DeskSurface({ target, overrides, readOnly, initialFilters, views }: DeskSurfaceHostProps) {
+export const DeskSurface = ({ target, overrides, readOnly, initialFilters, views }: DeskSurfaceHostProps) => {
   const Override = resolveOverride(overrides, target);
   if (Override) {
     return (
+      // oxlint-disable-next-line react/static-components -- a host-supplied component from props, not one created during render
       <Override
         target={target}
         readOnly={readOnly}
@@ -157,17 +163,18 @@ export function DeskSurface({ target, overrides, readOnly, initialFilters, views
     case 'not-found': {
       return <NotFoundScreen />;
     }
+    default: {
+      throw new Error(`Unhandled desk target: ${JSON.stringify(target satisfies never)}`);
+    }
   }
-}
+};
 
 /** The resolving state — same presentation as the slug route's spinner. */
-export function DeskSurfaceLoading() {
-  return (
-    <YStack
-      flex={1}
-      alignItems="center"
-      justifyContent="center">
-      <Spinner size="large" />
-    </YStack>
-  );
-}
+export const DeskSurfaceLoading = () => (
+  <YStack
+    flex={1}
+    alignItems="center"
+    justifyContent="center">
+    <Spinner size="large" />
+  </YStack>
+);

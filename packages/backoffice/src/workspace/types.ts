@@ -28,6 +28,7 @@ export interface WorkspaceShortcutRow {
 export interface WorkspaceLinkRow {
   name: string;
   /** "Card Break" starts a link group; "Link" is a member of the group. */
+  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- the literals document the known row types; string keeps unknown ones
   type: 'Card Break' | 'Link' | string;
   label: string;
   /** "DocType" | "Report" | "Page" — only on type "Link". */
@@ -83,6 +84,7 @@ export interface WorkspaceDoc {
   charts?: WorkspaceChartRow[];
   number_cards?: WorkspaceNumberCardRow[];
   quick_lists?: WorkspaceQuickListRow[];
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a Frappe doc carries any number of extra fields
   [key: string]: unknown;
 }
 
@@ -100,11 +102,13 @@ export type WorkspaceBlockType =
   | 'quick_list'
   | 'spacer'
   | 'onboarding'
+  // oxlint-disable-next-line typescript/ban-types -- `string & {}` keeps the literal autocomplete while admitting unknown block types
   | (string & {});
 
 export interface WorkspaceBlock {
   id: string;
   type: WorkspaceBlockType;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- editorjs block data carries tool-specific extra fields
   data: {
     /** header / paragraph: HTML-ish rich text. */
     text?: string;

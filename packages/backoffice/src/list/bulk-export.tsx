@@ -8,51 +8,58 @@ import { FileSaveError, saveFile } from '@repo/platform/file';
 // CSV text and should surface the gap honestly.
 import React from 'react';
 
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DocFieldMeta, DoctypeMeta } from '../shared/use-doctype-meta';
 
 import { BULK_EDIT_EXCLUDED_FIELDTYPES } from './bulk-edit-dialog';
 
-function formatCsvCell(value: unknown): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- document cells are untyped JSON values
+const formatCsvCell = (value: unknown): string => {
   if (value === null || value === undefined) {
     return '';
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof, typescript/no-base-to-string -- objects serialize as JSON; every other cell value is a scalar
   const text = typeof value === 'object' ? JSON.stringify(value) : String(value);
-  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
+  return /[",\n\r]/u.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+/** A document row as fetched: fieldname → untyped cell value. */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- export rows carry arbitrary doctype fields
+type CsvRow = Record<string, unknown>;
 
 /** Build a CSV string (CRLF rows, header first) from column keys + row objects. */
-export function buildCsv(columns: string[], rows: Record<string, unknown>[]): string {
+export const buildCsv = (columns: string[], rows: CsvRow[]): string => {
   const lines = [columns.map(formatCsvCell).join(',')];
   for (const row of rows) {
     lines.push(columns.map((column) => formatCsvCell(row[column])).join(','));
   }
   return lines.join('\r\n');
-}
+};
+
+const isExportField = (field: DocFieldMeta): boolean => {
+  if (field.fieldname === '' || field.fieldname === 'name') {
+    return false;
+  }
+  return Boolean(field.in_list_view) && !BULK_EDIT_EXCLUDED_FIELDTYPES.has(field.fieldtype);
+};
 
 /** Value-bearing list-view fieldnames from meta (always includes "name"). */
-export function exportFieldnames(meta?: DoctypeMeta): string[] {
+export const exportFieldnames = (meta?: DoctypeMeta): string[] => {
   const fieldnames = ['name'];
   for (const field of meta?.fields ?? []) {
-    if (!field.fieldname || field.fieldname === 'name') {
-      continue;
+    if (isExportField(field)) {
+      fieldnames.push(field.fieldname);
     }
-    if (!field.in_list_view) {
-      continue;
-    }
-    if (BULK_EDIT_EXCLUDED_FIELDTYPES.has(field.fieldtype)) {
-      continue;
-    }
-    fieldnames.push(field.fieldname);
   }
   return fieldnames;
-}
+};
 
 /** Trigger a browser download. Returns false where the DOM APIs are absent. */
-export function downloadTextFile(filename: string, text: string, mime = 'text/csv'): boolean {
+export const downloadTextFile = (filename: string, text: string, mime = 'text/csv'): boolean => {
   if (
     typeof document === 'undefined' ||
     typeof Blob === 'undefined' ||
     typeof URL === 'undefined' ||
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- feature detection of the DOM download API
     typeof URL.createObjectURL !== 'function'
   ) {
     return false;
@@ -66,7 +73,7 @@ export function downloadTextFile(filename: string, text: string, mime = 'text/cs
   anchor.remove();
   URL.revokeObjectURL(url);
   return true;
-}
+};
 
 export interface BulkExportResult {
   /** CSV text (also returned when the platform cannot download). */
@@ -80,10 +87,10 @@ export interface BulkExportResult {
 }
 
 /** Save CSV text through the platform file API. Throws on picker/write failure. */
-export async function saveCsvFile(
+export const saveCsvFile = async (
   filename: string,
   csv: string,
-): Promise<Pick<BulkExportResult, 'downloaded' | 'cancelled'>> {
+): Promise<Pick<BulkExportResult, 'downloaded' | 'cancelled'>> => {
   try {
     const result = await saveFile({
       bytes: new TextEncoder().encode(csv),
@@ -99,15 +106,15 @@ export async function saveCsvFile(
     }
     throw error;
   }
-}
+};
 
 /** Fetch the selected docs and export them as CSV (selection-scoped export). */
-export async function bulkExportCsv(
+export const bulkExportCsv = async (
   app: FrappeApp,
   doctype: string,
   names: string[],
   meta?: DoctypeMeta,
-): Promise<BulkExportResult> {
+): Promise<BulkExportResult> => {
   const fields = exportFieldnames(meta);
   const rows = await app.db().getDocList(doctype, {
     fields,
@@ -115,11 +122,11 @@ export async function bulkExportCsv(
     limit: 0,
   });
   const order = new Map(names.map((name, index) => [name, index]));
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh copy; toSorted is not guaranteed on every Hermes runtime this ships to
   const sorted = [...rows].sort(
-    (a, b) =>
-      (order.get(String(a.name)) ?? Number.MAX_SAFE_INTEGER) - (order.get(String(b.name)) ?? Number.MAX_SAFE_INTEGER),
+    (a, b) => (order.get(a.name) ?? Number.MAX_SAFE_INTEGER) - (order.get(b.name) ?? Number.MAX_SAFE_INTEGER),
   );
-  const csv = buildCsv(fields, sorted as Record<string, unknown>[]);
-  const filename = `${doctype.toLowerCase().replaceAll(/\s+/g, '-')}.csv`;
+  const csv = buildCsv(fields, sorted);
+  const filename = `${doctype.toLowerCase().replaceAll(/\s+/gu, '-')}.csv`;
   return { csv, rowCount: sorted.length, ...(await saveCsvFile(filename, csv)) };
-}
+};

@@ -10,9 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { useBackofficeNavigator, useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 
-import { useDefaultWorkspace } from './useWorkspaces';
+import { useDefaultWorkspace } from './use-workspaces';
 
-export function HomeRedirect() {
+export const HomeRedirect = () => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
@@ -20,7 +20,8 @@ export function HomeRedirect() {
 
   useEffect(() => {
     if (!workspace) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const target = paths.workspace(workspace);
     // Host routers (one's included) can silently no-op a replace that fires
@@ -72,4 +73,4 @@ export function HomeRedirect() {
       <Paragraph color="$color10">{t('loadingWorkspaces', 'Loading workspaces…')}</Paragraph>
     </YStack>
   );
-}
+};

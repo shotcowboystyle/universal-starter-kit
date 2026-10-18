@@ -18,10 +18,6 @@
  * button stays visible.
  */
 
-import { Breadcrumbs, Chip, DropdownMenu, H1, XStack, YStack } from '@repo/ui';
-import type { BreadcrumbItem, ChipColor, DropdownMenuEntry } from '@repo/ui';
-import { Button } from '@repo/forms';
-import { useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
 import {
   ArrowCounterClockwiseIcon,
   ArrowSquareOutIcon,
@@ -41,6 +37,10 @@ import {
   ProhibitIcon,
   TrashIcon,
 } from '@phosphor-icons/react';
+import { Button } from '@repo/forms';
+import { useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
+import { Breadcrumbs, Chip, DropdownMenu, H1, XStack, YStack } from '@repo/ui';
+import type { BreadcrumbItem, ChipColor, DropdownMenuEntry } from '@repo/ui';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -77,12 +77,12 @@ const INDICATOR_COLORS: Record<Exclude<DocIndicator, 'saved'>, ChipColor> = {
 };
 
 /** Map a frappe indicator color name (DocType States rows) → ChipColor. */
-export function frappeColorToChipColor(color?: string): ChipColor {
+export const frappeColorToChipColor = (color?: string): ChipColor => {
   switch (
     (color ?? '')
       .trim()
       .toLowerCase()
-      .replaceAll(/[\s_-]+/g, '')
+      .replaceAll(/[\s_-]+/gu, '')
   ) {
     case 'red': {
       return 'red';
@@ -109,13 +109,13 @@ export function frappeColorToChipColor(color?: string): ChipColor {
       return 'gray';
     }
   }
-}
+};
 
 /**
  * Heuristic status → color mapping mirroring desk's `guess_colour` for
- * status values with no `meta.states` row (e.g. ToDo "Open").
+ * status values with no `meta.states` row (e.g. "Open" on the to-do doctype).
  */
-function guessStatusColor(status: string): ChipColor {
+const guessStatusColor = (status: string): ChipColor => {
   const value = status.toLowerCase();
   const has = (...words: string[]) => words.some((word) => value.includes(word));
   if (has('cancel', 'inactive', 'archiv', 'low')) {
@@ -146,9 +146,9 @@ function guessStatusColor(status: string): ChipColor {
     return 'orange';
   }
   return 'gray';
-}
+};
 
-export function resolveIndicator(args: {
+export const resolveIndicator = (args: {
   isCreate: boolean;
   isDirty: boolean;
   docstatus: number;
@@ -156,18 +156,19 @@ export function resolveIndicator(args: {
   /** Doc's status-field (or workflow state field) value, when present. */
   statusValue?: string;
   /** `meta.states` rows — data-driven color mapping that wins over guesses. */
-  states?: ({ title?: string; color?: string } & Record<string, unknown>)[];
-}): DocIndicatorSpec {
+  states?: { title?: string; color?: string }[];
+}): DocIndicatorSpec => {
   if (args.isCreate) {
     return 'new';
   }
   if (args.isDirty) {
     return 'notSaved';
   }
-  if (args.statusValue) {
-    const state = args.states?.find((row) => row.title === args.statusValue);
+  const status = args.statusValue ?? '';
+  if (status !== '') {
+    const state = args.states?.find((row) => row.title === status);
     if (state) {
-      return { label: args.statusValue, color: frappeColorToChipColor(state.color) };
+      return { label: status, color: frappeColorToChipColor(state.color) };
     }
   }
   if (args.docstatus === 1) {
@@ -176,20 +177,33 @@ export function resolveIndicator(args: {
   if (args.docstatus === 2) {
     return 'cancelled';
   }
-  if (args.statusValue) {
-    return { label: args.statusValue, color: guessStatusColor(args.statusValue) };
+  if (status !== '') {
+    return { label: status, color: guessStatusColor(status) };
   }
   return args.isSubmittable ? 'draft' : 'saved';
-}
+};
 
 // ---------------------------------------------------------------------------
 // Toolbar
 // ---------------------------------------------------------------------------
 
+export type FormToolbarMenuIcon =
+  | 'reload'
+  | 'duplicate'
+  | 'rename'
+  | 'delete'
+  | 'print'
+  | 'email'
+  | 'links'
+  | 'new'
+  | 'list'
+  | 'desk'
+  | 'jump';
+
 export interface FormToolbarMenuItem {
   key: string;
   label: string;
-  icon?: 'reload' | 'duplicate' | 'rename' | 'delete' | 'print' | 'email' | 'links' | 'new' | 'list' | 'desk' | 'jump';
+  icon?: FormToolbarMenuIcon;
   destructive?: boolean;
   disabled?: boolean;
   disabledReason?: string;
@@ -260,7 +274,27 @@ const MENU_ICONS = {
 
 type LifecycleAction = 'save' | 'submit' | 'cancel' | 'amend';
 
-export function FormToolbar({
+/** The pill for an indicator: presets map to their label and color; 'saved' shows none. */
+const resolveIndicatorChip = (
+  indicator: DocIndicatorSpec,
+  labels: Record<Exclude<DocIndicator, 'saved'>, string>,
+): DocStatusIndicator | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the DocIndicatorSpec union (preset name or status spec), not wire data
+  if (typeof indicator !== 'string') {
+    return indicator;
+  }
+  return indicator === 'saved' ? undefined : { label: labels[indicator], color: INDICATOR_COLORS[indicator] };
+};
+
+const ACTION_ENTRY_ICONS: Record<LifecycleAction, typeof CheckCircleIcon> = {
+  save: FloppyDiskIcon,
+  submit: CheckCircleIcon,
+  cancel: ProhibitIcon,
+  amend: CopyIcon,
+};
+
+// oxlint-disable-next-line eslint/complexity -- prop-driven toolbar layout; each branch is one optional control
+export const FormToolbar = ({
   breadcrumbs,
   onNavigate,
   title,
@@ -283,10 +317,10 @@ export function FormToolbar({
   onNextDoc,
   prevDocDisabled,
   nextDocDisabled,
-}: FormToolbarProps) {
+}: FormToolbarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
+  const iconSize = knobProps.controlIcon?.width ?? 16;
   const isNarrow = useLayoutSizeClass() === 'compact';
 
   const indicatorLabels: Record<Exclude<DocIndicator, 'saved'>, string> = {
@@ -297,16 +331,11 @@ export function FormToolbar({
     new: t('notSaved', 'Not Saved'),
   };
 
-  const chip =
-    typeof indicator === 'string'
-      ? indicator === 'saved'
-        ? undefined
-        : { label: indicatorLabels[indicator], color: INDICATOR_COLORS[indicator] }
-      : indicator;
+  const chip = resolveIndicatorChip(indicator, indicatorLabels);
 
   // Desk primary-action lifecycle: dirty/new → Save; saved submittable
   // draft → Submit; docstatus 1 → Cancel; docstatus 2 → Amend.
-  const isDirtyish = typeof indicator === 'string' && (indicator === 'notSaved' || indicator === 'new');
+  const isDirtyish = indicator === 'notSaved' || indicator === 'new';
   const actionLabels: Record<LifecycleAction, string> = {
     save: isSaving ? t('saving', 'Saving…') : t('save', 'Save'),
     submit: t('submit', 'Submit'),
@@ -331,23 +360,17 @@ export function FormToolbar({
 
   const reload = onReload ?? menuItems.find((item) => item.key === 'reload')?.onSelect;
 
-  const actionEntryIcons: Record<LifecycleAction, typeof CheckCircleIcon> = {
-    save: FloppyDiskIcon,
-    submit: CheckCircleIcon,
-    cancel: ProhibitIcon,
-    amend: CopyIcon,
-  };
   const entries: DropdownMenuEntry[] = [
     // Narrow viewports: secondary lifecycle actions fold into the menu.
     ...collapsedActions.map((action) => {
-      const Icon = actionEntryIcons[action];
+      const Icon = ACTION_ENTRY_ICONS[action];
       return {
         key: `__action-${action}`,
         label: actionLabels[action],
         icon: <Icon size={iconSize} />,
         destructive: action === 'cancel',
         disabled: isSaving,
-        ...(isSaving ? { disabledReason: t('saving', 'Saving…') } : {}),
+        disabledReason: isSaving ? t('saving', 'Saving…') : undefined,
         onSelect: actionHandlers[action],
       };
     }),
@@ -532,4 +555,4 @@ export function FormToolbar({
       </XStack>
     </YStack>
   );
-}
+};

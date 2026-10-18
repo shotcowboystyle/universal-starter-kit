@@ -13,8 +13,6 @@
  * is owned by BackofficeShell so it spans the full rail height (footer
  * included) — this nav paints none.
  */
-import { ScrollView, Separator, SizableText, Spinner, XStack, YStack } from '@repo/ui';
-import type { SidebarItem, SidebarSection } from '@repo/ui';
 import {
   ensureFocusVisibleRing,
   getGroupPosition,
@@ -23,6 +21,8 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
 } from '@repo/theme';
+import { ScrollView, Separator, SizableText, Spinner, XStack, YStack } from '@repo/ui';
+import type { SidebarItem, SidebarSection } from '@repo/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,11 +30,22 @@ import { useBackofficePaths } from '../config/BackofficeProvider';
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { BackofficePaths } from '../navigation/paths';
 
-import { useWorkspaces } from './useWorkspaces';
-import type { WorkspaceDoc } from './useWorkspaces';
-import { workspaceIcon } from './workspaceIcons';
+import { useWorkspaces } from './use-workspaces';
+import type { WorkspaceDoc } from './use-workspaces';
+import { workspaceIcon } from './workspace-icons';
 
 export const WORKSPACE_SIDEBAR_WIDTH = 250;
+
+/** Sidebar row whose value is always the workspace path. */
+interface WorkspaceNavItem extends SidebarItem {
+  value: string;
+}
+
+interface WorkspaceNavSection extends SidebarSection {
+  items: WorkspaceNavItem[];
+}
+
+const ACCENT_BACKGROUND = '$accentBackground';
 
 export interface WorkspaceSidebarProps {
   /** Current path, used to highlight the active workspace. */
@@ -43,13 +54,13 @@ export interface WorkspaceSidebarProps {
   onNavigate?: (path: string) => void;
 }
 
-function workspaceItem(
+const workspaceItem = (
   workspace: WorkspaceDoc,
   depth: number,
   paths: BackofficePaths,
   activePath: string | undefined,
   onNavigate: ((path: string) => void) | undefined,
-): SidebarItem {
+): WorkspaceNavItem => {
   const path = paths.workspace(workspace.name);
   const IconComponent = workspaceIcon(workspace.icon, workspace.name);
   const icon = (
@@ -70,36 +81,38 @@ function workspaceItem(
         }
       : undefined,
   };
-}
+};
 
 /** Flatten a workspace tree into indented sidebar items (children follow parents). */
-function flattenTree(
+const flattenTree = (
   roots: WorkspaceDoc[],
   childrenByParent: Map<string, WorkspaceDoc[]>,
   paths: BackofficePaths,
   activePath: string | undefined,
   onNavigate: ((path: string) => void) | undefined,
   depth = 0,
-): SidebarItem[] {
-  const items: SidebarItem[] = [];
+): WorkspaceNavItem[] => {
+  const items: WorkspaceNavItem[] = [];
   for (const workspace of roots) {
     items.push(workspaceItem(workspace, depth, paths, activePath, onNavigate));
     const children = childrenByParent.get(workspace.name);
-    if (children?.length) {
+    if (children !== undefined && children.length > 0) {
       items.push(...flattenTree(children, childrenByParent, paths, activePath, onNavigate, depth + 1));
     }
   }
   return items;
-}
+};
 
-function NavRow({ item, position }: { item: SidebarItem; position: ReturnType<typeof getGroupPosition> }) {
+const NavRow = ({ item, position }: { item: WorkspaceNavItem; position: ReturnType<typeof getGroupPosition> }) => {
   const { knobProps } = useResolvedKnobs();
-  const onAccent = useReadableTextOn('$accentBackground');
+  const onAccent = useReadableTextOn(ACCENT_BACKGROUND);
   const rowPad = knobProps.panelPadding.padding;
   const corners = stackRadiusProps(position, knobProps.borderRadius.borderRadius);
-  const ink = item.active && onAccent ? onAccent : undefined;
+  const ink = item.active && onAccent !== undefined && onAccent !== '' ? onAccent : undefined;
+  const handlePress = item.onPress;
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack: `role` also sets the native accessibility role, a tag is web-only
       role="button"
       aria-current={item.active ? 'page' : undefined}
       data-testid="backoffice-workspace-row"
@@ -113,32 +126,30 @@ function NavRow({ item, position }: { item: SidebarItem; position: ReturnType<ty
       overflow="hidden"
       userSelect="none"
       {...corners}
-      backgroundColor={item.active ? '$accentBackground' : 'transparent'}
+      backgroundColor={item.active ? ACCENT_BACKGROUND : 'transparent'}
       hoverStyle={{
-        backgroundColor: item.active ? '$accentBackground' : '$color3',
+        backgroundColor: item.active ? ACCENT_BACKGROUND : '$color3',
         ...corners,
       }}
       pressStyle={{
-        backgroundColor: item.active ? '$accentBackground' : '$color4',
+        backgroundColor: item.active ? ACCENT_BACKGROUND : '$color4',
         ...corners,
       }}
-      cursor={item.onPress ? 'pointer' : 'default'}
-      onPress={item.onPress}
-      tabIndex={item.onPress ? 0 : undefined}
+      cursor={handlePress ? 'pointer' : 'default'}
+      onPress={handlePress}
+      tabIndex={handlePress ? 0 : undefined}
       outlineWidth={0}
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing({
         outlineOffset: -2,
         outlineColor: ink ?? '$outlineColor',
       })}
-      onKeyDown={
-        ((e: { key?: string; preventDefault?: () => void }) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault?.();
-            item.onPress?.();
-          }
-        }) as unknown as () => void
-      }>
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handlePress?.();
+        }
+      }}>
       {item.icon}
       <SizableText
         size="$3"
@@ -151,9 +162,9 @@ function NavRow({ item, position }: { item: SidebarItem; position: ReturnType<ty
       </SizableText>
     </XStack>
   );
-}
+};
 
-function WorkspaceNav({ sections }: { sections: SidebarSection[] }) {
+const WorkspaceNav = ({ sections }: { sections: WorkspaceNavSection[] }) => {
   const { knobProps } = useResolvedKnobs();
   const rowPad = knobProps.panelPadding.padding;
   return (
@@ -171,7 +182,7 @@ function WorkspaceNav({ sections }: { sections: SidebarSection[] }) {
             <YStack
               key={section.title ?? sectionIdx}
               {...knobProps.gap}>
-              {section.title ? (
+              {section.title !== undefined && section.title !== '' ? (
                 <YStack paddingHorizontal={rowPad}>
                   <SizableText
                     size="$2"
@@ -186,7 +197,7 @@ function WorkspaceNav({ sections }: { sections: SidebarSection[] }) {
                 {section.items.map((item, itemIdx) => {
                   const position = getGroupPosition(itemIdx, section.items.length);
                   return (
-                    <YStack key={String(item.value ?? item.label)}>
+                    <YStack key={item.value}>
                       {itemIdx > 0 ? <Separator {...hairline.line} /> : null}
                       <NavRow
                         item={item}
@@ -202,15 +213,15 @@ function WorkspaceNav({ sections }: { sections: SidebarSection[] }) {
       </ScrollView>
     </YStack>
   );
-}
+};
 
-export function WorkspaceSidebar({ activePath, onNavigate }: WorkspaceSidebarProps) {
+export const WorkspaceSidebar = ({ activePath, onNavigate }: WorkspaceSidebarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const paths = useBackofficePaths();
   const { privateWorkspaces, publicRoots, childrenByParent, isLoading } = useWorkspaces();
 
-  const sections = useMemo<SidebarSection[]>(() => {
-    const result: SidebarSection[] = [];
+  const sections = useMemo<WorkspaceNavSection[]>(() => {
+    const result: WorkspaceNavSection[] = [];
     if (privateWorkspaces.length > 0) {
       result.push({
         title: t('sidebar.private', 'Private'),
@@ -226,7 +237,8 @@ export function WorkspaceSidebar({ activePath, onNavigate }: WorkspaceSidebarPro
     // A lone group label is noise (owner-flagged): only caption sections when
     // there is more than one group to distinguish.
     if (result.length === 1) {
-      result[0] = { ...result[0], title: undefined };
+      const [only] = result;
+      result[0] = { items: only.items };
     }
     return result;
   }, [privateWorkspaces, publicRoots, childrenByParent, paths, activePath, onNavigate, t]);
@@ -246,4 +258,4 @@ export function WorkspaceSidebar({ activePath, onNavigate }: WorkspaceSidebarPro
   }
 
   return <WorkspaceNav sections={sections} />;
-}
+};

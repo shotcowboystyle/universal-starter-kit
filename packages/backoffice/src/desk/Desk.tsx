@@ -8,11 +8,11 @@
  * MemoryNavigator seeded from the pins), the path→surface resolution
  * (useDeskTarget), and the chrome pick. No fetch, no filter construction,
  * no field mapping, no visual values — the §9.2 doctrine greps over this
- * directory ship as a spec test (doctrine.spec.ts).
+ * directory ship as a spec test (doctrine.test.ts).
  */
-import { YStack } from '@repo/ui';
 import { useFrappeConfig } from '@repo/frappe-ui';
 import type { FieldRenderProps } from '@repo/frappe-ui';
+import { YStack } from '@repo/ui';
 import type { ComponentType } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 
@@ -35,6 +35,7 @@ import { BackofficeShell } from '../shell/BackofficeShell';
 
 import { DeskSurface, DeskSurfaceLoading } from './DeskSurface';
 import type { DeskSurfaceOverrides } from './DeskSurface';
+import { isPresent, stripTrailingSlashes } from './resolve-desk-path';
 import { DeskScopeProvider } from './scope';
 import { guessDeskTarget, hasDeskPin, useDeskTarget } from './target';
 import type { DeskPins, DeskTarget } from './target';
@@ -117,6 +118,7 @@ export interface DeskProps {
    * is resolved best-effort: an ambiguous slug degrades to a title-cased
    * doctype guess, the same degrade the slug index applies offline.
    */
+  // oxlint-disable-next-line typescript/no-invalid-void-type -- public callback: a host that returns nothing lets the navigation through
   onNavigate?: (target: DeskTarget, path: string) => boolean | void;
   /** Fires whenever the resolved surface changes (host breadcrumbs/titles). */
   onTargetChange?: (target: DeskTarget) => void;
@@ -133,17 +135,17 @@ export interface DeskProps {
 }
 
 /** Pins → the internal navigator's seed path. */
-function pinnedPath(pins: DeskPins, basePath: string): string {
+const pinnedPath = (pins: DeskPins, basePath: string): string => {
   const paths = createBackofficePaths(basePath);
-  if (pins.path) {
-    const prefix = basePath === '/' ? '' : basePath.replace(/\/+$/, '');
+  if (isPresent(pins.path)) {
+    const prefix = basePath === '/' ? '' : stripTrailingSlashes(basePath);
     return `${prefix}${pins.path}`;
   }
-  if (pins.doctype) {
+  if (isPresent(pins.doctype)) {
     if (pins.name === 'new') {
       return paths.newDoc(pins.doctype);
     }
-    if (pins.name) {
+    if (isPresent(pins.name)) {
       return paths.form(pins.doctype, pins.name);
     }
     if (pins.view && pins.view !== 'list') {
@@ -151,16 +153,68 @@ function pinnedPath(pins: DeskPins, basePath: string): string {
     }
     return paths.list(pins.doctype);
   }
-  if (pins.workspace) {
+  if (isPresent(pins.workspace)) {
     return paths.workspace(pins.workspace);
   }
-  if (pins.report) {
+  if (isPresent(pins.report)) {
     return paths.queryReport(pins.report);
   }
   return paths.home();
+};
+
+interface DeskBodyProps {
+  pins: DeskPins;
+  chrome: DeskChrome;
+  readOnly?: boolean;
+  surfaces?: DeskSurfaceOverrides;
+  initialFilters?: FrappeFilters;
+  views?: readonly BackofficeView[];
+  onTargetChange?: (target: DeskTarget) => void;
 }
 
-export function Desk(props: DeskProps) {
+/** Inside the provider: resolve the target, pick the chrome, mount the surface. */
+const DeskBody = ({ pins, chrome, readOnly, surfaces, initialFilters, views, onTargetChange }: DeskBodyProps) => {
+  const target = useDeskTarget(pins);
+
+  const onTargetChangeRef = useRef(onTargetChange);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: the target effect calls the current onTargetChange
+  onTargetChangeRef.current = onTargetChange;
+  const targetKey = target ? JSON.stringify(target) : undefined;
+  useEffect(() => {
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- fires on target value changes (targetKey), not identity
+    if (target) {
+      // oxlint-disable-next-line react-doctor/no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent, react-doctor/no-prop-callback-in-effect -- onTargetChange is the public "surface changed" notification; the host reacts after commit
+      onTargetChangeRef.current?.(target);
+    }
+    // oxlint-disable-next-line exhaustive-deps
+  }, [targetKey]);
+
+  const surface = target ? (
+    <DeskSurface
+      target={target}
+      overrides={surfaces}
+      readOnly={readOnly}
+      initialFilters={initialFilters}
+      views={views}
+    />
+  ) : (
+    <DeskSurfaceLoading />
+  );
+
+  if (chrome === 'content') {
+    return (
+      <YStack
+        flex={1}
+        minHeight={0}
+        minWidth={0}>
+        {surface}
+      </YStack>
+    );
+  }
+  return <BackofficeShell>{surface}</BackofficeShell>;
+};
+
+export const Desk = (props: DeskProps) => {
   const {
     doctype,
     name,
@@ -194,29 +248,32 @@ export function Desk(props: DeskProps) {
   }, [ambient, props.frappe]);
 
   // ── navigation: host adapter, else internal memory (seeded once) ──────
+  const navigationMode = props.navigation ? 'host' : 'memory';
   const memoryNavigator = useMemo(
-    () => (props.navigation ? undefined : createMemoryNavigator(pinnedPath(pins, basePath))),
+    () => (navigationMode === 'host' ? undefined : createMemoryNavigator(pinnedPath(pins, basePath))),
     // The seed is the ENTRY; later pin changes re-enter through useDeskTarget.
-    // oxlint-disable-next-line exhaustive-deps
-    [props.navigation ? 'host' : 'memory'],
+    // oxlint-disable-next-line exhaustive-deps, react/memo-dependencies -- seeded once per navigation mode
+    [navigationMode],
   );
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- memoryNavigator exists exactly when props.navigation is absent
   const baseNavigation = props.navigation ?? memoryNavigator!;
 
   const onNavigateRef = useRef(onNavigate);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: the stable navigator calls the current onNavigate
   onNavigateRef.current = onNavigate;
   const navigation = useMemo<BackofficeNavigator>(() => {
-    const intercept = (path: string): boolean =>
-      onNavigateRef.current?.(guessDeskTarget(path, basePath), path) !== false;
-    return {
+    const intercept = (href: string): boolean =>
+      onNavigateRef.current?.(guessDeskTarget(href, basePath), href) !== false;
+    const intercepted: BackofficeNavigator = {
       ...baseNavigation,
-      navigate: (path) => {
-        if (intercept(path)) {
-          baseNavigation.navigate(path);
+      navigate: (href) => {
+        if (intercept(href)) {
+          baseNavigation.navigate(href);
         }
       },
-      replace: (path) => {
-        if (intercept(path)) {
-          baseNavigation.replace(path);
+      replace: (href) => {
+        if (intercept(href)) {
+          baseNavigation.replace(href);
         }
       },
       back: () => {
@@ -224,17 +281,16 @@ export function Desk(props: DeskProps) {
       },
       getLocation: () => baseNavigation.getLocation(),
       subscribe: (listener) => baseNavigation.subscribe(listener),
-      ...(baseNavigation.setParams
-        ? {
-            setParams: (params: Record<string, string | undefined>) => baseNavigation.setParams?.(params),
-          }
-        : {}),
     };
+    if (baseNavigation.setParams) {
+      intercepted.setParams = (params) => baseNavigation.setParams?.(params);
+    }
+    return intercepted;
   }, [baseNavigation, basePath]);
 
   // ── narrowings: chrome, doctype fence, bare-chrome capability merge ───
   const chrome: DeskChrome = chromeProp ?? (embedded || hasDeskPin(pins) ? 'content' : 'full');
-  const doctypes = props.doctypes ?? (doctype ? { allow: [doctype] } : undefined);
+  const doctypes = props.doctypes ?? (isPresent(doctype) ? { allow: [doctype] } : undefined);
   const capabilities = useMemo<BackofficeCapabilities | undefined>(
     () => (chrome === 'bare' ? { ...props.capabilities, sidebar: false } : props.capabilities),
     [chrome, props.capabilities],
@@ -266,53 +322,4 @@ export function Desk(props: DeskProps) {
       </DeskScopeProvider>
     </BackofficeProvider>
   );
-}
-
-interface DeskBodyProps {
-  pins: DeskPins;
-  chrome: DeskChrome;
-  readOnly?: boolean;
-  surfaces?: DeskSurfaceOverrides;
-  initialFilters?: FrappeFilters;
-  views?: readonly BackofficeView[];
-  onTargetChange?: (target: DeskTarget) => void;
-}
-
-/** Inside the provider: resolve the target, pick the chrome, mount the surface. */
-function DeskBody({ pins, chrome, readOnly, surfaces, initialFilters, views, onTargetChange }: DeskBodyProps) {
-  const target = useDeskTarget(pins);
-
-  const onTargetChangeRef = useRef(onTargetChange);
-  onTargetChangeRef.current = onTargetChange;
-  const targetKey = target ? JSON.stringify(target) : undefined;
-  useEffect(() => {
-    if (target) {
-      onTargetChangeRef.current?.(target);
-    }
-    // oxlint-disable-next-line exhaustive-deps
-  }, [targetKey]);
-
-  const surface = target ? (
-    <DeskSurface
-      target={target}
-      overrides={surfaces}
-      readOnly={readOnly}
-      initialFilters={initialFilters}
-      views={views}
-    />
-  ) : (
-    <DeskSurfaceLoading />
-  );
-
-  if (chrome === 'content') {
-    return (
-      <YStack
-        flex={1}
-        minHeight={0}
-        minWidth={0}>
-        {surface}
-      </YStack>
-    );
-  }
-  return <BackofficeShell>{surface}</BackofficeShell>;
-}
+};

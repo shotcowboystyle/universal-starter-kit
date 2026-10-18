@@ -1,3 +1,4 @@
+import { TOUCH_HEIGHT_FLOOR, sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 // Contract: renders a frappe Workspace document (shortcuts, link cards,
 // charts, number cards, quick lists) by workspace name.
 /**
@@ -31,7 +32,6 @@ import {
   XStack,
   YStack,
 } from '@repo/ui';
-import { TOUCH_HEIGHT_FLOOR, sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,9 +46,9 @@ import {
   headerLevel,
   parseWorkspaceContent,
   stripHtml,
-} from './parseContent';
+} from './parse-content';
 import type { WorkspaceBlock, WorkspaceDoc, WorkspaceShortcutRow } from './types';
-import { useWorkspaceDoc } from './useWorkspaceDoc';
+import { useWorkspaceDoc } from './use-workspace-doc';
 import { WorkspaceChartBlock } from './WorkspaceChartBlock';
 import { WorkspaceGrid } from './WorkspaceGrid';
 import type { WorkspaceGridItem } from './WorkspaceGrid';
@@ -86,8 +86,9 @@ const HEADER_TAGS = { 1: H2, 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
  * reach this — the composition renders them as the chip band and the
  * "Browse all" directory instead.
  */
-function blockToGridItem(block: WorkspaceBlock, doc: WorkspaceDoc): WorkspaceGridItem | undefined {
+const blockToGridItem = (block: WorkspaceBlock, doc: WorkspaceDoc): WorkspaceGridItem | undefined => {
   const key = block.id || JSON.stringify(block.data);
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- only text and data blocks map to grid items; default covers the rest
   switch (block.type) {
     case 'header': {
       const text = stripHtml(block.data.text);
@@ -149,7 +150,7 @@ function blockToGridItem(block: WorkspaceBlock, doc: WorkspaceDoc): WorkspaceGri
       return undefined;
     }
   }
-}
+};
 
 const chipBoneWidths = sizeRecipeEscape(
   [128, 104, 144, 112],
@@ -160,7 +161,7 @@ const cardBoneHeight = sizeRecipeEscape(
   'loading bones: placeholder chip widths and card height for content that has not loaded',
 );
 
-function WorkspaceSkeleton() {
+const WorkspaceSkeleton = () => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   // Mirrors the dashboard-first anatomy (LC-20): title line, shortcut chip
@@ -203,7 +204,7 @@ function WorkspaceSkeleton() {
       </XStack>
     </YStack>
   );
-}
+};
 
 interface WorkspaceSections {
   /** Data widgets first: number cards → charts → quick lists. */
@@ -216,17 +217,17 @@ interface WorkspaceSections {
   links: WorkspaceLinkDirectoryItem[];
 }
 
-const DATA_KIND_BY_TYPE: Record<string, WorkspaceBlockKind> = {
-  chart: 'charts',
-  number_card: 'numbers',
-  quick_list: 'quickLists',
-};
+const DATA_KIND_BY_TYPE = new Map<string, WorkspaceBlockKind>([
+  ['chart', 'charts'],
+  ['number_card', 'numbers'],
+  ['quick_list', 'quickLists'],
+]);
 
-function buildSections(
+const buildSections = (
   doc: WorkspaceDoc,
   hidden: ReadonlySet<WorkspaceBlockKind>,
   renderBlock?: WorkspaceScreenProps['renderBlock'],
-): WorkspaceSections {
+): WorkspaceSections => {
   const composition = composeWorkspaceBlocks(parseWorkspaceContent(doc.content));
   const toGridItems = (blocks: WorkspaceBlock[]) =>
     blocks
@@ -240,7 +241,7 @@ function buildSections(
       .filter((item): item is WorkspaceGridItem => item !== undefined);
   const groups = groupLinks(doc.links);
   const dataBlocks = composition.data.filter((block) => {
-    const kind = DATA_KIND_BY_TYPE[block.type];
+    const kind = DATA_KIND_BY_TYPE.get(block.type);
     return !kind || !hidden.has(kind);
   });
   return {
@@ -262,14 +263,49 @@ function buildSections(
           return [{ key: block.id || group.label, col: block.data.col ?? 4, group }];
         }),
   };
+};
+
+interface WorkspaceSectionsBodyProps {
+  sections: WorkspaceSections;
+  onShortcutPress: WorkspaceScreenProps['onShortcutPress'];
 }
 
-export function WorkspaceScreen({ workspace, hiddenBlocks, onShortcutPress, renderBlock }: WorkspaceScreenProps) {
+const WorkspaceSectionsBody = ({ sections, onShortcutPress }: WorkspaceSectionsBodyProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
+  return (
+    <>
+      {sections.data.length > 0 ? <WorkspaceGrid items={sections.data} /> : null}
+      {sections.text.length > 0 ? <WorkspaceGrid items={sections.text} /> : null}
+      {sections.shortcuts.length > 0 ? (
+        // Section heading on the shared sectionHeading scale (LC-17) —
+        // PageSection owns it; no divider rule over a chip band.
+        <PageSection
+          title={t('workspaceShortcuts', 'Shortcuts')}
+          divider={false}>
+          <XStack
+            flexWrap="wrap"
+            {...knobProps.gap}>
+            {sections.shortcuts.map((row) => (
+              <WorkspaceShortcut
+                key={row.name}
+                row={row}
+                onPress={onShortcutPress}
+              />
+            ))}
+          </XStack>
+        </PageSection>
+      ) : null}
+      {sections.links.length > 0 ? <WorkspaceLinkDirectory items={sections.links} /> : null}
+    </>
+  );
+};
+
+export const WorkspaceScreen = ({ workspace, hiddenBlocks, onShortcutPress, renderBlock }: WorkspaceScreenProps) => {
+  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { doc, isLoading, error, isPermissionError, refresh } = useWorkspaceDoc(workspace);
 
-  const hidden = useMemo(() => new Set(hiddenBlocks ?? []), [hiddenBlocks]);
+  const hidden = useMemo(() => new Set(hiddenBlocks), [hiddenBlocks]);
   const sections = useMemo(
     () => (doc ? buildSections(doc, hidden, renderBlock) : undefined),
     [doc, hidden, renderBlock],
@@ -329,31 +365,11 @@ export function WorkspaceScreen({ workspace, hiddenBlocks, onShortcutPress, rend
           })}
         />
       ) : (
-        <>
-          {sections.data.length > 0 ? <WorkspaceGrid items={sections.data} /> : null}
-          {sections.text.length > 0 ? <WorkspaceGrid items={sections.text} /> : null}
-          {sections.shortcuts.length > 0 ? (
-            // Section heading on the shared sectionHeading scale (LC-17) —
-            // PageSection owns it; no divider rule over a chip band.
-            <PageSection
-              title={t('workspaceShortcuts', 'Shortcuts')}
-              divider={false}>
-              <XStack
-                flexWrap="wrap"
-                {...knobProps.gap}>
-                {sections.shortcuts.map((row) => (
-                  <WorkspaceShortcut
-                    key={row.name}
-                    row={row}
-                    onPress={onShortcutPress}
-                  />
-                ))}
-              </XStack>
-            </PageSection>
-          ) : null}
-          {sections.links.length > 0 ? <WorkspaceLinkDirectory items={sections.links} /> : null}
-        </>
+        <WorkspaceSectionsBody
+          sections={sections}
+          onShortcutPress={onShortcutPress}
+        />
       )}
     </Screen>
   );
-}
+};

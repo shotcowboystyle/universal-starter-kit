@@ -5,8 +5,8 @@
  *   - Mod+S saves the open document (form save shortcut)
  *   - Esc closes dialogs and menus (overlay default + shell drawer)
  */
-import { Button, Dialog, DialogContent, Paragraph, SizableText, XStack, YStack } from '@repo/ui';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
+import { Button, Dialog, DialogContent, Paragraph, SizableText, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
@@ -17,14 +17,14 @@ export interface HelpShortcutsDialogProps {
 }
 
 /** Platform modifier label; SSR/native-safe (defaults to "Ctrl"). */
-function getModLabel(): string {
-  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform ?? ''))) {
+const getModLabel = (): string => {
+  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/iu.test(navigator.platform ?? '')) {
     return '\u2318';
   }
   return 'Ctrl';
-}
+};
 
-function KeyChip({ label }: { label: string }) {
+const KeyChip = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <XStack
@@ -42,7 +42,7 @@ function KeyChip({ label }: { label: string }) {
       </SizableText>
     </XStack>
   );
-}
+};
 
 interface ShortcutRowProps {
   /** Alternative key combos, e.g. [["Ctrl","K"],["Ctrl","G"]]. */
@@ -50,60 +50,58 @@ interface ShortcutRowProps {
   description: string;
 }
 
-function ShortcutRow({ combos, description }: ShortcutRowProps) {
-  return (
+const ShortcutRow = ({ combos, description }: ShortcutRowProps) => (
+  <XStack
+    gap="$3"
+    alignItems="center">
     <XStack
-      gap="$3"
-      alignItems="center">
-      <XStack
-        width={sizeRecipeEscape(
-          150,
-          'shortcuts dialog: a fixed width and key column so every description starts at one edge',
-        )}
-        gap="$1"
-        alignItems="center"
-        flexWrap="wrap"
-        flexShrink={0}>
-        {combos.map((combo, comboIndex) => (
-          <XStack
-            key={combo.join('+')}
-            gap="$1"
-            alignItems="center">
-            {comboIndex > 0 && (
-              <SizableText
-                size="$2"
-                color="$color10">
-                /
-              </SizableText>
-            )}
-            {combo.map((key, keyIndex) => (
-              <XStack
-                key={key}
-                gap="$1"
-                alignItems="center">
-                {keyIndex > 0 && (
-                  <SizableText
-                    size="$2"
-                    color="$color10">
-                    +
-                  </SizableText>
-                )}
-                <KeyChip label={key} />
-              </XStack>
-            ))}
-          </XStack>
-        ))}
-      </XStack>
-      <SizableText
-        size="$3"
-        flex={1}>
-        {description}
-      </SizableText>
+      width={sizeRecipeEscape(
+        150,
+        'shortcuts dialog: a fixed width and key column so every description starts at one edge',
+      )}
+      gap="$1"
+      alignItems="center"
+      flexWrap="wrap"
+      flexShrink={0}>
+      {combos.map((combo, comboIndex) => (
+        <XStack
+          key={combo.join('+')}
+          gap="$1"
+          alignItems="center">
+          {comboIndex > 0 && (
+            <SizableText
+              size="$2"
+              color="$color10">
+              /
+            </SizableText>
+          )}
+          {combo.map((key, keyIndex) => (
+            <XStack
+              key={key}
+              gap="$1"
+              alignItems="center">
+              {keyIndex > 0 && (
+                <SizableText
+                  size="$2"
+                  color="$color10">
+                  +
+                </SizableText>
+              )}
+              <KeyChip label={key} />
+            </XStack>
+          ))}
+        </XStack>
+      ))}
     </XStack>
-  );
-}
+    <SizableText
+      size="$3"
+      flex={1}>
+      {description}
+    </SizableText>
+  </XStack>
+);
 
-export function HelpShortcutsDialog({ open, onOpenChange }: HelpShortcutsDialogProps) {
+export const HelpShortcutsDialog = ({ open, onOpenChange }: HelpShortcutsDialogProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const mod = getModLabel();
 
@@ -172,4 +170,4 @@ export function HelpShortcutsDialog({ open, onOpenChange }: HelpShortcutsDialogP
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

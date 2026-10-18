@@ -21,7 +21,7 @@ export interface ViewConnection {
   fixtures?: FixtureProvider;
 }
 
-export function useViewConnection(): ViewConnection | undefined {
+export const useViewConnection = (): ViewConnection | undefined => {
   const config = useFrappeConfig();
   const baseURL = config?.baseURL;
   const socketPort = config?.socketPort;
@@ -30,10 +30,11 @@ export function useViewConnection(): ViewConnection | undefined {
   const auth = config?.auth;
   const syncOptions = config?.syncOptions;
   const fixtures = config?.fixtures;
-  return useMemo(() => {
-    if (!baseURL) {
-      return;
-    }
-    return { baseURL, socketPort, socketBaseURL, siteName, auth, syncOptions, fixtures };
-  }, [baseURL, socketPort, socketBaseURL, siteName, auth, syncOptions, fixtures]);
-}
+  return useMemo(
+    () =>
+      baseURL === undefined || baseURL === ''
+        ? undefined
+        : { baseURL, socketPort, socketBaseURL, siteName, auth, syncOptions, fixtures },
+    [baseURL, socketPort, socketBaseURL, siteName, auth, syncOptions, fixtures],
+  );
+};

@@ -3,20 +3,22 @@
 // interactively — candidates are the doctype's visible Date/Datetime
 // fields, and picking one round-trips through the `?field=` search param
 // (see CalendarView) so the choice is shareable.
+
+import { CalendarBlankIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { Button, DropdownMenu } from '@repo/ui';
 import type { DropdownMenuEntry } from '@repo/ui';
-import { CalendarBlankIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
-import type { DocFieldMeta, DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DocFieldMeta, DoctypeMeta } from '../shared/use-doctype-meta';
+
+import { isHiddenField } from './view-meta';
 
 const CALENDAR_DATE_FIELD_TYPES = new Set(['Date', 'Datetime']);
 
 /** Visible Date/Datetime fields a calendar can be laid out on. */
-export function calendarDateFieldCandidates(meta: DoctypeMeta): DocFieldMeta[] {
-  return meta.fields.filter((field) => CALENDAR_DATE_FIELD_TYPES.has(field.fieldtype) && !field.hidden);
-}
+export const calendarDateFieldCandidates = (meta: DoctypeMeta): DocFieldMeta[] =>
+  meta.fields.filter((field) => CALENDAR_DATE_FIELD_TYPES.has(field.fieldtype) && !isHiddenField(field));
 
 export interface CalendarFieldSelectorProps {
   candidates: DocFieldMeta[];
@@ -29,7 +31,7 @@ export interface CalendarFieldSelectorProps {
  * Dropdown to switch which date field the calendar is laid out on
  * (ViewHeader switcher pattern: the active field is disabled with a reason).
  */
-export function CalendarFieldSelector({ candidates, value, onChange }: CalendarFieldSelectorProps) {
+export const CalendarFieldSelector = ({ candidates, value, onChange }: CalendarFieldSelectorProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const current = candidates.find((field) => field.fieldname === value);
   const items: DropdownMenuEntry[] = candidates.map((field) => ({
@@ -55,4 +57,4 @@ export function CalendarFieldSelector({ candidates, value, onChange }: CalendarF
       </Button>
     </DropdownMenu>
   );
-}
+};

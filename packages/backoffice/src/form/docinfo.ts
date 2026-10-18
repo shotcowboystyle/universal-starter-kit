@@ -1,7 +1,7 @@
 /**
  * Docinfo permission normalization.
  *
- * The docinfo fetch itself lives in shared/useDocinfo (one deduped
+ * The docinfo fetch itself lives in shared/use-docinfo (one deduped
  * get_docinfo per document shared by the sidebar / timeline / form screen);
  * the unused local `useDocInfo` getdoc loader was pruned by the integrator.
  *
@@ -15,9 +15,9 @@
  * undefined (fall back to meta role rules). See module note on the
  * `{"null": 0}` quirk.
  */
-export function normalizeDocPermissions(
+export const normalizeDocPermissions = (
   permissions: Record<string, number> | undefined,
-): Record<string, number> | undefined {
+): Record<string, number> | undefined => {
   if (!permissions) {
     return undefined;
   }
@@ -25,4 +25,4 @@ export function normalizeDocPermissions(
     return undefined;
   }
   return permissions;
-}
+};

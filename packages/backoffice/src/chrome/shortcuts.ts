@@ -22,7 +22,7 @@ export interface BackofficeShortcutHandlers {
   onFocusSearch?: () => void;
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+const isEditableTarget = (target: EventTarget | null): boolean => {
   if (typeof HTMLElement === 'undefined' || !(target instanceof HTMLElement)) {
     return false;
   }
@@ -31,16 +31,19 @@ function isEditableTarget(target: EventTarget | null): boolean {
   }
   const tag = target.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
-}
+};
 
-export function useBackofficeShortcuts(handlers: BackofficeShortcutHandlers): void {
+export const useBackofficeShortcuts = (handlers: BackofficeShortcutHandlers): void => {
   // Ref keeps the listener stable while consumers pass inline handler objects.
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+  useEffect(() => {
+    handlersRef.current = handlers;
+  });
 
   useEffect(() => {
-    if (typeof document === 'undefined' || typeof document.addEventListener !== 'function') {
-      return;
+    if (typeof document === 'undefined' || !('addEventListener' in document)) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
@@ -64,4 +67,4 @@ export function useBackofficeShortcuts(handlers: BackofficeShortcutHandlers): vo
       document.removeEventListener('keydown', onKeyDown);
     };
   }, []);
-}
+};

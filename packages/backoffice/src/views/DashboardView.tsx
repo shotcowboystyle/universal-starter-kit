@@ -9,9 +9,10 @@
 //   - status distribution donut (FrappeChartCard + useFrappeAggregate
 //     groupBy) when a status field exists
 // Every card carries honest loading / error / empty states.
-import { AsyncBoundary, Card, ScrollView, Skeleton, XStack, YStack } from '@repo/ui';
+
 import { ChartCard, FrappeChartCard, FrappeKPICard } from '@repo/frappe-ui';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
+import { AsyncBoundary, Card, ScrollView, Skeleton, XStack, YStack } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,29 +29,19 @@ import {
   filteredListHref,
   useWeeklyCreated,
 } from './dashboard-data';
-import { selectFieldOptions, useViewMeta } from './viewMeta';
+import type { WeeklyCreatedState } from './dashboard-data';
+import { selectFieldOptions, useViewMeta } from './view-meta';
 import { ViewError, ViewLoading } from './ViewStates';
 
 const CHART_HEIGHT = 220;
-const kpiColumnWidth = sizeRecipeEscape(
-  220,
-  'dashboard grid: cards share a row until a column drops below its floor, then wrap',
-);
-const statusColumnWidth = sizeRecipeEscape(
-  180,
-  'dashboard grid: cards share a row until a column drops below its floor, then wrap',
-);
-const chartColumnBasis = sizeRecipeEscape(
-  360,
-  'dashboard grid: cards share a row until a column drops below its floor, then wrap',
-);
-const chartColumnMinWidth = sizeRecipeEscape(
-  300,
-  'dashboard grid: cards share a row until a column drops below its floor, then wrap',
-);
+const GRID_ESCAPE_REASON = 'dashboard grid: cards share a row until a column drops below its floor, then wrap';
+const kpiColumnWidth = sizeRecipeEscape(220, GRID_ESCAPE_REASON);
+const statusColumnWidth = sizeRecipeEscape(180, GRID_ESCAPE_REASON);
+const chartColumnBasis = sizeRecipeEscape(360, GRID_ESCAPE_REASON);
+const chartColumnMinWidth = sizeRecipeEscape(300, GRID_ESCAPE_REASON);
 
 /** Card-shaped chart skeleton so the first load doesn't jump layout. */
-function ChartSkeletonCard({ height }: { height: number }) {
+const ChartSkeletonCard = ({ height }: { height: number }) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   return (
     <Card
@@ -67,14 +58,59 @@ function ChartSkeletonCard({ height }: { height: number }) {
       />
     </Card>
   );
-}
+};
+
+/** "Created per week" bar chart with its loading / error / empty states. */
+const WeeklyCreatedChart = ({ weekly }: { weekly: WeeklyCreatedState }) => {
+  const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
+  const handleRetry = weekly.refresh;
+  if (weekly.isLoading) {
+    return <ChartSkeletonCard height={CHART_HEIGHT} />;
+  }
+  if (weekly.error) {
+    return (
+      <AsyncBoundary
+        compact
+        error={weekly.error}
+        errorTitle={t('views.weeklyChartFailed', "Couldn't load weekly activity")}
+        onRetry={handleRetry}
+      />
+    );
+  }
+  if (weekly.isEmpty) {
+    return (
+      <AsyncBoundary
+        compact
+        empty
+        emptyTitle={t('views.weeklyChartEmpty', 'No recent activity')}
+        emptyDescription={t('views.weeklyChartEmptyDetail', 'Nothing was created in the last {{weeks}} weeks', {
+          weeks: WEEKS_WINDOW,
+        })}
+      />
+    );
+  }
+  return (
+    <ChartCard
+      // Subtle stale affordance: dim while a post-event refetch runs.
+      opacity={weekly.isStale ? 0.6 : 1}
+      aria-busy={weekly.isStale || undefined}
+      config={{
+        id: 'created-per-week',
+        title: t('views.createdPerWeek', 'Created per week'),
+        type: 'bar',
+        data: weekly.data ?? [],
+        height: CHART_HEIGHT,
+      }}
+    />
+  );
+};
 
 export interface DashboardViewProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order") */
   doctype: string;
 }
 
-export function DashboardView({ doctype }: DashboardViewProps) {
+export const DashboardView = ({ doctype }: DashboardViewProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const deskScope = useDeskScope();
   const { knobProps } = useResolvedKnobs();
@@ -85,6 +121,7 @@ export function DashboardView({ doctype }: DashboardViewProps) {
   const weekly = useWeeklyCreated(connection, doctype, WEEKS_WINDOW, deskScope);
   // Rolling-window anchors resolve once per mount so the aggregate query
   // identities stay stable across re-renders (no refetch churn).
+  // oxlint-disable-next-line react/hook-use-state -- anchors are a first-render snapshot and never update
   const [anchors] = useState(() => ({
     createdSince: daysAgoIso(30),
     modifiedSince: daysAgoIso(7),
@@ -200,38 +237,7 @@ export function DashboardView({ doctype }: DashboardViewProps) {
             flexGrow={1}
             flexBasis={chartColumnBasis}
             minWidth={chartColumnMinWidth}>
-            {weekly.isLoading ? (
-              <ChartSkeletonCard height={CHART_HEIGHT} />
-            ) : weekly.error ? (
-              <AsyncBoundary
-                compact
-                error={weekly.error}
-                errorTitle={t('views.weeklyChartFailed', "Couldn't load weekly activity")}
-                onRetry={weekly.refresh}
-              />
-            ) : weekly.isEmpty ? (
-              <AsyncBoundary
-                compact
-                empty
-                emptyTitle={t('views.weeklyChartEmpty', 'No recent activity')}
-                emptyDescription={t('views.weeklyChartEmptyDetail', 'Nothing was created in the last {{weeks}} weeks', {
-                  weeks: WEEKS_WINDOW,
-                })}
-              />
-            ) : (
-              <ChartCard
-                // Subtle stale affordance: dim while a post-event refetch runs.
-                opacity={weekly.isStale ? 0.6 : 1}
-                aria-busy={weekly.isStale || undefined}
-                config={{
-                  id: 'created-per-week',
-                  title: t('views.createdPerWeek', 'Created per week'),
-                  type: 'bar',
-                  data: weekly.data ?? [],
-                  height: CHART_HEIGHT,
-                }}
-              />
-            )}
+            <WeeklyCreatedChart weekly={weekly} />
           </YStack>
           {statusField && (
             <YStack
@@ -259,4 +265,4 @@ export function DashboardView({ doctype }: DashboardViewProps) {
       </YStack>
     </ScrollView>
   );
-}
+};

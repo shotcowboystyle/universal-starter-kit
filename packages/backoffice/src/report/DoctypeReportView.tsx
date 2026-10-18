@@ -12,7 +12,7 @@ import type { FrappeFilters } from '../shared/types';
 import { ViewError, ViewLoading } from '../views/ViewStates';
 
 export interface DoctypeReportViewProps {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order") */
+  /** Proper-cased doctype name (e.g. "Sales Order") */
   doctype: string;
   /**
    * Raw `?f=` search-param value (urlencoded JSON FrappeFilters), read by
@@ -24,7 +24,7 @@ export interface DoctypeReportViewProps {
   initialFilters?: FrappeFilters;
 }
 
-export function DoctypeReportView({ doctype, filtersParam, initialFilters }: DoctypeReportViewProps) {
+export const DoctypeReportView = ({ doctype, filtersParam, initialFilters }: DoctypeReportViewProps) => {
   const deskScope = useDeskScope();
   const navigator = useBackofficeNavigator();
   const paths = useBackofficePaths();
@@ -32,9 +32,9 @@ export function DoctypeReportView({ doctype, filtersParam, initialFilters }: Doc
 
   // The router may hand `?report=` through raw — decode defensively (same
   // contract as the `?f=` parser).
-  const rawReportParam = typeof params.report === 'string' ? params.report : params.report?.[0];
+  const rawReportParam = Array.isArray(params.report) ? params.report[0] : params.report;
   const currentReport = useMemo(() => {
-    if (!rawReportParam) {
+    if (rawReportParam === undefined || rawReportParam === '') {
       return null;
     }
     try {
@@ -54,7 +54,7 @@ export function DoctypeReportView({ doctype, filtersParam, initialFilters }: Doc
   const selectReport = useCallback(
     (name: string | null) => {
       const base = paths.view(doctype, 'report');
-      navigator.replace(name ? `${base}?report=${encodeURIComponent(name)}` : base);
+      navigator.replace(name !== null && name !== '' ? `${base}?report=${encodeURIComponent(name)}` : base);
     },
     [navigator, paths, doctype],
   );
@@ -77,6 +77,7 @@ export function DoctypeReportView({ doctype, filtersParam, initialFilters }: Doc
       }}
       onOpenLink={openForm}
       loading={<ViewLoading />}
+      // oxlint-disable-next-line react/no-unstable-nested-components -- render prop FrappeReportBuilder calls as a function; it is never mounted as a component
       error={(error) => (
         <ViewError
           doctype={doctype}
@@ -85,4 +86,4 @@ export function DoctypeReportView({ doctype, filtersParam, initialFilters }: Doc
       )}
     />
   );
-}
+};

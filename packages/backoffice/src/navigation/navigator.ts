@@ -20,6 +20,10 @@
  * StackNavigator (push/replace/back map 1:1, location from `useNavState`).
  */
 
+// oxlint-disable max-classes-per-file -- the abstract base and its two navigators share protected state; splitting them would export internals
+
+import { BACKOFFICE_BASE } from './paths';
+
 export type BackofficeParams = Record<string, string | string[] | undefined>;
 
 export interface BackofficeLocation {
@@ -31,11 +35,11 @@ export interface BackofficeLocation {
 
 export interface BackofficeNavigator {
   /** Push a new history entry. */
-  navigate(path: string): void;
+  navigate: (path: string) => void;
   /** Replace the current history entry. */
-  replace(path: string): void;
+  replace: (path: string) => void;
   /** Go back one entry. */
-  back(): void;
+  back: () => void;
   /**
    * Merge query params into the CURRENT location without a new history
    * entry (desk's `update_url_with_filters` → history.replaceState channel;
@@ -43,11 +47,11 @@ export interface BackofficeNavigator {
    * Optional — hosts without a param-merge primitive omit it and surfaces
    * skip URL sync (state still applies locally).
    */
-  setParams?(params: Record<string, string | undefined>): void;
+  setParams?: (params: Record<string, string | undefined>) => void;
   /** Snapshot of the current location (stable identity until it changes). */
-  getLocation(): BackofficeLocation;
+  getLocation: () => BackofficeLocation;
   /** Subscribe to location changes. Returns an unsubscribe function. */
-  subscribe(listener: () => void): () => void;
+  subscribe: (listener: () => void) => () => void;
 }
 
 /**
@@ -55,10 +59,10 @@ export interface BackofficeNavigator {
  * URLSearchParams so this module has zero polyfill-order dependency — same
  * trade the router seam makes for GJS entries.
  */
-function parseQuery(query: string | undefined): BackofficeParams {
-  const params: BackofficeParams = {};
-  if (!query) {
-    return params;
+const parseQuery = (query: string | undefined): BackofficeParams => {
+  const params = new Map<string, string | string[]>();
+  if (query === undefined || query === '') {
+    return {};
   }
   for (const pair of query.split('&')) {
     if (!pair) {
@@ -75,25 +79,25 @@ function parseQuery(query: string | undefined): BackofficeParams {
     } catch {
       // malformed escape — keep the raw pair
     }
-    const prev = params[key];
+    const prev = params.get(key);
     if (prev === undefined) {
-      params[key] = value;
+      params.set(key, value);
     } else if (Array.isArray(prev)) {
       prev.push(value);
     } else {
-      params[key] = [prev, value];
+      params.set(key, [prev, value]);
     }
   }
-  return params;
-}
+  return Object.fromEntries(params);
+};
 
 /** Split an href into a {@link BackofficeLocation} (query → params). */
-export function parseBackofficeHref(href: string): BackofficeLocation {
+export const parseBackofficeHref = (href: string): BackofficeLocation => {
   const queryIndex = href.indexOf('?');
   const path = queryIndex === -1 ? href : href.slice(0, queryIndex);
   const query = queryIndex === -1 ? undefined : href.slice(queryIndex + 1);
   return { path: path || '/', params: parseQuery(query) };
-}
+};
 
 type Listener = () => void;
 
@@ -113,7 +117,9 @@ abstract class SubscribableNavigator implements BackofficeNavigator {
 
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   };
 
   protected setLocationInternal(next: BackofficeLocation): void {
@@ -135,7 +141,7 @@ abstract class SubscribableNavigator implements BackofficeNavigator {
 export class MemoryNavigator extends SubscribableNavigator {
   private stack: BackofficeLocation[];
 
-  constructor(initialPath = '/backoffice') {
+  constructor(initialPath = BACKOFFICE_BASE) {
     const initial = parseBackofficeHref(initialPath);
     super(initial);
     this.stack = [initial];
@@ -171,30 +177,32 @@ export class MemoryNavigator extends SubscribableNavigator {
 
   setParams = (params: Record<string, string | undefined>): void => {
     const current = this.stack.at(-1) ?? this.location;
-    const merged: BackofficeParams = { ...current.params };
+    const merged = new Map(Object.entries(current.params));
     for (const [key, value] of Object.entries(params)) {
       if (value === undefined) {
-        delete merged[key];
+        merged.delete(key);
       } else {
-        merged[key] = value;
+        merged.set(key, value);
       }
     }
-    const next: BackofficeLocation = { path: current.path, params: merged };
+    const next: BackofficeLocation = { path: current.path, params: Object.fromEntries(merged) };
     this.stack[this.stack.length - 1] = next;
     this.setLocationInternal(next);
   };
 }
 
-export function createMemoryNavigator(initialPath = '/backoffice'): MemoryNavigator {
-  return new MemoryNavigator(initialPath);
-}
+export const createMemoryNavigator = (initialPath = BACKOFFICE_BASE): MemoryNavigator =>
+  new MemoryNavigator(initialPath);
+
+/** Host handlers may be async (one's router.push/replace); a pre-mount rejection is only observable on the returned promise. */
+type NavigationHandlerResult = PromiseLike<void> | void;
 
 export interface ControlledNavigatorHandlers {
-  navigate(path: string): void;
-  replace(path: string): void;
-  back(): void;
+  navigate: (path: string) => NavigationHandlerResult;
+  replace: (path: string) => NavigationHandlerResult;
+  back: () => NavigationHandlerResult;
   /** Optional param-merge primitive (see {@link BackofficeNavigator.setParams}). */
-  setParams?(params: Record<string, string | undefined>): void;
+  setParams?: (params: Record<string, string | undefined>) => void;
 }
 
 /** Retry cadence for actions the host router rejected (not mounted yet). */
@@ -220,7 +228,7 @@ const CONTROLLED_RETRY_LIMIT = 40;
  */
 export class ControlledNavigator extends SubscribableNavigator {
   private handlers: ControlledNavigatorHandlers;
-  private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   /** Monotonic dispatch id — a rejection only re-arms its action while that
    * action is still the newest one (stale rejections arrive on microtasks
    * and could otherwise resurrect a superseded navigation). */
@@ -242,21 +250,15 @@ export class ControlledNavigator extends SubscribableNavigator {
   }
 
   navigate = (path: string): void => {
-    this.dispatch(() => {
-      this.handlers.navigate(path);
-    }, `navigate(${path})`);
+    this.dispatch(() => this.handlers.navigate(path), `navigate(${path})`);
   };
 
   replace = (path: string): void => {
-    this.dispatch(() => {
-      this.handlers.replace(path);
-    }, `replace(${path})`);
+    this.dispatch(() => this.handlers.replace(path), `replace(${path})`);
   };
 
   back = (): void => {
-    this.dispatch(() => {
-      this.handlers.back();
-    }, 'back()');
+    this.dispatch(() => this.handlers.back(), 'back()');
   };
 
   // Best-effort, NOT routed through the retry dispatcher: URL sync is a
@@ -272,32 +274,35 @@ export class ControlledNavigator extends SubscribableNavigator {
     }
   };
 
-  private dispatch(action: () => unknown, label: string, attempt = 0): void {
+  private dispatch(action: () => NavigationHandlerResult, label: string, attempt = 0): void {
     // The newest intent supersedes any action still waiting on a retry.
-    if (this.retryTimer !== undefined) {
+    if (this.retryTimer !== null) {
       clearTimeout(this.retryTimer);
-      this.retryTimer = undefined;
+      this.retryTimer = null;
     }
-    const seq = ++this.dispatchSeq;
+    this.dispatchSeq += 1;
+    const seq = this.dispatchSeq;
     const issuedAt = this.location;
     const superseded = () => seq !== this.dispatchSeq || this.location !== issuedAt;
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the host router threw or rejected with; only logged
     const scheduleRetry = (error: unknown) => {
+      // A newer action or navigation landed.
       if (superseded()) {
         return;
-      } // a newer action or navigation landed
+      }
       if (attempt + 1 >= CONTROLLED_RETRY_LIMIT) {
         console.warn(`[backoffice] navigation ${label} never accepted by the host router:`, error);
         return;
       }
       this.retryTimer = setTimeout(() => {
-        this.retryTimer = undefined;
+        this.retryTimer = null;
         if (superseded()) {
           return;
         }
         this.dispatch(action, label, attempt + 1);
       }, CONTROLLED_RETRY_MS);
     };
-    let result: unknown;
+    let result: NavigationHandlerResult;
     try {
       result = action();
     } catch (error) {
@@ -305,10 +310,10 @@ export class ControlledNavigator extends SubscribableNavigator {
       return;
     }
     // Host handlers may return a promise (one's router.push/replace are
-    // async); a pre-mount rejection is only observable here.
-    if (result && typeof (result as PromiseLike<unknown>).then === 'function') {
-      Promise.resolve(result).catch(scheduleRetry);
-    }
+    // async); a pre-mount rejection is only observable here. A sync result
+    // resolves immediately and never rejects.
+    // oxlint-disable-next-line promise/prefer-await-to-then, github/no-then -- dispatch stays sync for callers; the rejection handler attaches without awaiting
+    Promise.resolve(result).catch(scheduleRetry);
   }
 }
 
@@ -316,13 +321,17 @@ export class ControlledNavigator extends SubscribableNavigator {
  * Inert navigator — the default-context fallback so package surfaces render
  * (and stories mount) without a BackofficeProvider. Navigation is a no-op.
  */
-export function createNoopNavigator(initialPath = '/backoffice'): BackofficeNavigator {
+const noop = (): void => {
+  // Intentionally inert: the fallback navigator ignores navigation.
+};
+
+export const createNoopNavigator = (initialPath = BACKOFFICE_BASE): BackofficeNavigator => {
   const location = parseBackofficeHref(initialPath);
   return {
-    navigate: () => {},
-    replace: () => {},
-    back: () => {},
+    navigate: noop,
+    replace: noop,
+    back: noop,
     getLocation: () => location,
-    subscribe: () => () => {},
+    subscribe: () => noop,
   };
-}
+};

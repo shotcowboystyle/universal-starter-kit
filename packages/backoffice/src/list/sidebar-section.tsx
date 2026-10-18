@@ -1,18 +1,3 @@
-/**
- * Presentational pieces for the list sidebar: a collapsible facet section
- * (one Accordion.Item — the Accordion root lives in ListSidebar so sections
- * share open state), a facet row (label + count pill + active state), and
- * the per-section loading skeleton.
- */
-import {
-  Accordion,
-  Chip,
-  SizableText,
-  Skeleton,
-  XStack,
-  YStack,
-  useAccordionTriggerInk,
-} from '@repo/ui';
 import {
   GroupPositionContext,
   ensureFocusVisibleRing,
@@ -24,6 +9,13 @@ import {
   useGroupPosition,
   useResolvedKnobs,
 } from '@repo/theme';
+/**
+ * Presentational pieces for the list sidebar: a collapsible facet section
+ * (one Accordion.Item — the Accordion root lives in ListSidebar so sections
+ * share open state), a facet row (label + count pill + active state), and
+ * the per-section loading skeleton.
+ */
+import { Accordion, Chip, SizableText, Skeleton, XStack, YStack, useAccordionTriggerInk } from '@repo/ui';
 import { Children, Fragment, isValidElement } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,23 +29,26 @@ export interface SidebarSectionProps {
   children: ReactNode;
 }
 
-function SidebarSectionTitle({ title }: { title: string }) {
+const SidebarSectionTitle = ({ title }: { title: string }) => {
   const color = useAccordionTriggerInk('$color11');
   return (
     <SizableText
       size="$2"
       fontWeight="400"
+      // SAFETY: useAccordionTriggerInk returns a theme color token; SizableText's color prop type does not list them
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       color={color as never}
       numberOfLines={1}
       flexShrink={1}>
       {title}
     </SizableText>
   );
-}
+};
 
 /** Trigger + facet stack. ListSidebar wraps this in Accordion.Item so the
  *  Accordion root can count items (a custom Item wrapper is opaque). */
-export function SidebarSectionChrome({ title, children }: Omit<SidebarSectionProps, 'value'>) {
+export const SidebarSectionChrome = ({ title, children }: Omit<SidebarSectionProps, 'value'>) => {
+  // oxlint-disable-next-line react/no-react-children -- each facet row needs its group position and a separator; rows are plain children
   const rows = Children.toArray(children);
   return (
     <>
@@ -66,8 +61,10 @@ export function SidebarSectionChrome({ title, children }: Omit<SidebarSectionPro
       <Accordion.Content padding={0}>
         <YStack>
           {rows.map((child, index) => (
-            <Fragment key={isValidElement(child) && child.key != null ? String(child.key) : index}>
+            // oxlint-disable-next-line react-doctor/no-array-index-as-key -- Children.toArray keys every element; the index only covers bare text nodes
+            <Fragment key={isValidElement(child) && child.key !== null ? child.key : index}>
               {index > 0 ? <YStack {...hairline.line} /> : null}
+              {/* oxlint-disable-next-line react/jsx-no-constructed-context-values -- getGroupPosition returns a primitive position string */}
               <GroupPositionContext.Provider value={getGroupPosition(index, rows.length)}>
                 {child}
               </GroupPositionContext.Provider>
@@ -77,15 +74,13 @@ export function SidebarSectionChrome({ title, children }: Omit<SidebarSectionPro
       </Accordion.Content>
     </>
   );
-}
+};
 
-export function SidebarSection({ value, title, children }: SidebarSectionProps) {
-  return (
-    <Accordion.Item value={value}>
-      <SidebarSectionChrome title={title}>{children}</SidebarSectionChrome>
-    </Accordion.Item>
-  );
-}
+export const SidebarSection = ({ value, title, children }: SidebarSectionProps) => (
+  <Accordion.Item value={value}>
+    <SidebarSectionChrome title={title}>{children}</SidebarSectionChrome>
+  </Accordion.Item>
+);
 
 export interface SidebarFacetRowProps {
   label: string;
@@ -95,12 +90,13 @@ export interface SidebarFacetRowProps {
   onPress: () => void;
 }
 
-export function SidebarFacetRow({ label, count, active, onPress }: SidebarFacetRowProps) {
+export const SidebarFacetRow = ({ label, count, active, onPress }: SidebarFacetRowProps) => {
   const { knobProps } = useResolvedKnobs();
   const position = useGroupPosition() ?? 'only';
   const corners = stackRadiusProps(position, knobProps.borderRadius.borderRadius);
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a tamagui row (flex layout, group corners) acting as a toggle; Enter/Space handled below
       role="button"
       aria-pressed={active}
       aria-label={label}
@@ -125,6 +121,8 @@ export function SidebarFacetRow({ label, count, active, onPress }: SidebarFacetR
       focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
       onPress={onPress}
       onKeyDown={
+        // SAFETY: on web tamagui forwards the DOM keyboard event, which has key/preventDefault; the prop is typed as a no-arg handler
+        // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
         ((e: { key?: string; preventDefault?: () => void }) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault?.();
@@ -147,13 +145,13 @@ export function SidebarFacetRow({ label, count, active, onPress }: SidebarFacetR
       </Chip>
     </XStack>
   );
-}
+};
 
 export interface SidebarSectionSkeletonProps {
   rows?: number;
 }
 
-export function SidebarSectionSkeleton({ rows = 3 }: SidebarSectionSkeletonProps) {
+export const SidebarSectionSkeleton = ({ rows = 3 }: SidebarSectionSkeletonProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
   const lineBone = sizeRecipeForToken(knobProps.sizeToken).fontSize;
@@ -182,4 +180,4 @@ export function SidebarSectionSkeleton({ rows = 3 }: SidebarSectionSkeletonProps
       ))}
     </YStack>
   );
-}
+};

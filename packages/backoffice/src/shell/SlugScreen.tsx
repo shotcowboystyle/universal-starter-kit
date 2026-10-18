@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import { DoctypeListScreen } from '../list/DoctypeListScreen';
-import { useSlugTarget } from '../shared/useSlugTarget';
+import { useSlugTarget } from '../shared/use-slug-target';
 import { WorkspaceScreen } from '../workspace/WorkspaceScreen';
 
 export interface SlugScreenProps {
@@ -21,7 +21,7 @@ export interface SlugScreenProps {
   sortParam?: string;
 }
 
-export function SlugScreen({ slug, filtersParam, sortParam }: SlugScreenProps) {
+export const SlugScreen = ({ slug, filtersParam, sortParam }: SlugScreenProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const target = useSlugTarget(slug);
 
@@ -53,4 +53,4 @@ export function SlugScreen({ slug, filtersParam, sortParam }: SlugScreenProps) {
       sortParam={sortParam}
     />
   );
-}
+};

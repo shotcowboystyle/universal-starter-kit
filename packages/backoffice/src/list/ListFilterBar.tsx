@@ -1,3 +1,6 @@
+import { HeartIcon } from '@phosphor-icons/react';
+import { Button } from '@repo/forms';
+import { useResolvedKnobs } from '@repo/theme';
 // Contract: filter chrome for the list surface (standard filters from meta,
 // filter editor, saved filters, sort control). Keep props stable — the
 // list-core composer imports this.
@@ -19,14 +22,11 @@
 // (DoctypeListScreen passes enableFiltering={false}); the table keeps only
 // search + header sort.
 import { XStack, YStack } from '@repo/ui';
-import { Button } from '@repo/forms';
-import { useResolvedKnobs } from '@repo/theme';
-import { HeartIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 import { BACKOFFICE_I18N_NAMESPACE } from '../i18n';
 import type { FrappeFilter, FrappeFilters } from '../shared/types';
-import type { DoctypeMeta } from '../shared/useDoctypeMeta';
+import type { DoctypeMeta } from '../shared/use-doctype-meta';
 
 import { FilterChips } from './filter-chips';
 import { FilterEditorButton } from './filter-editor';
@@ -63,7 +63,7 @@ export interface ListFilterBarProps {
   likedByUser?: string;
 }
 
-export function ListFilterBar({
+export const ListFilterBar = ({
   doctype,
   meta,
   filters,
@@ -74,17 +74,20 @@ export function ListFilterBar({
   compact,
   showChips = true,
   likedByUser,
-}: ListFilterBarProps) {
+}: ListFilterBarProps) => {
   const { t } = useTranslation(BACKOFFICE_I18N_NAMESPACE);
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 16;
-  const likedTuple: FrappeFilter | undefined = likedByUser ? ['_liked_by', 'like', `%${likedByUser}%`] : undefined;
+  const iconSize = knobProps.controlIcon?.width || 16;
+  const likedTuple: FrappeFilter | undefined =
+    likedByUser === undefined || likedByUser === '' ? undefined : ['_liked_by', 'like', `%${likedByUser}%`];
   const likedActive = likedTuple ? isFacetFilterActive(filters, likedTuple) : false;
   const likedButton = likedTuple ? (
     <Button
       size={knobProps.sizeToken}
       circular
       chromeless
+      // SAFETY: both are theme color tokens; Button's `col` prop type does not list theme tokens
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       col={(likedActive ? '$red10' : '$color8') as never}
       icon={
         <HeartIcon
@@ -159,4 +162,4 @@ export function ListFilterBar({
       />
     </YStack>
   );
-}
+};

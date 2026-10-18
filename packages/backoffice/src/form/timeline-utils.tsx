@@ -7,11 +7,12 @@
 import type { FrappeApp } from '@repo/frappe';
 import { useEffect, useState } from 'react';
 
-import { useFrappeApp } from '../shared/useFrappeApp';
+import { useFrappeApp } from '../shared/use-frappe-app';
 
 // ── frappe datetime parsing ────────────────────────────────────────────────
 
-const FRAPPE_DATETIME = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d+))?(Z)?)?$/;
+const FRAPPE_DATETIME =
+  /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})(?:[ T](?<hour>\d{2}):(?<minute>\d{2})(?::(?<second>\d{2}))?(?:\.(?<fraction>\d+))?(?<utc>Z)?)?$/u;
 
 /**
  * Parse a frappe datetime ("2026-08-12 09:35:11.836712", date-only, or ISO)
@@ -19,22 +20,25 @@ const FRAPPE_DATETIME = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2
  * constructed in local time; a trailing `Z` is honored as UTC. Returns
  * undefined for unparseable input (honest passthrough happens at render).
  */
-export function parseFrappeDate(value: unknown): Date | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary for raw frappe datetimes (string, epoch or Date)
+export const parseFrappeDate = (value: unknown): Date | undefined => {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? undefined : value;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: an epoch number
   if (typeof value === 'number') {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? undefined : date;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- parse boundary: anything else must be a non-blank string
   if (typeof value !== 'string' || !value.trim()) {
     return undefined;
   }
   const match = FRAPPE_DATETIME.exec(value.trim());
-  if (match) {
-    const [, year, month, day, hour, minute, second, fraction, utc] = match;
-    const ms = fraction ? Math.round(Number(`0.${fraction}`) * 1000) : 0;
-    if (utc) {
+  if (match?.groups) {
+    const { year, month, day, hour, minute, second, fraction, utc } = match.groups;
+    const ms = fraction === undefined ? 0 : Math.round(Number(`0.${fraction}`) * 1000);
+    if (utc !== undefined) {
       return new Date(
         Date.UTC(
           Number(year),
@@ -59,21 +63,22 @@ export function parseFrappeDate(value: unknown): Date | undefined {
   }
   const native = new Date(value);
   return Number.isNaN(native.getTime()) ? undefined : native;
-}
+};
 
 /** Epoch millis for sorting; unparseable input sorts last (0). */
-export function frappeDateEpoch(value: unknown): number {
-  return parseFrappeDate(value)?.getTime() ?? 0;
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards a raw frappe datetime to parseFrappeDate
+export const frappeDateEpoch = (value: unknown): number => parseFrappeDate(value)?.getTime() ?? 0;
 
 /**
  * Relative timestamp in the house feed register ("just now", "5m ago",
  * "2h ago", "3 days ago", "2mo ago", "1y ago") on top of frappe-safe
  * parsing. Unparseable strings pass through unchanged.
  */
-export function formatRelativeTime(value: unknown, now: number = Date.now()): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards a raw frappe datetime to parseFrappeDate
+export const formatRelativeTime = (value: unknown, now: number = Date.now()): string => {
   const date = parseFrappeDate(value);
   if (!date) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- unparseable strings pass through verbatim; other raw values render empty
     return typeof value === 'string' ? value : '';
   }
   const sec = Math.floor(Math.max(0, now - date.getTime()) / 1000);
@@ -98,11 +103,11 @@ export function formatRelativeTime(value: unknown, now: number = Date.now()): st
   }
   const yr = Math.floor(day / 365);
   return `${Math.max(1, yr)}y ago`;
-}
+};
 
 // ── HTML ↔ text ────────────────────────────────────────────────────────────
 
-function codePointToChar(code: number): string {
+const codePointToChar = (code: number): string => {
   if (!Number.isFinite(code) || code < 0 || code > 0x10_ff_ff) {
     return '';
   }
@@ -111,20 +116,19 @@ function codePointToChar(code: number): string {
   } catch {
     return '';
   }
-}
+};
 
-function decodeEntities(text: string): string {
-  return text
-    .replaceAll(/&#x([0-9a-f]+);/gi, (_, hex: string) => codePointToChar(Number.parseInt(hex, 16)))
-    .replaceAll(/&#(\d+);/g, (_, dec: string) => codePointToChar(Number.parseInt(dec, 10)))
-    .replaceAll(/&nbsp;/gi, ' ')
-    .replaceAll(/&quot;/gi, '"')
+const decodeEntities = (text: string): string =>
+  text
+    .replaceAll(/&#x(?<hex>[0-9a-f]+);/giu, (_, hex: string) => codePointToChar(Number.parseInt(hex, 16)))
+    .replaceAll(/&#(?<dec>\d+);/gu, (_, dec: string) => codePointToChar(Math.trunc(Number(dec))))
+    .replaceAll(/&nbsp;/giu, ' ')
+    .replaceAll(/&quot;/giu, '"')
     .replaceAll('&#39;', "'")
-    .replaceAll(/&apos;/gi, "'")
-    .replaceAll(/&lt;/gi, '<')
-    .replaceAll(/&gt;/gi, '>')
-    .replaceAll(/&amp;/gi, '&');
-}
+    .replaceAll(/&apos;/giu, "'")
+    .replaceAll(/&lt;/giu, '<')
+    .replaceAll(/&gt;/giu, '>')
+    .replaceAll(/&amp;/giu, '&');
 
 /**
  * Strip HTML down to display text without touching a DOM (works on web,
@@ -133,60 +137,56 @@ function decodeEntities(text: string): string {
  * entities are decoded. The result renders only as plain <Text> content —
  * markup from the server is never re-emitted as markup.
  */
-export function htmlToText(html: string | null | undefined): string {
-  if (!html) {
+export const htmlToText = (html: string | null | undefined): string => {
+  if (html == null || html === '') {
     return '';
   }
-  let text = String(html).replaceAll(/\r\n?/g, '\n');
-  text = text.replaceAll(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
-  text = text.replaceAll(/<!--[\s\S]*?-->/g, '');
-  text = text.replaceAll(/<br\s*\/?>/gi, '\n');
-  text = text.replaceAll(/<li\b[^>]*>/gi, '\n• ');
-  text = text.replaceAll(/<\/(p|div|li|tr|h[1-6]|blockquote|pre|table|ul|ol)\s*>/gi, '\n');
-  text = text.replaceAll(/<[^>]+>/g, '');
+  let text = html.replaceAll(/\r\n?/gu, '\n');
+  text = text.replaceAll(/<(?<tag>script|style)\b[^>]*>[\s\S]*?<\/\k<tag>\s*>/giu, '');
+  text = text.replaceAll(/<!--[\s\S]*?-->/gu, '');
+  text = text.replaceAll(/<br\s*\/?>/giu, '\n');
+  text = text.replaceAll(/<li\b[^>]*>/giu, '\n• ');
+  text = text.replaceAll(/<\/(?:p|div|li|tr|h[1-6]|blockquote|pre|table|ul|ol)\s*>/giu, '\n');
+  // oxlint-disable-next-line sonarjs/super-linear-regex -- bounded comment/version HTML from the bench; the tag scan stops at the first `>`
+  text = text.replaceAll(/<[^>]+>/gu, '');
   text = decodeEntities(text);
   text = text.replaceAll('\u00A0', ' ');
   text = text
-    .replaceAll(/[ \t]+\n/g, '\n')
-    .replaceAll(/\n{3,}/g, '\n\n')
+    // oxlint-disable-next-line sonarjs/super-linear-regex -- bounded comment/version text from the bench
+    .replaceAll(/[ \t]+\n/gu, '\n')
+    .replaceAll(/\n{3,}/gu, '\n\n')
     .trim();
   return text;
-}
+};
 
 /** Escape text for embedding inside HTML (comment payloads). */
-export function escapeHtml(text: string): string {
-  return text
+export const escapeHtml = (text: string): string =>
+  text
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
-}
 
 /**
  * Desk sends comment content as HTML; encode the plain composer text the
  * same way (escaped, newlines as <br>, wrapped in one div) so the payload
  * matches what `frappe.desk.form.utils.add_comment` expects.
  */
-export function textToCommentHtml(text: string): string {
-  return `<div>${escapeHtml(text.trim()).replaceAll('\n', '<br>')}</div>`;
-}
+export const textToCommentHtml = (text: string): string =>
+  `<div>${escapeHtml(text.trim()).replaceAll('\n', '<br>')}</div>`;
 
 /** Truncate display text with an ellipsis (version values, error copy). */
-export function truncateText(text: string, max = 50): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
+export const truncateText = (text: string, max = 50): string =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 /** "sales_order_item" → "Sales Order Item" (no meta available here). */
-export function humanizeFieldname(fieldname: string): string {
-  return (
-    fieldname
-      .split(/[_\s]+/)
-      .filter(Boolean)
-      .map((word) => word[0].toUpperCase() + word.slice(1))
-      .join(' ') || fieldname
-  );
-}
+export const humanizeFieldname = (fieldname: string): string =>
+  fieldname
+    .split(/[_\s]+/u)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(' ') || fieldname;
 
 // ── session user ───────────────────────────────────────────────────────────
 
@@ -199,12 +199,49 @@ interface SessionUserEntry {
 // so every timeline on a page shares one get_logged_user round trip.
 const sessionUserCache = new WeakMap<FrappeApp, SessionUserEntry>();
 
+const fetchSessionUser = async (app: FrappeApp): Promise<string> => {
+  const res = await app.call().get<{ message?: string }>('frappe.auth.get_logged_user');
+  const value = res.payload?.message;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- get_logged_user is wire data; only a non-empty string is a user
+  if (typeof value !== 'string' || !value) {
+    throw new Error('No logged user returned');
+  }
+  return value;
+};
+
+/** Record the resolved user on its cache entry, or evict a failed probe so the next mount retries. */
+const settleSessionUser = async (app: FrappeApp, entry: SessionUserEntry): Promise<void> => {
+  try {
+    const value = await entry.promise;
+    if (sessionUserCache.get(app) === entry) {
+      entry.value = value;
+    }
+  } catch {
+    // allow a retry on the next mount instead of caching the failure
+    if (sessionUserCache.get(app) === entry) {
+      sessionUserCache.delete(app);
+    }
+  }
+};
+
+/** The shared get_logged_user probe for an app, started on first use. */
+const sessionUserEntry = (app: FrappeApp): SessionUserEntry => {
+  const cached = sessionUserCache.get(app);
+  if (cached) {
+    return cached;
+  }
+  const created: SessionUserEntry = { promise: fetchSessionUser(app) };
+  sessionUserCache.set(app, created);
+  void settleSessionUser(app, created);
+  return created;
+};
+
 /**
  * Session user via `frappe.auth.get_logged_user`, cached per FrappeApp.
  * Drives the own-comment edit/delete affordances and the add_comment
  * payload (`comment_email` / `comment_by`).
  */
-export function useSessionUser(enabled = true): string | undefined {
+export const useSessionUser = (enabled = true): string | undefined => {
   const app = useFrappeApp();
   const [user, setUser] = useState<string | undefined>(() =>
     enabled && app ? sessionUserCache.get(app)?.value : undefined,
@@ -212,50 +249,26 @@ export function useSessionUser(enabled = true): string | undefined {
 
   useEffect(() => {
     if (!app || !enabled) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
-    let entry = sessionUserCache.get(app);
-    if (!entry) {
-      const promise = app
-        .call()
-        .get<{ message?: string }>('frappe.auth.get_logged_user')
-        .then((res) => {
-          const value = res.payload?.message;
-          if (typeof value !== 'string' || !value) {
-            throw new Error('No logged user returned');
-          }
-          return value;
-        });
-      const created: SessionUserEntry = { promise };
-      entry = created;
-      sessionUserCache.set(app, created);
-      promise
-        .then((value) => {
-          if (sessionUserCache.get(app) === created) {
-            created.value = value;
-          }
-        })
-        .catch(() => {
-          // allow a retry on the next mount instead of caching the failure
-          if (sessionUserCache.get(app) === created) {
-            sessionUserCache.delete(app);
-          }
-        });
-    }
+    const entry = sessionUserEntry(app);
     let cancelled = false;
-    entry.promise
-      .then((value) => {
+    const load = async () => {
+      try {
+        const value = await entry.promise;
         if (!cancelled) {
           setUser(value);
         }
-      })
-      .catch(() => {
+      } catch {
         // stay undefined; composer simply hides until a session is known
-      });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
   }, [app, enabled]);
 
   return user;
-}
+};

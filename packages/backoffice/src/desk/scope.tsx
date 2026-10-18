@@ -28,28 +28,29 @@ export interface DeskScopeProviderProps {
   children: ReactNode;
 }
 
-export function DeskScopeProvider({ scope, children }: DeskScopeProviderProps) {
+export const DeskScopeProvider = ({ scope, children }: DeskScopeProviderProps) => {
   // Value-keyed so unstable array literals from the host don't churn readers.
   const scopeKey = JSON.stringify(scope ?? EMPTY_SCOPE);
-  const value = useMemo(() => (JSON.parse(scopeKey) as FrappeFilters) ?? EMPTY_SCOPE, [scopeKey]);
+  const value = useMemo(
+    // SAFETY: scopeKey is JSON.stringify of a FrappeFilters (or EMPTY_SCOPE), so it parses back to one.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    () => (JSON.parse(scopeKey) as FrappeFilters) ?? EMPTY_SCOPE,
+    [scopeKey],
+  );
   return <DeskScopeContext.Provider value={value}>{children}</DeskScopeContext.Provider>;
-}
+};
 
 /** The ambient desk scope; `[]` outside any DeskScopeProvider. */
-export function useDeskScope(): FrappeFilters {
-  return useContext(DeskScopeContext);
-}
+export const useDeskScope = (): FrappeFilters => useContext(DeskScopeContext);
 
 /**
  * AND the ambient scope into `filters`. Returns `undefined` when there is
  * nothing to apply, so callers can spread-conditionally into leaf props.
  */
-export function useScopedFilters(filters?: FrappeFilters): FrappeFilters | undefined {
+export const useScopedFilters = (filters?: FrappeFilters): FrappeFilters | undefined => {
   const scope = useDeskScope();
   return useMemo(() => {
-    if (scope.length === 0 && (!filters || filters.length === 0)) {
-      return;
-    }
-    return [...scope, ...(filters ?? [])];
+    const nothingToApply = scope.length === 0 && (filters?.length ?? 0) === 0;
+    return nothingToApply ? undefined : [...scope, ...(filters ?? [])];
   }, [scope, filters]);
-}
+};
