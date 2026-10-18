@@ -2,10 +2,14 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Build configuration for workspace packages",
   "extends": "./base.json",
+  // Output paths, include and exclude live in each package's tsconfig.build.json:
+  // relative paths here resolve against this directory, not the extending
+  // package, and tamagui-build's TypeScript does not support ${configDir}.
   "compilerOptions": {
-    "outDir": "dist",
-    "declarationDir": "types",
-    "tsBuildInfoFile": "types/.tsbuildinfo",
+    // base.json is a typecheck config (noEmit); builds emit declarations only.
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
     // Resolve sibling workspace packages through their exports `source`
     // condition (listed first in every @repo exports map) during
     // declaration emission. This keeps emission order-independent — the
@@ -26,26 +30,5 @@
         "../../node_modules/@react-navigation/*/lib/typescript/src/index"
       ]
     }
-  },
-  // ${configDir} prefixes keep these patterns anchored to the EXTENDING
-  // package (relative patterns in an extended config rebase against this
-  // file's directory, which silently disabled the excludes and let stories/
-  // specs into every extender's declaration emission). Only src/ (what
-  // packages publish and emit declarations for) plus root-level ambient
-  // @types/ are compiled; package-root dev scaffolding (webview/, scratch/,
-  // tests/) stays out.
-  "include": ["src/**/*", "@types/**/*"],
-  "exclude": [
-    "tests",
-    "types",
-    "dist",
-    "**/*.spec.ts",
-    "**/*.spec.tsx",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.stories.ts",
-    "**/*.stories.tsx",
-    "vitest.config.ts",
-    "vitest.config.mjs"
-  ]
+  }
 }
