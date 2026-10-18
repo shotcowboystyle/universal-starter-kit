@@ -127,17 +127,13 @@ describe('Table Accessibility', () => {
     fireEvent.keyDown(focusTarget, { key: 'ArrowDown' });
     // Simulate ArrowUp
     fireEvent.keyDown(focusTarget, { key: 'ArrowUp' });
-    // Simulate Home
-    fireEvent.keyDown(focusTarget, { key: 'Home' });
-    // Simulate End
-    fireEvent.keyDown(focusTarget, { key: 'End' });
-    // Simulate PageDown
-    fireEvent.keyDown(focusTarget, { key: 'PageDown' });
-    // Simulate PageUp
-    fireEvent.keyDown(focusTarget, { key: 'PageUp' });
-
     // If no errors thrown, keyboard navigation is wired correctly
-    expect(true).toBe(true);
+    expect(() => {
+      fireEvent.keyDown(focusTarget, { key: 'Home' });
+      fireEvent.keyDown(focusTarget, { key: 'End' });
+      fireEvent.keyDown(focusTarget, { key: 'PageDown' });
+      fireEvent.keyDown(focusTarget, { key: 'PageUp' });
+    }).not.toThrow();
   });
 
   it('Escape closes the column filter panel', async () => {

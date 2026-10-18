@@ -1345,7 +1345,7 @@ export const DataTableCell = ({
           title={t('Edit')}>
           {(draftValue, onDraftChange) => (
             <RichTextEditor
-              value={draftValue ?? ''}
+              value={toCellText(draftValue)}
               onChange={onDraftChange}
               disabled={disabled}
               readOnly={readOnly}

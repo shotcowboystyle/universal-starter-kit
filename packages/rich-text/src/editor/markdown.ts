@@ -241,7 +241,7 @@ function upgradeTaskLists(html: string): string {
     li.dataset.type = 'taskItem';
     li.dataset.checked = input.checked || input.hasAttribute('checked') ? 'true' : 'false';
     input.remove();
-    const list = li.closest('ul, ol');
+    const list = li.closest<HTMLElement>('ul, ol');
     if (list) {
       list.dataset.type = 'taskList';
     }

@@ -52,7 +52,7 @@ export function useRovingFocus(containerRef: RefObject<HTMLElement | null>) {
         return;
       }
 
-      const isRtl = container.closest('[dir]')?.dir === 'rtl' || document.dir === 'rtl';
+      const isRtl = container.closest<HTMLElement>('[dir]')?.dir === 'rtl' || document.dir === 'rtl';
       const forward = isRtl ? -1 : 1;
 
       if (event.key === 'ArrowRight') {

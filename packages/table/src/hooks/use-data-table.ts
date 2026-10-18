@@ -38,7 +38,6 @@ import type {
   UseDataTableOptions,
   UseDataTableReturn,
 } from '../types';
-import { applyFilterToValue } from '../utils/filter-utils';
 import {
   applyFiltersToData,
   getFilterFieldType,
@@ -46,6 +45,7 @@ import {
   isFilterValueShape,
   resolveFilterFields,
 } from '../utils/filter-fields';
+import { applyFilterToValue } from '../utils/filter-utils';
 import { moneyComparator } from '../utils/money';
 import { DEFAULT_PAGE_SIZE } from '../utils/pagination-defaults';
 import { accumulateRows } from '../utils/row-accumulator';

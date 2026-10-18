@@ -135,9 +135,11 @@ export function parseHtmlPreview(html: string | null | undefined, maxBlocks = 6)
     }
     const { spans } = current;
     // trim outer whitespace, drop blanks
-    if (spans.length > 0) {
-      spans[0].text = spans[0].text.replace(/^\s+/, '');
-      spans.at(-1).text = spans.at(-1).text.replace(/\s+$/, '');
+    const [first] = spans;
+    const last = spans.at(-1);
+    if (first && last) {
+      first.text = first.text.replace(/^\s+/, '');
+      last.text = last.text.replace(/\s+$/, '');
     }
     const kept = spans.filter((s) => s.text.length > 0);
     if (kept.some((s) => s.text.trim().length > 0)) {

@@ -298,30 +298,30 @@ export const inferColumnType = (value: unknown): Exclude<DataTableColumnType, 's
 export const combineFilters =
   // oxlint-disable-next-line anti-slop/no-unknown-parameters -- returned predicate runs over arbitrary cell values
   (filters: TableFilter[], combinationMode: 'AND' | 'OR' = 'AND'): ((value: unknown, columnId: string) => boolean) =>
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- predicate over arbitrary cell values
-  (value: unknown, columnId: string) => {
-    if (filters.length === 0) {
-      return true;
-    }
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- predicate over arbitrary cell values
+    (value: unknown, columnId: string) => {
+      if (filters.length === 0) {
+        return true;
+      }
 
-    const columnFilters = filters.filter((f) => f.columnId === columnId);
+      const columnFilters = filters.filter((f) => f.columnId === columnId);
 
-    if (columnFilters.length === 0) {
-      return true;
-    }
+      if (columnFilters.length === 0) {
+        return true;
+      }
 
-    if (combinationMode === 'AND') {
-      return columnFilters.every((filter) => {
-        // Get column type (you'd need to pass this or infer it)
+      if (combinationMode === 'AND') {
+        return columnFilters.every((filter) => {
+          // Get column type (you'd need to pass this or infer it)
+          const columnType = inferColumnType(value);
+          return applyFilterToValue(value, filter.value, columnType);
+        });
+      }
+      return columnFilters.some((filter) => {
         const columnType = inferColumnType(value);
         return applyFilterToValue(value, filter.value, columnType);
       });
-    }
-    return columnFilters.some((filter) => {
-      const columnType = inferColumnType(value);
-      return applyFilterToValue(value, filter.value, columnType);
-    });
-  };
+    };
 
 // Filter Description Generation
 

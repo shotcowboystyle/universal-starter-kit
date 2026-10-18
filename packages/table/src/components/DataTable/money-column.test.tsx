@@ -17,8 +17,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { DataTableColumn } from '../../types';
 import { getDefaultColumnAlign } from '../../utils/column-align';
-import { applyFilterToValue } from '../../utils/filter-utils';
 import { mapFieldToFilterType, operatorsForFilterType } from '../../utils/filter-fields';
+import { applyFilterToValue } from '../../utils/filter-utils';
 
 import { DataTable } from './index';
 

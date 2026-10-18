@@ -41,7 +41,13 @@ describe(compareMoney, () => {
   });
 
   it('sorts blanks and junk before every real figure rather than throwing', () => {
-    expect(['10.00', null, '', 'n/a', '2.00'].toSorted(moneyComparator)).toStrictEqual([null, '', 'n/a', '2.00', '10.00']);
+    expect(['10.00', null, '', 'n/a', '2.00'].toSorted(moneyComparator)).toStrictEqual([
+      null,
+      '',
+      'n/a',
+      '2.00',
+      '10.00',
+    ]);
   });
 });
 
