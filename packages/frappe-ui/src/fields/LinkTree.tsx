@@ -13,7 +13,31 @@ import { buildTreeNodes } from '../FrappeTreeView';
 
 import type { LinkProps } from './Link';
 
-export function LinkTree({
+const useTreeConnection = (baseURL?: string, auth?: LinkProps['auth']): FrappeConnectionConfig | undefined => {
+  const config = useFrappeConfig();
+  const finalBaseURL = baseURL ?? config?.baseURL ?? '';
+  const finalAuth = auth ?? config?.auth;
+  // Carry `fixtures` through, the way FrappeTreeView does. Without it a
+  // LinkTree under a fixture-backed FrappeProvider takes the HTTP path
+  // instead: every story dials socket.io at the mock host and prints
+  // ERR_TUNNEL_CONNECTION_FAILED, which is a G-15 story-honesty breach and
+  // was the only console noise left on FrappeUI/LinkTree (MPO-197).
+  return useMemo(
+    () =>
+      finalBaseURL
+        ? {
+            baseURL: finalBaseURL,
+            socketPort: config?.socketPort,
+            auth: finalAuth,
+            realtime: config?.realtime,
+            fixtures: config?.fixtures,
+          }
+        : undefined,
+    [finalBaseURL, config?.socketPort, config?.realtime, finalAuth, config?.fixtures],
+  );
+};
+
+export const LinkTree = ({
   label,
   value = '',
   onChange,
@@ -31,31 +55,10 @@ export function LinkTree({
   placeholder,
   referenceDoctype: _referenceDoctype,
   ...stackProps
-}: LinkProps) {
+}: LinkProps) => {
   const { t } = useTranslation();
-  const config = useFrappeConfig();
   const isLocked = disabled || readOnly;
-
-  const finalBaseURL = baseURL ?? config?.baseURL ?? '';
-  const finalAuth = auth ?? config?.auth;
-  // Carry `fixtures` through, the way FrappeTreeView does. Without it a
-  // LinkTree under a fixture-backed FrappeProvider takes the HTTP path
-  // instead: every story dials socket.io at the mock host and prints
-  // ERR_TUNNEL_CONNECTION_FAILED, which is a G-15 story-honesty breach and
-  // was the only console noise left on FrappeUI/LinkTree (MPO-197).
-  const connectionConfig: FrappeConnectionConfig | undefined = useMemo(
-    () =>
-      finalBaseURL
-        ? {
-            baseURL: finalBaseURL,
-            socketPort: config?.socketPort,
-            auth: finalAuth,
-            realtime: config?.realtime,
-            fixtures: config?.fixtures,
-          }
-        : undefined,
-    [finalBaseURL, config?.socketPort, config?.realtime, finalAuth, config?.fixtures],
-  );
+  const connectionConfig = useTreeConnection(baseURL, auth);
 
   const { meta } = useDocTypeMeta(connectionConfig, doctype);
   const titleField = meta?.title_field ?? 'name';
@@ -71,6 +74,7 @@ export function LinkTree({
     [collection],
   );
 
+  // SAFETY: the live query reads this doctype's collection, whose rows always carry `name`
   const docs = useMemo(() => (rawData as { name: string }[] | undefined) ?? [], [rawData]);
   const nodes = useMemo(() => buildTreeNodes(docs, parentField, titleField), [docs, parentField, titleField]);
 
@@ -104,7 +108,9 @@ export function LinkTree({
       skeleton={skeleton}
       compact={compact}
       loading={isLoading}
+      // SAFETY: the remaining YStack props are forwarded verbatim to the TreeSelect root
+      // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above
       {...(stackProps as Record<string, unknown>)}
     />
   );
-}
+};

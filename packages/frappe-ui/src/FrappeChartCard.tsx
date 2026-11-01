@@ -34,9 +34,9 @@ import type { YStackProps } from 'tamagui';
 
 import { ChartCard } from './ChartCard';
 import { useFrappeConfig } from './FrappeProvider';
-import { frappeDevWarn } from './shared/devWarn';
-import { useFrappeAggregate } from './useFrappeAggregate';
-import type { FrappeAggregateConnection, FrappeAggregateOperation } from './useFrappeAggregate';
+import { frappeDevWarn } from './shared/dev-warn';
+import { useFrappeAggregate } from './use-frappe-aggregate';
+import type { FrappeAggregateConnection, FrappeAggregateOperation } from './use-frappe-aggregate';
 
 /** Live data source for a chart series: one data point per group. */
 export interface FrappeChartDataSource {
@@ -47,6 +47,7 @@ export interface FrappeChartDataSource {
   aggregate?: FrappeAggregateOperation;
   /** Field for sum/avg/min/max. */
   field?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Frappe filter values are any field type; get_list receives them as given
   filters?: Record<string, unknown> | [string, string, unknown][];
   /** Coalescing window for event-driven refetches in ms (default 300). */
   debounceMs?: number;
@@ -77,7 +78,7 @@ export interface FrappeChartCardProps extends Omit<ChartCardProps, 'config'> {
  * skeleton on the page line above the card (LC-38 — ChartCard renders its
  * heading outside the painted surface), chart skeleton inside.
  */
-function ChartCardSkeleton({ height = 200, ...stackProps }: Omit<YStackProps, 'height'> & { height?: number }) {
+const ChartCardSkeleton = ({ height = 200, ...stackProps }: Omit<YStackProps, 'height'> & { height?: number }) => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
   return (
@@ -96,34 +97,54 @@ function ChartCardSkeleton({ height = 200, ...stackProps }: Omit<YStackProps, 'h
       </Card>
     </YStack>
   );
-}
+};
 
-export function FrappeChartCard({
+const buildConnection = (
+  dataSource: FrappeChartDataSource | undefined,
+  baseURL: string | undefined,
+  providerConfig: ReturnType<typeof useFrappeConfig>,
+  auth: FrappeChartCardProps['auth'],
+  syncOptions: FrappeChartCardProps['syncOptions'],
+): FrappeAggregateConnection | undefined => {
+  const fixtures = providerConfig?.fixtures;
+  const hasBaseURL = baseURL !== undefined && baseURL !== '';
+  if (!dataSource || (!hasBaseURL && !fixtures)) {
+    return undefined;
+  }
+  return {
+    baseURL,
+    socketPort: providerConfig?.socketPort,
+    siteName: providerConfig?.siteName,
+    socketBaseURL: providerConfig?.socketBaseURL,
+    auth: auth ?? providerConfig?.auth,
+    syncOptions: syncOptions ?? providerConfig?.syncOptions,
+    realtime: providerConfig?.realtime,
+    fixtures,
+  };
+};
+
+const aggregateQuery = (dataSource: FrappeChartDataSource | undefined) => ({
+  doctype: dataSource?.doctype ?? '',
+  aggregate: dataSource?.aggregate,
+  field: dataSource?.field,
+  filters: dataSource?.filters,
+  groupBy: dataSource?.groupBy,
+  debounceMs: dataSource?.debounceMs,
+  enabled: !!dataSource,
+});
+
+export const FrappeChartCard = ({
   config,
   dataSource,
   baseURL,
   auth,
   syncOptions,
   ...chartCardProps
-}: FrappeChartCardProps) {
+}: FrappeChartCardProps) => {
   const providerConfig = useFrappeConfig();
   const { t } = useTranslation();
 
-  const finalBaseURL = baseURL ?? providerConfig?.baseURL;
-  const fixtures = providerConfig?.fixtures;
-  const connection: FrappeAggregateConnection | undefined =
-    dataSource && (finalBaseURL || fixtures)
-      ? {
-          baseURL: finalBaseURL,
-          socketPort: providerConfig?.socketPort,
-          siteName: providerConfig?.siteName,
-          socketBaseURL: providerConfig?.socketBaseURL,
-          auth: auth ?? providerConfig?.auth,
-          syncOptions: syncOptions ?? providerConfig?.syncOptions,
-          realtime: providerConfig?.realtime,
-          fixtures,
-        }
-      : undefined;
+  const connection = buildConnection(dataSource, baseURL ?? providerConfig?.baseURL, providerConfig, auth, syncOptions);
 
   const missingConnection = !!dataSource && !connection;
   const doctype = dataSource?.doctype;
@@ -139,15 +160,10 @@ export function FrappeChartCard({
     });
   }, [missingConnection, config.id, doctype]);
 
-  const { groups, isLoading, isStale, error, isPermissionError } = useFrappeAggregate(connection, {
-    doctype: dataSource?.doctype ?? '',
-    aggregate: dataSource?.aggregate,
-    field: dataSource?.field,
-    filters: dataSource?.filters,
-    groupBy: dataSource?.groupBy,
-    debounceMs: dataSource?.debounceMs,
-    enabled: !!dataSource,
-  });
+  const { groups, isLoading, isStale, error, isPermissionError } = useFrappeAggregate(
+    connection,
+    aggregateQuery(dataSource),
+  );
 
   const liveConfig = useMemo<ChartConfig>(() => {
     const data = dataSource
@@ -156,6 +172,7 @@ export function FrappeChartCard({
           value: group.value,
         }))
       : (config.data ?? []);
+    // SAFETY: `data` is always set here, which is the only field ChartConfig requires beyond the config chrome
     return { ...config, data } as ChartConfig;
   }, [config, dataSource, groups]);
 
@@ -183,6 +200,7 @@ export function FrappeChartCard({
           'This chart reads {{doctype}} live, but no Frappe baseURL is in scope, so the series was never computed.',
           { doctype: dataSource.doctype },
         )}
+        // SAFETY: ChartCard props extend the YStack props AsyncBoundary spreads onto its frame
         {...(chartCardProps as YStackProps)}
       />
     );
@@ -192,6 +210,7 @@ export function FrappeChartCard({
     return (
       <ChartCardSkeleton
         height={config.height ?? 200}
+        // SAFETY: ChartCard props extend the YStack props the skeleton spreads onto its frame
         {...(chartCardProps as Omit<YStackProps, 'height'>)}
       />
     );
@@ -207,6 +226,7 @@ export function FrappeChartCard({
             ? t('No permission to read {{doctype}}', { doctype: dataSource.doctype })
             : t("Couldn't load {{title}}", { title: config.title })
         }
+        // SAFETY: ChartCard props extend the YStack props AsyncBoundary spreads onto its frame
         {...(chartCardProps as YStackProps)}
       />
     );
@@ -221,6 +241,7 @@ export function FrappeChartCard({
         emptyDescription={t('{{doctype}} has no rows matching this chart', {
           doctype: dataSource.doctype,
         })}
+        // SAFETY: ChartCard props extend the YStack props AsyncBoundary spreads onto its frame
         {...(chartCardProps as YStackProps)}
       />
     );
@@ -235,6 +256,6 @@ export function FrappeChartCard({
       {...chartCardProps}
     />
   );
-}
+};
 
 export type { ChartConfig, ChartDataPoint } from '@repo/ui';

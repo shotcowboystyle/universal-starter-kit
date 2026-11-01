@@ -2,13 +2,17 @@ import { useResolvedKnobs } from '@repo/theme';
 import { Accordion, Card, Chip, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
-import { groupRows, sortRows } from './recordData';
-import { slugWords } from './recordSections';
-import type { FrappeRecordRowsSection } from './recordSections';
+import { groupRows, sortRows } from './record-data';
+import { slugWords } from './record-sections';
+import type { FrappeRecordRowsSection } from './record-sections';
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- linked rows are DocType-defined; fields are only known from the section config
 type Row = Record<string, unknown>;
 
-function RowTiles({ rows, section }: { rows: readonly Row[]; section: FrappeRecordRowsSection }) {
+/** A group's accordion value; the empty group reads as "other". */
+const groupValue = (value: string): string => value || 'other';
+
+const RowTiles = ({ rows, section }: { rows: readonly Row[]; section: FrappeRecordRowsSection }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <XStack
@@ -18,6 +22,7 @@ function RowTiles({ rows, section }: { rows: readonly Row[]; section: FrappeReco
         const detail = section.detail ? Number(row[section.detail.field]) : 0;
         return (
           <Card
+            // oxlint-disable-next-line anti-slop/no-runtime-typeof, react-doctor/no-array-index-as-key -- rows key by their doc name; a nameless row falls back to its sorted position
             key={typeof row.name === 'string' ? row.name : index}
             {...knobProps.cardSurface}
             backgroundColor="$color2"
@@ -30,9 +35,10 @@ function RowTiles({ rows, section }: { rows: readonly Row[]; section: FrappeReco
               <Text
                 textTransform="capitalize"
                 fontWeight="600">
+                {/* oxlint-disable-next-line typescript/no-base-to-string -- cells are scalar JSON values from the server */}
                 {slugWords(String(row[section.field] ?? ''))}
               </Text>
-              {section.flag && row[section.flag.field] ? (
+              {section.flag && Boolean(row[section.flag.field]) ? (
                 <Chip
                   size="$2"
                   color="purple">
@@ -52,14 +58,14 @@ function RowTiles({ rows, section }: { rows: readonly Row[]; section: FrappeReco
       })}
     </XStack>
   );
-}
+};
 
 /**
  * A record's linked rows as flat tiles that wrap, in the declared order,
  * flagged and detailed per row; grouped, each group is an accordion section
  * with its count, the first open.
  */
-export function RecordRows({ rows, section }: { rows: readonly Row[]; section: FrappeRecordRowsSection }) {
+export const RecordRows = ({ rows, section }: { rows: readonly Row[]; section: FrappeRecordRowsSection }) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   if (rows.length === 0) {
@@ -81,7 +87,6 @@ export function RecordRows({ rows, section }: { rows: readonly Row[]; section: F
     );
   }
   const groups = groupRows(sorted, section.groupBy.field);
-  const groupValue = (value: string) => value || 'other';
   return (
     <YStack {...knobProps.gap}>
       <Accordion
@@ -111,4 +116,4 @@ export function RecordRows({ rows, section }: { rows: readonly Row[]; section: F
       </Accordion>
     </YStack>
   );
-}
+};

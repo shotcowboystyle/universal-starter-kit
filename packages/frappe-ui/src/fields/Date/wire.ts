@@ -34,13 +34,13 @@ export type FrappeDateFieldType = 'date' | 'datetime' | 'time';
  * overwrite a time the user had just set. It stays on the contract because the
  * capability is real for a date-only writer, and it stays covered below.
  */
-export function toFrappeDateValue(date: Date, type: FrappeDateFieldType, previousValue?: string): string {
+export const toFrappeDateValue = (date: Date, type: FrappeDateFieldType, previousValue?: string): string => {
   if (type !== 'datetime') {
     return formatCalendarDate(date, type);
   }
-  const carriedTime = previousValue?.trim().split(/[ T]/)[1];
+  const carriedTime = previousValue?.trim().split(/[ T]/u)[1];
   return `${formatCalendarDate(date, 'date')} ${carriedTime ?? formatCalendarDate(date, 'time')}`;
-}
+};
 
 /**
  * Read a wire value back into the `Date` the picker opens on. Empty input
@@ -52,7 +52,7 @@ export function toFrappeDateValue(date: Date, type: FrappeDateFieldType, previou
  * picker on the previous day west of UTC. A wall clock with no offset is
  * already read as local per ES2016+.
  */
-export function fromFrappeDateValue(value: string, type: FrappeDateFieldType): Date {
+export const fromFrappeDateValue = (value: string, type: FrappeDateFieldType): Date => {
   if (!value) {
     return new Date();
   }
@@ -67,4 +67,4 @@ export function fromFrappeDateValue(value: string, type: FrappeDateFieldType): D
     return new Date(value.replace(' ', 'T'));
   }
   return new Date(`${value}T00:00:00`);
-}
+};

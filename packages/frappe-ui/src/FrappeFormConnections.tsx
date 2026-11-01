@@ -6,12 +6,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';
 
-import { connectionFields } from './frappeConnections';
-import type { FrappeConnection } from './frappeConnections';
-import { isPermissionError } from './liveErrors';
-import { useFrappeRows } from './useFrappeRows';
-import type { FrappeRowsConnection } from './useFrappeRows';
+import { connectionFields } from './frappe-connections';
+import type { FrappeConnection } from './frappe-connections';
+import { isPermissionError } from './live-errors';
+import { useFrappeRows } from './use-frappe-rows';
+import type { FrappeRowsConnection, UseFrappeRowsOptions } from './use-frappe-rows';
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a connection row carries whatever fields the linked doctype declares
 type ConnectionRow = Record<string, unknown> & { name: string; doctype: string };
 
 const bookkeepingKeys = new Set([
@@ -34,15 +35,17 @@ const bookkeepingKeys = new Set([
 ]);
 
 /** "poke_type" -> "Poke Type". */
-function fieldLabel(key: string): string {
-  return key.replaceAll('_', ' ').replaceAll(/(^|\s)\S/g, (c) => c.toUpperCase());
-}
+const fieldLabel = (key: string): string =>
+  key.replaceAll('_', ' ').replaceAll(/(?<lead>^|\s)\S/gu, (c) => c.toUpperCase());
 
 /**
  * Columns for one connection's rows: its declared fields, else what the rows
  * carry. The link field is left out; every row holds the same record.
  */
-function connectionColumns(link: FrappeConnection, rows: readonly ConnectionRow[]): DataTableColumn<ConnectionRow>[] {
+const connectionColumns = (
+  link: FrappeConnection,
+  rows: readonly ConnectionRow[],
+): DataTableColumn<ConnectionRow>[] => {
   const declared = (link.fields ?? []).filter((field) => field !== 'name');
   const keys = (
     declared.length > 0 ? declared : Object.keys(rows[0] ?? {}).filter((key) => !bookkeepingKeys.has(key))
@@ -52,7 +55,7 @@ function connectionColumns(link: FrappeConnection, rows: readonly ConnectionRow[
     accessorKey: key,
     header: fieldLabel(key),
   }));
-}
+};
 
 export interface FrappeFormConnectionSectionProps {
   connection: FrappeRowsConnection | undefined;
@@ -62,25 +65,25 @@ export interface FrappeFormConnectionSectionProps {
 }
 
 /** One connection of a record: its linked rows, live, with honest states. */
-export function FrappeFormConnectionSection({ connection, link, name }: FrappeFormConnectionSectionProps) {
+export const FrappeFormConnectionSection = ({ connection, link, name }: FrappeFormConnectionSectionProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const options = useMemo(
-    () => ({
+    (): UseFrappeRowsOptions<ConnectionRow> => ({
       fields: connectionFields(link),
-      filters: [[link.fieldname, '=', name]] as [string, string, unknown][],
+      filters: [[link.fieldname, '=', name]],
       limit: link.limit ?? 0,
     }),
     [link, name],
   );
-  const { rows, isLoading, error } = useFrappeRows<ConnectionRow>(connection, link.doctype, options as never);
+  const { rows, isLoading, error } = useFrappeRows<ConnectionRow>(connection, link.doctype, options);
   const columns = useMemo(() => connectionColumns(link, rows), [link, rows]);
   const title = t(link.label ?? link.doctype);
   return (
     <PageSection
       title={isLoading || error ? title : `${title} (${rows.length})`}
       divider={false}
-      testID={`frappe-form-connection-${link.doctype.toLowerCase().replaceAll(/\s+/g, '-')}`}>
+      testID={`frappe-form-connection-${link.doctype.toLowerCase().replaceAll(/\s+/gu, '-')}`}>
       <YStack {...knobProps.gap}>
         <AsyncBoundary
           layout="table"
@@ -107,7 +110,7 @@ export function FrappeFormConnectionSection({ connection, link, name }: FrappeFo
       </YStack>
     </PageSection>
   );
-}
+};
 
 export interface FrappeFormConnectionsProps {
   connection: FrappeRowsConnection | undefined;
@@ -116,7 +119,7 @@ export interface FrappeFormConnectionsProps {
 }
 
 /** The desk's Connections for one record: a section per linked doctype. */
-export function FrappeFormConnections({ connection, connections, name }: FrappeFormConnectionsProps) {
+export const FrappeFormConnections = ({ connection, connections, name }: FrappeFormConnectionsProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -132,4 +135,4 @@ export function FrappeFormConnections({ connection, connections, name }: FrappeF
       ))}
     </YStack>
   );
-}
+};

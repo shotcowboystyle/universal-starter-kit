@@ -2,9 +2,9 @@ import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import { Text, XStack, YStack } from 'tamagui';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeList } from './FrappeList';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 
 export default {
   title: 'FrappeUI/FrappeList',
@@ -34,61 +34,71 @@ export default {
 
 const MOCK_HOST = 'https://frappelist.mock.test';
 
-function todoMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Desk',
-    title_field: 'description',
-    fields: [
-      { fieldname: 'description', fieldtype: 'Data', label: 'Description', in_list_view: 1 },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Open\nWorking\nCompleted',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      {
-        fieldname: 'priority',
-        fieldtype: 'Select',
-        label: 'Priority',
-        options: 'Low\nMedium\nHigh',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      { fieldname: 'date', fieldtype: 'Date', label: 'Due Date' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const todoMetaRaw = (name: string) => ({
+  name,
+  module: 'Desk',
+  title_field: 'description',
+  fields: [
+    { fieldname: 'description', fieldtype: 'Data', label: 'Description', in_list_view: 1 },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Open\nWorking\nCompleted',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    {
+      fieldname: 'priority',
+      fieldtype: 'Select',
+      label: 'Priority',
+      options: 'Low\nMedium\nHigh',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    { fieldname: 'date', fieldtype: 'Date', label: 'Due Date' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeListMockFetch?: boolean } = window;
   if (w.__frappeListMockFetch) {
     return;
   }
   w.__frappeListMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'ToDo';
         return jsonResponse({ docs: [todoMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: todoMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -119,6 +129,16 @@ const todoFixtures: ToDo[] = Array.from({ length: 100 }, (_, i) => ({
   date: `2026-01-${String((i % 28) + 1).padStart(2, '0')}`,
   priority: ['Low', 'Medium', 'High'][i % 3],
 }));
+
+const statusBackground = (status: string | undefined): string => {
+  if (status === 'Completed') {
+    return '$green4';
+  }
+  if (status === 'Working') {
+    return '$yellow4';
+  }
+  return '$blue4';
+};
 
 export const Default = () => (
   <FrappeProvider
@@ -202,9 +222,7 @@ export const WithCustomFieldRenderer = () => (
             <Text
               paddingHorizontal="$2"
               paddingVertical="$1"
-              backgroundColor={
-                doc.status === 'Completed' ? '$green4' : doc.status === 'Working' ? '$yellow4' : '$blue4'
-              }
+              backgroundColor={statusBackground(doc.status)}
               borderRadius="$2"
               fontSize="$2">
               {doc.status}
@@ -236,6 +254,7 @@ WithCustomFieldRenderer.parameters = {
 };
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Live bench story — real ToDo doctype over the live data path
 // ---------------------------------------------------------------------------
 
@@ -284,7 +303,9 @@ Live.parameters = {
 
 /** Fixture provider whose list fetch never resolves — holds the real collection in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
 }
@@ -311,6 +332,7 @@ export const Loading = () => (
   </FrappeProvider>
 );
 
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 /** Zero documents, no failure — "No ToDo records found" (empty ≠ error). */
 export const Empty = () => (
   <FrappeProvider

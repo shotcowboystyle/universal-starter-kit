@@ -1,5 +1,6 @@
 import { PlusIcon } from '@phosphor-icons/react';
 import { Button, formCommonColors } from '@repo/forms';
+import type { UseFrappeCollectionConfig } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
 import { Kanban, componentColors } from '@repo/ui';
 import type { KanbanColumn as GenericKanbanColumn, KanbanProps } from '@repo/ui';
@@ -9,8 +10,8 @@ import { Text, XStack, YStack } from 'tamagui';
 
 import { FrappeConnectionIndicator } from './FrappeConnectionIndicator';
 import { useFrappeConfig } from './FrappeProvider';
-import { describeSyncError } from './syncError';
-import { useFrappeRows } from './useFrappeRows';
+import { describeSyncError } from './sync-error';
+import { useFrappeRows } from './use-frappe-rows';
 
 /**
  * Configuration for a single Kanban column.
@@ -28,14 +29,15 @@ export type KanbanCardRenderer<TDoc> = (card: Partial<TDoc>, defaultContent: Rea
 
 export interface FrappeKanbanProps<TDoc extends { name: string; doctype: string }> extends Omit<
   KanbanProps<Partial<TDoc>>,
+  // oxlint-disable-next-line sonarjs/max-union-size -- the list of generic Kanban props this wrapper replaces, not a domain union
   'columns' | 'renderCard' | 'onCardMove' | 'error'
 > {
   baseURL?: string;
   auth?: { useToken?: boolean; token?: string; type?: string };
-  syncOptions?: any;
+  syncOptions?: UseFrappeCollectionConfig['syncOptions'];
   doctype: string;
   fields?: readonly (keyof TDoc & string)[];
-  filters?: Partial<TDoc> | [keyof TDoc & string, string, any][];
+  filters?: Partial<TDoc> | [keyof TDoc & string, string, unknown][];
   statusField: keyof TDoc & string;
   columns: KanbanColumn[];
   titleField?: keyof TDoc & string;
@@ -51,6 +53,11 @@ export interface FrappeKanbanProps<TDoc extends { name: string; doctype: string 
   error?: (error: Error) => React.ReactNode;
 }
 
+const UNASSIGNED_COLUMN_ID = '__unassigned__';
+
+/** True when an optional field-name prop is set (an empty name counts as unset). */
+const isSetField = <K extends string>(field: K | undefined): field is K => field !== undefined && field !== '';
+
 /**
  * Thin Frappe wrapper around the generic Kanban component.
  *
@@ -58,7 +65,8 @@ export interface FrappeKanbanProps<TDoc extends { name: string; doctype: string 
  * by `statusField`, and passes the grouped columns to the generic
  * `Kanban` from `@repo/ui`.
  */
-export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
+// oxlint-disable-next-line eslint/complexity -- most of the count is prop defaults and optional-callback guards; each branch is a flat early return
+export const FrappeKanban = <TDoc extends { name: string; doctype: string }>({
   baseURL,
   auth,
   syncOptions,
@@ -76,10 +84,10 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   enableCardCreation = false,
   onCreateCard,
   loading,
-  error,
+  error: renderError,
   renderColumnActions,
   ...kanbanProps
-}: FrappeKanbanProps<TDoc>) {
+}: FrappeKanbanProps<TDoc>) => {
   const config = useFrappeConfig();
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
@@ -89,25 +97,25 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   const finalAuth = auth ?? config?.auth;
   const finalSyncOptions = syncOptions ?? config?.syncOptions;
 
-  if (!finalBaseURL && !config?.fixtures) {
+  if ((finalBaseURL === undefined || finalBaseURL === '') && !config?.fixtures) {
     throw new Error('FrappeKanban requires baseURL prop or FrappeProvider with baseURL or fixtures');
   }
 
   // Ensure required fields are fetched
   const effectiveFields = useMemo(() => {
-    if (!fields) {
-      return;
+    if (fields === undefined) {
+      return fields;
     }
-    const fieldSet = new Set(fields);
+    const fieldSet = new Set<keyof TDoc & string>(fields);
     fieldSet.add(statusField);
-    fieldSet.add('name' as keyof TDoc & string);
-    if (titleField) {
+    fieldSet.add('name');
+    if (isSetField(titleField)) {
       fieldSet.add(titleField);
     }
-    if (descriptionField) {
+    if (isSetField(descriptionField)) {
       fieldSet.add(descriptionField);
     }
-    return [...fieldSet] as (keyof TDoc & string)[];
+    return [...fieldSet];
   }, [fields, statusField, titleField, descriptionField]);
 
   const connectionConfig = useMemo(
@@ -138,6 +146,7 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   // The shared doctype read (MPO-251). `mapError` keeps this board's own
   // error copy (describeSyncError) rather than the hook's default shape, and
   // `limit: null` keeps the bench's own page length.
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- mapError receives whatever the sync layer threw; describeSyncError does the narrowing
   const mapSyncError = useCallback((err: unknown) => new Error(describeSyncError(err, doctype, t)), [doctype, t]);
   const {
     rows: cards,
@@ -156,15 +165,16 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   // Cards with an unknown status land in an "Unassigned" column so they
   // remain visible instead of disappearing from the board.
   const genericColumns = useMemo((): GenericKanbanColumn<Partial<TDoc>>[] => {
-    const grouped: Record<string, Partial<TDoc>[]> = {};
+    const grouped = new Map<string, Partial<TDoc>[]>();
     for (const column of columns) {
-      grouped[column.value] = [];
+      grouped.set(column.value, []);
     }
     const unknown: Partial<TDoc>[] = [];
     for (const card of cards) {
-      const status = String((card as Record<string, unknown>)[statusField] ?? '');
-      if (status && grouped[status]) {
-        grouped[status].push(card);
+      const status = String(card[statusField] ?? '');
+      const bucket = status === '' ? undefined : grouped.get(status);
+      if (bucket) {
+        bucket.push(card);
       } else {
         unknown.push(card);
       }
@@ -172,12 +182,12 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
     const result = columns.map((col) => ({
       id: col.value,
       title: col.title,
-      items: grouped[col.value] || [],
+      items: grouped.get(col.value) ?? [],
       color: col.color,
     }));
     if (unknown.length > 0) {
       result.push({
-        id: '__unassigned__',
+        id: UNASSIGNED_COLUMN_ID,
         title: t('Unassigned'),
         items: unknown,
         color: componentColors.text.subtle,
@@ -192,8 +202,8 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   const effectiveRenderCard =
     renderCard ??
     ((item: Partial<TDoc>) => {
-      const title = titleField ? (item as Record<string, unknown>)[titleField] : item.name;
-      const desc = descriptionField ? (item as Record<string, unknown>)[descriptionField] : undefined;
+      const title = isSetField(titleField) ? item[titleField] : item.name;
+      const desc = isSetField(descriptionField) ? item[descriptionField] : undefined;
       return (
         <YStack
           {...knobProps.panelPadding}
@@ -201,7 +211,11 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
           <Text
             {...knobProps.label}
             {...knobProps.textWeight}>
-            {(title as React.ReactNode) ?? item.name}
+            {
+              // SAFETY: title fields hold Data/Select strings, which React renders as text
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+              (title as React.ReactNode) ?? item.name
+            }
           </Text>
           {desc != null && desc !== '' && (
             <Text
@@ -217,7 +231,7 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   // Human-readable card label for screen-reader drag announcements.
   const getItemLabel = useCallback(
     (item: Partial<TDoc>) => {
-      const title = titleField ? (item as Record<string, unknown>)[titleField] : undefined;
+      const title = isSetField(titleField) ? item[titleField] : undefined;
       return String(title ?? item.name ?? t('Card'));
     },
     [titleField, t],
@@ -226,13 +240,15 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   // Persist status via the live collection, then notify the consumer.
   const handleCardMove = useCallback(
     async (item: Partial<TDoc>, fromColumn: string, toColumn: string) => {
-      if (!item.name || toColumn === '__unassigned__') {
+      if (item.name === undefined || item.name === '' || toColumn === UNASSIGNED_COLUMN_ID) {
         return;
       }
       setActionError(null);
       try {
         if (collection) {
           const tx = collection.update(item.name, (draft) => {
+            // SAFETY: the draft is the live doc object; the status field is written by name
+            // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- doc fields are doctype-defined
             (draft as Record<string, unknown>)[statusField] = toColumn;
           });
           await tx.isPersisted.promise;
@@ -260,13 +276,14 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   const effectiveRenderColumnActions = useMemo(() => {
     const canQuickAdd = enableCardCreation && Boolean(onCreateCard);
     if (!canQuickAdd && !renderColumnActions) {
-      return;
+      // Nothing to render: hand the Kanban no actions slot (renderColumnActions is undefined here).
+      return renderColumnActions;
     }
-    return (column: GenericKanbanColumn<Partial<TDoc>>) => (
+    const renderActions = (column: GenericKanbanColumn<Partial<TDoc>>) => (
       <XStack
         alignItems="center"
         gap="$1">
-        {canQuickAdd && column.id !== '__unassigned__' && (
+        {canQuickAdd && column.id !== UNASSIGNED_COLUMN_ID && (
           <Button
             size="$2"
             circular
@@ -286,11 +303,13 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
         {renderColumnActions?.(column)}
       </XStack>
     );
+    return renderActions;
   }, [enableCardCreation, onCreateCard, renderColumnActions, t]);
 
   // Custom loading slot only — default path keeps empty columns visible so
   // fixture-less demos still render the board (Kanban owns isLoading chrome).
-  if (isLoading && cards.length === 0 && loading) {
+  if (isLoading && cards.length === 0 && Boolean(loading)) {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- returning the bare ReactNode would widen the component's return type to include Promise
     return <>{loading}</>;
   }
 
@@ -298,14 +317,14 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
   // reported by the collection via onSyncError — honest error UI instead of
   // an empty board. The `error` render prop stays the consumer override.
   const boardError = syncError ? syncError.message : null;
-  if (syncError && error) {
-    return <>{error(syncError)}</>;
+  if (syncError && renderError) {
+    return <>{renderError(syncError)}</>;
   }
 
   // Opt-in query error panel via `error` prop. Empty/fixture-less collections
   // often report isError without a real failure — don't blank the board.
-  if (isError && error && !isLoading && cards.length === 0) {
-    return <>{error(new Error(t('Failed to load {{doctype}}', { doctype })))}</>;
+  if (isError && renderError && !isLoading && cards.length === 0) {
+    return <>{renderError(new Error(t('Failed to load {{doctype}}', { doctype })))}</>;
   }
 
   return (
@@ -334,6 +353,7 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
         renderCard={effectiveRenderCard}
         // The generic Kanban enables drag when a move handler exists —
         // readOnly withholds it so the board stays a visualization.
+        // oxlint-disable-next-line typescript/no-misused-promises -- awaitable handler, never rejects (errors land in actionError)
         onCardMove={readOnly ? undefined : handleCardMove}
         onCardSelect={handleCardSelect}
         renderColumnActions={effectiveRenderColumnActions}
@@ -345,4 +365,4 @@ export function FrappeKanban<TDoc extends { name: string; doctype: string }>({
       />
     </YStack>
   );
-}
+};

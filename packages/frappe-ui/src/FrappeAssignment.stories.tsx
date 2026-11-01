@@ -1,11 +1,11 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider } from './frappe-story-target';
+import type { FrappeUserDoc } from './frappe-users';
 import { FrappeAssignment } from './FrappeAssignment';
 import type { FrappeToDo } from './FrappeAssignment';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
-import type { FrappeUserDoc } from './frappeUsers';
 
 export default {
   title: 'FrappeUI/FrappeAssignment',
@@ -37,7 +37,7 @@ export default {
 const MOCK_HOST = 'https://frappeassignment.mock.test';
 const ERR_HOST = 'https://forbidden.frappeassignment.mock.test';
 
-function assignmentMetaRaw(name: string) {
+const assignmentMetaRaw = (name: string) => {
   if (name === 'User') {
     return {
       name: 'User',
@@ -97,24 +97,31 @@ function assignmentMetaRaw(name: string) {
     ],
     permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
   };
-}
+};
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
+
+const JANE = 'jane@example.com';
+const TASK_001_ASSIGNMENT = 'Assignment for Task TASK-001';
 
 const todoFixtures: FrappeToDo[] = [
   {
     name: 'TODO-001',
     doctype: 'ToDo',
-    allocated_to: 'jane@example.com',
+    allocated_to: JANE,
     assigned_by: 'Administrator',
     reference_type: 'Task',
     reference_name: 'TASK-001',
-    description: 'Assignment for Task TASK-001',
+    description: TASK_001_ASSIGNMENT,
     status: 'Open',
     priority: 'Medium',
     creation: '2026-01-05 10:00:00',
@@ -126,7 +133,7 @@ const todoFixtures: FrappeToDo[] = [
     assigned_by: 'Administrator',
     reference_type: 'Task',
     reference_name: 'TASK-001',
-    description: 'Assignment for Task TASK-001',
+    description: TASK_001_ASSIGNMENT,
     status: 'Open',
     priority: 'High',
     creation: '2026-01-06 11:00:00',
@@ -135,10 +142,10 @@ const todoFixtures: FrappeToDo[] = [
     name: 'TODO-003',
     doctype: 'ToDo',
     allocated_to: 'maria@example.com',
-    assigned_by: 'jane@example.com',
+    assigned_by: JANE,
     reference_type: 'Task',
     reference_name: 'TASK-001',
-    description: 'Assignment for Task TASK-001',
+    description: TASK_001_ASSIGNMENT,
     status: 'Closed',
     priority: 'Medium',
     creation: '2026-01-04 09:00:00',
@@ -146,7 +153,7 @@ const todoFixtures: FrappeToDo[] = [
   {
     name: 'TODO-004',
     doctype: 'ToDo',
-    allocated_to: 'jane@example.com',
+    allocated_to: JANE,
     reference_type: 'Task',
     reference_name: 'TASK-999',
     description: 'Assignment for Task TASK-999',
@@ -159,7 +166,7 @@ const todoFixtures: FrappeToDo[] = [
     allocated_to: 'ghost@example.com',
     reference_type: 'Task',
     reference_name: 'TASK-001',
-    description: 'Assignment for Task TASK-001',
+    description: TASK_001_ASSIGNMENT,
     status: 'Cancelled',
     creation: '2026-01-03 08:00:00',
   },
@@ -176,14 +183,15 @@ const userFixtures: FrappeUserDoc[] = [
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeAssignmentMockFetch) {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeAssignmentMockFetch?: boolean };
+  if (w.__frappeAssignmentMockFetch === true) {
     return;
   }
   w.__frappeAssignmentMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -205,7 +213,7 @@ const userFixtures: FrappeUserDoc[] = [
           })),
         });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: assignmentMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -238,12 +246,14 @@ const makeFixtures = () =>
     DocType: doctypeFixtures,
   });
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype and its records, not a task marker */
 /**
  * Two open assignees + one completed. The cancelled ToDo (TODO-005) and the
  * other document's ToDo (TODO-004) must not render. The add flow's user
  * search is served hermetically via the in-story search_link mock; the Live
  * story exercises the real bench search.
  */
+/* oxlint-enable sonarjs/todo-tag */
 export const Main = () => (
   <FrappeProvider
     baseURL={MOCK_HOST}
@@ -306,17 +316,22 @@ export const WithoutProvider = () => (
   />
 );
 
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 /** Fixture provider whose list fetch never resolves — holds the ToDo subscription in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the base provider's instance method; it needs no state to never settle
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the story in its loading state
     return await new Promise(() => {});
   }
 }
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype and its records, not a task marker */
 /**
  * ToDo subscription still syncing — skeleton chrome, never empty chrome
  * (LC-20 / DG-ST-02).
  */
+/* oxlint-enable sonarjs/todo-tag */
 export const Loading = () => (
   <FrappeProvider
     baseURL={MOCK_HOST}
@@ -343,9 +358,11 @@ export const LoadError = () => (
 );
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Live bench story — real ToDo documents over the live data path
 // ---------------------------------------------------------------------------
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype and its records, not a task marker */
 /**
  * Live assignments against the real bench: subscribes to the ToDo doctype
  * filtered by reference_type/reference_name, so assignments made in the
@@ -353,6 +370,7 @@ export const LoadError = () => (
  * searches real users via `search_link` through the Storybook proxy.
  * Falls back to fixtures when the bench is down.
  */
+/* oxlint-enable sonarjs/todo-tag */
 export const Live = (args: { doctype?: string; docname?: string }) => (
   <FrappeStoryProvider fixtures={makeFixtures()}>
     <FrappeAssignment

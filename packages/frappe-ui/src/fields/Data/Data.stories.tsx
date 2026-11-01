@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Data } from '.';
 import type { DataProps } from '.';
@@ -36,7 +36,7 @@ export default {
   },
 };
 
-function ControlledData(props: Omit<DataProps, 'onChange'>) {
+const ControlledData = (props: Omit<DataProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Data
@@ -48,7 +48,7 @@ function ControlledData(props: Omit<DataProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Default = (args: DataProps) => <ControlledData {...args} />;
 Default.args = {
@@ -121,7 +121,7 @@ const dataCellColumns: DataTableColumn<DataCellRow>[] = [
   } as DataTableColumn<DataCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(dataCellRows);
   return (
     <YStack
@@ -129,17 +129,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={dataCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={dataCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as DataCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Data cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Data") — chromeless in-cell input. */
 export const InTable = () => (

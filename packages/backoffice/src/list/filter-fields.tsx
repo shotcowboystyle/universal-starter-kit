@@ -1,6 +1,6 @@
 /**
  * The filterable-field vocabulary — moved to
- * `@repo/frappe-ui/src/filterFields` (MPO-15), where it is the
+ * `@repo/frappe-ui/src/filter-fields` (MPO-15), where it is the
  * one vocabulary both list stacks read: this desk chrome and FrappeTable's
  * toolbar (`docFieldsToFilterFields`). Re-exported here so the barrel and
  * the `@repo/backoffice/src/list/filter-fields` deep import

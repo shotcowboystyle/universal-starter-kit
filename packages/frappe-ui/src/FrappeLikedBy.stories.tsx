@@ -1,10 +1,12 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider, LiveToDoGate, frappeStoriesLive } from './frappe-story-target';
+import type { FrappeUserDoc } from './frappe-users';
 import { FrappeLikedBy } from './FrappeLikedBy';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider, LiveToDoGate, frappeStoriesLive } from './frappeStoryTarget';
-import type { FrappeUserDoc } from './frappeUsers';
+
+const JANE = 'jane@example.com';
 
 export default {
   title: 'FrappeUI/FrappeLikedBy',
@@ -35,40 +37,57 @@ export default {
 const MOCK_HOST = 'https://frappelikedby.mock.test';
 const ERR_HOST = 'https://forbidden.frappelikedby.mock.test';
 
-function likedByMetaRaw(name: string) {
-  return {
-    name,
-    module: name === 'User' ? 'Core' : name === 'ToDo' ? 'Desk' : 'Projects',
-    title_field: name === 'User' ? 'full_name' : 'subject',
-    fields: [
-      { fieldname: 'subject', fieldtype: 'Data', label: 'Subject', in_list_view: 1 },
-      { fieldname: '_liked_by', fieldtype: 'Text', label: 'Liked By', hidden: 1 },
-      { fieldname: 'full_name', fieldtype: 'Data', label: 'Full Name' },
-      { fieldname: 'user_image', fieldtype: 'Attach Image', label: 'User Image', hidden: 1 },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const moduleFor = (name: string): string => {
+  if (name === 'User') {
+    return 'Core';
+  }
+  return name === 'ToDo' ? 'Desk' : 'Projects';
+};
+
+const likedByMetaRaw = (name: string) => ({
+  name,
+  module: moduleFor(name),
+  title_field: name === 'User' ? 'full_name' : 'subject',
+  fields: [
+    { fieldname: 'subject', fieldtype: 'Data', label: 'Subject', in_list_view: 1 },
+    { fieldname: '_liked_by', fieldtype: 'Text', label: 'Liked By', hidden: 1 },
+    { fieldname: 'full_name', fieldtype: 'Data', label: 'Full Name' },
+    { fieldname: 'user_image', fieldtype: 'Attach Image', label: 'User Image', hidden: 1 },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeLikedByMockFetch?: boolean } = window;
   if (w.__frappeLikedByMockFetch) {
     return;
   }
   w.__frappeLikedByMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -78,7 +97,7 @@ function jsonResponse(body: unknown, status = 200): Response {
         const doctype = url.searchParams.get('doctype') ?? 'Task';
         return jsonResponse({ docs: [likedByMetaRaw(decodeURIComponent(doctype))] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: likedByMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -100,7 +119,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 const userFixtures: FrappeUserDoc[] = [
   { name: 'Administrator', doctype: 'User', full_name: 'Administrator' },
-  { name: 'jane@example.com', doctype: 'User', full_name: 'Jane Doe' },
+  { name: JANE, doctype: 'User', full_name: 'Jane Doe' },
   { name: 'john@example.com', doctype: 'User', full_name: 'John Smith' },
   { name: 'maria@example.com', doctype: 'User', full_name: 'Maria Garcia' },
   { name: 'amit@example.com', doctype: 'User', full_name: 'Amit Patel' },
@@ -113,7 +132,7 @@ const makeFixtures = () =>
       {
         name: 'TASK-001',
         doctype: 'Task',
-        _liked_by: JSON.stringify(['Administrator', 'jane@example.com']),
+        _liked_by: JSON.stringify(['Administrator', JANE]),
       },
       { name: 'TASK-002', doctype: 'Task', _liked_by: '[]' },
       {
@@ -121,7 +140,7 @@ const makeFixtures = () =>
         doctype: 'Task',
         _liked_by: JSON.stringify([
           'Administrator',
-          'jane@example.com',
+          JANE,
           'john@example.com',
           'maria@example.com',
           'amit@example.com',
@@ -138,7 +157,7 @@ const makeFixtures = () =>
       {
         name: 'TODO-LIVE-001',
         doctype: 'ToDo',
-        _liked_by: JSON.stringify(['Administrator', 'jane@example.com']),
+        _liked_by: JSON.stringify(['Administrator', JANE]),
       },
     ],
     User: userFixtures,
@@ -241,10 +260,14 @@ export const WithoutProvider = () => (
  * single-doc path), so that must hang too — getList alone only covers list
  * subscriptions. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getDoc(): Promise<never> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a doc fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
 }

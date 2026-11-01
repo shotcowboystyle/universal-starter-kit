@@ -10,11 +10,11 @@ import { Chip, DropdownMenu, Popover, PopoverContent, XStack, YStack } from '@re
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { filterTupleLabel } from '../filterFields';
+import { filterTupleLabel } from '../filter-fields';
 import { dialogBodyMinWidth, overlayListMaxHeight } from '../measures';
 
-import type { ReportColumnDef, ReportFilters } from './reportViewModel';
-import type { SavedReportSummary } from './savedReports';
+import type { ReportColumnDef, ReportFilters } from './report-view-model';
+import type { SavedReportSummary } from './saved-reports';
 
 export interface ReportViewToolbarProps {
   /** Every pickable column (reportColumnsFromMeta). */
@@ -44,7 +44,7 @@ export interface ReportViewToolbarProps {
   exportDisabled?: boolean;
 }
 
-export function ReportViewToolbar({
+export const ReportViewToolbar = ({
   columns,
   selected,
   onToggleColumn,
@@ -62,15 +62,17 @@ export function ReportViewToolbar({
   onDeleteReport,
   onExport,
   exportDisabled,
-}: ReportViewToolbarProps) {
+}: ReportViewToolbarProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveName, setSaveName] = useState('');
 
   const selectedSet = new Set(selected);
-  const groupByColumn = groupBy ? columns.find((column) => column.fieldname === groupBy) : undefined;
-  const currentSummary = currentReport ? savedReports.find((report) => report.name === currentReport) : undefined;
+  const hasGroupBy = Boolean(groupBy);
+  const hasCurrentReport = Boolean(currentReport);
+  const groupByColumn = hasGroupBy ? columns.find((column) => column.fieldname === groupBy) : undefined;
+  const currentSummary = hasCurrentReport ? savedReports.find((report) => report.name === currentReport) : undefined;
 
   const handleSaveAs = () => {
     const name = saveName.trim();
@@ -145,7 +147,7 @@ export function ReportViewToolbar({
         </DropdownMenu.Trigger>
         <DropdownMenu.Content maxHeight={overlayListMaxHeight}>
           <DropdownMenu.CheckboxItem
-            checked={!groupBy}
+            checked={!hasGroupBy}
             closeOnSelect
             onCheckedChange={() => {
               onGroupByChange(null);
@@ -185,7 +187,7 @@ export function ReportViewToolbar({
           </DropdownMenu.Trigger>
           <DropdownMenu.Content maxHeight={overlayListMaxHeight}>
             <DropdownMenu.CheckboxItem
-              checked={!currentReport}
+              checked={!hasCurrentReport}
               closeOnSelect
               onCheckedChange={() => {
                 onSelectReport(null);
@@ -292,6 +294,7 @@ export function ReportViewToolbar({
       {/* Base filter chips (?f= deep link) */}
       {baseFilters.map((tuple, index) => (
         <Chip
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- filter tuples carry no id and may repeat a field
           key={`${tuple[0]}-${index}`}
           size="$2"
           variant="subtle"
@@ -334,4 +337,4 @@ export function ReportViewToolbar({
       )}
     </XStack>
   );
-}
+};

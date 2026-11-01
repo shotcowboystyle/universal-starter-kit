@@ -7,12 +7,16 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Input as FormsInput } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useProps } from 'tamagui';
 
-export type DataProps<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
-> = Omit<
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+type FieldData = Record<string, unknown>;
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms Input
+type PassThroughProps = Record<string, unknown>;
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+export type DataProps<TData extends FieldData = FieldData, TName extends string = string> = Omit<
   FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown, unknown, string>,
   // "onChange": FormFieldProps carries the DOM ChangeEventHandler from
   // YStackProps; this field exposes a canonical value callback instead.
@@ -26,6 +30,7 @@ export type DataProps<
   > & {
     value?: string;
     onChange?: (value: string) => void;
+    // oxlint-disable-next-line sonarjs/max-union-size -- one member per Frappe text fieldtype this adapter renders
     type?: 'data' | 'small_text' | 'long_text' | 'text_editor';
     placeholder?: string;
     disabled?: boolean;
@@ -33,29 +38,28 @@ export type DataProps<
     skeleton?: boolean;
     compact?: boolean;
     maxLength?: number;
-    inputProps?: Record<string, unknown>;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms Input
+    inputProps?: PassThroughProps;
   };
 
-export function Data<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Data = <TData extends FieldData = FieldData, TName extends string = string>(
   props: DataProps<TData, TName>,
-) {
+) => {
   const {
     defaultValue,
     form,
     inputProps,
-    _mode,
     name,
     onBlur,
     onChange,
     placeholder,
-    _preserveValue,
     validators,
     disabled,
     value,
     type = 'data',
     maxLength,
     ...fieldProps
-  } = useProps(props) as DataProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
   const isMultiline = type === 'long_text' || type === 'text_editor' || type === 'small_text';
 
   return (
@@ -81,7 +85,9 @@ export function Data<TData extends Record<string, unknown> = Record<string, unkn
       disabled={disabled}
       multiline={isMultiline}
       maxLength={maxLength ?? (isMultiline ? undefined : 140)}
-      inputProps={inputProps as any}
+      // SAFETY: inputProps is the consumer's pass-through bag, forwarded to Input unchanged as before
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      inputProps={inputProps as ComponentProps<typeof FormsInput>['inputProps']}
     />
   );
-}
+};

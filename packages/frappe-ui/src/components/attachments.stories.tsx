@@ -1,8 +1,8 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { Attachments } from './attachments';
 import type { FrappeFile } from './attachments';
@@ -34,58 +34,62 @@ export default {
 
 const MOCK_HOST = 'https://frappeattachments.mock.test';
 
-function fileMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Core',
-    title_field: 'file_name',
-    fields: [
-      { fieldname: 'file_name', fieldtype: 'Data', label: 'File Name', in_list_view: 1 },
-      { fieldname: 'file_url', fieldtype: 'Attach', label: 'File URL' },
-      { fieldname: 'file_size', fieldtype: 'Int', label: 'File Size', in_list_view: 1 },
-      { fieldname: 'file_type', fieldtype: 'Data', label: 'File Type' },
-      { fieldname: 'is_private', fieldtype: 'Check', label: 'Is Private' },
-      {
-        fieldname: 'attached_to_doctype',
-        fieldtype: 'Link',
-        label: 'Attached To DocType',
-        options: 'DocType',
-      },
-      { fieldname: 'attached_to_name', fieldtype: 'Data', label: 'Attached To Name' },
-      { fieldname: 'attached_to_field', fieldtype: 'Data', label: 'Attached To Field' },
-      { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
-      { fieldname: 'modified', fieldtype: 'Datetime', label: 'Last Modified' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const fileMetaRaw = (name: string) => ({
+  name,
+  module: 'Core',
+  title_field: 'file_name',
+  fields: [
+    { fieldname: 'file_name', fieldtype: 'Data', label: 'File Name', in_list_view: 1 },
+    { fieldname: 'file_url', fieldtype: 'Attach', label: 'File URL' },
+    { fieldname: 'file_size', fieldtype: 'Int', label: 'File Size', in_list_view: 1 },
+    { fieldname: 'file_type', fieldtype: 'Data', label: 'File Type' },
+    { fieldname: 'is_private', fieldtype: 'Check', label: 'Is Private' },
+    {
+      fieldname: 'attached_to_doctype',
+      fieldtype: 'Link',
+      label: 'Attached To DocType',
+      options: 'DocType',
+    },
+    { fieldname: 'attached_to_name', fieldtype: 'Data', label: 'Attached To Name' },
+    { fieldname: 'attached_to_field', fieldtype: 'Data', label: 'Attached To Field' },
+    { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
+    { fieldname: 'modified', fieldtype: 'Datetime', label: 'Last Modified' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- serializes any mock payload; the story owns its shape
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const urlOf = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeAttachmentsMockFetch) {
+  const w: Window & { __frappeAttachmentsMockFetch?: boolean } = window;
+  if (w.__frappeAttachmentsMockFetch === true) {
     return;
   }
   w.__frappeAttachmentsMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = urlOf(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'File';
         return jsonResponse({ docs: [fileMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: fileMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -214,7 +218,9 @@ export const WithoutProvider = () => (
 
 /** Fixture provider whose list fetch never resolves — holds the File subscription in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a promise that never settles holds the subscription in loading
     return await new Promise(() => {});
   }
 }
@@ -240,6 +246,7 @@ class FailingFixtureProvider extends InMemoryFixtureProvider {
   // Promise<never[]> stays assignable to the generic base getList (same
   // pattern as PendingFixtureProvider above); ReturnType<> erased the type
   // parameter to its constraint and broke FixtureProvider conformance.
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
     throw new Error('File subscription failed');
   }

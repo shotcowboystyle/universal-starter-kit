@@ -11,7 +11,7 @@ export interface RecordPagerEntry {
   onPress: () => void;
 }
 
-function PagerButton({
+const PagerButton = ({
   direction,
   entry,
   testID,
@@ -19,10 +19,11 @@ function PagerButton({
   direction: 'prev' | 'next';
   entry: RecordPagerEntry;
   testID?: string;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps: nested } = useResolvedKnobs({ compact: true });
   const isPrev = direction === 'prev';
+  const handlePress = entry.onPress;
   const avatar = (
     <Avatar
       src={entry.image}
@@ -37,7 +38,7 @@ function PagerButton({
       minHeight={sizeRecipeEscape(56, "pager button: room for the neighbor's two-line label beside its avatar")}
       flexShrink={1}
       minWidth={0}
-      onPress={entry.onPress}
+      onPress={handlePress}
       icon={isPrev ? <ArrowLeftIcon size={18} /> : undefined}
       iconAfter={isPrev ? undefined : <ArrowRightIcon size={18} />}
       testID={testID}>
@@ -62,7 +63,7 @@ function PagerButton({
             gap="$1.5"
             alignItems="baseline"
             minWidth={0}>
-            {entry.code ? (
+            {entry.code !== undefined && entry.code !== '' ? (
               <Text
                 {...nested.label}
                 color="$color10"
@@ -82,10 +83,10 @@ function PagerButton({
       </XStack>
     </Button>
   );
-}
+};
 
 /** The records either side of this one in the list's order, by face and name. */
-export function RecordPager({
+export const RecordPager = ({
   prev,
   next,
   testID,
@@ -93,7 +94,7 @@ export function RecordPager({
   prev: RecordPagerEntry | null;
   next: RecordPagerEntry | null;
   testID?: string;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   if (!prev && !next) {
     return null;
@@ -107,7 +108,7 @@ export function RecordPager({
         <PagerButton
           direction="prev"
           entry={prev}
-          testID={testID && `${testID}-prev`}
+          testID={testID === undefined || testID === '' ? testID : `${testID}-prev`}
         />
       ) : (
         <YStack />
@@ -116,11 +117,11 @@ export function RecordPager({
         <PagerButton
           direction="next"
           entry={next}
-          testID={testID && `${testID}-next`}
+          testID={testID === undefined || testID === '' ? testID : `${testID}-next`}
         />
       ) : (
         <YStack />
       )}
     </XStack>
   );
-}
+};

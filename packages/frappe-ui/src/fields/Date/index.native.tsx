@@ -18,9 +18,9 @@ import { Modal, Pressable, StyleSheet, useColorScheme, useWindowDimensions, View
 import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { Text, View, XStack, YStack, useProps, useTheme, useThemeName } from 'tamagui';
 
-import { useKeyboardInset } from '../../shared/useKeyboardInset';
+import { useKeyboardInset } from '../../shared/use-keyboard-inset';
 
-import { datePickerHeight, dateSheetBottomPadding, dateSheetMaxHeight } from './sheetKeyboard';
+import { datePickerHeight, dateSheetBottomPadding, dateSheetMaxHeight } from './sheet-keyboard';
 import type { DateProps } from './types';
 import { fromFrappeDateValue, toFrappeDateValue } from './wire';
 
@@ -40,7 +40,17 @@ type FieldType = 'date' | 'datetime' | 'time';
  * cells and the timeline. A picker is an editing surface, so the year is
  * always shown.
  */
-function formatDisplayValue(value: string, type: FieldType): string {
+const isErrorShown = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+const defaultPlaceholder = (type: FieldType): string => {
+  if (type === 'time') {
+    return 'Select time';
+  }
+  return type === 'datetime' ? 'Select date & time' : 'Select date';
+};
+
+const formatDisplayValue = (value: string, type: FieldType): string => {
   if (!value) {
     return '';
   }
@@ -56,25 +66,27 @@ function formatDisplayValue(value: string, type: FieldType): string {
   } catch {
     return value;
   }
-}
+};
 
 /**
  * The form branch stores what the picker committed (a `Date`, matching the
  * web half); the standalone branch is handed the Frappe wire string. Both
  * arrive here so the rest of the component reads one shape.
  */
-function toWireValue(raw: unknown, type: FieldType): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- form state holds the committed Date, the standalone prop a wire string; this normalizes both
+const toWireValue = (raw: unknown, type: FieldType): string => {
   if (raw == null || raw === '') {
     return '';
   }
   if (raw instanceof Date) {
     return Number.isNaN(raw.getTime()) ? '' : toFrappeDateValue(raw, type);
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- what remains is a wire string (or a number from loose form state); String() passes it through
   return String(raw);
-}
+};
 
 /** What the picker opens on: the current value, else now. */
-function seedDate(wire: string, type: FieldType): Date {
+const seedDate = (wire: string, type: FieldType): Date => {
   if (!wire) {
     return new Date();
   }
@@ -84,7 +96,7 @@ function seedDate(wire: string, type: FieldType): Date {
   } catch {
     return new Date();
   }
-}
+};
 
 /**
  * The OS picker renders itself, so the only styling channel it exposes is
@@ -92,14 +104,14 @@ function seedDate(wire: string, type: FieldType): Date {
  * Read the app theme first and fall back to the OS scheme, the same order
  * the native rich-text editor uses.
  */
-function useNativePickerScheme(): 'light' | 'dark' {
+const useNativePickerScheme = (): 'light' | 'dark' => {
   const themeName = useThemeName();
   const osScheme = useColorScheme();
   if (themeName) {
-    return String(themeName).startsWith('dark') ? 'dark' : 'light';
+    return themeName.startsWith('dark') ? 'dark' : 'light';
   }
   return osScheme === 'dark' ? 'dark' : 'light';
-}
+};
 
 /**
  * Native `Date` field for iOS and Android.
@@ -110,9 +122,17 @@ function useNativePickerScheme(): 'light' | 'dark' {
  * written as `function Date` so the global `Date` constructor stays reachable
  * inside this module.
  */
-function DateField<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+// oxlint-disable-next-line react-doctor/no-giant-component -- one OS-picker state machine shared by the Android dialog and the iOS sheet; splitting it is a separate refactor
+const DateField = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: DateProps<TData, TName>,
-) {
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain DateProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- useProps widens the bag; extra keys are ignored
+  const resolvedProps = useProps(props) as DateProps<TData, TName> & Record<string, unknown>;
   const {
     compact,
     defaultValue,
@@ -121,6 +141,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
     form,
     helperText,
     id: idProp,
+    // oxlint-disable-next-line sonarjs/no-unused-vars -- destructured out: the OS picker has no host input to receive them
     inputProps: _inputProps,
     label,
     labelProps,
@@ -139,13 +160,14 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
     type = 'date',
     validators,
     value,
-  } = useProps(props) as DateProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const themeVariant = useNativePickerScheme();
   const theme = useTheme();
-  const accentColor = theme.accentBackground?.val;
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- Tamagui types a theme value's `val` as any; the accent token resolves to a color string
+  const accentColor: string | undefined = theme.accentBackground?.val;
   // MPO-64 leftover: the sheet must end ABOVE the keyboard, not run under it.
   const keyboardInset = useKeyboardInset();
   const { height: windowHeight } = useWindowDimensions();
@@ -156,7 +178,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date | null>(null);
 
-  const fieldType = type as FieldType;
+  const fieldType: FieldType = type;
   const isIOS = platform.isIos;
   const sheetBottomPadding = dateSheetBottomPadding(keyboardInset, isIOS);
   const pickerMode: 'date' | 'time' =
@@ -167,42 +189,47 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
   // Cancel/Done — `compact` would be a field that opens a second popover.
   const iosDisplay = pickerMode === 'time' ? 'spinner' : 'inline';
 
-  function closePicker() {
+  const closePicker = () => {
     setShowPicker(false);
     setShowTimePicker(false);
     setTempDate(null);
-  }
+  };
 
-  function renderControl(wire: string, hasError: boolean, commit?: (value: unknown) => void, blur?: () => void) {
+  // oxlint-disable-next-line eslint/complexity -- JSX visibility switches for the Android dialog and the iOS sheet; the handlers are already split out
+  const renderControl = (
+    wire: string,
+    hasError: boolean,
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- TanStack's handleChange is typed by the form's value type, which this field does not own
+    commit?: (value: unknown) => void,
+    blur?: () => void,
+  ) => {
     const seed = seedDate(wire, fieldType);
     const displayValue = formatDisplayValue(wire, fieldType);
-    const resolvedPlaceholder =
-      placeholder ??
-      (fieldType === 'time' ? 'Select time' : fieldType === 'datetime' ? 'Select date & time' : 'Select date');
+    const resolvedPlaceholder = placeholder ?? defaultPlaceholder(fieldType);
 
-    function emit(picked: Date) {
+    const emit = (picked: Date) => {
       // No `previousValue`: the native picker chooses date and time itself,
       // so there is no earlier time part to preserve (the web half's case).
       commit?.(picked);
-      (onChange as ((v: string) => void) | undefined)?.(toFrappeDateValue(picked, fieldType));
-    }
+      onChange?.(toFrappeDateValue(picked, fieldType));
+    };
 
-    function openPicker() {
+    const openPicker = () => {
       if (disabled || readOnly) {
         return;
       }
       setTempDate(seed);
       setShowPicker(true);
       setShowTimePicker(false);
-    }
+    };
 
-    function cancel() {
+    const cancel = () => {
       closePicker();
       blur?.();
-    }
+    };
 
     /** Android commits on the dialog's own OK; datetime runs date then time. */
-    function handleAndroidChange(event: DateTimePickerEvent, selected?: Date) {
+    const handleAndroidChange = (event: DateTimePickerEvent, selected?: Date) => {
       if (event.type === 'dismissed') {
         cancel();
         return;
@@ -232,10 +259,10 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
       emit(picked);
       closePicker();
       blur?.();
-    }
+    };
 
     /** iOS stages into `tempDate`; the sheet's Done commits. */
-    function handleIOSChange(_event: DateTimePickerEvent, selected?: Date) {
+    const handleIOSChange = (_event: DateTimePickerEvent, selected?: Date) => {
       if (!selected) {
         return;
       }
@@ -252,13 +279,13 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
         return;
       }
       setTempDate(selected);
-    }
+    };
 
-    function confirm() {
+    const confirm = () => {
       emit(tempDate ?? seed);
       closePicker();
       blur?.();
-    }
+    };
 
     return (
       <YStack {...knobProps.gap}>
@@ -270,6 +297,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
           {...knobProps.borderRadius}
           borderColor={hasError ? '$red8' : '$borderColor'}
           backgroundColor={disabled ? '$color4' : '$background'}
+          // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is a ReactNode; only a string can be the accessible name
           aria-label={typeof label === 'string' ? label : undefined}
           aria-invalid={hasError || undefined}
           aria-required={required ?? undefined}>
@@ -385,7 +413,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
         )}
       </YStack>
     );
-  }
+  };
 
   if (skeleton) {
     return (
@@ -403,7 +431,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -418,7 +446,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
         // LC-40: FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        {renderControl(toWireValue(value, fieldType), !!errorProp, undefined, onBlur)}
+        {renderControl(toWireValue(value, fieldType), isErrorShown(errorProp), undefined, onBlur)}
       </FieldLayout>
     );
   }
@@ -428,7 +456,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
       defaultValue={defaultValue}
       form={resolvedForm}
       mode={mode}
-      name={name as string}
+      name={name}
       preserveValue={preserveValue}
       validators={resolvedValidators}>
       {(field) => {
@@ -446,7 +474,7 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
             disabled={disabled}>
             {renderControl(
               toWireValue(value ?? field.state.value, fieldType),
-              !!resolvedError,
+              isErrorShown(resolvedError),
               mergeFieldHandler(field, 'handleChange'),
               mergeFieldHandler(field, 'handleBlur', onBlur),
             )}
@@ -455,6 +483,6 @@ function DateField<TData extends Record<string, unknown> = Record<string, unknow
       }}
     </Field>
   );
-}
+};
 
 export { DateField as Date };

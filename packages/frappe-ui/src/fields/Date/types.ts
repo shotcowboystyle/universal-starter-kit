@@ -11,6 +11,7 @@ import type { DeepKeys } from '@tanstack/form-core';
  * neither half can import it from the other without resolving to itself.
  */
 export type DateProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -37,5 +38,6 @@ export type DateProps<
     placeholder?: string;
     minDate?: Date;
     maxDate?: Date;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open-ended prop bag spread onto the underlying input
     inputProps?: Record<string, unknown>;
   };

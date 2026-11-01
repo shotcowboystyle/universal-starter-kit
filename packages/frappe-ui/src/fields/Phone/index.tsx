@@ -5,9 +5,11 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { PhoneInput } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useProps } from 'tamagui';
 
 export type PhoneFieldProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -30,9 +32,16 @@ export type PhoneFieldProps<
     placeholder?: string;
   };
 
-export function Phone<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Phone = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: PhoneFieldProps<TData, TName>,
-) {
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain PhoneFieldProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- useProps widens the bag; extra keys flow into fieldProps
+  const resolvedProps = useProps(props) as PhoneFieldProps<TData, TName> & Record<string, unknown>;
   const {
     defaultValue,
     form,
@@ -46,13 +55,13 @@ export function Phone<TData extends Record<string, unknown> = Record<string, unk
     value,
     defaultCountry,
     ...fieldProps
-  } = useProps(props) as PhoneFieldProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
-  const phoneProps: any = {
+  const phoneProps: ComponentProps<typeof PhoneInput> = {
     name,
     form,
     validators,
-    defaultValue: defaultValue!,
+    defaultValue,
     label: fieldProps.label,
     labelProps: fieldProps.labelProps,
     error: fieldProps.error,
@@ -71,4 +80,4 @@ export function Phone<TData extends Record<string, unknown> = Record<string, unk
   };
 
   return <PhoneInput {...phoneProps} />;
-}
+};

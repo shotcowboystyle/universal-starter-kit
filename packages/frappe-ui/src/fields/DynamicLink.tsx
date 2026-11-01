@@ -5,6 +5,7 @@
  * adapter. Do not fork tamagui Select chrome. R10: no frappe.ui.form.on.
  */
 import { Select as FormsSelect } from '@repo/forms';
+import type { FrappeConnectionConfig } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
@@ -21,7 +22,7 @@ export interface DynamicLinkProps {
   disabled?: boolean;
   required?: boolean;
   baseURL?: string;
-  auth?: any;
+  auth?: FrappeConnectionConfig['auth'];
   error?: string;
   helperText?: string;
   readOnly?: boolean;
@@ -29,13 +30,15 @@ export interface DynamicLinkProps {
   compact?: boolean;
 }
 
-export function DynamicLink({
+const NO_DOCTYPES: string[] = [];
+
+export const DynamicLink = ({
   label,
   value,
   onChange,
   doctypeFieldValue,
   onDoctypeChange,
-  doctypes = [],
+  doctypes = NO_DOCTYPES,
   disabled = false,
   required = false,
   baseURL,
@@ -45,7 +48,7 @@ export function DynamicLink({
   readOnly = false,
   skeleton = false,
   compact = false,
-}: DynamicLinkProps) {
+}: DynamicLinkProps) => {
   const { knobProps } = useResolvedKnobs();
   const [selectedDoctype, setSelectedDoctype] = useState<string>(doctypeFieldValue ?? '');
   const isLocked = disabled || readOnly;
@@ -97,4 +100,4 @@ export function DynamicLink({
       ) : null}
     </YStack>
   );
-}
+};

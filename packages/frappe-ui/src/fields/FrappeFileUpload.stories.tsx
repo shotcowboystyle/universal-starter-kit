@@ -6,9 +6,9 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../fieldRegistry';
+import { fieldtypeToTableField } from '../field-registry';
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { FileUpload } from './FileUpload';
 import type { FileUploadProps } from './FileUpload';
@@ -53,9 +53,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = FileUploadProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <FileUpload
@@ -67,7 +68,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 const withProvider = (node: ReactNode) => (
   <FrappeProvider
@@ -133,6 +134,7 @@ interface FileUploadRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<FileUploadRow[]>([
       { id: '1', label: 'Alpha', value: tinyPng },

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useProps } from 'tamagui';
 
 export type ToggleGroupFieldProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -37,10 +38,16 @@ export type ToggleGroupFieldProps<
     children?: ReactNode;
   };
 
-export function ToggleGroupField<
+export const ToggleGroupField = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: ToggleGroupFieldProps<TData, TName>) {
+>(
+  props: ToggleGroupFieldProps<TData, TName>,
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain ToggleGroupFieldProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above; extra keys flow into fieldProps
+  const resolvedProps = useProps(props) as ToggleGroupFieldProps<TData, TName> & Record<string, unknown>;
   const {
     defaultValue,
     form,
@@ -58,7 +65,7 @@ export function ToggleGroupField<
     orientation,
     children,
     ...fieldProps
-  } = useProps(props) as ToggleGroupFieldProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
   return (
     <FormsToggleGroup
@@ -78,7 +85,7 @@ export function ToggleGroupField<
       size={fieldProps.size}
       type={type}
       value={value}
-      onValueChange={onChange}
+      onChange={onChange}
       onBlur={onBlur}
       disabled={disabled}
       disabledReason={disabledReason}
@@ -87,4 +94,4 @@ export function ToggleGroupField<
       {children}
     </FormsToggleGroup>
   );
-}
+};

@@ -1,7 +1,7 @@
 import { action } from '@repo/storybook';
 import React, { useState } from 'react';
 
-import type { FieldSchema } from '../fieldRegistry';
+import type { FieldSchema } from '../field-registry';
 
 import { SchemaWizard } from './SchemaWizard';
 
@@ -38,8 +38,14 @@ const schema: FormSchema = {
   ],
 };
 
-function StatefulWizard(props: Partial<React.ComponentProps<typeof SchemaWizard>>) {
-  const [doc, setDoc] = useState<Record<string, unknown>>({
+type WizardProps = React.ComponentProps<typeof SchemaWizard>;
+
+const discardEdit = () => {
+  // Static-status stories discard edits.
+};
+
+const StatefulWizard = (props: Partial<WizardProps>) => {
+  const [doc, setDoc] = useState<WizardProps['doc']>({
     source: 'backup-2026-08-27-0300',
     volume: 'vol-restore-2026-08',
     region: 'eu-central',
@@ -60,7 +66,7 @@ function StatefulWizard(props: Partial<React.ComponentProps<typeof SchemaWizard>
       {...props}
     />
   );
-}
+};
 
 export const Main = () => <StatefulWizard />;
 Main.storyName = 'Ready';
@@ -69,7 +75,7 @@ export const Loading = () => (
   <SchemaWizard
     schema={schema}
     doc={{}}
-    setValue={() => {}}
+    setValue={discardEdit}
     completeLabel="Restore backup"
     status="loading"
   />
@@ -79,17 +85,18 @@ export const Empty = () => (
   <SchemaWizard
     schema={schema}
     doc={{}}
-    setValue={() => {}}
+    setValue={discardEdit}
     completeLabel="Restore backup"
     status="empty"
   />
 );
 
+// oxlint-disable-next-line sonarjs/no-globals-shadowing, sonarjs/no-built-in-override -- Storybook keys the story by its export name, the status it shows
 export const Error = () => (
   <SchemaWizard
     schema={schema}
     doc={{}}
-    setValue={() => {}}
+    setValue={discardEdit}
     completeLabel="Restore backup"
     status="error"
     errorTitle="Could not load this flow"

@@ -1,6 +1,6 @@
 /**
  * `fetch_from` map + lock helpers — moved to
- * `@repo/frappe-ui/src/formEngine/fetchFrom` (MPO-15).
+ * `@repo/frappe-ui/src/formEngine/fetch-from` (MPO-15).
  * Re-exported here so existing imports keep resolving.
  */
 

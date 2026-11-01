@@ -13,7 +13,7 @@ export type { TextEditorProps } from './types';
  * `prosemirror` (web-only DOM) out of the Hermes bundle while preserving the
  * same HTML `value` / `onChange(html)` contract as the web `TextEditor`.
  */
-export function TextEditor({
+export const TextEditor = ({
   label,
   value,
   onChange,
@@ -27,15 +27,15 @@ export function TextEditor({
   placeholder,
   minHeight = 200,
   ...rest
-}: TextEditorProps) {
+}: TextEditorProps) => {
   const resolvedMinHeight = minHeight ?? (compact ? 100 : 200);
   return (
     <YStack {...rest}>
       <RichTextEditor
         label={label}
         value={value}
-        onChange={(v: any) => {
-          onChange(v);
+        onChange={(html) => {
+          onChange(html);
         }}
         disabled={disabled ?? readOnly}
         required={required}
@@ -49,4 +49,4 @@ export function TextEditor({
       />
     </YStack>
   );
-}
+};

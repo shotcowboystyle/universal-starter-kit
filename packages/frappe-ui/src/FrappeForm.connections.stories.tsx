@@ -6,7 +6,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { rosterFixtureData, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
 import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
 
-import type { FrappeConnection } from './frappeConnections';
+import type { FrappeConnection } from './frappe-connections';
 import { FrappeForm } from './FrappeForm';
 import type { FrappeConnectionRows } from './FrappeForm';
 import { FrappeProvider } from './FrappeProvider';
@@ -56,7 +56,7 @@ export const ConnectionsTab = () => (
   </FrappeProvider>
 );
 
-function PokemonDetail({ doc, connections }: { doc: Partial<RosterPokemon>; connections: FrappeConnectionRows }) {
+const PokemonDetail = ({ doc, connections }: { doc: Partial<RosterPokemon>; connections: FrappeConnectionRows }) => {
   const { knobProps } = useResolvedKnobs();
   const types = connections['Pokemon Poke Type'] ?? [];
   const moves = connections['Pokemon Poke Move'] ?? [];
@@ -80,7 +80,7 @@ function PokemonDetail({ doc, connections }: { doc: Partial<RosterPokemon>; conn
       </Text>
     </YStack>
   );
-}
+};
 
 export const DetailPage = () => (
   <FrappeProvider

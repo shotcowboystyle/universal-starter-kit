@@ -4,9 +4,12 @@ import type { DataTableColumn } from '@repo/table';
 // Catalog Text (G-15 story honesty / D-05).
 import { Text } from '@repo/ui';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 import { FrappeTable } from './FrappeTable';
+
+const CUSTOMER_NAME_LABEL = 'Customer Name';
+const UNITED_STATES = 'United States';
 
 export default {
   title: 'FrappeUI/FrappeTable',
@@ -35,56 +38,66 @@ export default {
 const MOCK_HOST = 'https://frappetable.mock.test';
 const ERR_HOST = 'https://forbidden.frappetable.mock.test';
 
-function customerMetaRaw(name: string) {
-  return {
-    name,
-    doctype: 'DocType',
-    module: 'Selling',
-    title_field: 'customer_name',
-    fields: [
-      { fieldname: 'customer_name', fieldtype: 'Data', label: 'Customer Name', in_list_view: 1 },
-      {
-        fieldname: 'customer_type',
-        fieldtype: 'Select',
-        label: 'Customer Type',
-        options: 'Company\nIndividual',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      { fieldname: 'territory', fieldtype: 'Data', label: 'Territory', in_list_view: 1 },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Active\nInactive\nLead',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      { fieldname: 'creation', fieldtype: 'Date', label: 'Created On' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const customerMetaRaw = (name: string) => ({
+  name,
+  doctype: 'DocType',
+  module: 'Selling',
+  title_field: 'customer_name',
+  fields: [
+    { fieldname: 'customer_name', fieldtype: 'Data', label: CUSTOMER_NAME_LABEL, in_list_view: 1 },
+    {
+      fieldname: 'customer_type',
+      fieldtype: 'Select',
+      label: 'Customer Type',
+      options: 'Company\nIndividual',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    { fieldname: 'territory', fieldtype: 'Data', label: 'Territory', in_list_view: 1 },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Active\nInactive\nLead',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    { fieldname: 'creation', fieldtype: 'Date', label: 'Created On' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeTableMockFetch?: boolean } = window;
   if (w.__frappeTableMockFetch) {
     return;
   }
   w.__frappeTableMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -116,7 +129,7 @@ const customerFixtures: Customer[] = [
     doctype: 'Customer',
     customer_name: 'Acme Corp',
     customer_type: 'Company',
-    territory: 'United States',
+    territory: UNITED_STATES,
     status: 'Active',
     creation: '2025-01-15',
   },
@@ -134,7 +147,7 @@ const customerFixtures: Customer[] = [
     doctype: 'Customer',
     customer_name: 'John Smith',
     customer_type: 'Individual',
-    territory: 'United States',
+    territory: UNITED_STATES,
     status: 'Active',
     creation: '2025-03-10',
   },
@@ -161,7 +174,7 @@ const customerFixtures: Customer[] = [
     doctype: 'Customer',
     customer_name: 'Startup Inc',
     customer_type: 'Company',
-    territory: 'United States',
+    territory: UNITED_STATES,
     status: 'Active',
     creation: '2025-05-15',
   },
@@ -185,16 +198,15 @@ const customerFixtures: Customer[] = [
   },
 ];
 
-function customerCorpus(customers: Customer[] = customerFixtures): InMemoryFixtureProvider {
-  return new InMemoryFixtureProvider({
+const customerCorpus = (customers: Customer[] = customerFixtures): InMemoryFixtureProvider =>
+  new InMemoryFixtureProvider({
     DocType: [customerMetaRaw('Customer')],
     Customer: customers,
   });
-}
 
 const customerColumns: DataTableColumn<Partial<Customer>>[] = [
   { id: 'name', header: 'ID', accessorKey: 'name' },
-  { id: 'customer_name', header: 'Customer Name', accessorKey: 'customer_name' },
+  { id: 'customer_name', header: CUSTOMER_NAME_LABEL, accessorKey: 'customer_name' },
   { id: 'customer_type', header: 'Type', accessorKey: 'customer_type' },
   { id: 'territory', header: 'Territory', accessorKey: 'territory' },
   {
@@ -205,14 +217,14 @@ const customerColumns: DataTableColumn<Partial<Customer>>[] = [
       const status = getValue() as string;
       // Step-11 theme ramps: AA for small bold text where the raw brand
       // hexes (#10B981 etc.) measured under 4.5:1 on light surfaces.
-      const colors: Record<string, string> = {
-        Active: '$green11',
-        Inactive: '$red11',
-        Lead: '$yellow11',
-      };
+      const colors = new Map([
+        ['Active', '$green11'],
+        ['Inactive', '$red11'],
+        ['Lead', '$yellow11'],
+      ]);
       return (
         <Text
-          color={colors[status] || '$gray11'}
+          color={colors.get(status) ?? '$gray11'}
           fontWeight="500">
           {status}
         </Text>
@@ -345,12 +357,14 @@ Live.parameters = {
   },
 };
 
+// oxlint-disable sonarjs/todo-tag -- the comment names a Frappe doctype, not a task marker
 /**
  * Server-side mode uses the Frappe REST API (getDocList) for filtering, sorting, and pagination.
  * Targets the bench selected by STORYBOOK_FRAPPE_URL (default: the local dev bench, proxied by
  * the Storybook dev server) when it is reachable; falls back to fixtures otherwise. Uses the
  * ToDo doctype, which exists on a stock bench.
  */
+// oxlint-enable sonarjs/todo-tag
 export const ServerSide = () => (
   <FrappeStoryProvider fixtures={new InMemoryFixtureProvider({ ToDo: serverSideTodoFixtures })}>
     <FrappeTable<ToDoRow>
@@ -377,7 +391,9 @@ ServerSide.parameters = {
 
 /** Fixture provider whose list fetch never resolves — holds the real collection in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
 }
@@ -456,7 +472,7 @@ export const LoadError = () => (
 /** Only ID and Customer Name are visible columns. */
 const minimalCustomerColumns: DataTableColumn<Partial<Customer>>[] = [
   { id: 'name', header: 'ID', accessorKey: 'name' },
-  { id: 'customer_name', header: 'Customer Name', accessorKey: 'customer_name' },
+  { id: 'customer_name', header: CUSTOMER_NAME_LABEL, accessorKey: 'customer_name' },
 ];
 
 /**

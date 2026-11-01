@@ -1,9 +1,11 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Slider as FormsSlider } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useProps } from 'tamagui';
 
 export type SliderFieldProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -25,13 +27,20 @@ export type SliderFieldProps<
     readOnly?: boolean;
     skeleton?: boolean;
     compact?: boolean;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- pass-through props spread onto the Tamagui slider
     sliderProps?: Record<string, unknown>;
   };
 
-export function SliderField<
+export const SliderField = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: SliderFieldProps<TData, TName>) {
+>(
+  props: SliderFieldProps<TData, TName>,
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain SliderFieldProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- useProps widens the bag; extra keys flow into fieldProps
+  const resolvedProps = useProps(props) as SliderFieldProps<TData, TName> & Record<string, unknown>;
   const {
     sliderProps,
     defaultValue,
@@ -48,7 +57,7 @@ export function SliderField<
     max,
     step,
     ...fieldProps
-  } = useProps(props) as SliderFieldProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
   return (
     <FormsSlider
@@ -67,13 +76,15 @@ export function SliderField<
       id={fieldProps.id}
       size={fieldProps.size}
       value={value == null ? undefined : [value]}
-      onValueChange={(values) => onChange?.(values[0])}
+      onChange={(values) => onChange?.(values[0])}
       onBlur={onBlur}
       disabled={disabled}
       min={min}
       max={max}
       step={step}
-      sliderProps={sliderProps as any}
+      // SAFETY: caller-supplied Tamagui slider props, forwarded as-is
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      sliderProps={sliderProps as ComponentProps<typeof FormsSlider>['sliderProps']}
     />
   );
-}
+};

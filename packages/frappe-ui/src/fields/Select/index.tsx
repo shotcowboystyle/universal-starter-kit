@@ -7,10 +7,11 @@ import { Select as FormsSelect } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 
-export type SelectProps<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
-> = Omit<
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+type FieldData = Record<string, unknown>;
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+export type SelectProps<TData extends FieldData = FieldData, TName extends string = string> = Omit<
   FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown, unknown, string>,
   'children' | 'field'
 > &
@@ -30,26 +31,28 @@ export type SelectProps<
     compact?: boolean;
   };
 
-export function Select<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Select = <TData extends FieldData = FieldData, TName extends string = string>(
   props: SelectProps<TData, TName>,
-) {
+) => {
   const {
     defaultValue,
     form,
-    _mode,
     name,
     onBlur,
     onChange,
     options,
     placeholder = 'Select an option',
-    _preserveValue,
     validators,
     disabled,
     value,
     ...fieldProps
-  } = useProps(props) as SelectProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
 
-  const normalizedOptions = (options || []).map((opt) => (typeof opt === 'string' ? { label: opt, value: opt } : opt));
+  const optionList: readonly (string | { label: string; value: string })[] = options ?? [];
+  const normalizedOptions = optionList.map((opt) =>
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the declared `string | { label, value }` option union
+    typeof opt === 'string' ? { label: opt, value: opt } : opt,
+  );
 
   return (
     <FormsSelect
@@ -75,4 +78,4 @@ export function Select<TData extends Record<string, unknown> = Record<string, un
       placeholder={placeholder}
     />
   );
-}
+};

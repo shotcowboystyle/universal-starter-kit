@@ -28,29 +28,36 @@ export default {
 // ---------------------------------------------------------------------------
 
 const MOCK_HOST = 'https://frappeprovider.mock.test';
+/** What the probe prints for a config value that is not set. */
+const UNSET = '(undefined)';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeProviderMockFetch) {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeProviderMockFetch?: boolean };
+  if (w.__frappeProviderMockFetch === true) {
     return;
   }
   w.__frappeProviderMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({
           data: {
@@ -73,7 +80,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   };
 })();
 
-function ConfigProbe({ probeId = 'config-probe' }: { probeId?: string }) {
+const ConfigProbe = ({ probeId = 'config-probe' }: { probeId?: string }) => {
   const config = useFrappeConfig();
   return (
     <YStack
@@ -86,12 +93,12 @@ function ConfigProbe({ probeId = 'config-probe' }: { probeId?: string }) {
       <Text
         data-testid={`${probeId}-baseurl`}
         fontSize="$2">
-        baseURL: {config?.baseURL ?? '(undefined)'}
+        baseURL: {config?.baseURL ?? UNSET}
       </Text>
       <Text
         data-testid={`${probeId}-auth`}
         fontSize="$2">
-        auth.useToken: {String(config?.auth?.useToken ?? '(undefined)')}
+        auth.useToken: {String(config?.auth?.useToken ?? UNSET)}
       </Text>
       <Text
         data-testid={`${probeId}-fixtures`}
@@ -101,11 +108,11 @@ function ConfigProbe({ probeId = 'config-probe' }: { probeId?: string }) {
       <Text
         data-testid={`${probeId}-socketport`}
         fontSize="$2">
-        socketPort: {String(config?.socketPort ?? '(undefined)')}
+        socketPort: {String(config?.socketPort ?? UNSET)}
       </Text>
     </YStack>
   );
-}
+};
 
 export const Main = () => (
   <FrappeProvider

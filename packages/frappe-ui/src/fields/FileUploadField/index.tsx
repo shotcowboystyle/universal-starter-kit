@@ -12,12 +12,11 @@ import type { FileBrowserFile } from '../../FileBrowser/types';
 const imageAccept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
 
 export type FileUploadFieldProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors @repo/forms' TData constraint: any form values object
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>>, 'children' | 'field'> &
-  Partial<
-    Omit<FieldComponentProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown>, 'children'>
-  > & {
+  Partial<Omit<FieldComponentProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>>, 'children'>> & {
     disabled?: boolean;
     readOnly?: boolean;
     skeleton?: boolean;
@@ -28,6 +27,7 @@ export type FileUploadFieldProps<
     isImage?: boolean;
     /** Controlled value (SchemaForm / registry adapters pass value+onChange). */
     value?: unknown;
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Attach values are a url string, a File or a File[] depending on the transport; callers narrow
     onChange?: (value: unknown) => void;
     /** Same transport contract as forms FileUpload (progress / fail / retry / cancel). */
     onUpload?: FileUploadHandler;
@@ -37,11 +37,19 @@ export type FileUploadFieldProps<
     libraryFolder?: string;
   };
 
-export function FileUploadField<
+export const FileUploadField = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors @repo/forms' TData constraint: any form values object
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: FileUploadFieldProps<TData, TName>) {
+>(
+  props: FileUploadFieldProps<TData, TName>,
+) => {
   const { t } = useTranslation();
+  // SAFETY: tamagui useProps returns the prop shape it was given; registry adapters may also pass the internal _mode/_preserveValue keys, stripped here
+  const resolvedProps = useProps(props) as FileUploadFieldProps<TData, TName> & {
+    _mode?: unknown;
+    _preserveValue?: unknown;
+  };
   const {
     defaultValue,
     form,
@@ -61,10 +69,7 @@ export function FileUploadField<
     libraryFiles,
     libraryFolder,
     ...fieldProps
-  } = useProps(props) as FileUploadFieldProps<TData, TName> & {
-    value?: unknown;
-    onChange?: (value: unknown) => void;
-  } & Record<string, unknown>;
+  } = resolvedProps;
 
   const [libraryOpen, setLibraryOpen] = useState(false);
   const resolvedAccept = isImage ? (accept ?? imageAccept) : accept;
@@ -76,8 +81,10 @@ export function FileUploadField<
         name={name}
         form={form}
         validators={validators}
-        defaultValue={resolvedDefaultValue as any}
-        onValueChange={onChange as any}
+        // SAFETY: the registry hands this field the stored Attach value, which is the FileUpload value shape for this name
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+        defaultValue={resolvedDefaultValue as never}
+        onChange={onChange}
         label={fieldProps.label}
         labelProps={fieldProps.labelProps}
         error={fieldProps.error}
@@ -123,4 +130,4 @@ export function FileUploadField<
       ) : null}
     </>
   );
-}
+};

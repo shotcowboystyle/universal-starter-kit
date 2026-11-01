@@ -67,39 +67,45 @@ const regionDocs: Region[] = [
   },
 ];
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+type MockBody = { docs: unknown[] } | { data: unknown; message?: unknown[] } | { message: string };
 
-function regionMeta(name: string) {
-  return {
-    name,
-    module: 'QA',
-    title_field: 'region_name',
-    is_tree: 1,
-    fields: [
-      { fieldname: 'region_name', fieldtype: 'Data', label: 'Region Name', in_list_view: 1 },
-      { fieldname: 'parent_region', fieldtype: 'Link', label: 'Parent Region', options: name },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+// Response.json sets the same `Content-Type: application/json` header.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
+
+const regionMeta = (name: string) => ({
+  name,
+  module: 'QA',
+  title_field: 'region_name',
+  is_tree: 1,
+  fields: [
+    { fieldname: 'region_name', fieldtype: 'Data', label: 'Region Name', in_list_view: 1 },
+    { fieldname: 'parent_region', fieldtype: 'Link', label: 'Parent Region', options: name },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeLinkTreeMockFetch) {
+  const w: Window & { __frappeLinkTreeMockFetch?: boolean } = window;
+  if (w.__frappeLinkTreeMockFetch === true) {
     return;
   }
   w.__frappeLinkTreeMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname.includes('frappe.desk.form.load.getdoctype')) {
@@ -113,7 +119,7 @@ function regionMeta(name: string) {
       if (url.pathname.includes('frappe.sessions.get_csrf_token')) {
         return jsonResponse({ message: 'mock-csrf' });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: regionMeta(decodeURIComponent(metaMatch[1])) });
       }
@@ -123,17 +129,15 @@ function regionMeta(name: string) {
   };
 })();
 
-function host(children: ReactNode, docs: Region[] = regionDocs) {
-  return (
-    <FrappeProvider
-      baseURL={MOCK_HOST}
-      fixtures={new InMemoryFixtureProvider({ QaRegion: docs })}>
-      {children}
-    </FrappeProvider>
-  );
-}
+const host = (children: ReactNode, docs: Region[] = regionDocs) => (
+  <FrappeProvider
+    baseURL={MOCK_HOST}
+    fixtures={new InMemoryFixtureProvider({ QaRegion: docs })}>
+    {children}
+  </FrappeProvider>
+);
 
-function ControlledTree(props: Omit<LinkProps, 'onChange' | 'doctype'> & { doctype?: string }) {
+const ControlledTree = (props: Omit<LinkProps, 'onChange' | 'doctype'> & { doctype?: string }) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <LinkTree
@@ -147,7 +151,7 @@ function ControlledTree(props: Omit<LinkProps, 'onChange' | 'doctype'> & { docty
       }}
     />
   );
-}
+};
 
 export const Default = (args: Partial<LinkProps>) => host(<ControlledTree {...args} />);
 Default.args = {

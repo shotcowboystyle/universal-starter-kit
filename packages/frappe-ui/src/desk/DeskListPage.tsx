@@ -42,15 +42,13 @@ export interface DeskListPageProps {
  * Convert a URL slug to a display name.
  * "pokemon" → "Pokemon", "poke-type" → "Poke Type"
  */
-function toDisplayName(slug: string): string {
-  return slug.replaceAll('-', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
-}
+const toDisplayName = (slug: string): string => slug.replaceAll('-', ' ').replaceAll(/\b\w/gu, (c) => c.toUpperCase());
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function DeskListPage({ doctype, onNavigate }: DeskListPageProps) {
+export const DeskListPage = ({ doctype, onNavigate }: DeskListPageProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
 
@@ -81,7 +79,7 @@ export function DeskListPage({ doctype, onNavigate }: DeskListPageProps) {
   };
 
   const handleItemClick = (doc: Partial<{ name: string; doctype: string }>) => {
-    if (!doc.name) {
+    if (doc.name === undefined || doc.name === '') {
       return;
     }
     const path = `/desk/${doctype}/${doc.name}`;
@@ -124,4 +122,4 @@ export function DeskListPage({ doctype, onNavigate }: DeskListPageProps) {
       </ListPageLayout>
     </DeskShell>
   );
-}
+};

@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Check } from '.';
 import type { CheckProps } from '.';
@@ -29,7 +29,7 @@ export default {
   },
 };
 
-function ControlledCheck(props: Omit<CheckProps, 'onChange'>) {
+const ControlledCheck = (props: Omit<CheckProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? false);
   return (
     <Check
@@ -41,7 +41,7 @@ function ControlledCheck(props: Omit<CheckProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Default = (args: CheckProps) => <ControlledCheck {...args} />;
 Default.args = {
@@ -107,7 +107,7 @@ const checkCellColumns: DataTableColumn<CheckCellRow>[] = [
   } as DataTableColumn<CheckCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(checkCellRows);
   return (
     <YStack
@@ -115,17 +115,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={checkCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={checkCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as CheckCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Check cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Check") — in-cell checkbox. */
 export const InTable = () => (

@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { TableMultiSelect } from './TableMultiSelect';
 import type { TableMultiSelectProps } from './TableMultiSelect';
@@ -44,42 +44,46 @@ export default {
 
 const MOCK_HOST = 'https://frappetms.mock.test';
 
-function tagMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Core',
-    title_field: 'name',
-    fields: [{ fieldname: 'name', fieldtype: 'Data', label: 'Name', in_list_view: 1 }],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const tagMetaRaw = (name: string) => ({
+  name,
+  module: 'Core',
+  title_field: 'name',
+  fields: [{ fieldname: 'name', fieldtype: 'Data', label: 'Name', in_list_view: 1 }],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- each mocked Frappe method replies with its own payload shape
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeTmsMockFetch?: boolean } = window;
   if (w.__frappeTmsMockFetch) {
     return;
   }
   w.__frappeTmsMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'Tag';
         return jsonResponse({ docs: [tagMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: tagMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -105,9 +109,10 @@ const fixtures = new InMemoryFixtureProvider({
   ],
 });
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- story args carry Storybook controls beyond TableMultiSelectProps
 type StoryProps = TableMultiSelectProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState<string[]>((props.value as string[]) ?? []);
   return (
     <TableMultiSelect
@@ -119,7 +124,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 const withProvider = (node: ReactNode) => (
   <FrappeProvider

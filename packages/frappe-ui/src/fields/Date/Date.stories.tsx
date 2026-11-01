@@ -4,15 +4,15 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
-import { Date } from '.';
+import { Date as DateField } from '.';
 import type { DateProps } from '.';
 
 export default {
   title: 'FrappeUI/Date',
-  component: Date,
+  component: DateField,
   parameters: {
     status: { type: 'stable' },
     docs: {
@@ -34,10 +34,10 @@ export default {
   },
 };
 
-function ControlledDate(props: Omit<DateProps, 'onChange'>) {
+const ControlledDate = (props: Omit<DateProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
-    <Date
+    <DateField
       {...props}
       value={value}
       onChange={(v) => {
@@ -46,7 +46,7 @@ function ControlledDate(props: Omit<DateProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Default = (args: DateProps) => <ControlledDate {...args} />;
 Default.args = {
@@ -220,6 +220,7 @@ interface DateRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<DateRow[]>([
       { id: '1', label: 'Alpha', value: '2026-02-14' },

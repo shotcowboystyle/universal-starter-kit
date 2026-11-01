@@ -5,6 +5,7 @@ import { YStack } from 'tamagui';
 import { FrappeProvider } from '../FrappeProvider';
 
 import { Awesomebar } from './awesomebar';
+import type { AwesomebarProps } from './awesomebar';
 
 const meta = {
   title: 'FrappeUI/Desk/Awesomebar',
@@ -28,12 +29,8 @@ export default meta;
 const MOCK_HOST = 'https://awesomebar.mock.test';
 const ERR_HOST = 'https://forbidden.awesomebar.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock payload
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const doctypeList = [
   { name: 'Todo', module: 'Desk' },
@@ -44,14 +41,14 @@ const doctypeList = [
 ];
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__awesomebarMockFetch) {
+  // Install once per page: a window flag survives story re-renders and HMR.
+  if (Object.hasOwn(window, '__awesomebarMockFetch')) {
     return;
   }
-  w.__awesomebarMockFetch = true;
+  Reflect.set(window, '__awesomebarMockFetch', true);
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : input.toString();
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -75,7 +72,7 @@ const doctypeList = [
   };
 })();
 
-export const Main = (args: Record<string, unknown>) => (
+export const Main = (args: Partial<AwesomebarProps>) => (
   <FrappeProvider
     baseURL={MOCK_HOST}
     fixtures={new InMemoryFixtureProvider({})}>

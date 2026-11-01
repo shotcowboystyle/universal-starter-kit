@@ -2,6 +2,7 @@ import { CheckIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import { Button, formCommonColors } from '@repo/forms';
 import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
+// oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype of that name, not a task marker
 /**
  * FrappeAssignment — assignment (ToDo) management for a single document.
  *
@@ -17,6 +18,7 @@ import { useResolvedKnobs } from '@repo/theme';
  * The add flow reuses the backend-searching user combobox (`Link` over the
  * User doctype — stock `search_link` ranking and permissions server-side).
  */
+// oxlint-enable sonarjs/todo-tag
 import { AsyncBoundary, Avatar } from '@repo/ui';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,15 +27,16 @@ import type { YStackProps } from 'tamagui';
 
 import { toFrappeDateValue } from './fields/Date/wire';
 import { Link } from './fields/Link';
+import { useFrappeUsers } from './frappe-users';
 import { useFrappeConfig } from './FrappeProvider';
 import { FrappeReconnectIndicator } from './FrappeReconnectIndicator';
-import { useFrappeUsers } from './frappeUsers';
-import { toLiveLoadError } from './liveErrors';
+import { toLiveLoadError } from './live-errors';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype of that name, not a task marker
 /** A Frappe ToDo document (the assignment record). */
 export interface FrappeToDo {
   name: string;
@@ -85,12 +88,14 @@ export interface FrappeAssignmentProps extends Omit<YStackProps, 'children' | 'n
 
 const byCreation = (a: FrappeToDo, b: FrappeToDo) => (a.creation ?? '').localeCompare(b.creation ?? '');
 
+// oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype of that name, not a task marker
 /**
  * Splits raw ToDo docs into open / completed assignee lists.
  * Cancelled assignments are dropped (assign_to.remove parity); a missing
  * status is treated as Open (Frappe's ToDo default).
  */
-export function deriveAssignments(todos: readonly FrappeToDo[] | undefined): FrappeAssignmentDerivation {
+// oxlint-enable sonarjs/todo-tag
+export const deriveAssignments = (todos: readonly FrappeToDo[] | undefined): FrappeAssignmentDerivation => {
   const open: FrappeToDo[] = [];
   const completed: FrappeToDo[] = [];
   for (const todo of todos ?? []) {
@@ -104,22 +109,25 @@ export function deriveAssignments(todos: readonly FrappeToDo[] | undefined): Fra
   open.sort(byCreation);
   completed.sort(byCreation);
   return { open, completed };
-}
+};
 
+// oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype of that name, not a task marker
 /**
  * Builds the optimistic ToDo document for a new assignment — the same field
  * contract `frappe.desk.form.assign_to.add` writes server-side. The `name`
  * is a client placeholder; the server assigns the real name on create.
  */
-export function buildAssignmentTodo(args: {
+// oxlint-enable sonarjs/todo-tag
+export const buildAssignmentTodo = (args: {
   doctype: string;
   name: string;
   user: string;
   assignedBy?: string;
   description?: string;
-}): FrappeToDo {
-  return {
+}): FrappeToDo => {
+  const todo: FrappeToDo = {
     doctype: 'ToDo',
+    // oxlint-disable-next-line sonarjs/pseudo-random -- a client placeholder name; the server assigns the real one on create
     name: `new-todo-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     allocated_to: args.user,
     reference_type: args.doctype,
@@ -127,12 +135,16 @@ export function buildAssignmentTodo(args: {
     description: args.description ?? `Assignment for ${args.doctype} ${args.name}`,
     status: 'Open',
     priority: 'Medium',
+    // oxlint-disable-next-line sonarjs/todo-tag, eslint/no-warning-comments -- names the Frappe doctype field, not a task marker
     // ToDo.date is a Frappe Date field: timezone-naive, so the default is the
     // user's local calendar day. `toISOString()` would name UTC's day instead.
     date: toFrappeDateValue(new Date(), 'date'),
-    ...(args.assignedBy ? { assigned_by: args.assignedBy } : {}),
   };
-}
+  if (args.assignedBy !== undefined && args.assignedBy !== '') {
+    todo.assigned_by = args.assignedBy;
+  }
+  return todo;
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -152,7 +164,7 @@ const TODO_FIELDS = [
   'modified',
 ] as const;
 
-function AssignmentRow({
+const AssignmentRow = ({
   todo,
   label,
   image,
@@ -168,12 +180,14 @@ function AssignmentRow({
   disabled?: boolean;
   onComplete?: (todo: FrappeToDo) => void;
   onRemove?: (todo: FrappeToDo) => void;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
-  const iconSize = Number(knobProps.controlIcon?.width) || 14;
+  const iconWidth = knobProps.controlIcon?.width;
+  const iconSize = iconWidth !== undefined && iconWidth !== 0 ? iconWidth : 14;
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- XStack renders a styled flex row; <li> would drop the Tamagui layout props
       role="listitem"
       alignItems="center"
       gap="$2"
@@ -192,7 +206,7 @@ function AssignmentRow({
           numberOfLines={1}>
           {label}
         </Text>
-        {todo.allocated_to && todo.allocated_to !== label ? (
+        {todo.allocated_to !== undefined && todo.allocated_to !== '' && todo.allocated_to !== label ? (
           <Text
             {...knobProps.label}
             color={formCommonColors.muted}
@@ -238,9 +252,9 @@ function AssignmentRow({
       )}
     </XStack>
   );
-}
+};
 
-function FrappeAssignmentBody({
+const FrappeAssignmentBody = ({
   doctype,
   name,
   label,
@@ -252,7 +266,7 @@ function FrappeAssignmentBody({
   onComplete,
   onRetry,
   ...stackProps
-}: FrappeAssignmentProps & { onRetry?: () => void }) {
+}: FrappeAssignmentProps & { onRetry?: () => void }) => {
   const config = useFrappeConfig();
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
@@ -296,10 +310,14 @@ function FrappeAssignmentBody({
 
   const { data, isLoading } = useLiveQuery((q) => (collection ? q.from({ _list: collection }) : null), [collection]);
 
+  // SAFETY: the live query reads only the assignment collection typed as FrappeToDo above
   const { open, completed } = useMemo(() => deriveAssignments(data as FrappeToDo[] | undefined), [data]);
 
   const assigneeIds = useMemo(
-    () => [...open, ...completed].map((todo) => todo.allocated_to).filter((user): user is string => !!user),
+    () =>
+      [...open, ...completed]
+        .map((todo) => todo.allocated_to)
+        .filter((user): user is string => user !== undefined && user !== ''),
     [open, completed],
   );
   const users = useFrappeUsers(config, assigneeIds);
@@ -427,11 +445,13 @@ function FrappeAssignmentBody({
         <Link
           doctype="User"
           value=""
+          // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects: failures land in actionError
           onChange={handleAssign}
           placeholder={t('Assign to user')}
           compact
         />
       ) : null}
+      {/* oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype of that name, not a task marker */}
       {/* Honest first-load state: skeleton until the ToDo subscription is
           live; a failed subscription renders error chrome, never "no one
           assigned" (DG-ST-01 / LC-20). */}
@@ -443,6 +463,7 @@ function FrappeAssignmentBody({
         empty={open.length === 0 && completed.length === 0}
         emptyTitle={t('No one assigned')}>
         <YStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- YStack renders a styled flex column; <ul> would drop the Tamagui layout props
           role="list"
           gap="$2">
           {open.map((todo) => {
@@ -454,7 +475,9 @@ function FrappeAssignmentBody({
                 label={rowLabel}
                 image={image}
                 disabled={!canMutate}
+                // oxlint-disable-next-line typescript/no-misused-promises -- awaitable handler, never rejects: failures land in actionError
                 onComplete={canMutate ? handleComplete : undefined}
+                // oxlint-disable-next-line typescript/no-misused-promises -- awaitable handler, never rejects: failures land in actionError
                 onRemove={canMutate ? handleRemove : undefined}
               />
             );
@@ -483,7 +506,7 @@ function FrappeAssignmentBody({
           ) : null}
         </YStack>
       </AsyncBoundary>
-      {actionError ? (
+      {actionError !== null && actionError !== '' ? (
         <Text
           role="alert"
           {...knobProps.label}
@@ -493,13 +516,14 @@ function FrappeAssignmentBody({
       ) : null}
     </YStack>
   );
-}
+};
 
 /**
  * Assignment widget for one document: live assignee list (avatars + names),
  * add via backend-searched user combobox, complete / remove per row.
  */
-export function FrappeAssignment(props: FrappeAssignmentProps) {
+export const FrappeAssignment = (props: FrappeAssignmentProps) => {
+  // oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype of that name, not a task marker
   // Retry re-creates the ToDo collection (fresh initial sync) by remounting
   // the body — useFrappeCollection has no refetch surface of its own.
   const [retryNonce, setRetryNonce] = useState(0);
@@ -513,4 +537,4 @@ export function FrappeAssignment(props: FrappeAssignmentProps) {
       {...props}
     />
   );
-}
+};

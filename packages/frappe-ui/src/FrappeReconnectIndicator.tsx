@@ -25,7 +25,7 @@ export interface FrappeReconnectIndicatorProps {
  * gap is owned by the client's reconnect backfill; this chip only tells the
  * user that in-place updates are paused right now.
  */
-export function FrappeReconnectIndicator({ config, connection }: FrappeReconnectIndicatorProps) {
+export const FrappeReconnectIndicator = ({ config, connection }: FrappeReconnectIndicatorProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const hooked = useFrappeConnection(config);
@@ -35,6 +35,7 @@ export function FrappeReconnectIndicator({ config, connection }: FrappeReconnect
   }
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- XStack renders a styled flex row; <output> would drop the Tamagui layout props
       role="status"
       aria-live="polite"
       alignItems="center"
@@ -56,4 +57,4 @@ export function FrappeReconnectIndicator({ config, connection }: FrappeReconnect
       </Text>
     </XStack>
   );
-}
+};

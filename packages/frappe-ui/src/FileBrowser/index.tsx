@@ -38,18 +38,16 @@ import {
   fileKind,
   isFolder,
   parentFolder,
-} from './folderTree';
+} from './folder-tree';
 import type {
   FileBrowserBulkBarPlacement,
   FileBrowserFile,
   FileBrowserLayout,
   FileBrowserPaneStatus,
   FileBrowserProps,
-  FileBrowserSelectAllScope,
-  FileBrowserSelectionMode,
   FileBrowserView,
 } from './types';
-import { readPersistedView, writePersistedView } from './viewPersistence';
+import { readPersistedView, writePersistedView } from './view-persistence';
 
 export type {
   FileBrowserBulkBarPlacement,
@@ -60,11 +58,15 @@ export type {
   FileBrowserSelectAllScope,
   FileBrowserSelectionMode,
   FileBrowserView,
-};
+} from './types';
 
 const RAIL_WIDTH = 240;
+const NO_FILES: FileBrowserFile[] = [];
 
-function KindIcon({ kind, size = 16 }: { kind: ReturnType<typeof fileKind>; size?: number }) {
+/** One-line truncation plus the full name as the web tooltip (`title` is a DOM prop Text does not type). */
+const truncatedTitle = (title: string) => ({ numberOfLines: 1, title });
+
+const KindIcon = ({ kind, size = 16 }: { kind: ReturnType<typeof fileKind>; size?: number }) => {
   const props = { size, color: '$color9' as const };
   if (kind === 'folder') {
     return <FolderIcon {...props} />;
@@ -82,9 +84,9 @@ function KindIcon({ kind, size = 16 }: { kind: ReturnType<typeof fileKind>; size
     return <FileArchiveIcon {...props} />;
   }
   return <FileIcon {...props} />;
-}
+};
 
-function formatSize(bytes?: number): string {
+const formatSize = (bytes?: number): string => {
   if (bytes == null || Number.isNaN(bytes)) {
     return '—';
   }
@@ -94,23 +96,23 @@ function formatSize(bytes?: number): string {
   const units = ['B', 'KB', 'MB', 'GB'];
   const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
   return `${(bytes / 1024 ** i).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
+};
 
-function resolveStatus(
+const resolveStatus = (
   status: FileBrowserPaneStatus | undefined,
   items: unknown[],
   error?: boolean | string | Error,
-): FileBrowserPaneStatus {
-  if (error) {
+): FileBrowserPaneStatus => {
+  if (error !== undefined && error !== false && error !== '') {
     return 'error';
   }
   if (status) {
     return status;
   }
   return items.length === 0 ? 'empty' : 'ready';
-}
+};
 
-function FileRowMenu({
+const FileRowMenu = ({
   file,
   onOpen,
   onDownload,
@@ -124,7 +126,7 @@ function FileRowMenu({
   onRename?: (file: FileBrowserFile) => void;
   onMove?: (files: FileBrowserFile[]) => void;
   onDelete?: (files: FileBrowserFile[]) => void;
-}) {
+}) => {
   const { t } = useTranslation();
   return (
     <DropdownMenu
@@ -172,9 +174,9 @@ function FileRowMenu({
       />
     </DropdownMenu>
   );
-}
+};
 
-function BulkBar({
+const BulkBar = ({
   count,
   placement,
   onDownload,
@@ -188,7 +190,7 @@ function BulkBar({
   onMove?: () => void;
   onDelete?: () => void;
   onClear?: () => void;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   if (count === 0) {
@@ -244,10 +246,11 @@ function BulkBar({
       </Button>
     </XStack>
   );
-}
+};
 
-export function FileBrowser({
-  files = [],
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one controlled/uncontrolled surface whose panes share all of this state; splitting it is a refactor beyond the lint pass
+export const FileBrowser = ({
+  files = NO_FILES,
   foldersStatus,
   filesStatus,
   foldersError,
@@ -280,7 +283,8 @@ export function FileBrowser({
   onMove,
   onDelete,
   accept,
-}: FileBrowserProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the no-giant-component note above: shared controlled/uncontrolled state for every pane
+}: FileBrowserProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { width } = useWindowDimensions();
@@ -396,15 +400,18 @@ export function FileBrowser({
     [onOpen, onPick, setFolder, single],
   );
 
-  const selectedFiles = paneFiles.filter((file) => selectedIds.includes(file.name));
+  const selectedIdSet = new Set(selectedIds);
+  const selectedFiles = paneFiles.filter((file) => selectedIdSet.has(file.name));
   const crumbs = breadcrumbItems(currentFolder);
   const parent = parentFolder(currentFolder);
+  const hasParent = parent !== undefined && parent !== '';
 
   const columns = useMemo<DataTableColumn<FileBrowserFile & { id: string }>[]>(
     () => [
       {
         accessorKey: 'file_name',
         header: t('Name'),
+        // oxlint-disable-next-line react/no-unstable-nested-components -- TanStack column cell renderer; the columns array is memoized, so the reference is stable across renders
         cell: ({ row }) => {
           const file = row.original;
           const current =
@@ -421,7 +428,7 @@ export function FileBrowser({
                 fontSize="$3"
                 flex={1}
                 minWidth={0}
-                {...({ numberOfLines: 1, title: file.file_name } as Record<string, unknown>)}>
+                {...truncatedTitle(file.file_name)}>
                 {file.file_name}
               </Text>
               {single && current ? (
@@ -442,6 +449,7 @@ export function FileBrowser({
       {
         accessorKey: 'file_size',
         header: t('Size'),
+        // oxlint-disable-next-line react/no-unstable-nested-components -- TanStack column cell renderer; the columns array is memoized, so the reference is stable across renders
         cell: ({ row }) => (
           <Text
             fontSize="$3"
@@ -457,6 +465,7 @@ export function FileBrowser({
               id: 'actions',
               header: '',
               enableSorting: false,
+              // oxlint-disable-next-line react/no-unstable-nested-components -- TanStack column cell renderer; the columns array is memoized, so the reference is stable across renders
               cell: ({ row }: { row: { original: FileBrowserFile } }) => (
                 <FileRowMenu
                   file={row.original}
@@ -489,10 +498,14 @@ export function FileBrowser({
           chromeless
           size="$4"
           icon={CaretLeftIcon}
-          disabled={!parent}
+          disabled={!hasParent}
           aria-label={t('Back')}
           data-filebrowser-back
-          onPress={() => parent && setFolder(parent)}>
+          onPress={() => {
+            if (hasParent) {
+              setFolder(parent);
+            }
+          }}>
           {crumbs.at(-1)?.label ?? t('Home')}
         </Button>
       ) : (
@@ -522,7 +535,9 @@ export function FileBrowser({
         <ViewSwitcher
           currentView={view}
           onViewChange={(next) => {
-            setView(next as FileBrowserView);
+            if (next === 'list' || next === 'grid') {
+              setView(next);
+            }
           }}
           views={[
             { type: 'list', label: t('List'), icon: ListIcon, iconOnly: true },
@@ -579,7 +594,7 @@ export function FileBrowser({
               }}>
               <Checkbox
                 checked={checked}
-                onCheckedChange={() => {
+                onChange={() => {
                   toggleSelected(file.name);
                 }}
                 aria-label={t('Select {{name}}', { name: file.file_name })}
@@ -595,8 +610,8 @@ export function FileBrowser({
             {...knobProps.containerRadius}
             alignItems="center"
             justifyContent="center">
-            {kind === 'image' && file.file_url ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
+            {kind === 'image' && file.file_url !== undefined && file.file_url !== '' ? (
+              // oxlint-disable-next-line next/no-img-element, react-doctor/nextjs-no-img-element -- framework-agnostic package rendered through react-native-web; next/image is not available here
               <img
                 src={file.file_url}
                 alt=""
@@ -616,7 +631,7 @@ export function FileBrowser({
           <Text
             fontSize="$3"
             flex={1}
-            {...({ numberOfLines: 1, title: file.file_name } as Record<string, unknown>)}>
+            {...truncatedTitle(file.file_name)}>
             {file.file_name}
           </Text>
           {single && current ? (
@@ -637,8 +652,9 @@ export function FileBrowser({
     );
   };
 
-  const filesPaneReady =
-    view === 'grid' ? (
+  let filesPaneReady: ReactNode;
+  if (view === 'grid') {
+    filesPaneReady = (
       <YStack
         data-filebrowser-files-view="grid"
         data-filebrowser-tile-size={tileSize}
@@ -658,7 +674,9 @@ export function FileBrowser({
           emptyMessage={t('No files')}
         />
       </YStack>
-    ) : layout === 'drill' ? (
+    );
+  } else if (layout === 'drill') {
+    filesPaneReady = (
       <List
         items={paneFiles}
         aria-label={t('Files')}
@@ -674,7 +692,7 @@ export function FileBrowser({
               fontSize="$3"
               flex={1}
               minWidth={0}
-              {...({ numberOfLines: 1, title: file.file_name } as Record<string, unknown>)}>
+              {...truncatedTitle(file.file_name)}>
               {file.file_name}
             </Text>
             {isFolder(file) ? null : (
@@ -690,7 +708,9 @@ export function FileBrowser({
         onItemClick={handleFileActivate}
         emptyMessage={t('No files')}
       />
-    ) : (
+    );
+  } else {
+    filesPaneReady = (
       <YStack
         data-filebrowser-files-view="list"
         flex={1}>
@@ -733,6 +753,7 @@ export function FileBrowser({
         />
       </YStack>
     );
+  }
 
   const filesBody = (
     // flexBasis auto on the GRID chain (not flex:1's 0%): react-native-web
@@ -878,4 +899,4 @@ export function FileBrowser({
       ) : null}
     </YStack>
   );
-}
+};

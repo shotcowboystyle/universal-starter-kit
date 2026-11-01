@@ -1,6 +1,6 @@
 /**
  * Desk form layout engine — moved to
- * `@repo/frappe-ui/src/formEngine/formLayout` (MPO-15).
+ * `@repo/frappe-ui/src/formEngine/form-layout` (MPO-15).
  *
  * The exported `FrappeForm` needed the same tab / section / depends_on /
  * permlevel / fetch_from resolution the desk uses, and backoffice sits a

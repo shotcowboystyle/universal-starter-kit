@@ -2,7 +2,7 @@ import { Skeleton } from '@repo/forms';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 import { useRegisterPageHeading } from '@repo/ui';
 import type React from 'react';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { getTokenValue, H1, H2, H3, H4, Separator, Text, XStack, YStack } from 'tamagui';
 import type { YStackProps } from 'tamagui';
 
@@ -42,18 +42,139 @@ const levelFont = {
   4: { fontSize: 20, lineHeight: 30 },
 } as const;
 
-function ChevronIcon({ collapsed }: { collapsed: boolean }) {
-  return (
-    <Text
-      fontSize="$3"
-      color="$color10"
-      aria-hidden>
-      {collapsed ? '\u25B6' : '\u25BC'}
-    </Text>
-  );
+const ChevronIcon = ({ collapsed }: { collapsed: boolean }) => (
+  <Text
+    fontSize="$3"
+    color="$color10"
+    aria-hidden>
+    {collapsed ? '\u25B6' : '\u25BC'}
+  </Text>
+);
+
+type TokenValueInput = Parameters<typeof getTokenValue>[0];
+
+const spacePx = (token: YStackProps['gap'] | TokenValueInput) =>
+  // SAFETY: gap is a space token or a number; getTokenValue passes numbers through and resolves tokens against `space`
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  Number(getTokenValue(token as TokenValueInput, 'space')) || 0;
+
+interface HeadingSkeletonProps {
+  compact: boolean;
+  showSeparator: boolean;
+  stackProps: Omit<YStackProps, 'children'>;
 }
 
-export function Heading({
+const HeadingSkeleton = ({ compact, showSeparator, stackProps }: HeadingSkeletonProps) => {
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <YStack
+      {...knobProps.gap}
+      {...stackProps}>
+      <Skeleton
+        variant="text"
+        width="45%"
+        height={compact ? 18 : 24}
+      />
+      <Skeleton
+        variant="text"
+        width="70%"
+        height={compact ? 12 : 14}
+      />
+      {showSeparator && (
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={sizeRecipeEscape(1, 'separator bone: the 1px rule a Separator draws')}
+        />
+      )}
+    </YStack>
+  );
+};
+
+interface HeadingTitleProps {
+  label: string;
+  level: HeadingLevel;
+  compact: boolean;
+  canCollapse: boolean;
+  isCollapsed: boolean;
+  sectionId: string;
+  onToggle: () => void;
+}
+
+const HeadingTitle = ({ label, level, compact, canCollapse, isCollapsed, sectionId, onToggle }: HeadingTitleProps) => {
+  const { knobProps } = useResolvedKnobs();
+  const handleKeyDown = useCallback(
+    (event: { key?: string; preventDefault?: () => void }) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault?.();
+        onToggle();
+      }
+    },
+    [onToggle],
+  );
+
+  const HeadingComponent = { 1: H1, 2: H2, 3: H3, 4: H4 }[level];
+  // Knob weight wins; 600 is only a fallback. Kept out of the spread and set
+  // after the size props so no font-table weight (e.g. Inter's 300) beats it.
+  const { fontWeight: knobHeadingWeight, ...knobHeadingFont } = knobProps.heading ?? {};
+  const headingFontSize = compact ? Math.max(16, levelFont[level].fontSize - 4) : levelFont[level].fontSize;
+  const headingLineHeight = compact ? Math.max(22, levelFont[level].lineHeight - 6) : levelFont[level].lineHeight;
+
+  return (
+    <XStack
+      alignItems="center"
+      gap="$2"
+      cursor={canCollapse ? 'pointer' : 'default'}
+      onPress={onToggle}
+      paddingVertical={compact ? '$1' : '$2'}
+      hoverStyle={canCollapse ? { opacity: 0.8 } : undefined}
+      role={canCollapse ? 'button' : undefined}
+      tabIndex={canCollapse ? 0 : undefined}
+      onKeyDown={canCollapse ? handleKeyDown : undefined}
+      aria-expanded={canCollapse ? !isCollapsed : undefined}
+      aria-controls={canCollapse ? sectionId : undefined}>
+      {canCollapse && <ChevronIcon collapsed={isCollapsed} />}
+      <HeadingComponent
+        {...knobHeadingFont}
+        fontSize={headingFontSize}
+        lineHeight={headingLineHeight}
+        fontWeight={knobHeadingWeight ?? '600'}
+        color="$color">
+        {label}
+      </HeadingComponent>
+    </XStack>
+  );
+};
+
+// Adopt a changed `collapsed` prop during render (React's "adjusting state
+// when a prop changes" pattern) instead of in an effect.
+// oxlint-disable-next-line sonarjs/bool-param-default -- undefined means uncontrolled; a default would force every Heading into controlled mode
+const useCollapsedState = (collapsed: boolean | undefined, defaultCollapsed: boolean) => {
+  const [isCollapsed, setIsCollapsed] = useState(collapsed ?? defaultCollapsed);
+  const [syncedCollapsed, setSyncedCollapsed] = useState(collapsed);
+  if (collapsed !== syncedCollapsed) {
+    setSyncedCollapsed(collapsed);
+    if (collapsed !== undefined) {
+      setIsCollapsed(collapsed);
+    }
+  }
+  return [isCollapsed, setIsCollapsed] as const;
+};
+
+// Stable id: exists whether collapsed or expanded, never empty (useId
+// fallback for empty labels), so aria-controls never dangles.
+const sectionIdFor = (label: string, autoId: string) => {
+  const labelSlug = label.trim().replaceAll(/\s+/gu, '-').toLowerCase();
+  return `section-${labelSlug || autoId}`;
+};
+
+const HeadingSeparator = ({ compact }: { compact: boolean }) => (
+  <YStack paddingVertical={compact ? '$0.5' : '$1'}>
+    <Separator backgroundColor="$color5" />
+  </YStack>
+);
+
+export const Heading = ({
   label,
   description,
   helperText,
@@ -68,14 +189,9 @@ export function Heading({
   skeleton = false,
   compact = false,
   ...stackProps
-}: HeadingProps) {
+}: HeadingProps) => {
   const { knobProps } = useResolvedKnobs();
-  const [isCollapsed, setIsCollapsed] = useState(collapsed ?? defaultCollapsed);
-  useEffect(() => {
-    if (collapsed !== undefined) {
-      setIsCollapsed(collapsed);
-    }
-  }, [collapsed]);
+  const [isCollapsed, setIsCollapsed] = useCollapsedState(collapsed, defaultCollapsed);
   const autoId = useId();
   const resolvedDescription = description ?? helperText;
   const canCollapse = collapsible && !_readOnly;
@@ -84,10 +200,7 @@ export function Heading({
   // (multiple-h1 DEV warn from the nearest PageHeadingScope).
   useRegisterPageHeading({ level, component: 'Heading', label, enabled: !skeleton });
 
-  // Stable id: exists whether collapsed or expanded, never empty (useId
-  // fallback for empty labels), so aria-controls never dangles.
-  const labelSlug = label.trim().replaceAll(/\s+/g, '-').toLowerCase();
-  const sectionId = `section-${labelSlug || autoId}`;
+  const sectionId = sectionIdFor(label, autoId);
 
   const handleToggle = useCallback(() => {
     if (!canCollapse) {
@@ -96,79 +209,22 @@ export function Heading({
     const newState = !isCollapsed;
     setIsCollapsed(newState);
     onCollapseChange?.(newState);
-  }, [canCollapse, isCollapsed, onCollapseChange]);
-
-  const handleKeyDown = useCallback(
-    (event: { key?: string; preventDefault?: () => void }) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault?.();
-        handleToggle();
-      }
-    },
-    [handleToggle],
-  );
+  }, [canCollapse, isCollapsed, onCollapseChange, setIsCollapsed]);
 
   if (skeleton) {
     return (
-      <YStack
-        {...knobProps.gap}
-        {...stackProps}>
-        <Skeleton
-          variant="text"
-          width="45%"
-          height={compact ? 18 : 24}
-        />
-        <Skeleton
-          variant="text"
-          width="70%"
-          height={compact ? 12 : 14}
-        />
-        {showSeparator && (
-          <Skeleton
-            variant="rounded"
-            width="100%"
-            height={sizeRecipeEscape(1, 'separator bone: the 1px rule a Separator draws')}
-          />
-        )}
-      </YStack>
+      <HeadingSkeleton
+        compact={compact}
+        showSeparator={showSeparator}
+        stackProps={stackProps}
+      />
     );
   }
 
-  const HeadingComponent = { 1: H1, 2: H2, 3: H3, 4: H4 }[level];
-  // Knob weight wins; 600 is only a fallback. Kept out of the spread and set
-  // after the size props so no font-table weight (e.g. Inter's 300) beats it.
-  const { fontWeight: knobHeadingWeight, ...knobHeadingFont } = knobProps.heading ?? {};
-  const headingFontSize = compact ? Math.max(16, levelFont[level].fontSize - 4) : levelFont[level].fontSize;
-  const headingLineHeight = compact ? Math.max(22, levelFont[level].lineHeight - 6) : levelFont[level].lineHeight;
-
-  const headingContent = (
-    <XStack
-      alignItems="center"
-      gap="$2"
-      cursor={canCollapse ? 'pointer' : 'default'}
-      onPress={handleToggle}
-      paddingVertical={compact ? '$1' : '$2'}
-      hoverStyle={canCollapse ? { opacity: 0.8 } : undefined}
-      role={canCollapse ? 'button' : undefined}
-      tabIndex={canCollapse ? 0 : undefined}
-      {...(canCollapse ? ({ onKeyDown: handleKeyDown } as any) : {})}
-      aria-expanded={canCollapse ? !isCollapsed : undefined}
-      aria-controls={canCollapse ? sectionId : undefined}>
-      {canCollapse && <ChevronIcon collapsed={isCollapsed} />}
-      <HeadingComponent
-        {...knobHeadingFont}
-        fontSize={headingFontSize}
-        lineHeight={headingLineHeight}
-        fontWeight={knobHeadingWeight ?? '600'}
-        color="$color">
-        {label}
-      </HeadingComponent>
-    </XStack>
-  );
-
-  const spacePx = (token: unknown) => Number(getTokenValue(token as Parameters<typeof getTokenValue>[0], 'space')) || 0;
   const descriptionGap = Math.max(0, spacePx(stackProps.gap ?? knobProps.gap.gap) - spacePx('$1'));
   const showDescription = Boolean(resolvedDescription) && !isCollapsed;
+  const hasChildren = Boolean(children);
+  const uncollapsibleBody = hasChildren ? <YStack {...knobProps.gap}>{children}</YStack> : children;
 
   return (
     <YStack
@@ -177,7 +233,15 @@ export function Heading({
       <YStack
         gap={descriptionGap}
         paddingBottom={showDescription ? '$1' : undefined}>
-        {headingContent}
+        <HeadingTitle
+          label={label}
+          level={level}
+          compact={compact}
+          canCollapse={canCollapse}
+          isCollapsed={isCollapsed}
+          sectionId={sectionId}
+          onToggle={handleToggle}
+        />
         {showDescription && (
           <Text
             fontSize={knobProps.sizeToken}
@@ -188,11 +252,7 @@ export function Heading({
           </Text>
         )}
       </YStack>
-      {showSeparator && (
-        <YStack paddingVertical={compact ? '$0.5' : '$1'}>
-          <Separator backgroundColor="$color5" />
-        </YStack>
-      )}
+      {showSeparator && <HeadingSeparator compact={compact} />}
       {collapsible ? (
         // Always mounted so the aria-controls target exists while collapsed
         // (and on sections with no children).
@@ -204,8 +264,8 @@ export function Heading({
           {children}
         </YStack>
       ) : (
-        children && <YStack {...knobProps.gap}>{children}</YStack>
+        uncollapsibleBody
       )}
     </YStack>
   );
-}
+};

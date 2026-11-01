@@ -1,13 +1,16 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { RadioGroup as FormsRadioGroup } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { useProps } from 'tamagui';
 
-export type RadioGroupFieldProps<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
-> = Omit<
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+type FieldData = Record<string, unknown>;
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms RadioGroup
+type PassThroughProps = Record<string, unknown>;
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+export type RadioGroupFieldProps<TData extends FieldData = FieldData, TName extends string = string> = Omit<
   FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown, unknown, string>,
   'children' | 'field'
 > &
@@ -26,22 +29,20 @@ export type RadioGroupFieldProps<
     skeleton?: boolean;
     compact?: boolean;
     children?: ReactNode;
-    radioGroupProps?: Record<string, unknown>;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms RadioGroup
+    radioGroupProps?: PassThroughProps;
   };
 
-export function RadioGroupField<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
->(props: RadioGroupFieldProps<TData, TName>) {
+export const RadioGroupField = <TData extends FieldData = FieldData, TName extends string = string>(
+  props: RadioGroupFieldProps<TData, TName>,
+) => {
   const {
     radioGroupProps,
     defaultValue,
     form,
-    _mode,
     name,
     onBlur,
     onChange,
-    _preserveValue,
     validators,
     disabled,
     value,
@@ -49,7 +50,7 @@ export function RadioGroupField<
     orientation,
     children,
     ...fieldProps
-  } = useProps(props) as RadioGroupFieldProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
 
   return (
     <FormsRadioGroup
@@ -68,13 +69,15 @@ export function RadioGroupField<
       id={fieldProps.id}
       size={fieldProps.size}
       value={value}
-      onValueChange={onChange}
+      onChange={onChange}
       onBlur={onBlur}
       disabled={disabled}
       options={options}
       orientation={orientation}
-      radioGroupProps={radioGroupProps as any}>
+      // SAFETY: radioGroupProps is the consumer's pass-through bag, forwarded to RadioGroup unchanged as before
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      radioGroupProps={radioGroupProps as ComponentProps<typeof FormsRadioGroup>['radioGroupProps']}>
       {children}
     </FormsRadioGroup>
   );
-}
+};

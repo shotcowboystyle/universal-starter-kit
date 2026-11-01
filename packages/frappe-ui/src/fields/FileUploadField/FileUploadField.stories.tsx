@@ -3,8 +3,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useEffect, useRef, useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { FileUploadField } from '.';
 import type { FileUploadFieldProps } from '.';
@@ -34,6 +34,7 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = FileUploadFieldProps & Record<string, unknown>;
 
 export const Main = (args: StoryProps) => <FileUploadField {...(args as any)} />;
@@ -97,7 +98,7 @@ States.parameters = {
   },
 };
 
-function TransferFieldStory({ fail }: { fail?: boolean }) {
+const TransferFieldStory = ({ fail }: { fail?: boolean }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const input = hostRef.current?.querySelector("input[type='file']") as HTMLInputElement | null;
@@ -121,12 +122,13 @@ function TransferFieldStory({ fail }: { fail?: boolean }) {
           if (fail) {
             throw new Error('413 Payload Too Large');
           }
+          // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a never-settling upload holds the row in its uploading state
           await new Promise<void>(() => {});
         }}
       />
     </div>
   );
-}
+};
 
 export const Uploading = () => <TransferFieldStory />;
 Uploading.storyName = 'Uploading';
@@ -187,6 +189,7 @@ interface FileRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<FileRow[]>([
       { id: '1', label: 'Alpha', value: 'report.pdf' },

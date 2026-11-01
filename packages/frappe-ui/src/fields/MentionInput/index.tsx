@@ -8,6 +8,7 @@ export interface MentionItem {
   display: string;
   avatar?: string;
   description?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- caller-owned extra data carried with a mention
   metadata?: Record<string, unknown>;
 }
 
@@ -32,6 +33,7 @@ export interface MentionValue {
 }
 
 export type MentionInputFieldProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -61,10 +63,16 @@ export type MentionInputFieldProps<
     onMentionSelect?: (mention: MentionItem, trigger: string) => void;
   };
 
-export function MentionInputField<
+export const MentionInputField = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: MentionInputFieldProps<TData, TName>) {
+>(
+  props: MentionInputFieldProps<TData, TName>,
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain MentionInputFieldProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type, typescript/no-unsafe-type-assertion -- see SAFETY above; extra keys flow into fieldProps
+  const resolvedProps = useProps(props) as MentionInputFieldProps<TData, TName> & Record<string, unknown>;
   const {
     defaultValue,
     form,
@@ -79,7 +87,7 @@ export function MentionInputField<
     placeholder,
     onMentionSelect,
     ...fieldProps
-  } = useProps(props) as MentionInputFieldProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
   return (
     <MentionInput
@@ -105,4 +113,4 @@ export function MentionInputField<
       onMentionSelect={onMentionSelect}
     />
   );
-}
+};

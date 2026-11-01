@@ -6,31 +6,32 @@ import { EmptyState, Screen, ScreenToolbar, YStack } from '@repo/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useDocRights } from './formEngine/useDocRights';
-import type { FrappeConnection } from './frappeConnections';
+import { useDocRights } from './formEngine/use-doc-rights';
+import type { FrappeConnection } from './frappe-connections';
+import { frappeRouteTarget, useFrappeRouter, useRouteLoaderData } from './frappe-navigation';
 import { FrappeForm } from './FrappeForm';
-import { frappeRouteTarget, useFrappeRouter, useRouteLoaderData } from './frappeNavigation';
 import { FrappeNotConfigured } from './FrappeNotConfigured';
 import { useFrappeConfig } from './FrappeProvider';
-import { orderRows } from './insights/insightsData';
-import type { FrappeInsightsMetric } from './insights/insightsRecord';
-import type { FrappeListFacet } from './list/listState';
-import type { FrappeRecordLook } from './list/recordLook';
+import { orderRows } from './insights/insights-data';
+import type { FrappeInsightsMetric } from './insights/insights-record';
+import type { FrappeListFacet } from './list/list-state';
+import type { FrappeRecordLook } from './list/record-look';
+import type { FrappeRecordTab } from './record/record-sections';
 import { RecordBreadcrumbBone, RecordSkeleton } from './record/RecordHero';
 import { RecordPage } from './record/RecordPage';
 import type { FrappeRecordAction, RecordPageProps } from './record/RecordPage';
-import type { FrappeRecordTab } from './record/recordSections';
-import { useFrappeConnection, useFrappeRows } from './useFrappeRows';
+import { useFrappeConnection, useFrappeRows } from './use-frappe-rows';
 
 export type {
   FrappeRecordBarsSection,
   FrappeRecordRowsSection,
   FrappeRecordSection,
   FrappeRecordTab,
-} from './record/recordSections';
+} from './record/record-sections';
 
 export type { FrappeRecordAction } from './record/RecordPage';
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- linked rows and docs are read by fieldname; their columns vary per doctype
 type Row = Record<string, unknown>;
 
 export interface FrappeRecordViewProps<TDoc extends { name: string; doctype: string }> {
@@ -70,6 +71,41 @@ export interface FrappeRecordViewProps<TDoc extends { name: string; doctype: str
 }
 
 const noTabs: readonly FrappeRecordTab[] = [];
+const noMetrics: readonly FrappeInsightsMetric[] = [];
+/** Typed `never` so it stands in for any doc type's action list. */
+const noActions: readonly never[] = [];
+
+/** The order-by back from its memo key, `JSON.stringify(orderBy ?? null)`. */
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- the caller names the doc type whose fields the order-by keys into
+const parseOrderBy = <TDoc,>(key: string): FrappeRecordViewProps<TDoc & { name: string; doctype: string }>['orderBy'] =>
+  // SAFETY: the key is the JSON of an `orderBy` prop or null
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  (JSON.parse(key) as FrappeRecordViewProps<TDoc & { name: string; doctype: string }>['orderBy'] | null) ?? undefined;
+
+const RecordWithRights = <TDoc extends { name: string; doctype: string }>({
+  doc,
+  meta,
+  page,
+}: {
+  doc: Partial<TDoc>;
+  meta: Parameters<typeof useDocRights>[1];
+  page: Omit<RecordPageProps<TDoc>, 'doc' | 'canEdit'>;
+}) => {
+  const connection = useFrappeConnection();
+  // SAFETY: a Frappe doc is a plain record keyed by fieldname
+  const { owner } = doc as Row;
+  const { rights } = useDocRights(connection, meta, {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `owner` is the server's user id when present; anything else means unknown
+    owner: typeof owner === 'string' ? owner : undefined,
+  });
+  return (
+    <RecordPage<TDoc>
+      {...page}
+      doc={doc}
+      canEdit={rights.write}
+    />
+  );
+};
 
 /**
  * A doctype's record page, read first: the list's breadcrumb and Back, the
@@ -80,7 +116,7 @@ const noTabs: readonly FrappeRecordTab[] = [];
  * FrappeForm reads the record and its connections live; loading, not found
  * and error keep the page's wayfinding.
  */
-export function FrappeRecordView<TDoc extends { name: string; doctype: string }>({
+export const FrappeRecordView = <TDoc extends { name: string; doctype: string }>({
   doctype,
   route,
   name: nameProp,
@@ -94,14 +130,14 @@ export function FrappeRecordView<TDoc extends { name: string; doctype: string }>
   look,
   titleField,
   facet,
-  metrics = [],
+  metrics = noMetrics,
   summary,
   tabs = noTabs,
   favorites,
-  actions = [],
+  actions = noActions,
   history = true,
   testID,
-}: FrappeRecordViewProps<TDoc>) {
+}: FrappeRecordViewProps<TDoc>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const config = useFrappeConfig();
@@ -109,20 +145,29 @@ export function FrappeRecordView<TDoc extends { name: string; doctype: string }>
   const router = useFrappeRouter();
   const target = router ? frappeRouteTarget(route, router.pathname) : undefined;
   const name = nameProp ?? (target?.mode === 'view' ? target.name : '');
-  const slug = testID ?? doctype.toLowerCase().replaceAll(/\s+/g, '-');
+  const slug = testID ?? doctype.toLowerCase().replaceAll(/\s+/gu, '-');
+  // SAFETY: useRouteLoaderData returns what `loader` resolved, typed by the prop as { doc }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const loaded = useRouteLoaderData(loader) as { doc?: Partial<TDoc> | null } | undefined;
   const listName = listTitle ?? doctype;
   const navigate = (href: string) => router?.navigate(href);
 
   const orderKey = JSON.stringify(orderBy ?? null);
-  const readOptions = useMemo(() => ({ fields, limit, orderBy: JSON.parse(orderKey) }), [fields, limit, orderKey]);
-  const { rows: readRows } = useFrappeRows<TDoc>(connection, doctype, readOptions);
-  const listRows = useMemo(
-    () => orderRows(readRows as never[], JSON.parse(orderKey)) as Partial<TDoc>[],
-    [readRows, orderKey],
+  const readOptions = useMemo(
+    () => ({ fields, limit, orderBy: parseOrderBy<TDoc>(orderKey) }),
+    [fields, limit, orderKey],
   );
+  const { rows: readRows } = useFrappeRows<TDoc>(connection, doctype, readOptions);
+  const listRows = useMemo(() => {
+    // SAFETY: Frappe docs are plain records; orderRows reorders the same objects without reshaping them
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    const rows = readRows as never[];
+    // SAFETY: as above, the ordered rows are the read docs
+    return orderRows(rows, parseOrderBy(orderKey)) as Partial<TDoc>[];
+  }, [readRows, orderKey]);
 
-  if (!config?.baseURL && !config?.fixtures) {
+  const hasBaseURL = config?.baseURL !== undefined && config.baseURL !== '';
+  if (!hasBaseURL && !config?.fixtures) {
     return (
       <FrappeNotConfigured
         doctype={doctype}
@@ -195,6 +240,7 @@ export function FrappeRecordView<TDoc extends { name: string; doctype: string }>
           doc={doc}
           meta={meta}
           page={{
+            // SAFETY: FrappeForm hands each declared connection's rows over keyed by doctype
             linked: linked as Record<string, Row[]>,
             doctype,
             route,
@@ -217,27 +263,4 @@ export function FrappeRecordView<TDoc extends { name: string; doctype: string }>
       )}
     </FrappeForm>
   );
-}
-
-function RecordWithRights<TDoc extends { name: string; doctype: string }>({
-  doc,
-  meta,
-  page,
-}: {
-  doc: Partial<TDoc>;
-  meta: Parameters<typeof useDocRights>[1];
-  page: Omit<RecordPageProps<TDoc>, 'doc' | 'canEdit'>;
-}) {
-  const connection = useFrappeConnection();
-  const { owner } = doc as Row;
-  const { rights } = useDocRights(connection, meta, {
-    owner: typeof owner === 'string' ? owner : undefined,
-  });
-  return (
-    <RecordPage<TDoc>
-      {...page}
-      doc={doc}
-      canEdit={Boolean(rights.write)}
-    />
-  );
-}
+};

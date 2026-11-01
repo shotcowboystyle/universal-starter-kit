@@ -13,15 +13,19 @@ export interface FacetBadgeProps {
  * One facet value as a static badge: nested density (LC-73), the tint's
  * step-4 fill, step-7 border and step-12 text (DF-04, AA in both schemes).
  */
-export function FacetBadge({ label, tint = 'gray', compact = false }: FacetBadgeProps) {
+// SAFETY: every caller passes a `$<hue><step>` theme color token, which Tamagui resolves at runtime; its color props only type the literal token union.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+const colorToken = (token: string) => token as never;
+
+export const FacetBadge = ({ label, tint = 'gray', compact = false }: FacetBadgeProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   return (
     <XStack
       {...knobProps.borderRadius}
       paddingHorizontal={compact ? '$1.5' : '$2'}
       paddingVertical={compact ? '$0.5' : '$1'}
-      backgroundColor={`$${tint}4` as never}
-      borderColor={`$${tint}7` as never}
+      backgroundColor={colorToken(`$${tint}4`)}
+      borderColor={colorToken(`$${tint}7`)}
       borderWidth={hairlineWidth}
       alignItems="center">
       <Text
@@ -29,11 +33,11 @@ export function FacetBadge({ label, tint = 'gray', compact = false }: FacetBadge
         {...knobProps.body}
         textTransform="capitalize"
         fontWeight="700"
-        color={`$${tint}12` as never}
+        color={colorToken(`$${tint}12`)}
         {...(compact ? { fontSize: '$1' as const } : null)}
         letterSpacing={0.3}>
         {label}
       </Text>
     </XStack>
   );
-}
+};

@@ -7,7 +7,7 @@
  * the form on compact/medium — never hidden). The aside is a sibling of
  * FrappeForm, so this component owns the same live wiring FrappeForm uses for
  * its inline sidebar: the name-filtered doc subscription (metadata, image
- * field), the assignment-ToDo live query (Assigned To) and the DocShare live
+ * field), the open-assignment live query (Assigned To) and the DocShare live
  * query (Shared With). The section / metadata / image mappers are shared with
  * FrappeForm — one body (Axiom 13).
  *
@@ -42,7 +42,7 @@ export interface DeskFormSidebarProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
+export const DeskFormSidebar = ({ doctype, name }: DeskFormSidebarProps) => {
   const config = useFrappeConfig();
   const { t } = useTranslation();
 
@@ -75,6 +75,7 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
         return null;
       }
       return q.from({ _doc: docCollection }).where(({ _doc }) => {
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- kept verbatim from FrappeForm's doc query; the ref is typed non-null, so the guard never changes the result
         if (!_doc) {
           return eq(name, name);
         }
@@ -84,7 +85,9 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
     [docCollection, name],
   );
   const doc = useMemo(() => {
-    const arr = Array.isArray(rawDocData) ? rawDocData : rawDocData ? [rawDocData] : [];
+    const arr = Array.isArray(rawDocData) ? rawDocData : [];
+    // SAFETY: a widening cast: the doc row is read by runtime fieldname (the meta's image field) below.
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the image field is named by meta at runtime, so the row is indexed by string
     return (arr[0] ?? undefined) as Record<string, unknown> | undefined;
   }, [rawDocData]);
 
@@ -98,7 +101,7 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
     [shareCollection],
   );
   const shareRows = useMemo(
-    () => (shareCollection ? ((rawShareRows as DocShareRow[] | undefined) ?? []) : undefined),
+    () => (shareCollection ? (rawShareRows ?? []) : undefined),
     [shareCollection, rawShareRows],
   );
 
@@ -119,7 +122,7 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
     [assignmentCollection],
   );
   const assignmentRows = useMemo(
-    () => (assignmentCollection ? ((rawAssignmentRows as AssignmentTodoRow[] | undefined) ?? []) : undefined),
+    () => (assignmentCollection ? (rawAssignmentRows ?? []) : undefined),
     [assignmentCollection, rawAssignmentRows],
   );
 
@@ -128,7 +131,10 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
   }
 
   const imageFieldName = meta?.image_field;
-  const imageUrl = imageFieldName ? resolveFileUrl(doc[imageFieldName], config.baseURL) : undefined;
+  const imageUrl =
+    imageFieldName !== undefined && imageFieldName !== ''
+      ? resolveFileUrl(doc[imageFieldName], config.baseURL)
+      : undefined;
 
   return (
     <FormSidebar
@@ -143,4 +149,4 @@ export function DeskFormSidebar({ doctype, name }: DeskFormSidebarProps) {
       data-testid="desk-form-sidebar"
     />
   );
-}
+};

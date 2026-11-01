@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { DynamicLink } from './DynamicLink';
 import type { DynamicLinkProps } from './DynamicLink';
@@ -44,43 +44,49 @@ export default {
 
 const MOCK_HOST = 'https://frappedynamiclink.mock.test';
 
-function doctypeMeta(name: string) {
-  return {
-    name,
-    doctype: 'DocType',
-    module: name === 'Task' || name === 'ToDo' ? 'Projects' : 'Contacts',
-    title_field: 'name',
-    fields: [{ fieldname: 'name', fieldtype: 'Data', label: 'Name', in_list_view: 1 }],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const doctypeMeta = (name: string) => ({
+  name,
+  doctype: 'DocType',
+  module: name === 'Task' || name === 'ToDo' ? 'Projects' : 'Contacts',
+  title_field: 'name',
+  fields: [{ fieldname: 'name', fieldtype: 'Data', label: 'Name', in_list_view: 1 }],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+type MockBody = { docs: unknown[] } | { data: unknown; message?: unknown[] } | { message: string };
+
+// Response.json sets the same `Content-Type: application/json` header.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeDynamicLinkMockFetch) {
+  const w: Window & { __frappeDynamicLinkMockFetch?: boolean } = window;
+  if (w.__frappeDynamicLinkMockFetch === true) {
     return;
   }
   w.__frappeDynamicLinkMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'Contact';
         return jsonResponse({ docs: [doctypeMeta(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: doctypeMeta(decodeURIComponent(metaMatch[1])) });
       }
@@ -124,9 +130,10 @@ const liveFixtures = new InMemoryFixtureProvider({
   DocType: [doctypeMeta('ToDo'), doctypeMeta('User')],
 });
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args may carry arbitrary extra controls alongside the field props
 type StoryProps = DynamicLinkProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <DynamicLink
@@ -139,7 +146,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       onDoctypeChange={action('onDoctypeChange')}
     />
   );
-}
+};
 
 const withProvider = (node: ReactNode) => (
   <FrappeProvider
@@ -194,10 +201,10 @@ export const States = (args: StoryProps) =>
   );
 States.args = { doctypes: ['Contact', 'Task'] } as Partial<StoryProps>;
 
-/**
- * Live Dynamic Link against the real bench (STORYBOOK_FRAPPE_URL, default
- * the local dev bench proxied by the Storybook dev server) on stock ToDo and
- * User doctypes. Falls back to fixtures when the bench is unreachable.
+// oxlint-disable-next-line sonarjs/todo-tag -- names a stock Frappe doctype, not a task marker
+/** Live Dynamic Link on the stock ToDo and User doctypes, against the real
+ * bench (STORYBOOK_FRAPPE_URL, default the local dev bench proxied by the
+ * Storybook dev server). Falls back to fixtures when the bench is unreachable.
  */
 export const Live = (args: StoryProps) => (
   <FrappeStoryProvider fixtures={liveFixtures}>

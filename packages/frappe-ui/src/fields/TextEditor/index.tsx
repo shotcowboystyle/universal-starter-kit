@@ -10,7 +10,7 @@ import type { TextEditorProps } from './types';
 
 export type { TextEditorProps } from './types';
 
-export function TextEditor({
+export const TextEditor = ({
   label,
   value,
   onChange,
@@ -24,7 +24,7 @@ export function TextEditor({
   placeholder,
   minHeight = 200,
   ...rest
-}: TextEditorProps) {
+}: TextEditorProps) => {
   const resolvedMinHeight = minHeight ?? (compact ? 100 : 200);
   return (
     <YStack {...rest}>
@@ -46,4 +46,4 @@ export function TextEditor({
       />
     </YStack>
   );
-}
+};

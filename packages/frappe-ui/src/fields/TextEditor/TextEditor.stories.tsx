@@ -5,8 +5,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { TextEditor } from '.';
 import type { TextEditorProps } from '.';
@@ -33,9 +33,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = TextEditorProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <TextEditor
@@ -47,7 +48,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
@@ -58,6 +59,7 @@ Main.storyName = 'Main';
 
 export const ExternalValueUpdates = {
   name: 'External value updates',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function ExternalValueUpdatesStory() {
     const [value, setValue] = useState('<p>Original note</p>');
     const [edits, setEdits] = useState(0);
@@ -193,7 +195,7 @@ const textEditorCellColumns: DataTableColumn<TextEditorCellRow>[] = [
   } as DataTableColumn<TextEditorCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(textEditorCellRows);
   return (
     <YStack
@@ -201,17 +203,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={textEditorCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={textEditorCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as TextEditorCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Text Editor cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Text Editor") — richtext cell. */
 export const InTable = () => (

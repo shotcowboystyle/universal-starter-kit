@@ -1,4 +1,6 @@
+import type { UseFrappeCollectionConfig } from '@repo/frappe';
 import { formatCalendarDate, parseCalendarDate, useChartPalette, useResolvedKnobs } from '@repo/theme';
+import type { DateInput } from '@repo/theme';
 import { Alert, GanttView } from '@repo/ui';
 import type { GanttItemMoveRange, GanttTask, GanttZoom } from '@repo/ui';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -7,11 +9,11 @@ import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';
 import type { YStackProps } from 'tamagui';
 
+import { resolveFrappeEventColor } from './frappe-event-color';
 import { FrappeConnectionIndicator } from './FrappeConnectionIndicator';
-import { resolveFrappeEventColor } from './frappeEventColor';
 import { useFrappeConfig } from './FrappeProvider';
-import { describeSyncError } from './syncError';
-import { useFrappeRows } from './useFrappeRows';
+import { describeSyncError } from './sync-error';
+import { useFrappeRows } from './use-frappe-rows';
 
 export interface FrappeGanttProps<TDoc extends { name: string; doctype: string }> extends Omit<
   YStackProps,
@@ -19,10 +21,10 @@ export interface FrappeGanttProps<TDoc extends { name: string; doctype: string }
 > {
   baseURL?: string;
   auth?: { useToken?: boolean; token?: string; type?: string };
-  syncOptions?: any;
+  syncOptions?: UseFrappeCollectionConfig['syncOptions'];
   doctype: string;
   fields?: readonly (keyof TDoc & string)[];
-  filters?: Partial<TDoc> | [keyof TDoc & string, string, any][];
+  filters?: Partial<TDoc> | [keyof TDoc & string, string, unknown][];
   /** Task start-date field (default: `exp_start_date` — Frappe Gantt settings) */
   startField?: keyof TDoc & string;
   /** Task end-date field (default: `exp_end_date`) */
@@ -60,13 +62,15 @@ export interface FrappeGanttProps<TDoc extends { name: string; doctype: string }
  * Date stays Date, "YYYY-MM-DD HH:MM:SS" keeps its time part, plain
  * "YYYY-MM-DD" stays date-only (same contract as FrappeCalendar).
  */
-function toFrappeFieldValue(original: unknown, next: Date): unknown {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the value is whatever the doctype stores in the date field; only its shape is mirrored back
+const toFrappeFieldValue = (original: unknown, next: Date): Date | string => {
   if (original instanceof Date) {
     return next;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- distinguishes a "YYYY-MM-DD HH:MM:SS" string from the other shapes a date field can hold
   const carriesTime = typeof original === 'string' && original.includes(':');
   return formatCalendarDate(next, carriesTime ? 'datetime' : 'date');
-}
+};
 
 /**
  * Thin Frappe wrapper around the generic GanttView component.
@@ -79,15 +83,22 @@ function toFrappeFieldValue(original: unknown, next: Date): unknown {
  * doc's date fields via `collection.update` (optimistic, journal-backed
  * revert on failure) before notifying `onItemMove(name, start, end)`.
  */
-export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
+// oxlint-disable-next-line eslint/complexity -- the count comes from prop defaults in the destructuring; the body itself is linear
+export const FrappeGantt = <TDoc extends { name: string; doctype: string }>({
   baseURL,
   auth,
   syncOptions,
   doctype,
   fields,
   filters,
+  // SAFETY: Frappe's default Gantt field name; a doctype without it just yields no tasks (parseCalendarDate gets undefined)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   startField = 'exp_start_date' as keyof TDoc & string,
+  // SAFETY: Frappe's default Gantt field name; a doctype without it just yields no tasks (parseCalendarDate gets undefined)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   endField = 'exp_end_date' as keyof TDoc & string,
+  // SAFETY: Frappe's default Gantt field name; a doctype without it just yields no tasks (parseCalendarDate gets undefined)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   titleField = 'subject' as keyof TDoc & string,
   colorField,
   zoom = 'week',
@@ -95,7 +106,7 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
   onItemMove,
   enableItemDrag,
   loading,
-  error,
+  error: renderError,
   height,
   showToday = true,
   showNavigation = true,
@@ -103,7 +114,7 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
   firstDayOfWeek = 0,
   initialDate,
   ...stackProps
-}: FrappeGanttProps<TDoc>) {
+}: FrappeGanttProps<TDoc>) => {
   const config = useFrappeConfig();
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
@@ -113,24 +124,24 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
   const finalAuth = auth ?? config?.auth;
   const finalSyncOptions = syncOptions ?? config?.syncOptions;
 
-  if (!finalBaseURL && !config?.fixtures) {
+  if ((finalBaseURL === undefined || finalBaseURL === '') && !config?.fixtures) {
     throw new Error('FrappeGantt requires baseURL prop or FrappeProvider with baseURL or fixtures');
   }
 
   // Ensure required fields are fetched
   const effectiveFields = useMemo(() => {
-    if (!fields) {
-      return;
+    if (fields === undefined) {
+      return fields;
     }
-    const fieldSet = new Set(fields);
-    fieldSet.add('name' as keyof TDoc & string);
+    const fieldSet = new Set<keyof TDoc & string>(fields);
+    fieldSet.add('name');
     fieldSet.add(startField);
     fieldSet.add(endField);
     fieldSet.add(titleField);
-    if (colorField) {
+    if (colorField !== undefined && colorField !== '') {
       fieldSet.add(colorField);
     }
-    return [...fieldSet] as (keyof TDoc & string)[];
+    return [...fieldSet];
   }, [fields, startField, endField, titleField, colorField]);
 
   const connectionConfig = useMemo(
@@ -162,6 +173,7 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
   // error copy (describeSyncError); real subscription failures still win over
   // the generic isError flag inside the hook, because they carry an
   // actionable message. `limit: null` keeps the bench's own page length.
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- mapError receives whatever the sync layer threw; describeSyncError does the narrowing
   const mapSyncError = useCallback((err: unknown) => new Error(describeSyncError(err, doctype, t)), [doctype, t]);
   const {
     rows: docs,
@@ -187,29 +199,34 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
   // Map Frappe documents to generic GanttTask objects. Docs without a start
   // date are skipped (nothing to position); a missing end collapses to a
   // one-day bar on the start date.
-  const tasks = useMemo(
-    (): GanttTask[] =>
-      docs
-        .map((doc) => {
-          const start = parseCalendarDate((doc as any)[startField]);
-          if (!start) {
-            return null;
-          }
-          const end = parseCalendarDate((doc as any)[endField]) ?? start;
-          const title = String((doc as any)[titleField] ?? doc.name);
-          const color = colorField ? resolveFrappeEventColor((doc as any)[colorField], chartPalette) : undefined;
-          return {
-            id: doc.name,
-            title,
-            start,
-            end,
-            color,
-            _doc: doc, // Attach original doc for callbacks
-          } as GanttTask;
-        })
-        .filter(Boolean) as GanttTask[],
-    [docs, startField, endField, titleField, colorField, chartPalette],
-  );
+  const tasks = useMemo((): GanttTask[] => {
+    // SAFETY: Gantt date fields hold Frappe date/datetime strings (or null/Date); parseCalendarDate returns null for anything else
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    const dateOf = (doc: TDoc, field: keyof TDoc & string): DateInput => doc[field] as DateInput;
+    const result: GanttTask[] = [];
+    for (const doc of docs) {
+      const start = parseCalendarDate(dateOf(doc, startField));
+      if (!start) {
+        continue;
+      }
+      const end = parseCalendarDate(dateOf(doc, endField)) ?? start;
+      const title = String(doc[titleField] ?? doc.name);
+      const color =
+        colorField === undefined || colorField === ''
+          ? undefined
+          : resolveFrappeEventColor(doc[colorField], chartPalette);
+      result.push({
+        id: doc.name,
+        title,
+        start,
+        end,
+        color,
+        // Attach original doc for callbacks
+        _doc: doc,
+      });
+    }
+    return result;
+  }, [docs, startField, endField, titleField, colorField, chartPalette]);
 
   // Bridge onItemPress from generic GanttTask to Frappe doc
   const handleItemPress = useCallback(
@@ -232,6 +249,8 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
       try {
         if (collection) {
           const tx = collection.update(task.id, (draft) => {
+            // SAFETY: the draft is the live doc object; date fields are read and written by name
+            // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- doc fields are doctype-defined
             const rec = draft as Record<string, unknown>;
             rec[startField] = toFrappeFieldValue(rec[startField], range.start);
             const endValue = rec[endField];
@@ -249,11 +268,12 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
     [collection, onItemMove, startField, endField],
   );
 
-  if (isLoading && loading) {
+  if (isLoading && Boolean(loading)) {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- returning the bare ReactNode would widen the component's return type to include Promise
     return <>{loading}</>;
   }
-  if (queryError && error) {
-    return <>{error(queryError)}</>;
+  if (queryError && renderError) {
+    return <>{renderError(queryError)}</>;
   }
 
   return (
@@ -274,6 +294,7 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
         error={queryError}
         emptyTitle={t('No {{doctype}} tasks', { doctype })}
         onItemPress={handleItemPress}
+        // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects (errors land in actionError)
         onItemMove={handleItemMove}
         enableItemDrag={enableItemDrag}
         height={height}
@@ -286,4 +307,4 @@ export function FrappeGantt<TDoc extends { name: string; doctype: string }>({
       />
     </YStack>
   );
-}
+};

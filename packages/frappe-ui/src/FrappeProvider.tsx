@@ -1,13 +1,11 @@
 import type { FixtureProvider, UseFrappeCollectionConfig } from '@repo/frappe';
 import React, { createContext, use, useContext } from 'react';
 
-import { FrappeNavigationProvider } from './frappeNavigation';
-import type { FrappeNavigation } from './frappeNavigation';
+import { FrappeNavigationProvider } from './frappe-navigation';
+import type { FrappeNavigation } from './frappe-navigation';
 
 /**
  * Configuration for the Frappe connection.
- *
- * @category Types
  */
 export interface FrappeConfig {
   /**
@@ -70,8 +68,6 @@ const FrappeContext = createContext<FrappeConfig | undefined>(undefined);
 
 /**
  * Props for the FrappeProvider component.
- *
- * @category Types
  */
 export interface FrappeProviderProps {
   /** Child components */
@@ -132,10 +128,8 @@ export interface FrappeProviderProps {
  *   );
  * }
  * ```
- *
- * @category Components
  */
-export function FrappeProvider({
+export const FrappeProvider = ({
   children,
   baseURL,
   realtime,
@@ -147,7 +141,7 @@ export function FrappeProvider({
   socketOptions,
   fixtures,
   navigation,
-}: FrappeProviderProps) {
+}: FrappeProviderProps) => {
   const value = React.useMemo(
     () => ({
       baseURL,
@@ -168,7 +162,7 @@ export function FrappeProvider({
       <FrappeNavigationProvider navigation={navigation}>{children}</FrappeNavigationProvider>
     </FrappeContext.Provider>
   );
-}
+};
 
 /**
  * Hook to read the FrappeConfig from context.
@@ -176,9 +170,7 @@ export function FrappeProvider({
  *
  * @returns The FrappeConfig if a FrappeProvider is present, undefined otherwise
  */
-export function useFrappeConfig(): FrappeConfig | undefined {
-  return useContext(FrappeContext);
-}
+export const useFrappeConfig = (): FrappeConfig | undefined => useContext(FrappeContext);
 
 /**
  * React 19 use() hook wrapper for reading FrappeContext.
@@ -206,6 +198,4 @@ export function useFrappeConfig(): FrappeConfig | undefined {
  *
  * @returns The FrappeConfig if a FrappeProvider is present, undefined otherwise
  */
-export function useFrappeContext(): FrappeConfig | undefined {
-  return use(FrappeContext);
-}
+export const useFrappeContext = (): FrappeConfig | undefined => use(FrappeContext);

@@ -13,12 +13,14 @@ import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { FrappeConfig } from '../FrappeProvider';
 import { useFrappeConfig } from '../FrappeProvider';
 
 export interface TableMultiSelectOption {
   name: string;
   doctype: string;
-  [key: string]: any;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the doc carries whichever displayField the caller names
+  [key: string]: unknown;
 }
 
 export interface TableMultiSelectProps {
@@ -31,7 +33,7 @@ export interface TableMultiSelectProps {
   required?: boolean;
   maxSelections?: number;
   baseURL?: string;
-  auth?: any;
+  auth?: FrappeConfig['auth'];
   error?: string;
   helperText?: string;
   readOnly?: boolean;
@@ -40,9 +42,45 @@ export interface TableMultiSelectProps {
   placeholder?: string;
 }
 
-export function TableMultiSelect({
+/** Every falsy value: a display field holding one falls back to the doc name. */
+const EMPTY_LABELS = new Set<unknown>([undefined, null, '', 0, false, Number.NaN]);
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- displayField picks an arbitrary doc field
+const toDisplayLabel = (raw: unknown): string | undefined => {
+  if (EMPTY_LABELS.has(raw)) {
+    return undefined;
+  }
+  return String(raw);
+};
+
+const toSelection = (next: string | string[]): string[] => {
+  if (Array.isArray(next)) {
+    return next;
+  }
+  return next === '' ? [] : [next];
+};
+
+/** The provider's connection, with this field's baseURL/auth overrides; undefined without a base URL. */
+const useCollectionConfig = (baseURL?: string, auth?: FrappeConfig['auth']) => {
+  const config = useFrappeConfig();
+  const finalBaseURL = baseURL ?? config?.baseURL ?? '';
+  return finalBaseURL
+    ? {
+        baseURL: finalBaseURL,
+        socketPort: config?.socketPort,
+        siteName: config?.siteName,
+        socketBaseURL: config?.socketBaseURL,
+        auth: auth ?? config?.auth,
+        syncOptions: config?.syncOptions,
+        realtime: config?.realtime,
+        fixtures: config?.fixtures,
+      }
+    : undefined;
+};
+
+export const TableMultiSelect = ({
   label,
-  value = [],
+  value,
   onChange,
   doctype,
   displayField = 'name',
@@ -57,24 +95,10 @@ export function TableMultiSelect({
   skeleton = false,
   compact = false,
   placeholder,
-}: TableMultiSelectProps) {
+}: TableMultiSelectProps) => {
   const { t } = useTranslation();
-  const config = useFrappeConfig();
   const isLocked = disabled || readOnly;
-
-  const finalBaseURL = baseURL ?? config?.baseURL ?? '';
-  const finalConfig = finalBaseURL
-    ? {
-        baseURL: finalBaseURL,
-        socketPort: config?.socketPort,
-        siteName: config?.siteName,
-        socketBaseURL: config?.socketBaseURL,
-        auth: auth ?? config?.auth,
-        syncOptions: config?.syncOptions,
-        realtime: config?.realtime,
-        fixtures: config?.fixtures,
-      }
-    : undefined;
+  const finalConfig = useCollectionConfig(baseURL, auth);
 
   const optionsCollection = useFrappeCollection<TableMultiSelectOption>(finalConfig, doctype, {
     fields: ['name', displayField],
@@ -83,15 +107,22 @@ export function TableMultiSelect({
     (q) => (optionsCollection ? q.from({ _list: optionsCollection }) : null),
     [optionsCollection],
   );
+  // SAFETY: the live query reads the TableMultiSelectOption collection above
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const docs = useMemo(() => (rawOptions as TableMultiSelectOption[]) ?? [], [rawOptions]);
 
   const options = useMemo<ComboboxOption[]>(() => {
     const fromDocs = docs.map((option) => {
-      const displayLabel = displayField !== 'name' && option[displayField] ? String(option[displayField]) : option.name;
+      const displayLabel = (displayField === 'name' ? undefined : toDisplayLabel(option[displayField])) ?? option.name;
       return { value: option.name || '', label: displayLabel || option.name || '' };
     });
     const known = new Set(fromDocs.map((option) => option.value));
-    const unknown = value.filter((name) => name && !known.has(name)).map((name) => ({ value: name, label: name }));
+    const unknown: ComboboxOption[] = [];
+    for (const name of value) {
+      if (name !== '' && !known.has(name)) {
+        unknown.push({ value: name, label: name });
+      }
+    }
     return [...fromDocs, ...unknown];
   }, [docs, displayField, value]);
 
@@ -100,7 +131,7 @@ export function TableMultiSelect({
       if (isLocked) {
         return;
       }
-      const arr = Array.isArray(next) ? next : next ? [next] : [];
+      const arr = toSelection(next);
       if (maxSelections !== undefined && arr.length > maxSelections) {
         return;
       }
@@ -127,4 +158,4 @@ export function TableMultiSelect({
       compact={compact}
     />
   );
-}
+};

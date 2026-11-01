@@ -7,9 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 import { ImageWell } from '../list/ImageWell';
 
-import { topBy } from './insightsData';
-import { formatMetric, metricValue } from './insightsRecord';
-import type { FrappeInsightsMetric, InsightsRecordView } from './insightsRecord';
+import { topBy } from './insights-data';
+import { formatMetric, metricValue } from './insights-record';
+import type { FrappeInsightsMetric, InsightsRecordView } from './insights-record';
 
 interface LeaderRow<TDoc> extends DataTableData {
   rank: number;
@@ -32,25 +32,26 @@ export interface InsightsLeadersProps<TDoc> {
  * in one compact read-only DataTable; a row opens its record. Nested cell
  * chrome uses the compact nestedControl and label type (LC-73).
  */
-export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID }: InsightsLeadersProps<TDoc>) {
+export const InsightsLeaders = <TDoc,>({ rows, metrics, record, count = 5, testID }: InsightsLeadersProps<TDoc>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact: true });
   const [field, setField] = useState(metrics[0]?.field ?? '');
-  const metric = metrics.find((candidate) => candidate.field === field) ?? metrics[0];
+  const metric: FrappeInsightsMetric | undefined = metrics.find((candidate) => candidate.field === field) ?? metrics[0];
   const nestedPx = knobProps.nestedControl.px;
 
-  const leaders = useMemo<LeaderRow<TDoc>[]>(
-    () =>
-      metric
-        ? topBy(rows as never[], metric.field, count).map((doc: TDoc, index) => ({
-            rank: index + 1,
-            doc,
-            title: record.title(doc),
-            value: metricValue(doc, metric.field),
-          }))
-        : [],
-    [rows, metric, count, record],
-  );
+  const leaders = useMemo<LeaderRow<TDoc>[]>(() => {
+    if (metric === undefined) {
+      return [];
+    }
+    // SAFETY: TDoc rows are Frappe docs, i.e. objects keyed by fieldname, which is all topBy reads
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    return topBy(rows as never[], metric.field, count).map((doc: TDoc, index) => ({
+      rank: index + 1,
+      doc,
+      title: record.title(doc),
+      value: metricValue(doc, metric.field),
+    }));
+  }, [rows, metric, count, record]);
 
   const columns = useMemo<DataTableColumn<LeaderRow<TDoc>>[]>(
     () => [
@@ -59,6 +60,7 @@ export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID
         accessorKey: 'rank',
         header: t('Rank'),
         size: 64,
+        // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
         cell: ({ row }) => (
           <Text
             {...knobProps.label}
@@ -72,6 +74,7 @@ export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID
         id: 'record',
         accessorKey: 'title',
         header: t('Record'),
+        // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
         cell: ({ row }) => {
           const tints = record.tints(row.original.doc);
           const code = record.code(row.original.doc);
@@ -96,7 +99,7 @@ export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID
                   numberOfLines={1}>
                   {row.original.title}
                 </Text>
-                {code ? (
+                {code !== undefined && code !== '' ? (
                   <Text
                     {...knobProps.label}
                     color="$color10">
@@ -113,13 +116,16 @@ export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID
         accessorKey: 'value',
         header: metric?.label ?? '',
         align: 'right',
-        cell: ({ row }) => <Text fontWeight="700">{metric ? formatMetric(metric, row.original.value) : ''}</Text>,
+        // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
+        cell: ({ row }) => (
+          <Text fontWeight="700">{metric === undefined ? '' : formatMetric(metric, row.original.value)}</Text>
+        ),
       },
     ],
     [t, metric, record, nestedPx, knobProps.label],
   );
 
-  if (!metric) {
+  if (metric === undefined) {
     return null;
   }
   return (
@@ -152,4 +158,4 @@ export function InsightsLeaders<TDoc>({ rows, metrics, record, count = 5, testID
       />
     </YStack>
   );
-}
+};

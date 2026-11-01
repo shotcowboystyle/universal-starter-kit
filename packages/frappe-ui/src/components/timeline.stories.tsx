@@ -2,8 +2,8 @@ import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import { formatAbsoluteDateTime } from '@repo/theme';
 
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { Timeline } from './timeline';
 import type { FrappeComment, FrappeVersion } from './timeline';
@@ -35,70 +35,72 @@ export default {
 
 const MOCK_HOST = 'https://frappetimeline.mock.test';
 
-function commentMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Core',
-    title_field: 'content',
-    fields: [
-      { fieldname: 'comment_type', fieldtype: 'Select', label: 'Comment Type' },
-      { fieldname: 'content', fieldtype: 'Text Editor', label: 'Content' },
-      { fieldname: 'comment_by', fieldtype: 'Data', label: 'Comment By' },
-      { fieldname: 'reference_doctype', fieldtype: 'Link', label: 'Reference Document Type' },
-      { fieldname: 'reference_name', fieldtype: 'Dynamic Link', label: 'Reference Name' },
-      { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const commentMetaRaw = (name: string) => ({
+  name,
+  module: 'Core',
+  title_field: 'content',
+  fields: [
+    { fieldname: 'comment_type', fieldtype: 'Select', label: 'Comment Type' },
+    { fieldname: 'content', fieldtype: 'Text Editor', label: 'Content' },
+    { fieldname: 'comment_by', fieldtype: 'Data', label: 'Comment By' },
+    { fieldname: 'reference_doctype', fieldtype: 'Link', label: 'Reference Document Type' },
+    { fieldname: 'reference_name', fieldtype: 'Dynamic Link', label: 'Reference Name' },
+    { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
-function versionMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Core',
-    fields: [
-      { fieldname: 'ref_doctype', fieldtype: 'Link', label: 'Reference Document Type' },
-      { fieldname: 'docname', fieldtype: 'Dynamic Link', label: 'Document Name' },
-      { fieldname: 'data', fieldtype: 'Code', label: 'Data' },
-      { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
-    ],
-    permissions: [{ role: 'All', read: 1 }],
-  };
-}
+const versionMetaRaw = (name: string) => ({
+  name,
+  module: 'Core',
+  fields: [
+    { fieldname: 'ref_doctype', fieldtype: 'Link', label: 'Reference Document Type' },
+    { fieldname: 'docname', fieldtype: 'Dynamic Link', label: 'Document Name' },
+    { fieldname: 'data', fieldtype: 'Code', label: 'Data' },
+    { fieldname: 'creation', fieldtype: 'Datetime', label: 'Created On' },
+  ],
+  permissions: [{ role: 'All', read: 1 }],
+});
 
-function metaFor(doctype: string) {
+const metaFor = (doctype: string) => {
   if (doctype === 'Version') {
     return versionMetaRaw(doctype);
   }
   return commentMetaRaw(doctype);
-}
+};
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- serializes any mock payload; the story owns its shape
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const urlOf = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeTimelineMockFetch) {
+  const w: Window & { __frappeTimelineMockFetch?: boolean } = window;
+  if (w.__frappeTimelineMockFetch === true) {
     return;
   }
   w.__frappeTimelineMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = urlOf(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'Comment';
         return jsonResponse({ docs: [metaFor(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: metaFor(decodeURIComponent(metaMatch[1])) });
       }

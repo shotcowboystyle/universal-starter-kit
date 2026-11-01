@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { MentionInputField } from '.';
 import type { MentionInputFieldProps, MentionValue } from '.';
@@ -46,9 +46,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = MentionInputFieldProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState<MentionValue | undefined>(props.value as MentionValue | undefined);
   return (
     <MentionInputField
@@ -61,7 +62,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
@@ -149,6 +150,7 @@ interface MentionRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<MentionRow[]>([
       { id: '1', label: 'Alpha', value: 'Ping @John Doe when the build is green' },

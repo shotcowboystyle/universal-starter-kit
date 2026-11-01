@@ -2,8 +2,8 @@ import { DataTable } from '@repo/table';
 import type { DataTableColumn } from '@repo/table';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { ReadOnly } from '.';
 
@@ -210,21 +210,19 @@ const readOnlyCellColumns: DataTableColumn<ReadOnlyCellRow>[] = [
   } as DataTableColumn<ReadOnlyCellRow>,
 ];
 
-function InTableStory() {
-  return (
-    <YStack
-      width="100%"
-      height={280}>
-      <DataTable
-        data={readOnlyCellRows}
-        columns={readOnlyCellColumns as DataTableColumn<Record<string, any>>[]}
-        enablePagination={false}
-        readOnly
-        aria-label="Read Only cell table"
-      />
-    </YStack>
-  );
-}
+const InTableStory = () => (
+  <YStack
+    width="100%"
+    height={280}>
+    <DataTable
+      data={readOnlyCellRows}
+      columns={readOnlyCellColumns}
+      enablePagination={false}
+      readOnly
+      aria-label="Read Only cell table"
+    />
+  </YStack>
+);
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Read Only") — read-only cells. */
 export const InTable = () => (

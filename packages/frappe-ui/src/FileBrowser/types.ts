@@ -49,6 +49,7 @@ export interface FileBrowserProps {
   /** Test / story override. Default: split ≥640, drill-in below. */
   layout?: FileBrowserLayout;
   /** Opens the in-pane FileUpload (same forms control Attach uses). */
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- the return value is ignored; unknown accepts both sync and async uploaders
   onUpload?: (file: File) => unknown;
   search?: string;
   onSearchChange?: (query: string) => void;

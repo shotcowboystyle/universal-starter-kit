@@ -1,9 +1,9 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeImageView } from './FrappeImageView';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 
 // hex-escape: generated image fixtures are data, not paint
 
@@ -28,25 +28,37 @@ export default {
 
 const MOCK_HOST = 'https://imageview.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
+
 (() => {
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeImageViewMockFetch?: boolean } = window;
   if (w.__frappeImageViewMockFetch) {
     return;
   }
   w.__frappeImageViewMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         const name = decodeURIComponent(metaMatch[1]);
         return jsonResponse({
@@ -78,8 +90,8 @@ const svgImage = (color: string, label: string) =>
 
 const palette = ['#4a90d9', '#2ec27e', '#e5a50a', '#c061cb', '#e01b24', '#63452c'];
 
-function makeGallery(doctype: string, count: number, broken = false) {
-  return Array.from({ length: count }, (_, i) => ({
+const makeGallery = (doctype: string, count: number, broken = false) =>
+  Array.from({ length: count }, (_, i) => ({
     name: `${doctype.toUpperCase()}-${String(i + 1).padStart(3, '0')}`,
     doctype,
     title: `Item ${i + 1}`,
@@ -87,8 +99,8 @@ function makeGallery(doctype: string, count: number, broken = false) {
     picture:
       broken && i % 2 === 0 ? '/files/definitely-broken.png' : svgImage(palette[i % palette.length], String(i + 1)),
   }));
-}
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the Storybook args bag is spread onto FrappeImageView as-is
 export const Main = (args: Record<string, unknown>) => (
   <FrappeProvider
     baseURL={MOCK_HOST}

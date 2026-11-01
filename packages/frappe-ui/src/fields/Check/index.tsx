@@ -7,9 +7,11 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Checkbox as FormsCheckbox } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useProps } from 'tamagui';
 
 export type CheckProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -30,12 +32,20 @@ export type CheckProps<
     readOnly?: boolean;
     skeleton?: boolean;
     compact?: boolean;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- pass-through props spread onto the Tamagui checkbox
     checkboxProps?: Record<string, unknown>;
   };
 
-export function Check<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Check = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: CheckProps<TData, TName>,
-) {
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain CheckProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- useProps widens the bag; extra keys flow into fieldProps
+  const resolvedProps = useProps(props) as CheckProps<TData, TName> & Record<string, unknown>;
   const {
     checkboxProps,
     defaultValue,
@@ -49,7 +59,7 @@ export function Check<TData extends Record<string, unknown> = Record<string, unk
     disabled,
     value,
     ...fieldProps
-  } = useProps(props) as CheckProps<TData, TName> & Record<string, unknown>;
+  } = resolvedProps;
 
   return (
     <FormsCheckbox
@@ -71,7 +81,9 @@ export function Check<TData extends Record<string, unknown> = Record<string, unk
       onChange={(checked) => onChange?.(checked === true)}
       onBlur={onBlur}
       disabled={disabled}
-      checkboxProps={checkboxProps as any}
+      // SAFETY: caller-supplied Tamagui checkbox props, forwarded as-is
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      checkboxProps={checkboxProps as ComponentProps<typeof FormsCheckbox>['checkboxProps']}
     />
   );
-}
+};

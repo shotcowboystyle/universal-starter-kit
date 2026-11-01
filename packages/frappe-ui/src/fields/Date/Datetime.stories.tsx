@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Date as DateField } from '.';
 import type { DateProps } from '.';
@@ -30,9 +30,13 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = DateProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const SAMPLE_DATETIME = '2026-01-24T14:30';
+const SCHEDULED_AT = 'Scheduled At';
+
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <DateField
@@ -44,13 +48,13 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
-  label: 'Scheduled At',
+  label: SCHEDULED_AT,
   type: 'datetime',
-  value: '2026-01-24T14:30',
+  value: SAMPLE_DATETIME,
 } as Partial<StoryProps>;
 Main.storyName = 'Main';
 
@@ -87,9 +91,9 @@ export const States = (args: StoryProps) => (
   </YStack>
 );
 States.args = {
-  label: 'Scheduled At',
+  label: SCHEDULED_AT,
   type: 'datetime',
-  value: '2026-01-24T14:30',
+  value: SAMPLE_DATETIME,
 } as Partial<StoryProps>;
 
 /**
@@ -119,9 +123,9 @@ export const ContractProbe = (args: StoryProps) => (
   </YStack>
 );
 ContractProbe.args = {
-  label: 'Scheduled At',
+  label: SCHEDULED_AT,
   type: 'datetime',
-  value: '2026-01-24T14:30',
+  value: SAMPLE_DATETIME,
 } as Partial<StoryProps>;
 
 interface DatetimeRow {
@@ -132,9 +136,10 @@ interface DatetimeRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<DatetimeRow[]>([
-      { id: '1', label: 'Alpha', value: '2026-01-24T14:30' },
+      { id: '1', label: 'Alpha', value: SAMPLE_DATETIME },
       { id: '2', label: 'Beta', value: '2026-03-01T09:00' },
       { id: '3', label: 'Gamma', value: '' },
     ]);

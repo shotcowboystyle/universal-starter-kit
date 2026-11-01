@@ -24,7 +24,7 @@ import { useResolvedKnobs } from '@repo/theme';
  *   - a reader refused DocType meta (Guest) still gets the rows, laid out
  *     from `initialColumns` or one record's own fields, with nothing to save
  *     (LC-96); rows refused too is a permission state, never a retry
- * The model is `./report/reportViewModel`; navigation, scope and the selected
+ * The model is `./report/report-view-model`; navigation, scope and the selected
  * saved report come in as props, so the desk and a plain app mount the same
  * component.
  */
@@ -37,9 +37,9 @@ import type { YStackProps } from 'tamagui';
 
 import { FrappeNotConfigured } from './FrappeNotConfigured';
 import { useFrappeConfig } from './FrappeProvider';
-import { isPermissionError, refusalReason } from './liveErrors';
-import { recordKeyLabel, useRecordShape } from './recordShape';
-import { ReportGrid } from './report/ReportGrid';
+import { isPermissionError, refusalReason } from './live-errors';
+// oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- useRecordShape is the record-shape module's exported hook name
+import { recordKeyLabel, useRecordShape } from './record-shape';
 import {
   DEFAULT_REPORT_PAGE_SIZE,
   REPORT_PAGE_SIZES,
@@ -51,21 +51,23 @@ import {
   orderReportRows,
   reportColumnsFromMeta,
   resolveSelectedColumns,
-} from './report/reportViewModel';
-import type { ReportFilters, ReportMetaSource, ReportRow, ReportSortState } from './report/reportViewModel';
+} from './report/report-view-model';
+import type { ReportFilters, ReportMetaSource, ReportRow, ReportSortState } from './report/report-view-model';
+import { ReportGrid } from './report/ReportGrid';
 import { ReportViewToolbar } from './report/ReportViewToolbar';
-import { useSavedReports } from './report/savedReports';
-import { useFrappeRows } from './useFrappeRows';
+import { useSavedReports } from './report/saved-reports';
+import { useFrappeRows } from './use-frappe-rows';
 
 type FilterTuple = [string, string, unknown];
 
 export interface FrappeReportBuilderProps extends Omit<YStackProps, 'children'> {
-  /** Proper-cased doctype name (e.g. "ToDo", "Sales Order"). */
+  /** Proper-cased doctype name (e.g. "Note", "Sales Order"). */
   doctype: string;
   /**
    * The report's own filters (a deep link, a host's preset). They show as
    * chips the user can clear. The object form means `field = value`.
    */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported prop: `field = value` filters carry arbitrary Frappe field values
   filters?: Record<string, unknown> | FilterTuple[];
   /**
    * Filters ANDed into every query: invisible to the chips and not
@@ -86,6 +88,7 @@ export interface FrappeReportBuilderProps extends Omit<YStackProps, 'children'> 
   /** Open a row's document. */
   onOpenRow?: (name: string) => void;
   /** A row press with the row and its index in the full ordered result. */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported prop: report rows have no owner shape, the columns name the fields at runtime
   onRowPress?: (row: Record<string, unknown>, index: number) => void;
   /** Open a Link cell's target document. */
   onOpenLink?: (doctype: string, name: string) => void;
@@ -96,6 +99,7 @@ export interface FrappeReportBuilderProps extends Omit<YStackProps, 'children'> 
   report?: string | null;
   onReportChange?: (report: string | null) => void;
   /** Replaces the CSV download; receives the full filtered, ordered rows. */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported prop: report rows have no owner shape, the columns name the fields at runtime
   onExport?: (rows: Record<string, unknown>[]) => void;
   /** Shown while the doctype's meta loads. */
   loading?: ReactNode;
@@ -103,23 +107,31 @@ export interface FrappeReportBuilderProps extends Omit<YStackProps, 'children'> 
   error?: (error: Error) => ReactNode;
   baseURL?: string;
   auth?: { useToken?: boolean; token?: string; type?: string };
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported prop: passed through untouched to the collection's sync layer
   syncOptions?: Record<string, unknown>;
 }
 
 const EMPTY_FILTERS: ReportFilters = [];
+
+/** Adds or removes a column; the last selected column stays (a report always shows one). */
+const toggleFieldname = (current: string[], fieldname: string): string[] => {
+  if (!current.includes(fieldname)) {
+    return [...current, fieldname];
+  }
+  return current.length === 1 ? current : current.filter((entry) => entry !== fieldname);
+};
 const COLUMN_FILTER_DEBOUNCE_MS = 350;
 
-function columnsStorageKey(doctype: string): string {
-  return `backoffice.report.columns.${doctype}`;
-}
+const columnsStorageKey = (doctype: string): string => `backoffice.report.columns.${doctype}`;
 
-async function readStoredColumns(doctype: string): Promise<string[] | undefined> {
+const readStoredColumns = async (doctype: string): Promise<string[] | undefined> => {
   try {
     const raw = await Promise.resolve(storage.getItem(columnsStorageKey(doctype)));
-    if (!raw) {
+    if (raw === null || raw === undefined || raw === '') {
       return undefined;
     }
     const parsed: unknown = JSON.parse(raw);
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this is the parse step at the storage boundary
     if (Array.isArray(parsed) && parsed.every((entry) => typeof entry === 'string')) {
       return parsed;
     }
@@ -127,18 +139,18 @@ async function readStoredColumns(doctype: string): Promise<string[] | undefined>
     // storage unavailable or corrupted — defaults win
   }
   return undefined;
-}
+};
 
-function persistStoredColumns(doctype: string, fieldnames: readonly string[]): void {
+const persistStoredColumns = (doctype: string, fieldnames: readonly string[]): void => {
   try {
     void Promise.resolve(storage.setItem(columnsStorageKey(doctype), JSON.stringify(fieldnames)));
   } catch {
     // storage unavailable — selection stays session-only
   }
-}
+};
 
 /** `{field: value}` → equality tuples; tuple arrays pass through. */
-function toReportFilters(filters: FrappeReportBuilderProps['filters']): ReportFilters | undefined {
+const toReportFilters = (filters: FrappeReportBuilderProps['filters']): ReportFilters | undefined => {
   if (!filters) {
     return undefined;
   }
@@ -147,32 +159,36 @@ function toReportFilters(filters: FrappeReportBuilderProps['filters']): ReportFi
   }
   const tuples = Object.entries(filters).map(([field, value]): FilterTuple => [field, '=', value]);
   return tuples.length > 0 ? tuples : undefined;
-}
+};
 
-function initialFieldnames(columns: FrappeReportBuilderProps['initialColumns']): string[] | null {
+const initialFieldnames = (columns: FrappeReportBuilderProps['initialColumns']): string[] | null => {
   if (!columns) {
     return null;
   }
-  const fieldnames = columns.flatMap((column) =>
-    typeof column === 'string' ? [column] : column.enabled ? [column.fieldname] : [],
-  );
+  const fieldnames = columns.flatMap((column) => {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- initialColumns takes bare fieldnames or ReportColumn rows
+    if (typeof column === 'string') {
+      return [column];
+    }
+    return column.enabled ? [column.fieldname] : [];
+  });
   return fieldnames.length > 0 ? fieldnames : null;
-}
+};
 
-function asFieldType(fieldtype: string | undefined): FrappeFieldType {
-  return frappeFieldTypes.find((known) => known === fieldtype) ?? 'Data';
-}
+const asFieldType = (fieldtype: string | undefined): FrappeFieldType =>
+  frappeFieldTypes.find((known) => known === fieldtype) ?? 'Data';
 
 /**
  * What a reader refused DocType meta lays the report out from (LC-96): the
  * host's `initialColumns`, else one record's own fields. Read-only and all in
  * the default columns.
  */
-function refusedMetaFields(
+const refusedMetaFields = (
   initialColumns: FrappeReportBuilderProps['initialColumns'],
   recordFields: readonly DocTypeField[] | undefined,
-): DocTypeField[] {
+): DocTypeField[] => {
   const declared = (initialColumns ?? []).map((column): DocTypeField =>
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- initialColumns takes bare fieldnames or ReportColumn rows
     typeof column === 'string'
       ? { fieldname: column, label: recordKeyLabel(column), fieldtype: 'Data' }
       : {
@@ -181,30 +197,31 @@ function refusedMetaFields(
           fieldtype: asFieldType(column.fieldtype),
         },
   );
-  return (declared.length > 0 ? declared : (recordFields ?? []))
-    .filter((field) => field.fieldname !== 'name')
-    .map((field) => ({ ...field, read_only: 1, in_list_view: 1 }));
-}
+  return (declared.length > 0 ? declared : (recordFields ?? [])).flatMap((field) =>
+    field.fieldname === 'name' ? [] : [{ ...field, read_only: 1, in_list_view: 1 }],
+  );
+};
 
-function asError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- normalizes a caught sync error, which is untyped by nature
+const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
-function groupField(groupBy: FrappeReportBuilderProps['initialGroupBy']): string | null {
-  if (!groupBy) {
+const groupField = (groupBy: FrappeReportBuilderProps['initialGroupBy']): string | null => {
+  if (groupBy === undefined || groupBy === '') {
     return null;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- initialGroupBy takes a bare fieldname or a GroupByConfig
   return typeof groupBy === 'string' ? groupBy : groupBy.field;
-}
+};
 
 /** Group value → aggregate over its rows (count unless the config names one). */
-function aggregateGroups(
+const aggregateGroups = (
   rows: readonly ReportRow[],
   field: string,
   config: GroupByConfig | undefined,
-): { label: string; value: number }[] {
+): { label: string; value: number }[] => {
   const groups = new Map<string, ReportRow[]>();
   for (const row of rows) {
+    // oxlint-disable-next-line typescript/no-base-to-string -- the group label is the cell's own string form, as the grid shows it
     const key = row[field] === null || row[field] === undefined ? '' : String(row[field]);
     const bucket = groups.get(key);
     if (bucket) {
@@ -213,10 +230,12 @@ function aggregateGroups(
       groups.set(key, [row]);
     }
   }
-  const numbers = (group: ReportRow[]) =>
-    group.map((row) => Number(config?.aggregationField ? row[config.aggregationField] : 0) || 0);
+  const aggregationField = config?.aggregationField;
+  const aggregates = aggregationField !== undefined && aggregationField !== '';
+  const numbers = (group: ReportRow[]) => group.map((row) => Number(aggregates ? row[aggregationField] : 0) || 0);
   return [...groups.entries()].map(([label, group]) => {
-    switch (config?.aggregationField ? config.aggregation : 'count') {
+    // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- default covers count and any unrecognized aggregation
+    switch (config !== undefined && aggregates ? config.aggregation : 'count') {
       case 'sum': {
         return { label, value: numbers(group).reduce((sum, value) => sum + value, 0) };
       }
@@ -237,32 +256,25 @@ function aggregateGroups(
       }
     }
   });
-}
+};
 
 /**
  * The export button needs somewhere to put a file: a DOM anchor and an
  * object URL. Native and GTK have neither, so the built-in CSV path is left
  * out there (B12); a host `onExport` owns delivery and shows everywhere.
  */
-function canDownloadCsv(): boolean {
-  return (
-    typeof document !== 'undefined' &&
-    typeof document.createElement === 'function' &&
-    typeof Blob !== 'undefined' &&
-    typeof URL !== 'undefined' &&
-    typeof URL.createObjectURL === 'function'
-  );
-}
+const canDownloadCsv = (): boolean => {
+  // typeof is the only ReferenceError-safe probe for globals Native and GTK never declare.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof, typescript/no-deprecated -- feature-detects possibly-undeclared DOM globals
+  const hasAnchor = typeof document !== 'undefined' && typeof document.createElement === 'function';
+  const hasBlob = typeof Blob !== 'undefined';
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- feature-detects a possibly-undeclared global
+  const hasObjectUrl = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+  return hasAnchor && hasBlob && hasObjectUrl;
+};
 
-export function FrappeReportBuilder(props: FrappeReportBuilderProps) {
-  const config = useFrappeConfig();
-  if (!(props.baseURL ?? config?.baseURL) && !config?.fixtures) {
-    return <FrappeNotConfigured doctype={props.doctype} />;
-  }
-  return <FrappeReportBuilderBody {...props} />;
-}
-
-function FrappeReportBuilderBody({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one view model wired to one render; the pure logic already lives in report-view-model and the helpers above
+const FrappeReportBuilderBody = ({
   doctype,
   filters,
   scopeFilters,
@@ -282,7 +294,8 @@ function FrappeReportBuilderBody({
   auth,
   syncOptions,
   ...stackProps
-}: FrappeReportBuilderProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity, react-doctor/prefer-useReducer -- one view model wired to one render; the view states reset together only on a doctype swap
+}: FrappeReportBuilderProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const config = useFrappeConfig();
@@ -317,7 +330,8 @@ function FrappeReportBuilderBody({
   const metaRefused = !meta && metaError !== undefined && isPermissionError(metaError);
   const initialColumnsJson = JSON.stringify(initialColumns ?? []);
   const declaresColumns = initialColumnsJson !== '[]';
-  const recordShape = useRecordShape(connection, doctype, metaRefused && !declaresColumns);
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- useRecordShape is the record-shape module's exported hook name
+  const recordSample = useRecordShape(connection, doctype, metaRefused && !declaresColumns);
   const layoutMeta = useMemo((): ReportMetaSource | undefined => {
     if (meta) {
       return meta;
@@ -326,11 +340,13 @@ function FrappeReportBuilderBody({
       return undefined;
     }
     const fields = refusedMetaFields(
+      // SAFETY: initialColumnsJson is JSON.stringify of the initialColumns prop, so it parses back to that type
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       JSON.parse(initialColumnsJson) as FrappeReportBuilderProps['initialColumns'],
-      recordShape.fields,
+      recordSample.fields,
     );
     return fields.length > 0 ? { fields } : undefined;
-  }, [meta, metaRefused, initialColumnsJson, recordShape.fields]);
+  }, [meta, metaRefused, initialColumnsJson, recordSample.fields]);
   const readsWithoutMeta = !meta && layoutMeta !== undefined;
   const savedReports = useSavedReports(
     doctype,
@@ -351,7 +367,7 @@ function FrappeReportBuilderBody({
   // ── Columns: defaults → device-stored → initial → explicit override ──
   const allColumns = useMemo(() => {
     const columns = reportColumnsFromMeta(layoutMeta);
-    if (!readsWithoutMeta || !layoutMeta) {
+    if (!readsWithoutMeta || layoutMeta === undefined) {
       return columns;
     }
     const own = new Set(layoutMeta.fields.map((field) => field.fieldname));
@@ -359,26 +375,32 @@ function FrappeReportBuilderBody({
   }, [layoutMeta, readsWithoutMeta]);
   const defaultFieldnames = useMemo(
     () =>
-      readsWithoutMeta && layoutMeta
+      readsWithoutMeta && layoutMeta !== undefined
         ? ['name', ...layoutMeta.fields.map((field) => field.fieldname)]
         : defaultReportFieldnames(layoutMeta),
     [layoutMeta, readsWithoutMeta],
   );
   const initialColumnsKey = JSON.stringify(initialFieldnames(initialColumns));
-  const startFieldnames = useMemo(() => JSON.parse(initialColumnsKey) as string[] | null, [initialColumnsKey]);
+  const startFieldnames = useMemo(
+    // SAFETY: initialColumnsKey is JSON.stringify of initialFieldnames(), a string[] or null
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    () => JSON.parse(initialColumnsKey) as string[] | null,
+    [initialColumnsKey],
+  );
   const [storedColumns, setStoredColumns] = useState<string[] | undefined>();
   const [selectedOverride, setSelectedOverride] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (fixtureMode) {
-      return;
-    }
     let cancelled = false;
-    void readStoredColumns(doctype).then((stored) => {
+    const loadStoredColumns = async () => {
+      const stored = await readStoredColumns(doctype);
       if (!cancelled) {
         setStoredColumns(stored);
       }
-    });
+    };
+    if (!fixtureMode) {
+      void loadStoredColumns();
+    }
     return () => {
       cancelled = true;
     };
@@ -393,6 +415,8 @@ function FrappeReportBuilderBody({
   // ── Filters: the report's own + the per-column filter row ─────
   const filtersKey = JSON.stringify(filters ?? null);
   const propFilters = useMemo(
+    // SAFETY: filtersKey is JSON.stringify of the filters prop (or null), so it parses back to that type
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     () => toReportFilters(JSON.parse(filtersKey) as FrappeReportBuilderProps['filters']),
     [filtersKey],
   );
@@ -418,7 +442,12 @@ function FrappeReportBuilderBody({
     [selectedColumns, committedFilters],
   );
   const scopeKey = JSON.stringify(scopeFilters ?? []);
-  const scope = useMemo(() => JSON.parse(scopeKey) as ReportFilters, [scopeKey]);
+  const scope = useMemo(
+    // SAFETY: scopeKey is JSON.stringify of the scopeFilters tuples (or []), so it parses back to ReportFilters
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    () => JSON.parse(scopeKey) as ReportFilters,
+    [scopeKey],
+  );
   const effectiveFilters = useMemo(
     () => [...scope, ...baseFilters, ...columnTuples],
     [scope, baseFilters, columnTuples],
@@ -435,13 +464,18 @@ function FrappeReportBuilderBody({
   const [sortOverride, setSortOverride] = useState<ReportSortState | null>(null);
   const sort = sortOverride ?? metaSort;
   const startGroupBy = groupField(initialGroupBy);
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- initialGroupBy takes a bare fieldname or a GroupByConfig
   const chartConfig = typeof initialGroupBy === 'object' ? initialGroupBy : undefined;
   const [groupBy, setGroupBy] = useState<string | null>(startGroupBy);
   const [pageSize, setPageSize] = useState<number>(DEFAULT_REPORT_PAGE_SIZE);
   const [page, setPage] = useState(0);
 
   // A doctype swap resets every view state (a route reuses the component).
-  useEffect(() => {
+  // Adjusted during render, not in an effect, so the new doctype never paints
+  // with the previous one's columns, sort or filters.
+  const [viewDoctype, setViewDoctype] = useState(doctype);
+  if (viewDoctype !== doctype) {
+    setViewDoctype(doctype);
     setSelectedOverride(null);
     setStoredColumns(undefined);
     setSortOverride(null);
@@ -452,27 +486,24 @@ function FrappeReportBuilderBody({
     setCommittedFilters({});
     setFiltersCleared(false);
     setReportFilters(null);
-    // startGroupBy is the mount-time seed; only a doctype swap re-seeds.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doctype]);
+  }
 
   useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- a new filters prop re-shows its chips; the cleared flag is user state seeded per prop value
     setFiltersCleared(false);
   }, [filtersKey]);
 
   const effectiveFiltersKey = useMemo(() => JSON.stringify(effectiveFilters), [effectiveFilters]);
   useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- any filter, page-size or grouping change returns to the first page, including a saved report's
     setPage(0);
   }, [effectiveFiltersKey, pageSize, groupBy]);
 
   // ── Apply a saved report's config when the selection changes ─
   useEffect(() => {
-    if (!currentReport) {
-      setReportFilters(null);
-      return;
-    }
     let cancelled = false;
-    void savedReports.load(currentReport).then((saved) => {
+    const applySavedReport = async (name: string) => {
+      const saved = await savedReports.load(name);
       if (cancelled || !saved) {
         return;
       }
@@ -484,11 +515,20 @@ function FrappeReportBuilderBody({
       if (saved.sort) {
         setSortOverride(saved.sort);
       }
-      if (saved.pageSize && REPORT_PAGE_SIZES.some((size) => size === saved.pageSize)) {
+      if (
+        saved.pageSize !== undefined &&
+        saved.pageSize !== 0 &&
+        REPORT_PAGE_SIZES.some((size) => size === saved.pageSize)
+      ) {
         setPageSize(saved.pageSize);
       }
       setGroupBy(saved.groupBy ?? null);
-    });
+    };
+    if (currentReport === null || currentReport === '') {
+      setReportFilters(null);
+    } else {
+      void applySavedReport(currentReport);
+    }
     return () => {
       cancelled = true;
     };
@@ -503,12 +543,8 @@ function FrappeReportBuilderBody({
     (fieldname: string) => {
       setSelectedOverride((previous) => {
         const current = previous ?? startFieldnames ?? storedColumns ?? defaultFieldnames;
-        const next = current.includes(fieldname)
-          ? current.length === 1
-            ? current
-            : current.filter((entry) => entry !== fieldname)
-          : [...current, fieldname];
-        if (!fixtureMode && !currentReport) {
+        const next = toggleFieldname(current, fieldname);
+        if (!fixtureMode && (currentReport === null || currentReport === '')) {
           persistStoredColumns(doctype, next);
         }
         return next;
@@ -531,10 +567,10 @@ function FrappeReportBuilderBody({
     for (const column of selectedColumns) {
       fields.add(column.fieldname);
     }
-    if (groupBy) {
+    if (groupBy !== null && groupBy !== '') {
       fields.add(groupBy);
     }
-    if (chartConfig?.aggregationField) {
+    if (chartConfig?.aggregationField !== undefined && chartConfig.aggregationField !== '') {
       fields.add(chartConfig.aggregationField);
     }
     return [...fields];
@@ -567,10 +603,11 @@ function FrappeReportBuilderBody({
     [orderedRows, effectivePage, pageSize, groupBy],
   );
   const totals = useMemo(() => computeTotals(selectedColumns, orderedRows), [selectedColumns, orderedRows]);
-  const groupByColumn = groupBy ? allColumns.find((column) => column.fieldname === groupBy) : undefined;
+  const grouped = groupBy !== null && groupBy !== '';
+  const groupByColumn = grouped ? allColumns.find((column) => column.fieldname === groupBy) : undefined;
   const chartData = useMemo(
-    () => (showChart && groupBy ? aggregateGroups(orderedRows, groupBy, chartConfig) : []),
-    [showChart, groupBy, orderedRows, chartConfig],
+    () => (showChart && grouped ? aggregateGroups(orderedRows, groupBy, chartConfig) : []),
+    [showChart, grouped, groupBy, orderedRows, chartConfig],
   );
 
   // ── Navigation ──────────────────────────────────────────────
@@ -594,7 +631,7 @@ function FrappeReportBuilderBody({
         setInternalReport(name);
       }
       onReportChange?.(name);
-      if (!name) {
+      if (name === null || name === '') {
         setReportFilters(null);
         setSelectedOverride(null);
         setSortOverride(null);
@@ -614,16 +651,16 @@ function FrappeReportBuilderBody({
   // ── Saved-report actions ────────────────────────────────────
   const handleSaveReport = useCallback(
     (name: string) => {
-      void savedReports
-        .save(name, {
-          fieldnames: [...selectedFieldnames],
-          filters: effectiveFilters,
-          sort,
-          pageSize,
-          groupBy,
-          addTotals: totals.length > 0,
-        })
-        .then((savedName) => {
+      const saveReport = async () => {
+        try {
+          const savedName = await savedReports.save(name, {
+            fieldnames: [...selectedFieldnames],
+            filters: effectiveFilters,
+            sort,
+            pageSize,
+            groupBy,
+            addTotals: totals.length > 0,
+          });
           notify({
             severity: 'success',
             scope: 'page',
@@ -635,14 +672,15 @@ function FrappeReportBuilderBody({
           if (savedName !== currentReport) {
             handleSelectReport(savedName);
           }
-        })
-        .catch((error: unknown) => {
+        } catch (error) {
           notify({
             severity: 'error',
             scope: 'page',
             body: error instanceof Error ? error.message : t('report.saveFailed', 'Could not save the report'),
           });
-        });
+        }
+      };
+      void saveReport();
     },
     [
       savedReports,
@@ -660,9 +698,9 @@ function FrappeReportBuilderBody({
 
   const handleDeleteReport = useCallback(
     (name: string) => {
-      void savedReports
-        .remove(name)
-        .then(() => {
+      const deleteReport = async () => {
+        try {
+          await savedReports.remove(name);
           notify({
             severity: 'success',
             scope: 'page',
@@ -674,14 +712,15 @@ function FrappeReportBuilderBody({
           if (name === currentReport) {
             handleSelectReport(null);
           }
-        })
-        .catch((error: unknown) => {
+        } catch (error) {
           notify({
             severity: 'error',
             scope: 'page',
             body: error instanceof Error ? error.message : t('report.deleteFailed', 'Could not delete the report'),
           });
-        });
+        }
+      };
+      void deleteReport();
     },
     [savedReports, currentReport, handleSelectReport, t],
   );
@@ -716,8 +755,7 @@ function FrappeReportBuilderBody({
         if (!(fieldname in previous)) {
           return previous;
         }
-        const { [fieldname]: _dropped, ...rest } = previous;
-        return rest;
+        return Object.fromEntries(Object.entries(previous).filter(([key]) => key !== fieldname));
       }
       return { ...previous, [fieldname]: value };
     });
@@ -731,6 +769,7 @@ function FrappeReportBuilderBody({
   // ── Render ──────────────────────────────────────────────────
   if (metaLoading && !meta) {
     return (
+      // oxlint-disable-next-line react/jsx-no-useless-fragment -- keeps the return a JSX element; a bare ReactNode fallback widens the return type to include a Promise
       <>
         {loadingFallback ?? (
           <YStack
@@ -745,8 +784,9 @@ function FrappeReportBuilderBody({
     );
   }
   if (metaError && metaRefused && !layoutMeta) {
-    if (recordShape.status === 'pending') {
+    if (recordSample.status === 'pending') {
       return (
+        // oxlint-disable-next-line react/jsx-no-useless-fragment -- keeps the return a JSX element; a bare ReactNode fallback widens the return type to include a Promise
         <>
           {loadingFallback ?? (
             <YStack
@@ -761,6 +801,7 @@ function FrappeReportBuilderBody({
       );
     }
     return (
+      // oxlint-disable-next-line react/jsx-no-useless-fragment -- keeps the return a JSX element; a bare ReactNode fallback widens the return type to include a Promise
       <>
         {errorFallback ? (
           errorFallback(metaError)
@@ -779,6 +820,7 @@ function FrappeReportBuilderBody({
   }
   if (metaError && !meta && !readsWithoutMeta) {
     return (
+      // oxlint-disable-next-line react/jsx-no-useless-fragment -- keeps the return a JSX element; a bare ReactNode fallback widens the return type to include a Promise
       <>
         {errorFallback ? (
           errorFallback(metaError)
@@ -938,6 +980,15 @@ function FrappeReportBuilderBody({
   // Native has no page-level scroll (the desk list precedent) — wrap so rows
   // below the fold stay reachable. Web keeps the flex layout.
   return isWeb ? content : <ScrollView flex={1}>{content}</ScrollView>;
-}
+};
+
+export const FrappeReportBuilder = (props: FrappeReportBuilderProps) => {
+  const config = useFrappeConfig();
+  const finalBaseURL = props.baseURL ?? config?.baseURL;
+  if ((finalBaseURL === undefined || finalBaseURL === '') && !config?.fixtures) {
+    return <FrappeNotConfigured doctype={props.doctype} />;
+  }
+  return <FrappeReportBuilderBody {...props} />;
+};
 
 export type { ReportColumn, GroupByConfig } from '@repo/ui';

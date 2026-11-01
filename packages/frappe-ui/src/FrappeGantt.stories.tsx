@@ -2,9 +2,9 @@ import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import { resolveChartPalette } from '@repo/theme';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeGantt } from './FrappeGantt';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 
 export default {
   title: 'FrappeUI/FrappeGantt',
@@ -33,54 +33,57 @@ export default {
 
 const MOCK_HOST = 'https://frappegantt.mock.test';
 
-function taskMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Projects',
-    title_field: 'subject',
-    fields: [
-      { fieldname: 'subject', fieldtype: 'Data', label: 'Subject', in_list_view: 1 },
-      { fieldname: 'exp_start_date', fieldtype: 'Date', label: 'Expected Start Date' },
-      { fieldname: 'exp_end_date', fieldtype: 'Date', label: 'Expected End Date' },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Open\nWorking\nCompleted',
-        in_list_view: 1,
-      },
-      { fieldname: 'color', fieldtype: 'Color', label: 'Color' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const taskMetaRaw = (name: string) => ({
+  name,
+  module: 'Projects',
+  title_field: 'subject',
+  fields: [
+    { fieldname: 'subject', fieldtype: 'Data', label: 'Subject', in_list_view: 1 },
+    { fieldname: 'exp_start_date', fieldtype: 'Date', label: 'Expected Start Date' },
+    { fieldname: 'exp_end_date', fieldtype: 'Date', label: 'Expected End Date' },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Open\nWorking\nCompleted',
+      in_list_view: 1,
+    },
+    { fieldname: 'color', fieldtype: 'Color', label: 'Color' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeGanttMockFetch) {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeGanttMockFetch?: boolean };
+  if (w.__frappeGanttMockFetch === true) {
     return;
   }
   w.__frappeGanttMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'Task';
         return jsonResponse({ docs: [taskMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: taskMetaRaw(decodeURIComponent(metaMatch[1])) });
       }

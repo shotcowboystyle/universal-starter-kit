@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 
 import { assetLoanLifecycleFixtures } from '../tests/fixtures/assetLoanLifecycle';
 
+import { FrappeStoryProvider, frappeStoriesLive } from './frappe-story-target';
 import { FrappeForm } from './FrappeForm';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider, frappeStoriesLive } from './frappeStoryTarget';
 
 export default {
   title: 'FrappeUI/FrappeForm Lifecycle',
@@ -24,7 +24,7 @@ export default {
 const host = 'https://form-lifecycle.mock.test';
 const roles = ['Loan Manager'];
 
-function AssetLoan({ start, initialRoles = roles }: { start?: string; initialRoles?: string[] }) {
+const AssetLoan = ({ start, initialRoles = roles }: { start?: string; initialRoles?: string[] }) => {
   const fixtures = useMemo(() => assetLoanLifecycleFixtures(), []);
   const [name, setName] = useState<string | undefined>(start);
   return (
@@ -49,7 +49,7 @@ function AssetLoan({ start, initialRoles = roles }: { start?: string; initialRol
       />
     </FrappeProvider>
   );
-}
+};
 
 /** Starts on a saved draft: Submit, Cancel, then Amend, on one live fixture corpus. */
 export const Lifecycle = () => <AssetLoan start="LOAN-DRAFT" />;
@@ -69,7 +69,7 @@ export const SubmitOnlyRole = () => (
   />
 );
 
-function BenchLoan({ start }: { start: string }) {
+const BenchLoan = ({ start }: { start: string }) => {
   const [name, setName] = useState<string | undefined>(start);
   return (
     <FrappeStoryProvider>
@@ -87,7 +87,7 @@ function BenchLoan({ start }: { start: string }) {
       />
     </FrappeStoryProvider>
   );
-}
+};
 
 /**
  * The same walk on the bench the Storybook dev server proxies

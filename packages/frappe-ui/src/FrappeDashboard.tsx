@@ -1,6 +1,7 @@
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { Button, Spinner, formCommonColors } from '@repo/forms';
 import { useFrappeDoctypeEvents } from '@repo/frappe';
+import type { FixtureProvider, UseFrappeCollectionConfig } from '@repo/frappe';
 import { formatTimeOfDay, useResolvedKnobs } from '@repo/theme';
 import { Dashboard } from '@repo/ui';
 import type { DashboardWidget } from '@repo/ui';
@@ -10,7 +11,7 @@ import { Text, XStack, YStack, H3 } from 'tamagui';
 import type { YStackProps } from 'tamagui';
 
 import { useFrappeConfig } from './FrappeProvider';
-import { useFrappeRows } from './useFrappeRows';
+import { useFrappeRows } from './use-frappe-rows';
 
 /**
  * Data source configuration for live data.
@@ -18,9 +19,10 @@ import { useFrappeRows } from './useFrappeRows';
 export interface DashboardDataSource<TDoc> {
   doctype: string;
   fields?: readonly (keyof TDoc & string)[];
-  filters?: Partial<TDoc> | [keyof TDoc & string, string, any][];
+  filters?: Partial<TDoc> | [keyof TDoc & string, string, unknown][];
   aggregations?: {
     field: keyof TDoc & string;
+    // oxlint-disable-next-line sonarjs/max-union-size -- the five Frappe aggregate functions, part of the exported data-source shape
     operation: 'count' | 'sum' | 'avg' | 'min' | 'max';
     groupBy?: keyof TDoc & string;
   }[];
@@ -32,7 +34,7 @@ export interface FrappeDashboardProps<TDoc extends { name: string; doctype: stri
 > {
   baseURL?: string;
   auth?: { useToken?: boolean; token?: string | (() => string | Promise<string>); type?: string };
-  syncOptions?: any;
+  syncOptions?: UseFrappeCollectionConfig['syncOptions'];
   title?: string;
   description?: string;
   widgets: DashboardWidget[];
@@ -57,15 +59,22 @@ interface ConnectionConfig {
   /** Frappe site name — the realtime Socket.IO namespace. */
   siteName?: string;
   auth?: FrappeDashboardProps<{ name: string; doctype: string }>['auth'];
-  syncOptions?: unknown;
-  fixtures?: unknown;
+  syncOptions?: UseFrappeCollectionConfig['syncOptions'];
+  fixtures?: FixtureProvider;
 }
+
+/**
+ * Dashboard takes pixel numbers; a `$token` knob value falls back to the numeric prop.
+ */
+const numericKnobOr = (value: string | number | undefined, fallback: number): number =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- picks the number variant of the knob's token | number value
+  typeof value === 'number' ? value : fallback;
 
 /**
  * Owns the live query. Remounted via `key={refreshKey}` so Refresh /
  * autoRefresh re-subscribe instead of faking a spinner (SB-M-806).
  */
-function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
+const LiveDashboardContent = <TDoc extends { name: string; doctype: string }>({
   connectionConfig,
   dataSource,
   transformData,
@@ -99,7 +108,7 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
   loading?: React.ReactNode;
   error?: (error: Error) => React.ReactNode;
   stackProps: YStackProps;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
 
@@ -107,7 +116,7 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
     rows: liveData,
     isQueryLoading: isLiveLoading,
     isError,
-  } = useFrappeRows<TDoc>(connectionConfig as any, dataSource.doctype, {
+  } = useFrappeRows<TDoc>(connectionConfig, dataSource.doctype, {
     fields: dataSource.fields,
     filters: dataSource.filters,
     limit: null,
@@ -119,14 +128,14 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
   // filters/window — never leave the indicator stuck).
   const [isLiveStale, setIsLiveStale] = useState(false);
   const [dataUpdatedAt, setDataUpdatedAt] = useState<Date | undefined>();
-  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearStaleTimer = useCallback(() => {
-    if (staleTimerRef.current) {
+    if (staleTimerRef.current !== null) {
       clearTimeout(staleTimerRef.current);
-      staleTimerRef.current = undefined;
+      staleTimerRef.current = null;
     }
   }, []);
-  useFrappeDoctypeEvents(connectionConfig as any, dataSource.doctype, (event) => {
+  useFrappeDoctypeEvents(connectionConfig, dataSource.doctype, (event) => {
     if (
       event.type !== 'doc_update' &&
       event.type !== 'list_update' &&
@@ -147,9 +156,13 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
       isFirstData.current = false;
       return;
     }
+    // Each new rows identity is a reconcile from the live collection: stamp it and clear the stale flag.
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- records when the external collection delivered new rows; there is no event to hook instead
     setDataUpdatedAt(new Date());
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- same reconcile signal as above
     setIsLiveStale(false);
     clearStaleTimer();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- liveData is the trigger: the effect fires on each new rows identity
   }, [liveData, clearStaleTimer]);
   useEffect(() => clearStaleTimer, [clearStaleTimer]);
 
@@ -161,7 +174,9 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
   }, [transformData, liveData, staticWidgets]);
 
   if (isLiveLoading && liveData.length === 0) {
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- ReactNode truthiness is the contract: null/false/'' mean no custom loading slot
     if (loading) {
+      // oxlint-disable-next-line react/jsx-no-useless-fragment -- returning the bare ReactNode would widen the component's return type to include Promise
       return <>{loading}</>;
     }
     return (
@@ -179,6 +194,8 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
       </YStack>
     );
   }
+
+  const hasTitle = title !== undefined && title !== '';
 
   if (isError) {
     const err = new Error(t('Failed to load dashboard data'));
@@ -206,13 +223,13 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
       {...knobProps.containerRadius}
       flex={1}
       {...stackProps}>
-      {(title || showRefresh) && (
+      {(hasTitle || showRefresh) && (
         <XStack
           {...knobProps.panelPadding}
           justifyContent="space-between"
           alignItems="center"
           paddingBottom={0}>
-          {title ? <H3 {...knobProps.heading}>{title}</H3> : <YStack flex={1} />}
+          {hasTitle ? <H3 {...knobProps.heading}>{title}</H3> : <YStack flex={1} />}
           {showRefresh && (
             <XStack
               {...knobProps.gap}
@@ -254,12 +271,12 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
         widgets={widgets}
         description={description}
         columns={columns}
-        gap={typeof knobProps.gap?.gap === 'number' ? knobProps.gap.gap : gap}
-        padding={typeof knobProps.panelPadding?.padding === 'number' ? knobProps.panelPadding.padding : padding}
+        gap={numericKnobOr(knobProps.gap?.gap, gap)}
+        padding={numericKnobOr(knobProps.panelPadding?.padding, padding)}
       />
     </YStack>
   );
-}
+};
 
 /**
  * Thin Frappe wrapper around the generic Dashboard component.
@@ -268,7 +285,8 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
  * transforms it into widget data, and passes everything to the generic
  * `Dashboard` from `@repo/ui`.
  */
-export function FrappeDashboard<TDoc extends { name: string; doctype: string }>({
+// oxlint-disable-next-line eslint/complexity -- most of the count is prop defaults in the destructuring; the body is two flat render paths
+export const FrappeDashboard = <TDoc extends { name: string; doctype: string }>({
   baseURL,
   auth,
   syncOptions,
@@ -285,7 +303,7 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
   loading,
   error,
   ...stackProps
-}: FrappeDashboardProps<TDoc>) {
+}: FrappeDashboardProps<TDoc>) => {
   const config = useFrappeConfig();
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
@@ -294,12 +312,14 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
   const finalAuth = auth ?? config?.auth;
   const finalSyncOptions = syncOptions ?? config?.syncOptions;
 
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [lastRefresh, setLastRefresh] = useState<Date>(() => new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const hasBaseURL = finalBaseURL !== undefined && finalBaseURL !== '';
+  const hasLiveSource = dataSource !== undefined && dataSource.doctype !== '';
   const connectionConfig: ConnectionConfig | undefined =
-    finalBaseURL && dataSource?.doctype
+    hasBaseURL && hasLiveSource
       ? {
           baseURL: finalBaseURL,
           socketPort: config?.socketPort,
@@ -312,10 +332,12 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
         }
       : undefined;
 
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearRefreshTimer = useCallback(() => {
-    clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = undefined;
+    if (refreshTimerRef.current !== null) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = null;
   }, []);
   useEffect(() => clearRefreshTimer, [clearRefreshTimer]);
 
@@ -331,7 +353,8 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
 
   useEffect(() => {
     if (!autoRefresh || refreshInterval <= 0 || !dataSource) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const interval = setInterval(() => {
       bumpRefresh();
@@ -339,7 +362,10 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
     return () => {
       clearInterval(interval);
     };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- bumpRefresh is a stable useCallback (its only dep is stable), so it never re-subscribes the interval
   }, [autoRefresh, refreshInterval, dataSource, bumpRefresh]);
+
+  const hasTitle = title !== undefined && title !== '';
 
   // Static widgets path (no live dataSource)
   if (!dataSource || !connectionConfig) {
@@ -348,13 +374,13 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
         {...knobProps.containerRadius}
         flex={1}
         {...stackProps}>
-        {(title || autoRefresh) && (
+        {(hasTitle || autoRefresh) && (
           <XStack
             {...knobProps.panelPadding}
             justifyContent="space-between"
             alignItems="center"
             paddingBottom={0}>
-            {title ? <H3 {...knobProps.heading}>{title}</H3> : <YStack flex={1} />}
+            {hasTitle ? <H3 {...knobProps.heading}>{title}</H3> : <YStack flex={1} />}
             <XStack
               {...knobProps.gap}
               alignItems="center">
@@ -383,8 +409,8 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
           widgets={staticWidgets}
           description={description}
           columns={columns}
-          gap={typeof knobProps.gap?.gap === 'number' ? knobProps.gap.gap : gap}
-          padding={typeof knobProps.panelPadding?.padding === 'number' ? knobProps.panelPadding.padding : padding}
+          gap={numericKnobOr(knobProps.gap?.gap, gap)}
+          padding={numericKnobOr(knobProps.panelPadding?.padding, padding)}
         />
       </YStack>
     );
@@ -414,6 +440,6 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
       stackProps={stackProps}
     />
   );
-}
+};
 
 export { ChartCard } from './ChartCard';

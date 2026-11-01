@@ -2,8 +2,8 @@ import { action } from '@repo/storybook';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import type { FieldSchema } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import type { FieldSchema } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 import { SchemaForm } from '../../schemaForm';
 import type { FormSchema } from '../../schemaForm';
 import { Check } from '../Check';
@@ -175,7 +175,8 @@ const headingInTableSchema: FormSchema = {
   ],
 };
 
-function InTableStory() {
+const InTableStory = () => {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- SchemaForm doc values are keyed by fieldname
   const [doc, setDoc] = useState<Record<string, unknown>>({
     title: 'Alpha widget',
     notes: 'Follow up after the site visit.',
@@ -194,7 +195,7 @@ function InTableStory() {
       />
     </YStack>
   );
-}
+};
 
 /**
  * Heading is TABLE_LAYOUT — skip the editable DataTable cell. SchemaForm mock

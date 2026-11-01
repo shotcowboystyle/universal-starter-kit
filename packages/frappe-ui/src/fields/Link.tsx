@@ -34,6 +34,7 @@ export interface LinkProps extends Omit<YStackProps, 'children' | 'onChange'> {
   /** Restrict matching to one field (maps to `search_link`'s `searchfield`) */
   searchFields?: string[];
   /** Link filters applied server-side on top of the doctype's link query */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Frappe link filters map arbitrary fieldnames to filter values
   filters?: Record<string, unknown> | [string, string, unknown][];
   /** Offer a create affordance when the typed text matches nothing */
   allowCreate?: boolean;
@@ -50,7 +51,7 @@ export interface LinkProps extends Omit<YStackProps, 'children' | 'onChange'> {
   disabled?: boolean;
   required?: boolean;
   baseURL?: string;
-  auth?: any;
+  auth?: FrappeConnectionConfig['auth'];
   error?: string;
   helperText?: string;
   readOnly?: boolean;
@@ -68,7 +69,7 @@ export interface LinkProps extends Omit<YStackProps, 'children' | 'onChange'> {
   control?: 'combobox';
 }
 
-function useLinkConnection(baseURL?: string, auth?: LinkProps['auth']) {
+const useLinkConnection = (baseURL?: string, auth?: LinkProps['auth']) => {
   const config = useFrappeConfig();
   const finalBaseURL = baseURL ?? config?.baseURL ?? '';
   const connectionConfig: FrappeConnectionConfig | undefined = finalBaseURL
@@ -80,13 +81,21 @@ function useLinkConnection(baseURL?: string, auth?: LinkProps['auth']) {
       }
     : undefined;
   return { config, connectionConfig };
-}
+};
 
-function LinkCombobox({
+const searchErrorStatus = (searchError: Error): number | undefined => {
+  // SAFETY: HTTP failures carry the response status on the error; other errors leave the optional field absent
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  const { status } = searchError as { status?: number };
+  return status;
+};
+
+const LinkCombobox = ({
   label,
   value = '',
   onChange,
   doctype,
+  // oxlint-disable-next-line typescript/no-deprecated -- destructured out so the deprecated prop never reaches the Combobox
   displayField: _displayField,
   searchFields,
   filters,
@@ -94,8 +103,11 @@ function LinkCombobox({
   createRoute: _createRoute,
   onCreateNew,
   showDescription = true,
+  // oxlint-disable-next-line typescript/no-deprecated -- destructured out so the deprecated prop never reaches the Combobox
   descriptionField: _descriptionField,
+  // oxlint-disable-next-line typescript/no-deprecated -- destructured out so the deprecated prop never reaches the Combobox
   showAdvancedSearch: _showAdvancedSearch,
+  // oxlint-disable-next-line typescript/no-deprecated -- destructured out so the deprecated prop never reaches the Combobox
   onAdvancedSearch: _onAdvancedSearch,
   disabled = false,
   required = false,
@@ -110,7 +122,7 @@ function LinkCombobox({
   pageLength = 20,
   referenceDoctype,
   ...stackProps
-}: LinkProps) {
+}: LinkProps) => {
   const { t } = useTranslation();
   const { connectionConfig } = useLinkConnection(baseURL, auth);
   const [open, setOpen] = useState(false);
@@ -136,12 +148,14 @@ function LinkCombobox({
 
   const options = useMemo<ComboboxOption[]>(
     () =>
-      results.map((result) => ({
-        value: result.value,
-        label: result.label,
-        description:
-          showDescription && result.description && result.description !== result.label ? result.description : undefined,
-      })),
+      results.map((result) => {
+        const description = result.description ?? '';
+        return {
+          value: result.value,
+          label: result.label,
+          description: showDescription && description !== '' && description !== result.label ? description : undefined,
+        };
+      }),
     [results, showDescription],
   );
 
@@ -161,21 +175,20 @@ function LinkCombobox({
       if (isLocked) {
         return;
       }
-      onChange(typeof next === 'string' ? next : (next[0] ?? ''));
+      onChange(Array.isArray(next) ? (next[0] ?? '') : next);
     },
     [onChange, isLocked],
   );
 
   const handleCreate = useCallback(() => {
     onCreateNew?.();
-    return;
   }, [onCreateNew]);
 
   const searchErrorText = useMemo(() => {
     if (!searchError) {
-      return;
+      return null;
     }
-    const { status } = searchError as { status?: number };
+    const status = searchErrorStatus(searchError);
     if (status === 401 || status === 403) {
       return t("You don't have permission to search {{doctype}}", { doctype });
     }
@@ -189,7 +202,7 @@ function LinkCombobox({
       onChange={handleChange}
       onSearch={handleSearch}
       loading={isLoading}
-      searchError={searchErrorText}
+      searchError={searchErrorText ?? undefined}
       valueLabel={value ? (title ?? value) : undefined}
       clearable
       open={open}
@@ -207,16 +220,18 @@ function LinkCombobox({
       creatable={allowCreate && !!onCreateNew}
       onCreate={handleCreate}
       createLabel={t('Create new {{doctype}}', { doctype })}
+      // SAFETY: the remaining YStack props are forwarded verbatim to the Combobox root stack
+      // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above
       {...(stackProps as Record<string, unknown>)}
     />
   );
-}
+};
 
-export function Link(props: LinkProps) {
+export const Link = (props: LinkProps) => {
   const { connectionConfig } = useLinkConnection(props.baseURL, props.auth);
   const { meta } = useDocTypeMeta(connectionConfig, props.doctype);
-  if (meta?.is_tree && props.control !== 'combobox') {
+  if ((meta?.is_tree ?? 0) !== 0 && props.control !== 'combobox') {
     return <LinkTree {...props} />;
   }
   return <LinkCombobox {...props} />;
-}
+};

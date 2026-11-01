@@ -1,8 +1,8 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider, LiveToDoGate, LIVE_TODO_NAME } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider, LiveToDoGate, LIVE_TODO_NAME } from '../frappeStoryTarget';
 
 import { Tags } from './tags';
 import type { FrappeTag, FrappeTagLink } from './tags';
@@ -35,7 +35,7 @@ export default {
 
 const MOCK_HOST = 'https://frappetags.mock.test';
 
-function tagMetaRaw(name: string) {
+const tagMetaRaw = (name: string) => {
   if (name === 'Tag Link') {
     return {
       name: 'Tag Link',
@@ -67,34 +67,40 @@ function tagMetaRaw(name: string) {
     fields: [{ fieldname: 'name', fieldtype: 'Data', label: 'Tag', in_list_view: 1 }],
     permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
   };
-}
+};
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- serializes any mock payload; the story owns its shape
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const urlOf = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeTagsMockFetch) {
+  const w: Window & { __frappeTagsMockFetch?: boolean } = window;
+  if (w.__frappeTagsMockFetch === true) {
     return;
   }
   w.__frappeTagsMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = urlOf(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'Tag';
         return jsonResponse({ docs: [tagMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: tagMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -228,7 +234,7 @@ export const Disabled = () => (
 
 /**
  * Live tags against the real bench (STORYBOOK_FRAPPE_URL, default the local
- * dev bench proxied by the Storybook dev server) on a stock ToDo. Tag /
+ * dev bench proxied by the Storybook dev server) on a stock to-do doc. Tag /
  * Tag Link are core doctypes. Falls back to fixtures when the bench is
  * unreachable.
  */

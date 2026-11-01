@@ -27,7 +27,7 @@ export interface FrappeTagsProps extends Omit<TagsProps, 'tags' | 'suggestions'>
   docname: string;
 }
 
-export function Tags({ doctype, docname, onAdd, onRemove, enableAdd, ...props }: FrappeTagsProps) {
+export const Tags = ({ doctype, docname, onAdd, onRemove, enableAdd, ...props }: FrappeTagsProps) => {
   const config = useFrappeConfig();
 
   // Forward the full socket target + engine options: the SyncModule cache
@@ -77,6 +77,7 @@ export function Tags({ doctype, docname, onAdd, onRemove, enableAdd, ...props }:
 
   const tags = useMemo<TagItem[]>(
     () =>
+      // SAFETY: the query selects whole rows of the Tag Link Collection<FrappeTagLink>, so each row is a FrappeTagLink.
       ((tagLinksData as FrappeTagLink[] | undefined) ?? []).map((link) => ({
         id: link.name,
         label: link.tag,
@@ -86,6 +87,7 @@ export function Tags({ doctype, docname, onAdd, onRemove, enableAdd, ...props }:
 
   const suggestions = useMemo<TagItem[]>(
     () =>
+      // SAFETY: the query selects whole rows of the Tag Collection<FrappeTag>, so each row is a FrappeTag.
       ((allTagsData as FrappeTag[] | undefined) ?? []).map((tag) => ({
         id: tag.name,
         label: tag.name,
@@ -121,4 +123,4 @@ export function Tags({ doctype, docname, onAdd, onRemove, enableAdd, ...props }:
       {...props}
     />
   );
-}
+};

@@ -3,7 +3,7 @@ import { Text, XStack, YStack } from '@repo/ui';
 
 import { ImageWell } from '../list/ImageWell';
 
-import type { InsightsRecordView } from './insightsRecord';
+import type { InsightsRecordView } from './insights-record';
 
 export interface InsightsRecordTile<TDoc> {
   id: string;
@@ -23,7 +23,7 @@ export interface InsightsRecordsProps<TDoc> {
  * title and code, and the value. Nested chrome steps with the compact
  * nestedControl, not the page's 44px floor (LC-73).
  */
-export function InsightsRecords<TDoc>({ tiles, record, testID }: InsightsRecordsProps<TDoc>) {
+export const InsightsRecords = <TDoc,>({ tiles, record, testID }: InsightsRecordsProps<TDoc>) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const { knobProps: pageKnobs } = useResolvedKnobs();
   const wellPx = knobProps.nestedControl.px * 2;
@@ -77,7 +77,7 @@ export function InsightsRecords<TDoc>({ tiles, record, testID }: InsightsRecords
                   flexShrink={1}>
                   {title}
                 </Text>
-                {code ? (
+                {code !== undefined && code !== '' ? (
                   <Text
                     {...knobProps.label}
                     color="$color10"
@@ -97,4 +97,4 @@ export function InsightsRecords<TDoc>({ tiles, record, testID }: InsightsRecords
       })}
     </XStack>
   );
-}
+};

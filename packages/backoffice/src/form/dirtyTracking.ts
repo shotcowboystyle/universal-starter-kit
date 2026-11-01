@@ -1,6 +1,6 @@
 /**
  * Dirty-field diffing — moved to
- * `@repo/frappe-ui/src/formEngine/dirtyTracking` (MPO-15).
+ * `@repo/frappe-ui/src/formEngine/dirty-tracking` (MPO-15).
  * Re-exported here so existing imports keep resolving.
  */
 

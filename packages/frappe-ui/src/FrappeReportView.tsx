@@ -20,8 +20,8 @@ import { formatCalendarDate, useResolvedKnobs } from '@repo/theme';
  *     therefore re-keyed defensively here (`normalizeReportRows`).
  *
  * The payload, filter and column shapes are the one query-report model in
- * `./report/queryReport` (MPO-15, GL-28), and the transport is
- * `./report/useFrappeReport`, the same caller the desk's QueryReportScreen
+ * `./report/query-report` (MPO-15, GL-28), and the transport is
+ * `./report/use-frappe-report`, the same caller the desk's QueryReportScreen
  * runs its reports through. This file owns rendering only.
  *
  * Filter bar: built from the report's DB-defined filters (the Report doc's
@@ -46,7 +46,7 @@ import { formatCalendarDate, useResolvedKnobs } from '@repo/theme';
  */
 import { AsyncBoundary, EmptyState } from '@repo/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack } from 'tamagui';
 import type { YStackProps } from 'tamagui';
@@ -55,17 +55,17 @@ import { Check } from './fields/Check';
 import { Data } from './fields/Data';
 import { Select } from './fields/Select';
 import { useFrappeConfig } from './FrappeProvider';
-import { isPermissionError, refusalReason, toLiveLoadError } from './liveErrors';
-import { humanizeFrappeError, normalizeFilterMeta, scrubFieldname } from './report/queryReport';
+import { isPermissionError, refusalReason, toLiveLoadError } from './live-errors';
+import { humanizeFrappeError, normalizeFilterMeta, scrubFieldname } from './report/query-report';
 import type {
   FrappeReportColumn,
   FrappeReportFilterDef,
   FrappeReportRow,
   FrappeReportValues,
   QueryReportFilterMeta,
-} from './report/queryReport';
-import { useFrappeReport } from './report/useFrappeReport';
-import type { FrappeReportConnection, FrappeReportFixture } from './report/useFrappeReport';
+} from './report/query-report';
+import { useFrappeReport } from './report/use-frappe-report';
+import type { FrappeReportConnection, FrappeReportFixture } from './report/use-frappe-report';
 
 export {
   compactFilterValues,
@@ -79,14 +79,14 @@ export {
   type FrappeReportRow,
   type FrappeReportRunResponse,
   type FrappeReportValues,
-} from './report/queryReport';
+} from './report/query-report';
 export {
   useFrappeReport,
   type FrappeReportConnection,
   type FrappeReportFixture,
   type UseFrappeReportOptions,
   type UseFrappeReportResult,
-} from './report/useFrappeReport';
+} from './report/use-frappe-report';
 
 /** A column as the render helpers take it: normalized, or with the wire's string width. */
 type RenderableReportColumn = Omit<FrappeReportColumn, 'fieldtype' | 'width'> & {
@@ -99,23 +99,26 @@ type RenderableReportColumn = Omit<FrappeReportColumn, 'fieldtype' | 'width'> & 
 const ReportDataTable = DataTable<FrappeReportRow>;
 
 /** Parse a Select column/filter option string (newline-separated). */
-function parseSelectOptions(options: string | undefined): { label: string; value: string }[] {
-  return (options ?? '')
+const parseSelectOptions = (options: string | undefined): { label: string; value: string }[] =>
+  (options ?? '')
     .split('\n')
     .map((opt) => opt.trim())
     .filter((opt, idx, arr) => arr.indexOf(opt) === idx)
     .map((opt) => ({ label: opt, value: opt }));
-}
 
 /**
  * Map a report column fieldtype to a read-only DataTable `field` so the
  * forms `FieldDisplay` pipeline formats the value and DG-TBL-01
  * align-by-type defaults apply (numerics → right, Check → center).
  */
-export function reportFieldtypeToTableField(column: RenderableReportColumn): {
+/** The read-only DataTable editor a report column renders through. */
+export interface ReportTableField {
   field: DataTableField;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- DataTable's own fieldProps channel is an open per-field prop bag
   fieldProps?: Record<string, unknown>;
-} {
+}
+
+export const reportFieldtypeToTableField = (column: RenderableReportColumn): ReportTableField => {
   switch (column.fieldtype) {
     case 'Int': {
       return { field: 'stepper', fieldProps: { precision: 0 } };
@@ -142,14 +145,16 @@ export function reportFieldtypeToTableField(column: RenderableReportColumn): {
     }
     case 'Select': {
       const options = parseSelectOptions(column.options).filter((o) => o.value !== '');
-      return { field: 'select', fieldProps: options.length ? { options } : undefined };
+      return { field: 'select', fieldProps: options.length > 0 ? { options } : undefined };
     }
+    // oxlint-disable-next-line unicorn/no-useless-switch-case -- names the absent fieldtype so switch-exhaustiveness-check sees it handled
+    case undefined:
     default: {
       // Data / Link / Dynamic Link / HTML / everything else: plain text.
       return { field: 'input' };
     }
   }
-}
+};
 
 /**
  * Map a normalized report column to a DataTableColumn.
@@ -160,19 +165,24 @@ export function reportFieldtypeToTableField(column: RenderableReportColumn): {
  * resolved alignment survives every downstream cell surface, custom
  * renderers included (DataTable's aligned cell wrapper reads it).
  */
-export function reportColumnToDataTableColumn(column: RenderableReportColumn): DataTableColumn<FrappeReportRow> {
+export const reportColumnToDataTableColumn = (column: RenderableReportColumn): DataTableColumn<FrappeReportRow> => {
   const { field, fieldProps } = reportFieldtypeToTableField(column);
   const width = column.width == null ? undefined : Number(column.width);
-  return {
+  const tableColumn: DataTableColumn<FrappeReportRow> = {
     id: column.fieldname,
     accessorKey: column.fieldname,
     header: column.label,
-    ...(width && Number.isFinite(width) ? { width } : {}),
     field,
-    ...(fieldProps ? { fieldProps } : {}),
     meta: { align: getDefaultColumnAlign({ id: column.fieldname, field, fieldProps }) },
   };
-}
+  if (width !== undefined && width !== 0 && Number.isFinite(width)) {
+    tableColumn.width = width;
+  }
+  if (fieldProps) {
+    tableColumn.fieldProps = fieldProps;
+  }
+  return tableColumn;
+};
 
 /**
  * Accessible row identity for pressable report rows (DG-A11Y-06): report
@@ -181,18 +191,20 @@ export function reportColumnToDataTableColumn(column: RenderableReportColumn): D
  * result defers to DataTable's own fallbacks (first visible cell value →
  * positional "Row N").
  */
-export function reportRowLabel(row: FrappeReportRow): string {
+export const reportRowLabel = (row: FrappeReportRow): string => {
   for (const key of ['name', 'title'] as const) {
     const value = row[key];
-    if (typeof value === 'string' && value) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- report rows are untyped server JSON; only string or number cells name a row
+    if (typeof value === 'string' && value !== '') {
       return value;
     }
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- report rows are untyped server JSON; only string or number cells name a row
     if (typeof value === 'number') {
       return String(value);
     }
   }
   return '';
-}
+};
 
 /**
  * Download capability gate for the built-in export path (B12 precedent from
@@ -201,15 +213,14 @@ export function reportRowLabel(row: FrappeReportRow): string {
  * no file could actually be delivered. Presence checks, not `typeof window`
  * (Hermes defines `window` without DOM).
  */
-function canDownloadFiles(): boolean {
-  return (
-    typeof document !== 'undefined' &&
-    typeof document.createElement === 'function' &&
-    typeof Blob !== 'undefined' &&
-    typeof URL !== 'undefined' &&
-    typeof URL.createObjectURL === 'function'
-  );
-}
+const canDownloadFiles = (): boolean => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof, typescript/no-deprecated -- presence checks on globals Hermes and GJS may not declare
+  const hasDom = typeof document !== 'undefined' && typeof document.createElement === 'function';
+  const hasObjectUrls =
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- presence checks on globals Hermes and GJS may not declare
+    typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+  return hasDom && hasObjectUrls;
+};
 
 // ---------------------------------------------------------------------------
 // Filter bar
@@ -218,10 +229,11 @@ function canDownloadFiles(): boolean {
 interface ReportFilterFieldProps {
   def: QueryReportFilterMeta;
   value: unknown;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a filter value is whatever its report fieldtype carries (FrappeReportValues)
   onChange: (value: unknown) => void;
 }
 
-function ReportFilterField({ def, value, onChange }: ReportFilterFieldProps) {
+const ReportFilterField = ({ def, value, onChange }: ReportFilterFieldProps) => {
   const { t } = useTranslation();
   const label = def.label ?? def.fieldname;
   switch (def.fieldtype) {
@@ -234,6 +246,7 @@ function ReportFilterField({ def, value, onChange }: ReportFilterFieldProps) {
           label={label}
           compact
           options={options}
+          // oxlint-disable-next-line typescript/no-base-to-string -- Select filter values are scalars; String() matches desk's coercion
           value={value == null ? '' : String(value)}
           onChange={onChange}
         />
@@ -245,6 +258,7 @@ function ReportFilterField({ def, value, onChange }: ReportFilterFieldProps) {
         <DatePicker
           label={label}
           compact
+          // oxlint-disable-next-line typescript/no-base-to-string -- date filter values are date strings; String() matches desk's coercion
           value={value == null ? null : String(value)}
           onChange={(date) => {
             onChange(date ? formatCalendarDate(date) : '');
@@ -265,12 +279,15 @@ function ReportFilterField({ def, value, onChange }: ReportFilterFieldProps) {
         />
       );
     }
+    // oxlint-disable-next-line unicorn/no-useless-switch-case -- names the absent fieldtype so switch-exhaustiveness-check sees it handled
+    case undefined:
     default: {
       // Data / Link / Dynamic Link / Int / Float / …: free-text entry.
       return (
         <Data
           label={label}
           compact
+          // oxlint-disable-next-line typescript/no-base-to-string -- free-text filter values are scalars; String() matches desk's coercion
           value={value == null ? '' : String(value)}
           onChange={onChange}
           placeholder={label}
@@ -278,7 +295,7 @@ function ReportFilterField({ def, value, onChange }: ReportFilterFieldProps) {
       );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -330,7 +347,300 @@ export interface FrappeReportViewProps extends Omit<YStackProps, 'children'> {
   tableProps?: Partial<DataTableProps<FrappeReportRow>>;
 }
 
-export function FrappeReportView({
+/** The report transport, from the props or the FrappeProvider above. */
+const useReportConnection = (
+  baseURL: string | undefined,
+  auth: FrappeReportConnection['auth'] | undefined,
+  fixture: FrappeReportFixture | undefined,
+): FrappeReportConnection | undefined => {
+  const config = useFrappeConfig();
+  const finalBaseURL = baseURL ?? config?.baseURL;
+  const finalAuth = auth ?? config?.auth;
+  const hasBaseURL = finalBaseURL !== undefined && finalBaseURL !== '';
+  if (!hasBaseURL && !fixture) {
+    throw new Error('FrappeReportView requires baseURL prop or FrappeProvider with baseURL');
+  }
+  const realtime = config?.realtime;
+  return useMemo(
+    () => (hasBaseURL ? { baseURL: finalBaseURL, realtime, auth: finalAuth } : undefined),
+    [hasBaseURL, finalBaseURL, realtime, finalAuth],
+  );
+};
+
+/** Controlled + uncontrolled filter values (standard pattern). */
+const useReportFilterValues = (
+  controlledFilters: FrappeReportValues | undefined,
+  defaultFilters: FrappeReportValues | undefined,
+  onFiltersChange: ((filters: FrappeReportValues) => void) | undefined,
+) => {
+  const isControlled = controlledFilters !== undefined;
+  const [internalFilters, setInternalFilters] = useState<FrappeReportValues>(() => defaultFilters ?? {});
+  const filterValues = isControlled ? controlledFilters : internalFilters;
+
+  const setFilterValue = useCallback(
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a filter value is whatever its report fieldtype carries (FrappeReportValues)
+    (fieldname: string, value: unknown) => {
+      const next = { ...(isControlled ? controlledFilters : internalFilters), [fieldname]: value };
+      if (!isControlled) {
+        setInternalFilters(next);
+      }
+      onFiltersChange?.(next);
+    },
+    [isControlled, controlledFilters, internalFilters, onFiltersChange],
+  );
+  return { isControlled, filterValues, setFilterValue, setInternalFilters };
+};
+
+/**
+ * Seeds DB-defined defaults once per report (uncontrolled mode only —
+ * controlled callers own their values).
+ */
+const useSeedReportDefaults = (
+  isControlled: boolean,
+  reportName: string,
+  filterDefs: QueryReportFilterMeta[],
+  setInternalFilters: Dispatch<SetStateAction<FrappeReportValues>>,
+) => {
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- React 19's useRef requires its initial value
+  const seededReportRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (isControlled || seededReportRef.current === reportName || filterDefs.length === 0) {
+      return;
+    }
+    seededReportRef.current = reportName;
+    // oxlint-disable-next-line react-doctor/no-pass-data-to-parent -- defaults arrive with the report's filter meta; the ref guard seeds them once per report
+    setInternalFilters((prev) => {
+      const seeded: FrappeReportValues = {};
+      for (const def of filterDefs) {
+        if (def.default !== undefined && def.default !== '' && prev[def.fieldname] == null) {
+          seeded[def.fieldname] = def.default;
+        }
+      }
+      return Object.keys(seeded).length > 0 ? { ...seeded, ...prev } : prev;
+    });
+  }, [isControlled, reportName, filterDefs, setInternalFilters]);
+};
+
+type ReportBoundaryState = { error: Error } | { loading: ReactNode } | { empty: true } | null;
+
+/** Honest states via AsyncBoundary (DG-ST-01: error > loading > empty). */
+const reportBoundaryState = (
+  normalizedError: Error | null,
+  isLoading: boolean,
+  loading: ReactNode,
+  rowCount: number,
+): ReportBoundaryState => {
+  if (normalizedError) {
+    return { error: normalizedError };
+  }
+  if (isLoading) {
+    return { loading: loading ?? true };
+  }
+  return rowCount === 0 ? { empty: true } : null;
+};
+
+interface ReportToolbarProps {
+  reportName: string;
+  filterDefs: QueryReportFilterMeta[];
+  filterValues: FrappeReportValues;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a filter value is whatever its report fieldtype carries (FrappeReportValues)
+  onFilterChange: (fieldname: string, value: unknown) => void;
+  updating: boolean;
+  refreshShown: boolean;
+  onRefresh: () => void;
+  exportShown: boolean;
+  rows: FrappeReportRow[];
+  exportColumns: { accessorKey: string; header: string }[];
+}
+
+/** Filter bar + actions — stays mounted across empty/error states so a bad filter can always be corrected. */
+const ReportToolbar = ({
+  reportName,
+  filterDefs,
+  filterValues,
+  onFilterChange,
+  updating,
+  refreshShown,
+  onRefresh,
+  exportShown,
+  rows,
+  exportColumns,
+}: ReportToolbarProps) => {
+  const { knobProps } = useResolvedKnobs();
+  const { t } = useTranslation();
+  return (
+    <XStack
+      {...knobProps.gap}
+      alignItems="flex-end"
+      flexWrap="wrap">
+      {filterDefs.map((def) => (
+        <YStack
+          key={def.fieldname}
+          minWidth={180}
+          maxWidth={280}
+          flexShrink={1}>
+          <ReportFilterField
+            def={def}
+            value={filterValues[def.fieldname]}
+            onChange={(value) => {
+              onFilterChange(def.fieldname, value);
+            }}
+          />
+        </YStack>
+      ))}
+      <XStack flex={1} />
+      {updating && (
+        <XStack
+          gap="$2"
+          alignItems="center"
+          paddingBottom="$2">
+          <Spinner
+            size="small"
+            aria-label={t('Updating')}
+          />
+          <Text
+            {...knobProps.label}
+            color={formCommonColors.muted}>
+            {t('Updating...')}
+          </Text>
+        </XStack>
+      )}
+      {refreshShown && (
+        <Button
+          size="$2"
+          icon={ArrowClockwiseIcon}
+          onPress={onRefresh}
+          aria-label={t('Refresh report')}>
+          {t('Refresh')}
+        </Button>
+      )}
+      {exportShown && (
+        <DataTableExport
+          data={rows}
+          columns={exportColumns}
+          filename={scrubFieldname(reportName)}
+          exportFormats={[
+            {
+              id: 'csv',
+              label: t('CSV'),
+              icon: null,
+              extension: 'csv',
+              mimeType: 'text/csv',
+              description: t('Comma-separated values'),
+              enabled: true,
+            },
+            {
+              id: 'json',
+              label: t('JSON'),
+              icon: null,
+              extension: 'json',
+              mimeType: 'application/json',
+              description: t('JavaScript object notation'),
+              enabled: true,
+            },
+          ]}
+        />
+      )}
+    </XStack>
+  );
+};
+
+/** The server-side report message, already user-facing. */
+const ReportMessage = ({ message }: { message: string | undefined }) => {
+  const { knobProps } = useResolvedKnobs();
+  if (message === undefined || message === '') {
+    return null;
+  }
+  return (
+    <Text
+      {...knobProps.label}
+      color={formCommonColors.muted}>
+      {message}
+    </Text>
+  );
+};
+
+interface ReportBodyProps {
+  reportName: string;
+  error: Error | undefined;
+  refused: boolean;
+  isLoading: boolean;
+  loading: ReactNode;
+  rows: FrappeReportRow[];
+  columns: DataTableColumn<FrappeReportRow>[];
+  onRetry: () => void;
+  onRowPress: FrappeReportViewProps['onRowPress'];
+  tableProps: FrappeReportViewProps['tableProps'];
+}
+
+/** The refusal, the honest async states, or the report table itself. */
+const ReportBody = ({
+  reportName,
+  error,
+  refused,
+  isLoading,
+  loading,
+  rows,
+  columns,
+  onRetry,
+  onRowPress,
+  tableProps,
+}: ReportBodyProps) => {
+  const { t } = useTranslation();
+  if (refused) {
+    return (
+      <EmptyState
+        testID="frappe-report-not-permitted"
+        title={t("You can't run {{reportName}}", { reportName })}
+        description={refusalReason(humanizeFrappeError(error))}
+      />
+    );
+  }
+  const normalizedError = error
+    ? toLiveLoadError(error, {
+        permissionMessage: t('You do not have permission to run {{reportName}}', { reportName }),
+        genericMessage: t('Error running {{reportName}}', { reportName }),
+      })
+    : null;
+  const boundaryState = reportBoundaryState(normalizedError, isLoading, loading, rows.length);
+  if (boundaryState) {
+    return (
+      <AsyncBoundary
+        layout="table"
+        errorTitle={t('Error running {{reportName}}', { reportName })}
+        emptyTitle={t('No results for {{reportName}}', { reportName })}
+        onRetry={onRetry}
+        {...boundaryState}
+      />
+    );
+  }
+  // onRowPress (the stable FrappeReportView prop) rides DataTable's
+  // first-class row activation: whole-row press target, roving tab
+  // stop (LC-49), Enter/Space activation (LC-50), inner interactive
+  // controls win. The forwarded index keeps its full-row-set
+  // meaning (DataTable reports page-local indexes). rowLabel names
+  // each pressable row by report identity. Both spread BEFORE
+  // {...tableProps} so an explicit consumer onRowPress/rowLabel
+  // still ejects (consumer-last house rule).
+  const rowPress: Partial<DataTableProps<FrappeReportRow>> = {};
+  if (onRowPress) {
+    rowPress.onRowPress = (row: FrappeReportRow) => {
+      onRowPress(row, rows.indexOf(row));
+    };
+  }
+  return (
+    <ReportDataTable
+      data={rows}
+      columns={columns}
+      readOnly
+      {...rowPress}
+      rowLabel={reportRowLabel}
+      {...tableProps}
+    />
+  );
+};
+
+export const FrappeReportView = ({
   reportName,
   filters: controlledFilters,
   defaultFilters,
@@ -348,36 +658,13 @@ export function FrappeReportView({
   error: errorRenderer,
   tableProps,
   ...stackProps
-}: FrappeReportViewProps) {
+}: FrappeReportViewProps) => {
   const { knobProps } = useResolvedKnobs();
-  const { t } = useTranslation();
-  const config = useFrappeConfig();
-
-  const finalBaseURL = baseURL ?? config?.baseURL;
-  const finalAuth = auth ?? config?.auth;
-  if (!finalBaseURL && !fixture) {
-    throw new Error('FrappeReportView requires baseURL prop or FrappeProvider with baseURL');
-  }
-
-  const connection = useMemo(
-    () => (finalBaseURL ? { baseURL: finalBaseURL, realtime: config?.realtime, auth: finalAuth } : undefined),
-    [finalBaseURL, config?.realtime, finalAuth],
-  );
-
-  // Controlled + uncontrolled filter values (standard pattern).
-  const isControlled = controlledFilters !== undefined;
-  const [internalFilters, setInternalFilters] = useState<FrappeReportValues>(() => defaultFilters ?? {});
-  const filterValues = isControlled ? controlledFilters : internalFilters;
-
-  const setFilterValue = useCallback(
-    (fieldname: string, value: unknown) => {
-      const next = { ...(isControlled ? controlledFilters : internalFilters), [fieldname]: value };
-      if (!isControlled) {
-        setInternalFilters(next);
-      }
-      onFiltersChange?.(next);
-    },
-    [isControlled, controlledFilters, internalFilters, onFiltersChange],
+  const connection = useReportConnection(baseURL, auth, fixture);
+  const { isControlled, filterValues, setFilterValue, setInternalFilters } = useReportFilterValues(
+    controlledFilters,
+    defaultFilters,
+    onFiltersChange,
   );
 
   const { payload, scriptFilters, isLoading, isFetching, error, refresh } = useFrappeReport(connection, {
@@ -397,25 +684,7 @@ export function FrappeReportView({
     [filterFields, payload?.filters, scriptFilters],
   );
   const shownFilterDefs = useMemo(() => filterDefs.filter((def) => def.hidden !== 1), [filterDefs]);
-
-  // Seed DB-defined defaults once per report (uncontrolled mode only —
-  // controlled callers own their values).
-  const seededReportRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (isControlled || seededReportRef.current === reportName || !filterDefs.length) {
-      return;
-    }
-    seededReportRef.current = reportName;
-    setInternalFilters((prev) => {
-      const seeded: FrappeReportValues = {};
-      for (const def of filterDefs) {
-        if (def.default !== undefined && def.default !== '' && prev[def.fieldname] == null) {
-          seeded[def.fieldname] = def.default;
-        }
-      }
-      return Object.keys(seeded).length ? { ...seeded, ...prev } : prev;
-    });
-  }, [isControlled, reportName, filterDefs]);
+  useSeedReportDefaults(isControlled, reportName, filterDefs, setInternalFilters);
 
   const rows = payload?.rows ?? [];
 
@@ -442,155 +711,41 @@ export function FrappeReportView({
     return <>{errorRenderer(error)}</>;
   }
 
-  const normalizedError =
-    error && !refused
-      ? toLiveLoadError(error, {
-          permissionMessage: t('You do not have permission to run {{reportName}}', { reportName }),
-          genericMessage: t('Error running {{reportName}}', { reportName }),
-        })
-      : null;
-
-  // Honest states via AsyncBoundary (DG-ST-01: error > loading > empty).
-  const boundaryState = refused
-    ? null
-    : normalizedError
-      ? { error: normalizedError }
-      : isLoading
-        ? { loading: loading ?? true }
-        : rows.length === 0
-          ? { empty: true }
-          : null;
-
   return (
     <YStack
       {...knobProps.gap}
       flex={1}
       {...stackProps}>
-      {/* Filter bar + actions — stays mounted across empty/error states so a
-          bad filter can always be corrected. */}
       {hasToolbar && (
-        <XStack
-          {...knobProps.gap}
-          alignItems="flex-end"
-          flexWrap="wrap">
-          {shownFilterDefs.map((def) => (
-            <YStack
-              key={def.fieldname}
-              minWidth={180}
-              maxWidth={280}
-              flexShrink={1}>
-              <ReportFilterField
-                def={def}
-                value={filterValues[def.fieldname]}
-                onChange={(value) => {
-                  setFilterValue(def.fieldname, value);
-                }}
-              />
-            </YStack>
-          ))}
-          <XStack flex={1} />
-          {isFetching && !isLoading && (
-            <XStack
-              gap="$2"
-              alignItems="center"
-              paddingBottom="$2">
-              <Spinner
-                size="small"
-                aria-label={t('Updating')}
-              />
-              <Text
-                {...knobProps.label}
-                color={formCommonColors.muted}>
-                {t('Updating...')}
-              </Text>
-            </XStack>
-          )}
-          {refreshShown && (
-            <Button
-              size="$2"
-              icon={ArrowClockwiseIcon}
-              onPress={refresh}
-              aria-label={t('Refresh report')}>
-              {t('Refresh')}
-            </Button>
-          )}
-          {exportEnabled && rows.length > 0 && (
-            <DataTableExport
-              data={rows}
-              columns={exportColumns}
-              filename={scrubFieldname(reportName)}
-              exportFormats={[
-                {
-                  id: 'csv',
-                  label: t('CSV'),
-                  icon: null,
-                  extension: 'csv',
-                  mimeType: 'text/csv',
-                  description: t('Comma-separated values'),
-                  enabled: true,
-                },
-                {
-                  id: 'json',
-                  label: t('JSON'),
-                  icon: null,
-                  extension: 'json',
-                  mimeType: 'application/json',
-                  description: t('JavaScript object notation'),
-                  enabled: true,
-                },
-              ]}
-            />
-          )}
-        </XStack>
+        <ReportToolbar
+          reportName={reportName}
+          filterDefs={shownFilterDefs}
+          filterValues={filterValues}
+          onFilterChange={setFilterValue}
+          updating={isFetching && !isLoading}
+          refreshShown={refreshShown}
+          onRefresh={refresh}
+          exportShown={exportEnabled && rows.length > 0}
+          rows={rows}
+          exportColumns={exportColumns}
+        />
       )}
 
       {/* Server-side report message (already user-facing). */}
-      {payload?.message && (
-        <Text
-          {...knobProps.label}
-          color={formCommonColors.muted}>
-          {payload.message}
-        </Text>
-      )}
+      <ReportMessage message={payload?.message} />
 
-      {refused ? (
-        <EmptyState
-          testID="frappe-report-not-permitted"
-          title={t("You can't run {{reportName}}", { reportName })}
-          description={refusalReason(humanizeFrappeError(error))}
-        />
-      ) : boundaryState ? (
-        <AsyncBoundary
-          layout="table"
-          errorTitle={t('Error running {{reportName}}', { reportName })}
-          emptyTitle={t('No results for {{reportName}}', { reportName })}
-          onRetry={refresh}
-          {...boundaryState}
-        />
-      ) : (
-        <ReportDataTable
-          data={rows}
-          columns={columns}
-          readOnly
-          // onRowPress (the stable FrappeReportView prop) rides DataTable's
-          // first-class row activation: whole-row press target, roving tab
-          // stop (LC-49), Enter/Space activation (LC-50), inner interactive
-          // controls win. The forwarded index keeps its full-row-set
-          // meaning (DataTable reports page-local indexes). rowLabel names
-          // each pressable row by report identity. Both spread BEFORE
-          // {...tableProps} so an explicit consumer onRowPress/rowLabel
-          // still ejects (consumer-last house rule).
-          {...(onRowPress
-            ? {
-                onRowPress: (row: FrappeReportRow) => {
-                  onRowPress(row, rows.indexOf(row));
-                },
-              }
-            : {})}
-          rowLabel={reportRowLabel}
-          {...tableProps}
-        />
-      )}
+      <ReportBody
+        reportName={reportName}
+        error={error}
+        refused={refused}
+        isLoading={isLoading}
+        loading={loading}
+        rows={rows}
+        columns={columns}
+        onRetry={refresh}
+        onRowPress={onRowPress}
+        tableProps={tableProps}
+      />
     </YStack>
   );
-}
+};

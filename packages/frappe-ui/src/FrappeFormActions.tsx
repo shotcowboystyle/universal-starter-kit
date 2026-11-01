@@ -14,7 +14,7 @@ import type { ChipColor } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 import { XStack } from 'tamagui';
 
-import type { DocAction, DocStatusIndicator } from './formEngine/docLifecycle';
+import type { DocAction, DocStatusIndicator } from './formEngine/doc-lifecycle';
 
 const indicatorColors: Record<DocStatusIndicator, ChipColor> = {
   notSaved: 'orange',
@@ -57,7 +57,8 @@ export interface FrappeFormActionsProps {
  * secondary destructive action on a submitted document, and the state pill.
  * A read-only view trades Save and the leave button for Edit.
  */
-export function FrappeFormActions({
+// oxlint-disable-next-line eslint/complexity -- one flat conditional per lifecycle button; splitting scatters desk's action bar
+export const FrappeFormActions = ({
   indicator,
   action,
   busy,
@@ -71,10 +72,21 @@ export function FrappeFormActions({
   onEdit,
   onClose,
   closeDisabled,
-}: FrappeFormActionsProps) {
+}: FrappeFormActionsProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const readOnlyReason = t('Form is read-only');
+  const isAmended = amendedAs !== undefined && amendedAs !== '';
+  let amendDisabledReason: string | undefined;
+  if (isAmended) {
+    amendDisabledReason = t('Already amended as {{name}}', { name: amendedAs });
+  } else if (disabled) {
+    amendDisabledReason = readOnlyReason;
+  }
+  let saveLabel = action === 'update' ? t('Update') : t('Save');
+  if (busy) {
+    saveLabel = t('Saving...');
+  }
 
   const indicatorLabels: Record<DocStatusIndicator, string> = {
     notSaved: t('Not Saved'),
@@ -165,14 +177,12 @@ export function FrappeFormActions({
       {action === 'amend' && onAmend && (
         <Button
           // Desk demotes Amend to a secondary action once the document is amended.
-          accent={!amendedAs}
-          outlined={Boolean(amendedAs)}
+          accent={!isAmended}
+          outlined={isAmended}
           icon={ArrowCounterClockwiseIcon}
           loading={busy}
-          disabled={disabled || Boolean(amendedAs)}
-          disabledReason={
-            amendedAs ? t('Already amended as {{name}}', { name: amendedAs }) : disabled ? readOnlyReason : undefined
-          }
+          disabled={disabled || isAmended}
+          disabledReason={amendDisabledReason}
           disabledReasonPlacement="inline"
           onPress={onAmend}
           testID="frappe-form-amend">
@@ -204,9 +214,9 @@ export function FrappeFormActions({
           disabledReasonPlacement="inline"
           onPress={onSave}
           testID="frappe-form-save">
-          {busy ? t('Saving...') : action === 'update' ? t('Update') : t('Save')}
+          {saveLabel}
         </Button>
       )}
     </XStack>
   );
-}
+};

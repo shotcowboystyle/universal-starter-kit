@@ -15,18 +15,20 @@ export type { RecordCardBadge, RecordCardProps } from './RecordCard';
  * press the Card (a View with its own responder) claims, so the card's
  * press sits on the Card itself and the heart stops it from bubbling there.
  */
-export function RecordCard({
+const NO_BADGES: NonNullable<RecordCardProps['badges']> = [];
+
+export const RecordCard = ({
   title,
   subtitle,
   code,
   images,
   tints,
-  badges = [],
+  badges = NO_BADGES,
   onPress,
   favorite,
   testID,
   favoriteTestID,
-}: RecordCardProps) {
+}: RecordCardProps) => {
   const { t } = useTranslation();
   const { knobProps, elevation: elevationState } = useResolvedKnobs({ component: 'Card' });
 
@@ -42,6 +44,7 @@ export function RecordCard({
       elevation={knobProps.elevation}
       transition={knobProps.transition}
       pressStyle={{ scale: 0.98, ...elevationState.pressKnobProps }}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- native Card (a View); there is no <button> element on React Native
       role="button"
       aria-label={title}
       onPress={() => onPress?.()}>
@@ -53,7 +56,7 @@ export function RecordCard({
             tints={tints}
             inset={0.04}
           />
-          {code ? (
+          {code !== undefined && code !== '' ? (
             <XStack
               position="absolute"
               top="$2"
@@ -89,6 +92,8 @@ export function RecordCard({
                 backgroundColor="$background08"
                 pressStyle={{ backgroundColor: '$background', scale: 0.92 }}
                 onPress={handleToggleFavorite}
+                // SAFETY: both values are theme color tokens; the house Button's `col` prop is typed narrower than Tamagui's color token union.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
                 col={(favorite.active ? '$red9' : '$color11') as never}
                 icon={
                   <HeartIcon
@@ -147,4 +152,4 @@ export function RecordCard({
       </YStack>
     </Card>
   );
-}
+};

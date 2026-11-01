@@ -23,7 +23,7 @@ export interface InsightsKpiBandProps {
  * A supporting metric beside the hero (LC-73): compact density and the
  * label type, painted below the page's 44px floor.
  */
-function NestedKpi({ tile, testID }: { tile: InsightsTile; testID?: string }) {
+const NestedKpi = ({ tile, testID }: { tile: InsightsTile; testID?: string }) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const nestedPx = knobProps.nestedControl.px;
   return (
@@ -51,7 +51,7 @@ function NestedKpi({ tile, testID }: { tile: InsightsTile; testID?: string }) {
         numberOfLines={1}>
         {tile.value}
       </Text>
-      {tile.hint ? (
+      {tile.hint !== undefined && tile.hint !== '' ? (
         <Text
           {...knobProps.label}
           color="$color10"
@@ -69,7 +69,7 @@ function NestedKpi({ tile, testID }: { tile: InsightsTile; testID?: string }) {
       ) : null}
     </YStack>
   );
-}
+};
 
 /**
  * The hero count with its denser companions, then the charts. Rows wrap on
@@ -77,7 +77,7 @@ function NestedKpi({ tile, testID }: { tile: InsightsTile; testID?: string }) {
  * widths plus its gap overflow a row that sums to 100%. Every child shrinks
  * so a line narrower than one tile stays inside its frame (LC-10).
  */
-export function InsightsKpiBand({ hero, tiles, charts, testID }: InsightsKpiBandProps) {
+export const InsightsKpiBand = ({ hero, tiles, charts, testID }: InsightsKpiBandProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -105,7 +105,7 @@ export function InsightsKpiBand({ hero, tiles, charts, testID }: InsightsKpiBand
               <NestedKpi
                 key={tile.id}
                 tile={tile}
-                testID={testID ? `${testID}-kpi-${tile.id}` : undefined}
+                testID={testID !== undefined && testID !== '' ? `${testID}-kpi-${tile.id}` : undefined}
               />
             ))}
           </XStack>
@@ -131,4 +131,4 @@ export function InsightsKpiBand({ hero, tiles, charts, testID }: InsightsKpiBand
       ) : null}
     </YStack>
   );
-}
+};

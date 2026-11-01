@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Rating } from '.';
 import type { RatingProps } from '.';
@@ -32,9 +32,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = RatingProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <Rating
@@ -46,7 +47,7 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = { label: 'Rating', value: 0.6, maxStars: 5 } as Partial<StoryProps>;

@@ -17,7 +17,7 @@
  */
 
 import { ListIcon, XIcon } from '@phosphor-icons/react';
-import { NARROW_BREAKPOINT, useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
+import { useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
 import {
   Breadcrumbs,
   Button,
@@ -33,7 +33,7 @@ import {
 import type { BreadcrumbItem } from '@repo/ui';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Awesomebar } from './awesomebar';
@@ -61,7 +61,7 @@ export interface DeskShellProps {
  * Narrow viewport → sidebar drawer. Same value as theme `layoutBreakpoints.medium`
  * / `NARROW_BREAKPOINT` (640; Tamagui `$sm`). DG-LAY-01.
  */
-export const DESK_NARROW_BREAKPOINT = NARROW_BREAKPOINT;
+export { NARROW_BREAKPOINT as DESK_NARROW_BREAKPOINT } from '@repo/theme';
 
 // ---------------------------------------------------------------------------
 // Hooks
@@ -72,12 +72,10 @@ export const DESK_NARROW_BREAKPOINT = NARROW_BREAKPOINT;
  * (theme layoutBreakpoints.medium, 640). Web rides matchMedia thresholds,
  * native rides window dimensions — phones get the drawer instead of the rail.
  */
-function useIsNarrowDesk(): boolean {
-  return useLayoutSizeClass() === 'compact';
-}
+const useIsNarrowDesk = (): boolean => useLayoutSizeClass() === 'compact';
 
 /** Size token is a HEIGHT key — map the banner min-height from it, never fontSize. */
-function bannerMinHeight(sizeToken: string): '$5' | '$6' | '$7' {
+const bannerMinHeight = (sizeToken: string): '$5' | '$6' | '$7' => {
   if (sizeToken === '$5') {
     return '$7';
   }
@@ -85,35 +83,39 @@ function bannerMinHeight(sizeToken: string): '$5' | '$6' | '$7' {
     return '$5';
   }
   return '$6';
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function DeskShell({
+export const DeskShell = ({
   children,
   breadcrumbs,
   onNavigate,
   activePath,
   showSidebar = true,
   showAwesomebar = true,
-}: DeskShellProps) {
+}: DeskShellProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'DeskShell' });
   const isNarrow = useIsNarrowDesk();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [wasNarrow, setWasNarrow] = useState(isNarrow);
 
   // DG-COPY-04: document title is the reverse breadcrumb trail
   // ("Leaf – Section – App"). Web-only; no-op when there are no breadcrumbs.
   useDocumentTitle(breadcrumbs);
 
-  // Desktop always shows the rail; closing the drawer when leaving narrow keeps state clean.
-  useEffect(() => {
+  // Desktop always shows the rail; closing the drawer when leaving narrow keeps
+  // state clean. Adjusted during render (not in an effect) so the wide layout
+  // never paints a frame with the drawer still open.
+  if (wasNarrow !== isNarrow) {
+    setWasNarrow(isNarrow);
     if (!isNarrow) {
       setMobileSidebarOpen(false);
     }
-  }, [isNarrow]);
+  }
 
   const handleNavigate = useCallback(
     (path: string) => {
@@ -151,6 +153,7 @@ export function DeskShell({
         return;
       }
       if (document.activeElement instanceof HTMLElement) {
+        // oxlint-disable-next-line github/no-blur -- Escape deliberately drops focus back to the document (desk parity); there is no prior element to restore
         document.activeElement.blur();
       }
     },
@@ -195,6 +198,7 @@ export function DeskShell({
       {/* Header with Awesomebar — R-NONE full-bleed chrome; knobs own pad/gap/type. */}
       {showAwesomebar && (
         <XStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <header> on native); the role gives the landmark on web
           role="banner"
           {...knobProps.surface}
           {...knobProps.gap}
@@ -239,6 +243,7 @@ export function DeskShell({
         {/* Desktop nav sidebar — in flow. Sidebar owns the painted surface. */}
         {showSidebar && !isNarrow && (
           <YStack
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <nav> on native); the role gives the landmark on web
             role="navigation"
             aria-label={t('Desk navigation')}
             id="desk-sidebar"
@@ -269,6 +274,7 @@ export function DeskShell({
               data-testid="desk-sidebar-scrim"
             />
             <YStack
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <nav> on native); the role gives the landmark on web
               role="navigation"
               aria-label={t('Desk navigation')}
               id="desk-sidebar"
@@ -290,6 +296,7 @@ export function DeskShell({
 
         {/* Main content */}
         <YStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <main> on native); the role gives the landmark on web
           role="main"
           id="desk-main"
           tabIndex={-1}
@@ -331,4 +338,4 @@ export function DeskShell({
       </XStack>
     </YStack>
   );
-}
+};

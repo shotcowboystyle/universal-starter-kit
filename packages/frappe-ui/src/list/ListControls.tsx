@@ -6,10 +6,10 @@ import type React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FacetRail } from './FacetRail';
-import { isListNarrowed } from './listState';
-import type { FrappeListControls } from './listState';
+import { isListNarrowed } from './list-state';
+import type { FrappeListControls } from './list-state';
 import { RangeFilter, rangeCeiling } from './RangeFilter';
-import type { ListControlsResult } from './useListControls';
+import type { ListControlsResult } from './use-list-controls';
 
 export interface ListControlsProps {
   controls: FrappeListControls;
@@ -38,7 +38,7 @@ const rangeMaxWidth = 340;
  * shuffle anchored right; then one chip rail per facet; then the range
  * sliders with Clear filters. Under sm the search takes its own row.
  */
-export function ListControls({
+export const ListControls = ({
   controls,
   list,
   searchId,
@@ -49,7 +49,7 @@ export function ListControls({
   shufflePanel,
   separator,
   testID,
-}: ListControlsProps) {
+}: ListControlsProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { state, update, favorites } = list;
@@ -82,6 +82,7 @@ export function ListControls({
                 minWidth={0}>
                 <SearchInput
                   value={list.searchText}
+                  // oxlint-disable-next-line react/jsx-handler-names -- `setSearchText` is a named member of the list-controls API, passed through unchanged
                   onChange={list.setSearchText}
                   onSearch={(text) => {
                     update({ search: text });
@@ -147,6 +148,7 @@ export function ListControls({
                   outlined={!shuffle.open}
                   theme={shuffle.open ? 'accent' : undefined}
                   circular
+                  // oxlint-disable-next-line react/jsx-handler-names -- `toggle` is a named member of the list-controls API, passed through unchanged
                   onPress={shuffle.toggle}
                   icon={<DiceFiveIcon size={16} />}
                   aria-label={t('Surprise me')}
@@ -217,6 +219,7 @@ export function ListControls({
                 <Button
                   size="$2"
                   chromeless
+                  // oxlint-disable-next-line react/jsx-handler-names -- `clear` is a named member of the list-controls API, passed through unchanged
                   onPress={list.clear}
                   testID={`${testID}-clear`}>
                   {t('Clear filters')}
@@ -229,4 +232,4 @@ export function ListControls({
       {separator ? <Separator /> : null}
     </>
   );
-}
+};

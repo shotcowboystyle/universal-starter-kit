@@ -14,8 +14,8 @@
 
 import { Combobox, formCommonColors } from '@repo/forms';
 import type { ComboboxOption } from '@repo/forms';
-import { useDocTypeSearch, HttpClient } from '@repo/frappe';
-import type { FrappeConnectionConfig } from '@repo/frappe';
+import { useDocTypeSearch } from '@repo/frappe';
+import type { FrappeConnectionConfig, HttpClient } from '@repo/frappe';
 import { writeToClipboard } from '@repo/platform';
 import { storage } from '@repo/store';
 import { useResolvedKnobs } from '@repo/theme';
@@ -25,8 +25,8 @@ import { useTranslation } from 'react-i18next';
 import { Text, View, XStack, isWeb } from 'tamagui';
 import type { XStackProps } from 'tamagui';
 
+import { createHttpClient } from '../formEngine/form-actions';
 import { useFrappeConfig } from '../FrappeProvider';
-import { createHttpClient } from '../formEngine/formActions';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,9 +56,9 @@ interface RecentSearch {
 
 const recentStorageKey = 'frappe-awesomebar-recent';
 const maxRecent = 10;
-const mathRegex = /^[\d\s+\-*/.()]+$/;
+const mathRegex = /^[\d\s+\-*/.()]+$/u;
 
-const commands: Record<string, string> = {
+const commands = {
   settings: '/desk/settings',
   logout: '/logout',
   home: '/desk',
@@ -77,35 +77,43 @@ const prefix = {
 // Storage helpers
 // ---------------------------------------------------------------------------
 
-async function getRecentSearches(): Promise<RecentSearch[]> {
+const getRecentSearches = async (): Promise<RecentSearch[]> => {
   try {
     const raw = await Promise.resolve(storage.getItem(recentStorageKey));
-    return raw ? (JSON.parse(raw) as RecentSearch[]) : [];
+    if (raw === null || raw === '') {
+      return [];
+    }
+    // SAFETY: this key is only ever written by addRecentSearch, which stores a RecentSearch[]; a corrupt value throws in JSON.parse and falls to the catch.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    return JSON.parse(raw) as RecentSearch[];
   } catch {
     return [];
   }
-}
+};
 
-async function addRecentSearch(query: string): Promise<void> {
+const addRecentSearch = async (query: string): Promise<void> => {
   try {
-    const recent = (await getRecentSearches()).filter((r) => r.query !== query);
+    const stored = await getRecentSearches();
+    const recent = stored.filter((r) => r.query !== query);
     recent.unshift({ query, timestamp: Date.now() });
     await Promise.resolve(storage.setItem(recentStorageKey, JSON.stringify(recent.slice(0, maxRecent))));
   } catch {
     // storage unavailable
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function evaluateMath(expr: string): number | null {
+const evaluateMath = (expr: string): number | null => {
   if (!mathRegex.test(expr.trim())) {
     return null;
   }
   try {
-    const result = new Function(`return (${expr.trim()})`)() as unknown;
+    // oxlint-disable-next-line react-doctor/no-eval, typescript/no-implied-eval, typescript/no-unsafe-call, eslint/no-new-func, sonarjs/code-eval -- expr passed mathRegex: only digits, whitespace and + - * / . ( ) reach the evaluator
+    const result: unknown = new Function(`return (${expr.trim()})`)();
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the evaluated arithmetic has no declared type; typeof is the only discriminant
     if (typeof result === 'number' && Number.isFinite(result)) {
       return result;
     }
@@ -113,23 +121,55 @@ function evaluateMath(expr: string): number | null {
   } catch {
     return null;
   }
-}
+};
 
-function matchingCommands(query: string): { label: string; path: string }[] {
+const matchingCommands = (query: string): { label: string; path: string }[] => {
   if (!query) {
     return [];
   }
   const lower = query.toLowerCase();
-  return Object.entries(commands)
-    .filter(([name]) => name.includes(lower))
-    .map(([name, path]) => ({ label: name, path }));
+  return Object.entries(commands).flatMap(([name, path]) => (name.includes(lower) ? [{ label: name, path }] : []));
+};
+
+interface NavTarget {
+  type: string;
+  doctype: string;
 }
+
+const navPath = (basePath: string, result: NavTarget): string => {
+  if (result.type === 'list') {
+    return `${basePath}/${result.doctype}`;
+  }
+  if (result.type === 'new') {
+    return `${basePath}/${result.doctype}/new`;
+  }
+  return `${basePath}/${result.doctype}?view=report`;
+};
+
+interface DocSearchPayload {
+  message?: DocSearchResult[];
+}
+
+/** Global document search; an unreachable or failing server yields no results. */
+const fetchDocResults = async (http: HttpClient, text: string): Promise<DocSearchResult[]> => {
+  try {
+    const response = await http.get<DocSearchPayload>('/api/method/frappe.utils.global_search.search', {
+      text,
+      start: 0,
+      limit: 10,
+    });
+    return response.payload?.message ?? [];
+  } catch {
+    // Safe to continue: a failed document search shows no document results; navigation results still render.
+    return [];
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: AwesomebarProps) {
+export const Awesomebar = ({ onNavigate, basePath = '/desk', ...stackProps }: AwesomebarProps) => {
   const { t } = useTranslation();
   const { knobProps, control } = useResolvedKnobs();
   const config = useFrappeConfig();
@@ -164,15 +204,22 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
   const matchedCommands = useMemo(() => matchingCommands(query), [query]);
 
   // HttpClient ref for document search
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- React 19's useRef requires its initial value argument
   const httpRef = useRef<HttpClient | undefined>(undefined);
   const configKeyRef = useRef('');
-  if (config?.baseURL) {
+  // The client is cached per connection key during render (rebuilt only when
+  // the key changes) and read later by the debounced document search.
+  if (config?.baseURL !== undefined && config.baseURL !== '') {
+    // oxlint-disable-next-line typescript/restrict-template-expressions -- the token (string or getter) only feeds an identity key; a getter's source text is stable per getter
     const key = `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`;
+    // oxlint-disable-next-line react/refs -- render-time cache of the connection key; see above
     if (key !== configKeyRef.current) {
+      // oxlint-disable-next-line react/refs -- render-time client cache; see above
       httpRef.current = createHttpClient({
         baseURL: config.baseURL,
         auth: config.auth,
       });
+      // oxlint-disable-next-line react/refs -- render-time cache of the connection key; see above
       configKeyRef.current = key;
     }
   }
@@ -201,12 +248,7 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
 
     // Navigation results
     for (const result of limitedNavResults) {
-      const path =
-        result.type === 'list'
-          ? `${basePath}/${result.doctype}`
-          : result.type === 'new'
-            ? `${basePath}/${result.doctype}/new`
-            : `${basePath}/${result.doctype}?view=report`;
+      const path = navPath(basePath, result);
       opts.push({
         value: `${prefix.NAV}${path}`,
         label: result.label,
@@ -230,50 +272,37 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
   }, [mathResult, matchedCommands, limitedNavResults, docResults, basePath, t]);
 
   // Handle search for async document fetching
-  const handleSearch = useCallback((searchQuery: string) => {
+  const handleSearch = useCallback((searchQuery: string): (() => void) | undefined => {
     setQuery(searchQuery);
 
     if (!searchQuery || !httpRef.current) {
       setDocResults([]);
       setDocSearchLoading(false);
-      return;
+      return undefined;
     }
 
     setDocSearchLoading(true);
     let cancelled = false;
 
-    const timer = setTimeout(async () => {
-      try {
-        const http = httpRef.current;
-        if (!http || cancelled) {
-          return;
-        }
-
-        const response = await http.get<{
-          message?: {
-            doctype: string;
-            name: string;
-            content: string;
-          }[];
-        }>('/api/method/frappe.utils.global_search.search', {
-          text: searchQuery,
-          start: 0,
-          limit: 10,
-        });
-
-        if (cancelled) {
-          return;
-        }
-        setDocResults(response.payload?.message ?? []);
-      } catch {
-        if (!cancelled) {
-          setDocResults([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setDocSearchLoading(false);
-        }
+    const runSearch = async () => {
+      if (cancelled) {
+        return;
       }
+      const http = httpRef.current;
+      if (!http) {
+        setDocSearchLoading(false);
+        return;
+      }
+      const results = await fetchDocResults(http, searchQuery);
+      if (cancelled) {
+        return;
+      }
+      setDocResults(results);
+      setDocSearchLoading(false);
+    };
+
+    const timer = setTimeout(() => {
+      void runSearch();
     }, 300);
 
     return () => {
@@ -295,7 +324,7 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
       if (selectedValue.startsWith(prefix.MATH)) {
         // Copy math result to clipboard
         const result = selectedValue.slice(prefix.MATH.length);
-        writeToClipboard(result);
+        void writeToClipboard(result);
         return;
       }
 
@@ -314,7 +343,6 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
       if (selectedValue.startsWith(prefix.DOC)) {
         const path = selectedValue.slice(prefix.DOC.length);
         onNavigate?.(path);
-        return;
       }
     },
     [query, onNavigate],
@@ -396,6 +424,15 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
     [control, knobProps, t, triggerHeight],
   );
 
+  // The DocType catalog behind navigation search is permission-gated
+  // (Guests get a 403): say so instead of a misleading "No results".
+  let emptyMessage = t('No results found.');
+  if (!query) {
+    emptyMessage = t('Type to search...');
+  } else if (navError) {
+    emptyMessage = t('Search unavailable -- are you logged in?');
+  }
+
   return (
     <XStack
       data-awesomebar-root
@@ -409,24 +446,16 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
       {...stackProps}>
       <Combobox
         options={options}
-        onValueChange={handleValueChange}
+        onChange={handleValueChange}
         onSearch={handleSearch}
         loading={docSearchLoading}
         aria-label={t('Search or type a command')}
         placeholder={t('Search or type a command...')}
         searchPlaceholder={t('Search...')}
-        emptyMessage={
-          // The DocType catalog behind navigation search is permission-gated
-          // (Guests get a 403): say so instead of a misleading "No results".
-          query && navError
-            ? t('Search unavailable -- are you logged in?')
-            : query
-              ? t('No results found.')
-              : t('Type to search...')
-        }
+        emptyMessage={emptyMessage}
         trigger={renderTrigger}
         size={knobProps.sizeToken}
       />
     </XStack>
   );
-}
+};

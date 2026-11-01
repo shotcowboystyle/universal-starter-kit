@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-import { useFrappeRows } from './useFrappeRows';
-import type { FrappeRowsConnection, UseFrappeRowsOptions } from './useFrappeRows';
+import { useFrappeRows } from './use-frappe-rows';
+import type { FrappeRowsConnection, UseFrappeRowsOptions } from './use-frappe-rows';
 
 export interface FrappeRowsSnapshot<TDoc> {
   rows: TDoc[];
@@ -22,15 +22,16 @@ export interface FrappeRowsReaderProps<TDoc extends { name: string; doctype: str
  * reads (one per connection, one per junction filter) mounts one reader per
  * read instead of calling hooks in a loop. Renders nothing.
  */
-export function FrappeRowsReader<TDoc extends { name: string; doctype: string }>({
+export const FrappeRowsReader = <TDoc extends { name: string; doctype: string }>({
   connection,
   doctype,
   options,
   onChange,
-}: FrappeRowsReaderProps<TDoc>) {
+}: FrappeRowsReaderProps<TDoc>) => {
   const { rows, isLoading, error } = useFrappeRows<TDoc>(connection, doctype, options);
   useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent, react-doctor/no-prop-callback-in-effect -- this component exists to report one hook's rows to a parent that mounts a variable number of readers
     onChange({ rows, isLoading, error });
   }, [rows, isLoading, error, onChange]);
   return null;
-}
+};

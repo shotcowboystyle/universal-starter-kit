@@ -2,10 +2,28 @@ import { action } from '@repo/storybook';
 import React, { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import type { FieldSchema } from '../fieldRegistry';
+import type { FieldRenderProps, FieldSchema } from '../field-registry';
 
 import { SchemaForm } from './index';
-import type { FormSchema } from './index';
+import type { FormSchema, SchemaFormProps } from './index';
+
+type SchemaDoc = SchemaFormProps['doc'];
+
+const EMPTY_DOC: SchemaDoc = {};
+
+const mkOptions = (n: number) => Array.from({ length: n }, (_, i) => `Option ${i + 1}`).join('\n');
+
+/** Render-function override for the Overrides story. */
+const StatusOverride = (props: FieldRenderProps) => (
+  <YStack
+    data-testid="override-fn"
+    padding="$2"
+    backgroundColor="$color3">
+    <Text fontSize="$2">
+      fn override for {props.label}: {String(props.value)}
+    </Text>
+  </YStack>
+);
 
 export default {
   title: 'FrappeUI/SchemaForm',
@@ -45,11 +63,11 @@ const schema: FormSchema = {
   ],
 };
 
-function StatefulForm({
-  initialDoc = {},
+const StatefulForm = ({
+  initialDoc = EMPTY_DOC,
   ...props
-}: Partial<React.ComponentProps<typeof SchemaForm>> & { initialDoc?: Record<string, any> }) {
-  const [doc, setDoc] = useState<Record<string, any>>(initialDoc);
+}: Partial<React.ComponentProps<typeof SchemaForm>> & { initialDoc?: SchemaDoc }) => {
+  const [doc, setDoc] = useState<SchemaDoc>(initialDoc);
   return (
     <YStack
       maxWidth={720}
@@ -71,7 +89,7 @@ function StatefulForm({
       </Text>
     </YStack>
   );
-}
+};
 
 export const Main = () => <StatefulForm initialDoc={{ first_name: 'Jane', status: 'Open', is_active: true }} />;
 Main.storyName = 'Main';
@@ -104,7 +122,7 @@ export const ReadOnlyVsDisabled = () => {
       },
     ],
   };
-  const [doc, setDoc] = useState<Record<string, any>>({
+  const [doc, setDoc] = useState<SchemaDoc>({
     first_name: 'copy me if you can',
     last_name: 'schema read-only value',
     editable: 'type here',
@@ -138,7 +156,7 @@ export const HideBorder = () => {
     fields,
     sections: schema.sections.map((section) => ({ ...section, hideBorder: true })),
   };
-  const [doc, setDoc] = useState<Record<string, any>>({
+  const [doc, setDoc] = useState<SchemaDoc>({
     first_name: 'Jane',
     status: 'Open',
     is_active: true,
@@ -185,7 +203,7 @@ export const ConditionalFields = () => {
     fields: condFields,
     sections: [{ label: 'Conditional', columns: [{ fields: condFields }] }],
   };
-  const [doc, setDoc] = useState<Record<string, any>>({});
+  const [doc, setDoc] = useState<SchemaDoc>({});
   return (
     <SchemaForm
       schema={condSchema}
@@ -252,16 +270,7 @@ export const Overrides = () => (
       first_name: {
         props: { placeholder: 'overridden placeholder' },
       },
-      status: (props) => (
-        <YStack
-          data-testid="override-fn"
-          padding="$2"
-          backgroundColor="$color3">
-          <Text fontSize="$2">
-            fn override for {props.label}: {String(props.value)}
-          </Text>
-        </YStack>
-      ),
+      status: StatusOverride,
     }}
   />
 );
@@ -294,7 +303,7 @@ export const ChildTableField = () => {
     fields: tableFields,
     sections: [{ label: 'Lines', columns: [{ fields: tableFields }] }],
   };
-  const [doc, setDoc] = useState<Record<string, any>>({
+  const [doc, setDoc] = useState<SchemaDoc>({
     items: [
       { item_code: 'SKU-100', qty: 2, status: 'Draft' },
       { item_code: 'SKU-200', qty: 1, status: 'Submitted' },
@@ -320,7 +329,6 @@ export const ChildTableField = () => {
  * control=select ejects; Check uses switch/checkbox by commit.
  */
 export const ChoiceHeuristics = () => {
-  const mkOptions = (n: number) => Array.from({ length: n }, (_, i) => `Option ${i + 1}`).join('\n');
   const choiceFields: FieldSchema[] = [
     {
       type: 'Select',
@@ -370,7 +378,7 @@ export const ChoiceHeuristics = () => {
     fields: choiceFields,
     sections: [{ label: 'Choice heuristics', columns: [{ fields: choiceFields }] }],
   };
-  const [doc, setDoc] = useState<Record<string, any>>({
+  const [doc, setDoc] = useState<SchemaDoc>({
     two_option: 'Buy',
     short: 'Open',
     mid: 'Option 1',
@@ -395,7 +403,7 @@ export const ChoiceHeuristics = () => {
 
 /** Two schema columns inside a narrow shell — must stack (DG-FORM-09). */
 export const NarrowColumns = () => {
-  const [doc, setDoc] = useState<Record<string, any>>({
+  const [doc, setDoc] = useState<SchemaDoc>({
     first_name: 'Jane',
     last_name: 'Doe',
     status: 'Open',

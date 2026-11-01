@@ -15,13 +15,13 @@ import {
   useTheme,
 } from '@repo/ui';
 import type { ChartConfig } from '@repo/ui';
-import { useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useDocRights } from './formEngine/useDocRights';
-import { connectionsFromMeta } from './frappeConnections';
-import type { FrappeConnection } from './frappeConnections';
-import { frappeRouteHref, useFrappeRouter } from './frappeNavigation';
+import { useDocRights } from './formEngine/use-doc-rights';
+import { connectionsFromMeta } from './frappe-connections';
+import type { FrappeConnection } from './frappe-connections';
+import { frappeRouteHref, useFrappeRouter } from './frappe-navigation';
 import { FrappeNotConfigured } from './FrappeNotConfigured';
 import { useFrappeConfig } from './FrappeProvider';
 import { FrappeReconnectIndicator } from './FrappeReconnectIndicator';
@@ -33,23 +33,23 @@ import {
   multiValued,
   orderRows,
   topBy,
-} from './insights/insightsData';
+} from './insights/insights-data';
+import { formatMetric } from './insights/insights-record';
+import type { FrappeInsightsMetric, InsightsRecordView } from './insights/insights-record';
 import { InsightsFacetTags } from './insights/InsightsFacetTags';
 import { InsightsKpiBand } from './insights/InsightsKpiBand';
 import type { InsightsTile } from './insights/InsightsKpiBand';
 import { InsightsLeaders } from './insights/InsightsLeaders';
-import { formatMetric } from './insights/insightsRecord';
-import type { FrappeInsightsMetric, InsightsRecordView } from './insights/insightsRecord';
 import { InsightsRecords } from './insights/InsightsRecords';
 import { InsightsTable } from './insights/InsightsTable';
-import { facetRead, readFacet } from './list/facetReading';
+import { facetRead, readFacet } from './list/facet-reading';
 import { favoritesKey, useFavorites } from './list/favorites';
-import type { FrappeListFacet } from './list/listState';
-import { recordTitle } from './list/recordLook';
-import type { FrappeRecordLook } from './list/recordLook';
-import { useFrappeConnection, useFrappeRows } from './useFrappeRows';
+import type { FrappeListFacet } from './list/list-state';
+import { recordTitle } from './list/record-look';
+import type { FrappeRecordLook } from './list/record-look';
+import { useFrappeConnection, useFrappeRows } from './use-frappe-rows';
 
-export type { FrappeInsightsMetric };
+export type { FrappeInsightsMetric } from './insights/insights-record';
 
 /** Slices of the facet pie before the tail folds into "Other". */
 const pieSlices = 7;
@@ -87,6 +87,152 @@ export interface FrappeInsightsProps<TDoc extends { name: string; doctype: strin
   testID?: string;
 }
 
+type Translate = ReturnType<typeof useTranslation>['t'];
+type OrderSpec = { field: string; order: string }[];
+type ThemeColors = Record<string, { val?: string } | undefined>;
+
+/**
+ * The value last declared under `key`: a fresh-but-equal declaration keeps
+ * the settled one's identity, so the sections' memoised data holds.
+ */
+const useSettled = <T,>(value: T, key: string): T => {
+  const [settled, setSettled] = useState({ key, value });
+  if (settled.key !== key) {
+    setSettled({ key, value });
+    return value;
+  }
+  return settled.value;
+};
+
+/** The favorites storage key: true keys by doctype, a string names it, anything else counts none. */
+const favoritesKeyFor = (favorites: boolean | string | undefined, doctype: string): string | undefined => {
+  if (favorites === undefined || favorites === false || favorites === '') {
+    return undefined;
+  }
+  return favorites === true ? favoritesKey(doctype) : favorites;
+};
+
+/** The record holders: the top row of each `record` metric. */
+const recordHolders = <TDoc extends { name: string; doctype: string }>(
+  metrics: readonly FrappeInsightsMetric[],
+  rows: readonly TDoc[],
+) =>
+  metrics.flatMap((metric) => {
+    const { record: label } = metric;
+    if (label === undefined || label === '') {
+      return [];
+    }
+    // SAFETY: topBy returns rows from `rows`, which are TDocs; never[] only bridges TDoc to the helpers' open Row
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    const doc = topBy(rows as never[], metric.field, 1)[0] as TDoc | undefined;
+    if (doc === undefined) {
+      return [];
+    }
+    // SAFETY: metric fields are fieldnames of the doctype, so they key the row
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    const raw = doc[metric.field as keyof TDoc];
+    return [{ id: metric.field, label, doc, value: formatMetric(metric, Number(raw) || 0) }];
+  });
+
+/** The facet pie: the folded distribution, each slice in its value's tint. */
+const facetPie = (
+  facet: FrappeListFacet,
+  distribution: Parameters<typeof foldDistribution>[0],
+  theme: ThemeColors,
+  t: Translate,
+  valueLabel: (value: string) => string,
+): ChartConfig => ({
+  id: 'facet-distribution',
+  title: t('{{facet}} distribution', { facet: facet.label }),
+  type: 'pie',
+  data: foldDistribution(distribution, pieSlices).map((entry) => {
+    const tint = entry.other === true ? undefined : facet.tint?.(entry.value);
+    return {
+      label: entry.other === true ? t('Other') : valueLabel(entry.value),
+      value: entry.count,
+      color: theme[`${tint === undefined || tint === '' ? 'gray' : tint}9`]?.val,
+    };
+  }),
+});
+
+interface InsightBandInput<TDoc> {
+  t: Translate;
+  theme: ThemeColors;
+  rows: readonly TDoc[];
+  metrics: readonly FrappeInsightsMetric[];
+  facet: FrappeListFacet | undefined;
+  values: ReadonlyMap<string, readonly string[]>;
+  distribution: Parameters<typeof foldDistribution>[0];
+  plural: string;
+  valueLabel: (value: string) => string;
+  favoritesStorageKey: string | undefined;
+  favoritesCount: number;
+}
+
+/** The KPI band's tiles and charts: favorites, the facet's spread, the lead metric's average and histogram. */
+const insightBand = <TDoc extends { name: string; doctype: string }>({
+  t,
+  theme,
+  rows,
+  metrics,
+  facet,
+  values,
+  distribution,
+  plural,
+  valueLabel,
+  favoritesStorageKey,
+  favoritesCount,
+}: InsightBandInput<TDoc>) => {
+  const [lead] = metrics;
+  const hasLead = metrics.length > 0;
+  const tiles: InsightsTile[] = [];
+  if (favoritesStorageKey !== undefined) {
+    tiles.push({
+      id: 'favorites',
+      title: t('Favorites'),
+      value: favoritesCount,
+      hint: t('{{count}} of {{total}}', { count: favoritesCount, total: rows.length }),
+    });
+  }
+  if (facet) {
+    const several = multiValued(values, rows);
+    let hint: string | undefined;
+    if (several > 0) {
+      hint = t('{{count}} with 2+', { count: several });
+    } else if (distribution.length > 0) {
+      hint = valueLabel(distribution[0].value);
+    }
+    tiles.push({
+      id: 'facet',
+      title: t('Distinct {{facets}}', { facets: plural }),
+      value: distribution.length,
+      hint,
+    });
+  }
+  const buckets = hasLead ? histogram(rows, lead.field, lead.bucket) : [];
+  if (hasLead) {
+    tiles.push({
+      id: 'average',
+      title: t('Average {{metric}}', { metric: lead.label }),
+      value: formatMetric(lead, Math.round(average(rows, lead.field))),
+      spark: buckets.map((bucket) => bucket.value),
+    });
+  }
+  const charts: ChartConfig[] = [];
+  if (facet) {
+    charts.push(facetPie(facet, distribution, theme, t, valueLabel));
+  }
+  if (hasLead) {
+    charts.push({
+      id: 'metric-histogram',
+      title: t('{{metric}} distribution', { metric: lead.label }),
+      type: 'bar',
+      data: buckets,
+    });
+  }
+  return { tiles, charts };
+};
+
 /**
  * A doctype's analytics page over the rows its list reads: the count, the
  * favorites, the facet's spread and the first metric's average, a facet pie
@@ -95,28 +241,32 @@ export interface FrappeInsightsProps<TDoc extends { name: string; doctype: strin
  * Not configured, error, loading and empty are four honest states under
  * the same wayfinding header.
  */
-export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
-  doctype,
-  route,
-  listTitle,
-  title,
-  subtitle,
-  fields,
-  limit,
-  orderBy,
-  connections,
-  facet: facetProp,
-  facetPlural,
-  metrics: metricsProp = noMetrics,
-  favorites,
-  look,
-  titleField,
-  pageSize = 5,
-  testID,
-}: FrappeInsightsProps<TDoc>) {
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one page with four honest states and optional sections; each branch is a flat prop check
+export const FrappeInsights = <TDoc extends { name: string; doctype: string }>(props: FrappeInsightsProps<TDoc>) => {
+  const {
+    doctype,
+    route,
+    listTitle,
+    title,
+    subtitle,
+    fields,
+    limit,
+    orderBy,
+    connections,
+    facet: facetProp,
+    facetPlural,
+    metrics: metricsProp = noMetrics,
+    favorites,
+    look,
+    titleField,
+    pageSize = 5,
+    testID,
+  } = props;
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
-  const theme = useTheme() as unknown as Record<string, { val?: string } | undefined>;
+  // SAFETY: Tamagui's theme is a map of token name -> variable carrying `val`; tokens it lacks read as undefined
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- see SAFETY above; the theme type has no string index
+  const theme = useTheme() as unknown as ThemeColors;
   const config = useFrappeConfig();
   const connection = useFrappeConnection();
   const navigate = useFrappeRouter()?.navigate;
@@ -127,35 +277,45 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
 
   // Declarations arrive as fresh objects every render. The sections' tables
   // keep their page only while their data keeps its identity, so the facet
-  // and metrics settle on what they declare and the functions ride refs.
-  const latest = useRef({ facet: facetProp, metrics: metricsProp, look, navigate });
-  latest.current = { facet: facetProp, metrics: metricsProp, look, navigate };
-  const facetKey = JSON.stringify(facetProp ?? null);
-  const metricsKey = JSON.stringify(metricsProp);
-  const facet = useMemo(() => latest.current.facet, [facetKey]);
-  const metrics = useMemo(() => latest.current.metrics, [metricsKey]);
+  // and metrics settle on what they declare and the functions ride a ref.
+  const latest = useRef({ look, navigate });
+  // oxlint-disable-next-line react/refs -- latest-value ref: the record view's callbacks read the current look/navigate without changing identity
+  latest.current = { look, navigate };
+  const facet = useSettled(facetProp, JSON.stringify(facetProp ?? null));
+  const metrics = useSettled(metricsProp, JSON.stringify(metricsProp));
 
   const { rows: readRows, isLoading, error } = useFrappeRows<TDoc>(connection, doctype, { fields, limit, orderBy });
   const orderKey = JSON.stringify(orderBy ?? null);
-  const rows = useMemo(() => orderRows(readRows as never[], JSON.parse(orderKey)) as TDoc[], [readRows, orderKey]);
+  const rows = useMemo(
+    () =>
+      // SAFETY: orderRows returns the given rows reordered, so they stay TDocs; orderKey is orderBy serialised above
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      orderRows(readRows as never[], (JSON.parse(orderKey) as OrderSpec | null) ?? undefined) as TDoc[],
+    [readRows, orderKey],
+  );
   const read = facet ? facetRead(facet, doctype, connections ?? connectionsFromMeta(meta), limit) : undefined;
   const readKey = JSON.stringify(read ?? null);
+  // SAFETY: readKey is `read` serialised above; the facet read is plain data
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const facetQuery = useMemo(() => JSON.parse(readKey) as typeof read | null, [readKey]);
   const facetOptions = useMemo(() => ({ ...facetQuery?.options, enabled: Boolean(facetQuery?.ready) }), [facetQuery]);
+  // SAFETY: the facet read's options are useFrappeRows options for the facet's doctype, built by facetRead
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const { rows: facetRows } = useFrappeRows<TDoc>(connection, facetQuery?.doctype ?? '', facetOptions as never);
-  const values = useMemo(
-    () =>
-      facet && facetQuery
-        ? readFacet(facet, facetQuery.linkField, facetRows as never).values
-        : new Map<string, string[]>(),
-    [facet, facetQuery, facetRows],
-  );
-  const { count: favoritesCount } = useFavorites(
-    favorites ? (typeof favorites === 'string' ? favorites : favoritesKey(doctype)) : undefined,
-  );
+  const values = useMemo(() => {
+    if (!facet || !facetQuery) {
+      return new Map<string, string[]>();
+    }
+    // SAFETY: facet rows are plain field->value docs; never[] only bridges TDoc to readFacet's open Row
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    return readFacet(facet, facetQuery.linkField, facetRows as never).values;
+  }, [facet, facetQuery, facetRows]);
+  const favoritesStorageKey = favoritesKeyFor(favorites, doctype);
+  const { count: favoritesCount } = useFavorites(favoritesStorageKey);
 
   const nameField = titleField ?? meta?.title_field;
   const baseURL = config?.baseURL;
+  const valueLabel = useCallback((value: string) => facet?.optionLabel?.(value) ?? value, [facet]);
   const record = useMemo<InsightsRecordView<TDoc>>(
     () => ({
       title: (doc) => recordTitle(doc, latest.current.look, nameField),
@@ -163,85 +323,29 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
       images: (doc) => latest.current.look?.images?.(doc, baseURL) ?? [],
       values: (doc) => values.get(doc.name) ?? [],
       tints: (doc) => (values.get(doc.name) ?? []).map((value) => facet?.tint?.(value)),
-      valueLabel: (value) => facet?.optionLabel?.(value) ?? value,
+      valueLabel,
       valueTint: (value) => facet?.tint?.(value),
       open: (doc) => latest.current.navigate?.(frappeRouteHref(route, { mode: 'view', name: doc.name })),
     }),
-    [nameField, baseURL, values, facet, route],
+    [nameField, baseURL, values, facet, valueLabel, route],
   );
 
   const distribution = useMemo(() => facetDistribution(values, rows), [values, rows]);
-  const lead = metrics[0];
   const plural = facetPlural ?? facet?.label ?? '';
-
-  const tiles: InsightsTile[] = [];
-  if (favorites) {
-    tiles.push({
-      id: 'favorites',
-      title: t('Favorites'),
-      value: favoritesCount,
-      hint: t('{{count}} of {{total}}', { count: favoritesCount, total: rows.length }),
-    });
-  }
-  if (facet) {
-    const several = multiValued(values, rows);
-    tiles.push({
-      id: 'facet',
-      title: t('Distinct {{facets}}', { facets: plural }),
-      value: distribution.length,
-      hint:
-        several > 0
-          ? t('{{count}} with 2+', { count: several })
-          : distribution[0]
-            ? record.valueLabel(distribution[0].value)
-            : undefined,
-    });
-  }
-  const buckets = lead ? histogram(rows as never[], lead.field, lead.bucket) : [];
-  if (lead) {
-    tiles.push({
-      id: 'average',
-      title: t('Average {{metric}}', { metric: lead.label }),
-      value: formatMetric(lead, Math.round(average(rows as never[], lead.field))),
-      spark: buckets.map((bucket) => bucket.value),
-    });
-  }
-  const charts: ChartConfig[] = [];
-  if (facet) {
-    charts.push({
-      id: 'facet-distribution',
-      title: t('{{facet}} distribution', { facet: facet.label }),
-      type: 'pie',
-      data: foldDistribution(distribution, pieSlices).map((entry) => ({
-        label: entry.other ? t('Other') : record.valueLabel(entry.value),
-        value: entry.count,
-        color: theme[`${(!entry.other && facet.tint?.(entry.value)) || 'gray'}9`]?.val,
-      })),
-    });
-  }
-  if (lead) {
-    charts.push({
-      id: 'metric-histogram',
-      title: t('{{metric}} distribution', { metric: lead.label }),
-      type: 'bar',
-      data: buckets,
-    });
-  }
-  const holders = metrics
-    .filter((metric) => metric.record)
-    .flatMap((metric) => {
-      const doc = topBy(rows as never[], metric.field, 1)[0] as TDoc | undefined;
-      return doc
-        ? [
-            {
-              id: metric.field,
-              label: metric.record!,
-              doc,
-              value: formatMetric(metric, Number(doc[metric.field as keyof TDoc]) || 0),
-            },
-          ]
-        : [];
-    });
+  const { tiles, charts } = insightBand({
+    t,
+    theme,
+    rows,
+    metrics,
+    facet,
+    values,
+    distribution,
+    plural,
+    valueLabel,
+    favoritesStorageKey,
+    favoritesCount,
+  });
+  const holders = recordHolders(metrics, rows);
 
   const onAdd =
     rights.create && navigate
@@ -249,9 +353,10 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
           navigate(frappeRouteHref(route, { mode: 'create' }));
         }
       : undefined;
-  const sectionId = (name: string) => (testID ? `${testID}-${name}` : undefined);
+  const sectionId = (name: string) => (testID !== undefined && testID !== '' ? `${testID}-${name}` : undefined);
+  const hasRows = !isLoading && !error && rows.length > 0;
 
-  if (!config?.baseURL && !config?.fixtures) {
+  if ((config?.baseURL === undefined || config.baseURL === '') && !config?.fixtures) {
     return (
       <FrappeNotConfigured
         doctype={doctype}
@@ -268,7 +373,7 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
       />
       <PageHeader
         title={pageTitle}
-        subtitle={subtitle && !isLoading && !error && rows.length > 0 ? subtitle(rows.length) : undefined}
+        subtitle={subtitle && hasRows ? subtitle(rows.length) : undefined}
         actions={
           <Button
             variant="outlined"
@@ -404,7 +509,7 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
           paddingBottom="$6">
           <InsightsFacetTags
             distribution={distribution}
-            label={record.valueLabel}
+            label={valueLabel}
             tint={facet.tint}
             onSelect={(value) => navigate?.(`${route}?${facet.param}=${encodeURIComponent(value)}`)}
             testID={sectionId('tag')}
@@ -413,4 +518,4 @@ export function FrappeInsights<TDoc extends { name: string; doctype: string }>({
       ) : null}
     </Screen>
   );
-}
+};

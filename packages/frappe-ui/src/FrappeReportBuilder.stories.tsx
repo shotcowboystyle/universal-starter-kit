@@ -1,9 +1,10 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeProvider } from './FrappeProvider';
 import { FrappeReportBuilder } from './FrappeReportBuilder';
-import { FrappeStoryProvider } from './frappeStoryTarget';
+import type { FrappeReportBuilderProps } from './FrappeReportBuilder';
 
 export default {
   title: 'FrappeUI/FrappeReportBuilder',
@@ -27,74 +28,54 @@ const MOCK_HOST = 'https://report.mock.test';
 const ERR_HOST = 'https://forbidden.report.mock.test';
 const GUEST_HOST = 'https://guest.report.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function saleMeta(name: string) {
-  return {
-    name,
-    module: 'QA',
-    title_field: 'customer',
-    fields: [
-      { fieldname: 'customer', fieldtype: 'Data', label: 'Customer', in_list_view: 1 },
-      { fieldname: 'amount', fieldtype: 'Currency', label: 'Amount', in_list_view: 1 },
-      {
-        fieldname: 'region',
-        fieldtype: 'Select',
-        label: 'Region',
-        options: 'North\nSouth\nEast\nWest',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Draft\nSubmitted\nPaid',
-        in_standard_filter: 1,
-      },
-      { fieldname: 'sale_date', fieldtype: 'Date', label: 'Sale Date' },
-      { fieldname: 'layout_break', fieldtype: 'Section Break', label: 'Break' },
-    ],
-    permissions: [{ role: 'All', read: 1 }],
-  };
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
 
-(() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeReportMockFetch) {
-    return;
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
   }
-  w.__frappeReportMockFetch = true;
-  const realFetch = window.fetch.bind(window);
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-    if (urlStr.startsWith(ERR_HOST)) {
-      return jsonResponse({ message: 'Not permitted' }, 403);
-    }
-    if (urlStr.startsWith(GUEST_HOST)) {
-      const url = new URL(urlStr);
-      return url.pathname === '/api/resource/QaSaleGuest'
-        ? jsonResponse({ data: makeSales('QaSaleGuest', 1) })
-        : jsonResponse({ message: 'Not permitted' }, 403);
-    }
-    if (urlStr.startsWith(MOCK_HOST)) {
-      const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
-      if (metaMatch) {
-        return jsonResponse({ data: saleMeta(decodeURIComponent(metaMatch[1])) });
-      }
-      return jsonResponse({ data: [] });
-    }
-    return await realFetch(input as RequestInfo, init);
-  };
-})();
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
-function makeSales(doctype: string, count: number) {
+const saleMeta = (name: string) => ({
+  name,
+  module: 'QA',
+  title_field: 'customer',
+  fields: [
+    { fieldname: 'customer', fieldtype: 'Data', label: 'Customer', in_list_view: 1 },
+    { fieldname: 'amount', fieldtype: 'Currency', label: 'Amount', in_list_view: 1 },
+    {
+      fieldname: 'region',
+      fieldtype: 'Select',
+      label: 'Region',
+      options: 'North\nSouth\nEast\nWest',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Draft\nSubmitted\nPaid',
+      in_standard_filter: 1,
+    },
+    { fieldname: 'sale_date', fieldtype: 'Date', label: 'Sale Date' },
+    { fieldname: 'layout_break', fieldtype: 'Section Break', label: 'Break' },
+  ],
+  permissions: [{ role: 'All', read: 1 }],
+});
+
+const makeSales = (doctype: string, count: number) => {
   const customers = ['ACME Corp', 'Globex', 'Initech', 'Umbrella', 'Stark Industries'];
   const regions = ['North', 'South', 'East', 'West'];
   const statuses = ['Draft', 'Submitted', 'Paid'];
@@ -107,12 +88,42 @@ function makeSales(doctype: string, count: number) {
     status: statuses[i % statuses.length],
     sale_date: `2026-0${(i % 6) + 1}-15`,
   }));
-}
+};
+
+(() => {
+  const w: Window & { __frappeReportMockFetch?: boolean } = window;
+  if (w.__frappeReportMockFetch) {
+    return;
+  }
+  w.__frappeReportMockFetch = true;
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const urlStr = requestUrl(input);
+    if (urlStr.startsWith(ERR_HOST)) {
+      return jsonResponse({ message: 'Not permitted' }, 403);
+    }
+    if (urlStr.startsWith(GUEST_HOST)) {
+      const url = new URL(urlStr);
+      return url.pathname === '/api/resource/QaSaleGuest'
+        ? jsonResponse({ data: makeSales('QaSaleGuest', 1) })
+        : jsonResponse({ message: 'Not permitted' }, 403);
+    }
+    if (urlStr.startsWith(MOCK_HOST)) {
+      const url = new URL(urlStr);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
+      if (metaMatch) {
+        return jsonResponse({ data: saleMeta(decodeURIComponent(metaMatch[1])) });
+      }
+      return jsonResponse({ data: [] });
+    }
+    return await realFetch(input as RequestInfo, init);
+  };
+})();
 
 const fixturesFor = (doctype: string, count: number) =>
   new InMemoryFixtureProvider({ [doctype]: makeSales(doctype, count) });
 
-export const Main = (args: Record<string, unknown>) => (
+export const Main = (args: Partial<FrappeReportBuilderProps>) => (
   <FrappeProvider
     baseURL={MOCK_HOST}
     fixtures={fixturesFor('QaSale', 15)}>
@@ -177,6 +188,7 @@ export const InitialColumnsNoMeta = () => (
  * Meta refused, one record readable: the columns come from that record's own
  * fields, labelled from their keys, and there is nothing to save (LC-96).
  */
+// oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- the export name is the Storybook story id; renaming breaks saved links
 export const GuestRecordShape = () => (
   <FrappeProvider
     baseURL={GUEST_HOST}
@@ -204,6 +216,7 @@ export const GuestRefused = () => (
 );
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Live bench report: rows over the bench's ToDo doctype stream through the
 // sync engine and refresh in place on realtime events while the chosen
 // columns and group-by survive untouched. Fixtures stand in when the bench is

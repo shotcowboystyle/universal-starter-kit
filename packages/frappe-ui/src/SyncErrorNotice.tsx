@@ -41,7 +41,7 @@ export interface SyncErrorNoticeProps {
  * ))}
  * ```
  */
-export function SyncErrorNotice({ message, onRetry, onDismiss, retryLabel, dismissLabel }: SyncErrorNoticeProps) {
+export const SyncErrorNotice = ({ message, onRetry, onDismiss, retryLabel, dismissLabel }: SyncErrorNoticeProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   return (
@@ -82,4 +82,4 @@ export function SyncErrorNotice({ message, onRetry, onDismiss, retryLabel, dismi
       )}
     </XStack>
   );
-}
+};

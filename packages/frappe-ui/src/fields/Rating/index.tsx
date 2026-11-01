@@ -5,6 +5,7 @@ import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 
 export type RatingProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -26,23 +27,15 @@ export type RatingProps<
     maxStars?: number;
   };
 
-export function Rating<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Rating = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: RatingProps<TData, TName>,
-) {
-  const {
-    defaultValue,
-    form,
-    mode: _mode,
-    name,
-    onBlur,
-    onChange,
-    preserveValue: _preserveValue,
-    validators,
-    disabled,
-    value,
-    maxStars,
-    ...fieldProps
-  } = useProps(props);
+) => {
+  const { defaultValue, form, name, onBlur, onChange, validators, disabled, value, maxStars, ...fieldProps } =
+    useProps(props);
 
   return (
     <FormsRating
@@ -68,4 +61,4 @@ export function Rating<TData extends Record<string, unknown> = Record<string, un
       starIcon={StarIcon}
     />
   );
-}
+};

@@ -6,6 +6,7 @@ import { Text, YStack } from '@repo/ui';
 import { FrappeProvider } from '../FrappeProvider';
 
 import { DeskShell } from './DeskShell';
+import type { DeskShellProps } from './DeskShell';
 
 const frameHeight = sizeRecipeEscape(640, 'story canvas: a fixed-height frame for a full-height screen to fill');
 
@@ -31,12 +32,8 @@ export default {
 
 const MOCK_HOST = 'https://deskshell.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock payload
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const doctypeList = [
   { name: 'Todo', module: 'Desk' },
@@ -47,14 +44,14 @@ const doctypeList = [
 ];
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__deskShellMockFetch) {
+  // Install once per page: a window flag survives story re-renders and HMR.
+  if (Object.hasOwn(window, '__deskShellMockFetch')) {
     return;
   }
-  w.__deskShellMockFetch = true;
+  Reflect.set(window, '__deskShellMockFetch', true);
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : input.toString();
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/resource/DocType') {
@@ -92,7 +89,7 @@ const content = (blocks: number) => (
   </YStack>
 );
 
-export const Main = (args: Record<string, unknown>) => (
+export const Main = (args: Partial<DeskShellProps>) => (
   <FrappeProvider
     baseURL={MOCK_HOST}
     fixtures={new InMemoryFixtureProvider({})}>

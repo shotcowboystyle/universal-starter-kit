@@ -12,32 +12,29 @@ export interface FavoritesState {
   names: string[];
 }
 
-export function createFavoritesStore(key: string, storageImpl: Storage = storage): PersistStore<FavoritesState> {
-  return createPersistStore<FavoritesState>({ names: [] }, { key, storage: storageImpl });
-}
+export const createFavoritesStore = (key: string, storageImpl: Storage = storage): PersistStore<FavoritesState> =>
+  createPersistStore<FavoritesState>({ names: [] }, { key, storage: storageImpl });
 
 const stores = new Map<string, PersistStore<FavoritesState>>();
 
 /** The shared store for a storage key. */
-export function favoritesStore(key: string): PersistStore<FavoritesState> {
+export const favoritesStore = (key: string): PersistStore<FavoritesState> => {
   let store = stores.get(key);
   if (!store) {
     store = createFavoritesStore(key);
     stores.set(key, store);
   }
   return store;
-}
+};
 
 /** The storage key a doctype's favorites default to. */
-export function favoritesKey(doctype: string): string {
-  return `frappe-favorites-${doctype}`;
-}
+export const favoritesKey = (doctype: string): string => `frappe-favorites-${doctype}`;
 
-export function toggleFavoriteIn(store: PersistStore<FavoritesState>, name: string): void {
+export const toggleFavoriteIn = (store: PersistStore<FavoritesState>, name: string): void => {
   store.setState((prev) =>
     prev.names.includes(name) ? { names: prev.names.filter((n) => n !== name) } : { names: [...prev.names, name] },
   );
-}
+};
 
 export interface UseFavorites {
   favorites: string[];
@@ -50,8 +47,9 @@ export interface UseFavorites {
 const noFavorites = new Store<FavoritesState>({ names: [] });
 
 /** A key's favorites; without a key, none (and toggling does nothing). */
-export function useFavorites(key: string | undefined): UseFavorites {
-  const store = key ? favoritesStore(key) : noFavorites;
+export const useFavorites = (key: string | undefined): UseFavorites => {
+  const persistent = key !== undefined && key !== '' ? favoritesStore(key) : undefined;
+  const store = persistent ?? noFavorites;
   const names = useStore(store, (state) => state.names);
   return useMemo(() => {
     const favoriteSet = new Set(names);
@@ -60,11 +58,11 @@ export function useFavorites(key: string | undefined): UseFavorites {
       favoriteSet,
       isFavorite: (name: string) => favoriteSet.has(name),
       toggle: (name: string) => {
-        if (store !== noFavorites) {
-          toggleFavoriteIn(store as PersistStore<FavoritesState>, name);
+        if (persistent) {
+          toggleFavoriteIn(persistent, name);
         }
       },
       count: names.length,
     };
-  }, [names, store]);
-}
+  }, [names, persistent]);
+};

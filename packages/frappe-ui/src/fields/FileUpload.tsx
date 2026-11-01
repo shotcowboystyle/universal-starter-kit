@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Image, Label, Text, XStack, YStack } from 'tamagui';
 
+import type { FrappeConfig } from '../FrappeProvider';
 import { useFrappeConfig } from '../FrappeProvider';
 
 export type FrappeFileUploadHandler = (
@@ -24,7 +25,7 @@ export interface FileUploadProps {
   required?: boolean;
   maxSize?: number;
   baseURL?: string;
-  auth?: any;
+  auth?: FrappeConfig['auth'];
   helperText?: string;
   readOnly?: boolean;
   skeleton?: boolean;
@@ -48,21 +49,24 @@ interface TransferState {
   controller: AbortController;
 }
 
-function formatFileSize(bytes: number): string {
+const DEFAULT_MAX_SIZE = 5 * 1024 * 1024;
+
+const formatFileSize = (bytes: number): string => {
   if (bytes === 0) {
     return '0 Bytes';
   }
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
-}
+  return `${Number((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+};
 
-async function readFileAsDataUrl(
+const readFileAsDataUrl = async (
   file: File,
   { onProgress, signal }: { onProgress: (percent: number) => void; signal: AbortSignal },
-): Promise<string> {
-  return await new Promise((resolve, reject) => {
+): Promise<string> =>
+  // oxlint-disable-next-line promise/avoid-new -- wraps the callback-based FileReader API
+  await new Promise((resolve, reject) => {
     const reader = new FileReader();
     const onAbort = () => {
       reader.abort();
@@ -73,53 +77,57 @@ async function readFileAsDataUrl(
       return;
     }
     signal.addEventListener('abort', onAbort);
-    reader.onprogress = (event) => {
+    reader.addEventListener('progress', (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.round((event.loaded / event.total) * 100));
       }
-    };
-    reader.onload = () => {
+    });
+    reader.addEventListener('load', () => {
       signal.removeEventListener('abort', onAbort);
       onProgress(100);
+      // SAFETY: readAsDataURL always yields a string result on load
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       resolve(reader.result as string);
-    };
-    reader.onerror = () => {
+    });
+    reader.addEventListener('error', () => {
       signal.removeEventListener('abort', onAbort);
       reject(new Error('Failed to read file'));
-    };
-    reader.onabort = () => {
+    });
+    reader.addEventListener('abort', () => {
       signal.removeEventListener('abort', onAbort);
       reject(new DOMException('Aborted', 'AbortError'));
-    };
+    });
     reader.readAsDataURL(file);
   });
-}
 
-export function FileUpload({
-  label,
-  value,
-  onChange,
-  accept,
-  isImage = false,
-  disabled = false,
-  required = false,
-  maxSize = 5 * 1024 * 1024,
-  baseURL,
-  auth,
-  helperText,
-  readOnly = false,
-  skeleton = false,
-  compact = false,
-  onUpload,
-}: FileUploadProps) {
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity, sonarjs/cognitive-complexity -- one transfer state machine (pick, progress, fail, retry, replace) and its three render states; splitting it is a separate refactor
+export const FileUpload = (props: FileUploadProps) => {
+  const {
+    label,
+    value,
+    onChange,
+    accept,
+    isImage = false,
+    disabled = false,
+    required = false,
+    maxSize = DEFAULT_MAX_SIZE,
+    baseURL,
+    auth,
+    helperText,
+    readOnly = false,
+    skeleton = false,
+    compact = false,
+    onUpload,
+  } = props;
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const config = useFrappeConfig();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [transfer, setTransfer] = useState<TransferState | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const transferRef = useRef<TransferState | null>(null);
   const onUploadRef = useRef(onUpload);
+  // oxlint-disable-next-line react/refs -- latest-value ref synced during render; read only inside runTransfer
   onUploadRef.current = onUpload;
   const isLocked = disabled || readOnly;
   const minHeight = compact ? 40 : 56;
@@ -181,7 +189,7 @@ export function FileUpload({
       try {
         const url = await upload(file, {
           onProgress: (percent) => {
-            const n = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
+            const n = Math.min(100, Math.max(0, Math.round(Number.isNaN(percent) ? 0 : percent)));
             setTransfer((prev) => (prev ? { ...prev, progress: n } : prev));
           },
           signal: controller.signal,
@@ -191,7 +199,7 @@ export function FileUpload({
         }
         setTransfer(null);
         transferRef.current = null;
-        setError(null);
+        setFileError(null);
         onChange(url);
       } catch (error) {
         if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
@@ -209,7 +217,7 @@ export function FileUpload({
             : prev,
         );
         // Per-file failure stays on the row (DG-VAL-04). Do not clear `value`.
-        setError(null);
+        setFileError(null);
       }
     },
     [defaultUpload, onChange, t],
@@ -227,7 +235,7 @@ export function FileUpload({
       };
       transferRef.current = next;
       setTransfer(next);
-      setError(null);
+      setFileError(null);
       void runTransfer(file, controller);
     },
     [runTransfer],
@@ -243,7 +251,7 @@ export function FileUpload({
     }
 
     if (maxSize && file.size > maxSize) {
-      setError(`File size exceeds ${Math.round(maxSize / 1024 / 1024)}MB limit`);
+      setFileError(`File size exceeds ${Math.round(maxSize / 1024 / 1024)}MB limit`);
       return;
     }
 
@@ -288,10 +296,15 @@ export function FileUpload({
     fileInputRef.current?.click();
   };
 
+  const hasLabel = label !== undefined && label !== '';
+  const hasValue = value !== undefined && value !== '';
+  const hasError = fileError !== null && fileError !== '';
+  const hasHelperText = helperText !== undefined && helperText !== '';
+
   if (skeleton) {
     return (
       <YStack {...knobProps.gap}>
-        {label && (
+        {hasLabel && (
           <Skeleton
             variant="text"
             width="30%"
@@ -309,7 +322,7 @@ export function FileUpload({
 
   return (
     <YStack {...knobProps.gap}>
-      {label && (
+      {hasLabel && (
         <Label>
           {label}
           {required && <Text color="$red10"> *</Text>}
@@ -362,6 +375,7 @@ export function FileUpload({
           {transfer.status === 'uploading' ? (
             <YStack
               data-file-upload="progress"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a Tamagui YStack draws the bar on native too, where there is no <progress> element
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
@@ -417,7 +431,7 @@ export function FileUpload({
         </YStack>
       ) : null}
 
-      {!value && !transfer ? (
+      {!hasValue && !transfer ? (
         <Button
           size="$3"
           icon={UploadIcon}
@@ -428,7 +442,7 @@ export function FileUpload({
         </Button>
       ) : null}
 
-      {value ? (
+      {hasValue ? (
         <YStack {...knobProps.gap}>
           {isImage ? (
             <Image
@@ -481,20 +495,20 @@ export function FileUpload({
         </YStack>
       ) : null}
 
-      {helperText && !error && !transfer ? (
+      {hasHelperText && !hasError && !transfer ? (
         <Text
           color="$color11"
           fontSize="$2">
           {helperText}
         </Text>
       ) : null}
-      {error ? (
+      {hasError ? (
         <Text
           color="$red11"
           fontSize="$2">
-          {error}
+          {fileError}
         </Text>
       ) : null}
     </YStack>
   );
-}
+};

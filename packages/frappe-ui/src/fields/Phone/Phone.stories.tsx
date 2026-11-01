@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Phone } from '.';
 import type { PhoneFieldProps } from '.';
@@ -29,9 +29,12 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = PhoneFieldProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const SAMPLE_PHONE = '+15125551234';
+
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <Phone
@@ -43,10 +46,10 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
-Main.args = { label: 'Phone', value: '+15125551234' } as Partial<StoryProps>;
+Main.args = { label: 'Phone', value: SAMPLE_PHONE } as Partial<StoryProps>;
 Main.storyName = 'Main';
 
 export const States = (args: StoryProps) => (
@@ -81,7 +84,7 @@ export const States = (args: StoryProps) => (
     />
   </YStack>
 );
-States.args = { label: 'Phone', value: '+15125551234' } as Partial<StoryProps>;
+States.args = { label: 'Phone', value: SAMPLE_PHONE } as Partial<StoryProps>;
 
 /**
  * Thin-adapter contract probe: forwards readOnly / skeleton / compact through
@@ -109,7 +112,7 @@ export const ContractProbe = (args: StoryProps) => (
     />
   </YStack>
 );
-ContractProbe.args = { label: 'Phone', value: '+15125551234' } as Partial<StoryProps>;
+ContractProbe.args = { label: 'Phone', value: SAMPLE_PHONE } as Partial<StoryProps>;
 
 interface PhoneRow {
   id: string;
@@ -119,7 +122,7 @@ interface PhoneRow {
 
 export const InTable = () => {
   const [data, setData] = useState<PhoneRow[]>([
-    { id: '1', label: 'Alpha', value: '+15125551234' },
+    { id: '1', label: 'Alpha', value: SAMPLE_PHONE },
     { id: '2', label: 'Beta', value: '+442071838750' },
     { id: '3', label: 'Gamma', value: '' },
   ]);

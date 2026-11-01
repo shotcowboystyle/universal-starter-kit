@@ -1,8 +1,8 @@
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 import { FrappeTreeView } from './FrappeTreeView';
 
 export default {
@@ -55,41 +55,41 @@ const regionDocs: Region[] = [
   },
 ];
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
-function regionMeta(name: string, isTree: boolean) {
-  return {
-    name,
-    module: 'QA',
-    title_field: 'region_name',
-    is_tree: isTree ? 1 : 0,
-    fields: [
-      { fieldname: 'region_name', fieldtype: 'Data', label: 'Region Name', in_list_view: 1 },
-      { fieldname: 'parent_region', fieldtype: 'Link', label: 'Parent Region', options: name },
-    ],
-    permissions: [{ role: 'All', read: 1 }],
-  };
-}
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
+
+const regionMeta = (name: string, isTree: boolean) => ({
+  name,
+  module: 'QA',
+  title_field: 'region_name',
+  is_tree: isTree ? 1 : 0,
+  fields: [
+    { fieldname: 'region_name', fieldtype: 'Data', label: 'Region Name', in_list_view: 1 },
+    { fieldname: 'parent_region', fieldtype: 'Link', label: 'Parent Region', options: name },
+  ],
+  permissions: [{ role: 'All', read: 1 }],
+});
 
 /** A chart of accounts: no parent field, no is_tree, the name is the path. */
-function accountMeta(name: string) {
-  return {
-    name,
-    module: 'QA',
-    title_field: 'name',
-    is_tree: 0,
-    fields: [{ fieldname: 'balance', fieldtype: 'Currency', label: 'Balance', in_list_view: 1 }],
-    permissions: [{ role: 'All', read: 1 }],
-  };
-}
+const accountMeta = (name: string) => ({
+  name,
+  module: 'QA',
+  title_field: 'name',
+  is_tree: 0,
+  fields: [{ fieldname: 'balance', fieldtype: 'Currency', label: 'Balance', in_list_view: 1 }],
+  permissions: [{ role: 'All', read: 1 }],
+});
 
-function handleMetaRequest(url: URL): Response | null {
-  const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+const handleMetaRequest = (url: URL): Response | null => {
+  const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
   if (!metaMatch) {
     return null;
   }
@@ -98,17 +98,18 @@ function handleMetaRequest(url: URL): Response | null {
     return jsonResponse({ data: accountMeta(name) });
   }
   return jsonResponse({ data: regionMeta(name, name !== 'QaFlatDoc') });
-}
+};
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeTreeViewMockFetch) {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeTreeViewMockFetch?: boolean };
+  if (w.__frappeTreeViewMockFetch === true) {
     return;
   }
   w.__frappeTreeViewMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERRMETA_HOST)) {
       return jsonResponse({ message: 'DocType meta unavailable (mock)' }, 500);
     }
@@ -245,18 +246,20 @@ interface LiveTreeNode {
   parent_test_tree_node: string;
 }
 
+const treeDoctype = 'Test Tree Node';
+
 const liveTreeFixtures: LiveTreeNode[] = [
-  { name: 'Root A', doctype: 'Test Tree Node', title: 'Fixture Root A', parent_test_tree_node: '' },
-  { name: 'Root B', doctype: 'Test Tree Node', title: 'Fixture Root B', parent_test_tree_node: '' },
+  { name: 'Root A', doctype: treeDoctype, title: 'Fixture Root A', parent_test_tree_node: '' },
+  { name: 'Root B', doctype: treeDoctype, title: 'Fixture Root B', parent_test_tree_node: '' },
   {
     name: 'Child A1',
-    doctype: 'Test Tree Node',
+    doctype: treeDoctype,
     title: 'Fixture Child A1',
     parent_test_tree_node: 'Root A',
   },
   {
     name: 'Leaf A1a',
-    doctype: 'Test Tree Node',
+    doctype: treeDoctype,
     title: 'Fixture Leaf A1a',
     parent_test_tree_node: 'Child A1',
   },

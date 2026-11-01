@@ -12,11 +12,12 @@ import { ChartCard as BaseChartCard } from '@repo/ui';
 import type { ChartCardProps, ChartDataPoint } from '@repo/ui';
 import React, { useMemo } from 'react';
 
-export function ChartCard({ config, ...chartCardProps }: ChartCardProps) {
+export const ChartCard = ({ config, ...chartCardProps }: ChartCardProps) => {
   const clampNegatives = config.type === 'bar' || config.type === 'pie';
   const data = useMemo(
     () =>
       (config.data ?? []).flatMap((point) => {
+        // SAFETY: widening to Partial | undefined only loosens the type, so malformed runtime rows are read defensively
         const value = Number((point as Partial<ChartDataPoint> | undefined)?.value);
         if (!Number.isFinite(value)) {
           return [];
@@ -25,11 +26,11 @@ export function ChartCard({ config, ...chartCardProps }: ChartCardProps) {
       }),
     [config.data, clampNegatives],
   );
-  const sanitizedConfig = useMemo(() => ({ ...config, data }), [config.data, data]);
+  const sanitizedConfig = useMemo(() => ({ ...config, data }), [config, data]);
   return (
     <BaseChartCard
       {...chartCardProps}
       config={sanitizedConfig}
     />
   );
-}
+};

@@ -26,12 +26,8 @@ export default {
 const MOCK_HOST = 'https://desksidebar.mock.test';
 const ERR_HOST = 'https://forbidden.desksidebar.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock payload
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const doctypeList = [
   { name: 'Todo', module: 'Desk' },
@@ -46,14 +42,14 @@ const doctypeList = [
 ];
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__deskSidebarMockFetch) {
+  // Install once per page: a window flag survives story re-renders and HMR.
+  if (Object.hasOwn(window, '__deskSidebarMockFetch')) {
     return;
   }
-  w.__deskSidebarMockFetch = true;
+  Reflect.set(window, '__deskSidebarMockFetch', true);
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : input.toString();
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -71,14 +67,14 @@ const doctypeList = [
 const recentKey = 'frappe-desk-recent';
 const favoritesKey = 'frappe-desk-favorites';
 
-function seedStorage(recent: unknown[], favorites: unknown[]) {
+const seedStorage = (recent: unknown[], favorites: unknown[]) => {
   try {
     void storage.setItem(recentKey, JSON.stringify(recent));
     void storage.setItem(favoritesKey, JSON.stringify(favorites));
   } catch {
     // storage unavailable
   }
-}
+};
 
 const clearStorageDecorator = (Story: React.ComponentType) => {
   seedStorage([], []);

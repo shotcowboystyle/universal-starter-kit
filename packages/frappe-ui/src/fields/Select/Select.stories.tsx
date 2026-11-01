@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Select } from '.';
 import type { SelectProps } from '.';
@@ -30,7 +30,7 @@ export default {
   },
 };
 
-function ControlledSelect({ onChange: _onChange, ...props }: SelectProps) {
+const ControlledSelect = ({ onChange: _onChange, ...props }: SelectProps) => {
   const [value, setValue] = useState(props.value ?? '');
   const handleChange = (v: string) => {
     setValue(v);
@@ -38,7 +38,7 @@ function ControlledSelect({ onChange: _onChange, ...props }: SelectProps) {
   };
   const merged = { ...props, value, onChange: handleChange } as SelectProps;
   return <Select {...merged} />;
-}
+};
 
 // DG-CTRL-01: >5 options — shorter Select fixtures trip the
 // `select-too-few-options` guardrail (UX-P19).

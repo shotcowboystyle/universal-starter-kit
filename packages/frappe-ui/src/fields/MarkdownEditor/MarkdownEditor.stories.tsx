@@ -7,8 +7,8 @@ import { useForm } from '@tanstack/react-form';
 import { useState } from 'react';
 import { Theme, YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { MarkdownEditorField } from '.';
 import type { MarkdownEditorFieldProps } from '.';
@@ -56,9 +56,11 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = MarkdownEditorFieldProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Storybook args are untyped here; only a string seeds the editor
   const [value, setValue] = useState<string>(typeof props.value === 'string' ? props.value : '');
   return (
     <MarkdownEditorField
@@ -70,7 +72,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
@@ -134,7 +136,7 @@ export const States = (args: StoryProps) => (
     <MarkdownEditorField
       label="Skeleton"
       skeleton
-      onChange={() => {}}
+      onChange={action('onChange')}
     />
   </YStack>
 );
@@ -164,6 +166,7 @@ interface MarkdownRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<MarkdownRow[]>([
       { id: '1', label: 'Alpha', value: '# Setup\n\nRun `make prepare`.' },

@@ -8,12 +8,16 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Stepper as FormsStepper, formCommonColors, useForm } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useEffect, useRef } from 'react';
 import { Text, XStack, YStack, useProps } from 'tamagui';
 
 export type NumericType = 'Int' | 'Float' | 'Currency' | 'Percent';
 
+type StepperFieldProps = ComponentProps<typeof FormsStepper>;
+
 export type NumericProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -41,19 +45,24 @@ export type NumericProps<
     step?: number;
     precision?: number;
     currencySymbol?: string;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- pass-through props spread onto the Stepper's input
     inputProps?: Record<string, unknown>;
   };
 
-function derivePrecision(type: NumericType, explicitPrecision?: number): number {
+const derivePrecision = (type: NumericType, explicitPrecision?: number): number => {
   if (explicitPrecision !== undefined) {
     return explicitPrecision;
   }
   return type === 'Int' ? 0 : 2;
-}
+};
 
-export function Numeric<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Numeric = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: NumericProps<TData, TName>,
-) {
+) => {
   const {
     defaultValue,
     form,
@@ -82,12 +91,16 @@ export function Numeric<TData extends Record<string, unknown> = Record<string, u
   // bridged through a local single-field form so Stepper's field mode
   // notifies the caller on every change.
   const onChangeRef = useRef(onChange);
+  // oxlint-disable-next-line react/refs -- latest-value ref synced during render; read only from the form listener
   onChangeRef.current = onChange;
+  // SAFETY: TName is constrained to string keys of TData
   const fieldName = (name as string | undefined) ?? 'value';
   const localForm = useForm({
     defaultValues: { [fieldName]: value ?? defaultValue },
     listeners: {
       onChange: ({ fieldApi }) => {
+        // SAFETY: the bridge form holds this one numeric field, seeded from value/defaultValue
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         onChangeRef.current?.(fieldApi.state.value as number | undefined);
       },
     },
@@ -99,6 +112,8 @@ export function Numeric<TData extends Record<string, unknown> = Record<string, u
       return;
     }
     if (localForm.getFieldValue(fieldName) !== value) {
+      // SAFETY: fieldName is the bridge form's only key and holds a number
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       localForm.setFieldValue(fieldName, value as never);
     }
   }, [useLocalForm, value, localForm, fieldName]);
@@ -106,7 +121,8 @@ export function Numeric<TData extends Record<string, unknown> = Record<string, u
   const stepper = (
     <FormsStepper
       name={useLocalForm ? fieldName : name}
-      form={(form ?? (useLocalForm ? localForm : undefined)) as any}
+      // SAFETY: Stepper only reads and writes the named field, which exists on either form
+      form={(form ?? (useLocalForm ? localForm : undefined)) as StepperFieldProps['form']}
       validators={validators}
       defaultValue={value ?? defaultValue}
       label={fieldProps.label}
@@ -128,7 +144,9 @@ export function Numeric<TData extends Record<string, unknown> = Record<string, u
       onBlur={onBlur}
       mode={mode}
       preserveValue={preserveValue}
-      inputProps={inputProps as any}
+      // SAFETY: caller-supplied host input props, forwarded as-is
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      inputProps={inputProps as StepperFieldProps['inputProps']}
     />
   );
 
@@ -148,4 +166,4 @@ export function Numeric<TData extends Record<string, unknown> = Record<string, u
   }
 
   return stepper;
-}
+};

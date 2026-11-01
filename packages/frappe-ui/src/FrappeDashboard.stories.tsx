@@ -3,9 +3,16 @@ import { KPICard, ChartCard } from '@repo/ui';
 import type { DashboardWidget } from '@repo/ui';
 import { Text, YStack } from 'tamagui';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeDashboard } from './FrappeDashboard';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
+
+const TOTAL_REVENUE = 'Total Revenue';
+const NORTH_AMERICA = 'North America';
+const TOTAL_REVENUE_ID = 'total-revenue';
+const COMPLETION_RATE_ID = 'completion-rate';
+const REVENUE_STATUS_ID = 'revenue-status';
+const SALES_REGION_ID = 'sales-region';
 
 // hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
 
@@ -38,46 +45,56 @@ export default {
 const MOCK_HOST = 'https://frappedashboard.mock.test';
 const ERR_HOST = 'https://forbidden.frappedashboard.mock.test';
 
-function salesOrderMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Selling',
-    title_field: 'name',
-    fields: [
-      { fieldname: 'total', fieldtype: 'Currency', label: 'Total', in_list_view: 1 },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Completed\nPending',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-      { fieldname: 'region', fieldtype: 'Data', label: 'Region', in_list_view: 1 },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const salesOrderMetaRaw = (name: string) => ({
+  name,
+  module: 'Selling',
+  title_field: 'name',
+  fields: [
+    { fieldname: 'total', fieldtype: 'Currency', label: 'Total', in_list_view: 1 },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Completed\nPending',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+    { fieldname: 'region', fieldtype: 'Data', label: 'Region', in_list_view: 1 },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeDashboardMockFetch?: boolean } = window;
   if (w.__frappeDashboardMockFetch) {
     return;
   }
   w.__frappeDashboardMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -87,7 +104,7 @@ function jsonResponse(body: unknown, status = 200): Response {
         const doctype = url.searchParams.get('doctype') ?? 'SalesOrder';
         return jsonResponse({ docs: [salesOrderMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: salesOrderMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -106,7 +123,7 @@ export const KPICardDefault = () => (
   <KPICard
     config={{
       id: 'revenue-kpi',
-      title: 'Total Revenue',
+      title: TOTAL_REVENUE,
       value: 125_000,
       format: 'currency',
       currencySymbol: '$',
@@ -160,7 +177,7 @@ const salesFixtures: SalesOrder[] = [
     doctype: 'SalesOrder',
     total: 5000,
     status: 'Completed',
-    region: 'North America',
+    region: NORTH_AMERICA,
   },
   { name: 'SO-002', doctype: 'SalesOrder', total: 3500, status: 'Pending', region: 'Europe' },
   {
@@ -175,19 +192,19 @@ const salesFixtures: SalesOrder[] = [
     doctype: 'SalesOrder',
     total: 2800,
     status: 'Completed',
-    region: 'North America',
+    region: NORTH_AMERICA,
   },
   { name: 'SO-005', doctype: 'SalesOrder', total: 4100, status: 'Pending', region: 'Europe' },
 ];
 
 const widgets: DashboardWidget[] = [
   {
-    id: 'total-revenue',
+    id: TOTAL_REVENUE_ID,
     type: 'kpi',
     colSpan: 1,
     kpiConfig: {
-      id: 'total-revenue',
-      title: 'Total Revenue',
+      id: TOTAL_REVENUE_ID,
+      title: TOTAL_REVENUE,
       value: 22_600,
       previousValue: 18_500,
       format: 'currency',
@@ -226,11 +243,11 @@ const widgets: DashboardWidget[] = [
     },
   },
   {
-    id: 'completion-rate',
+    id: COMPLETION_RATE_ID,
     type: 'kpi',
     colSpan: 1,
     kpiConfig: {
-      id: 'completion-rate',
+      id: COMPLETION_RATE_ID,
       title: 'Completion Rate',
       value: 60,
       previousValue: 50,
@@ -240,11 +257,11 @@ const widgets: DashboardWidget[] = [
     },
   },
   {
-    id: 'revenue-status',
+    id: REVENUE_STATUS_ID,
     type: 'chart',
     colSpan: 2,
     chartConfig: {
-      id: 'revenue-status',
+      id: REVENUE_STATUS_ID,
       title: 'Revenue by Status',
       type: 'bar',
       data: [
@@ -254,15 +271,15 @@ const widgets: DashboardWidget[] = [
     },
   },
   {
-    id: 'sales-region',
+    id: SALES_REGION_ID,
     type: 'chart',
     colSpan: 2,
     chartConfig: {
-      id: 'sales-region',
+      id: SALES_REGION_ID,
       title: 'Sales by Region',
       type: 'pie',
       data: [
-        { label: 'North America', value: 7800, color: '#3B82F6' },
+        { label: NORTH_AMERICA, value: 7800, color: '#3B82F6' },
         { label: 'Europe', value: 7600, color: '#10B981' },
         { label: 'Asia Pacific', value: 7200, color: '#F59E0B' },
       ],
@@ -312,17 +329,17 @@ export const Main = () => (
         const pending = rows.filter((r) => r.status === 'Pending');
         const byRegion = new Map<string, number>();
         for (const r of rows) {
-          const region = String(r.region ?? 'Other');
+          const region = r.region ?? 'Other';
           byRegion.set(region, (byRegion.get(region) ?? 0) + (Number(r.total) || 0));
         }
         return [
           {
-            id: 'total-revenue',
+            id: TOTAL_REVENUE_ID,
             type: 'kpi',
             colSpan: 1,
             kpiConfig: {
-              id: 'total-revenue',
-              title: 'Total Revenue',
+              id: TOTAL_REVENUE_ID,
+              title: TOTAL_REVENUE,
               value: total,
               format: 'currency',
               currencySymbol: '$',
@@ -352,22 +369,22 @@ export const Main = () => (
             },
           },
           {
-            id: 'completion-rate',
+            id: COMPLETION_RATE_ID,
             type: 'kpi',
             colSpan: 1,
             kpiConfig: {
-              id: 'completion-rate',
+              id: COMPLETION_RATE_ID,
               title: 'Completion Rate',
               value: rows.length ? Math.round((completed.length / rows.length) * 100) : 0,
               format: 'percent',
             },
           },
           {
-            id: 'revenue-status',
+            id: REVENUE_STATUS_ID,
             type: 'chart',
             colSpan: 2,
             chartConfig: {
-              id: 'revenue-status',
+              id: REVENUE_STATUS_ID,
               title: 'Revenue by Status',
               type: 'bar',
               data: [
@@ -383,11 +400,11 @@ export const Main = () => (
             },
           },
           {
-            id: 'sales-region',
+            id: SALES_REGION_ID,
             type: 'chart',
             colSpan: 2,
             chartConfig: {
-              id: 'sales-region',
+              id: SALES_REGION_ID,
               title: 'Sales by Region',
               type: 'pie',
               data: [...byRegion.entries()].map(([label, value]) => ({ label, value })),
@@ -412,7 +429,9 @@ Main.storyName = 'Main';
 
 /** Fixture provider whose list fetch never resolves — holds the real collection in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
 }
@@ -457,6 +476,7 @@ export const LoadError = () => (
       columns={4}
       dataSource={{ doctype: 'SalesOrder', fields: ['name', 'total'] }}
       widgets={widgets}
+      // oxlint-disable-next-line react/no-unstable-nested-components -- `error` is a render prop FrappeDashboard calls, not a component it mounts
       error={(err) => (
         <YStack
           padding="$4"
@@ -523,7 +543,7 @@ export const LiveBenchToDos = () => (
         const open = rows.filter((r) => r.status === 'Open');
         const byPriority = new Map<string, number>();
         for (const r of rows) {
-          const p = String(r.priority ?? 'Medium');
+          const p = r.priority ?? 'Medium';
           byPriority.set(p, (byPriority.get(p) ?? 0) + 1);
         }
         return [

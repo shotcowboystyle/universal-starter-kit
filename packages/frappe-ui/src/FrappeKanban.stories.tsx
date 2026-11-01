@@ -2,10 +2,10 @@ import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import { Text, YStack } from 'tamagui';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeKanban } from './FrappeKanban';
 import type { KanbanColumn } from './FrappeKanban';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 
 // hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
 
@@ -35,79 +35,86 @@ export default {
 // failure host for the error-state story.
 // ---------------------------------------------------------------------------
 
+const IN_PROGRESS = 'In Progress';
 const MOCK_HOST = 'https://frappekanban.mock.test';
 const ERR_HOST = 'https://forbidden.frappekanban.mock.test';
 
-function todoMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Desk',
-    title_field: 'description',
-    fields: [
-      { fieldname: 'description', fieldtype: 'Text', label: 'Description', in_list_view: 1 },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Open\nWorking\nPending Review\nCompleted',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const todoMetaRaw = (name: string) => ({
+  name,
+  module: 'Desk',
+  title_field: 'description',
+  fields: [
+    { fieldname: 'description', fieldtype: 'Text', label: 'Description', in_list_view: 1 },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Open\nWorking\nPending Review\nCompleted',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+const bugMetaRaw = (name: string) => ({
+  name,
+  module: 'QA',
+  title_field: 'title',
+  fields: [
+    { fieldname: 'title', fieldtype: 'Data', label: 'Title', in_list_view: 1 },
+    {
+      fieldname: 'severity',
+      fieldtype: 'Select',
+      label: 'Severity',
+      options: 'Critical\nHigh\nMedium\nLow',
+      in_list_view: 1,
+    },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'New\nConfirmed\nIn Progress\nTesting\nClosed',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+const metaFor = (doctype: string) => (doctype === 'Bug' ? bugMetaRaw(doctype) : todoMetaRaw(doctype));
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function bugMetaRaw(name: string) {
-  return {
-    name,
-    module: 'QA',
-    title_field: 'title',
-    fields: [
-      { fieldname: 'title', fieldtype: 'Data', label: 'Title', in_list_view: 1 },
-      {
-        fieldname: 'severity',
-        fieldtype: 'Select',
-        label: 'Severity',
-        options: 'Critical\nHigh\nMedium\nLow',
-        in_list_view: 1,
-      },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'New\nConfirmed\nIn Progress\nTesting\nClosed',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
 
-function metaFor(doctype: string) {
-  return doctype === 'Bug' ? bugMetaRaw(doctype) : todoMetaRaw(doctype);
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeKanbanMockFetch?: boolean } = window;
   if (w.__frappeKanbanMockFetch) {
     return;
   }
   w.__frappeKanbanMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(ERR_HOST)) {
       return jsonResponse({ message: 'Not permitted' }, 403);
     }
@@ -117,7 +124,7 @@ function jsonResponse(body: unknown, status = 200): Response {
         const doctype = url.searchParams.get('doctype') ?? 'ToDo';
         return jsonResponse({ docs: [metaFor(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: metaFor(decodeURIComponent(metaMatch[1])) });
       }
@@ -154,7 +161,7 @@ const todoFixtures: ToDo[] = [
 
 const todoColumns: KanbanColumn[] = [
   { value: 'Open', title: 'To Do', color: '#6366F1' },
-  { value: 'Working', title: 'In Progress', color: '#F59E0B' },
+  { value: 'Working', title: IN_PROGRESS, color: '#F59E0B' },
   { value: 'Pending Review', title: 'Review', color: '#8B5CF6' },
   { value: 'Completed', title: 'Done', color: '#10B981' },
 ];
@@ -209,6 +216,7 @@ WithCardCreation.parameters = {
 };
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Live bench story — real ToDo doctype over the live data path
 // ---------------------------------------------------------------------------
 
@@ -219,6 +227,7 @@ interface LiveToDo {
   status: string;
 }
 
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Stock ToDo status options; colors come from the tokenized palette.
 const liveTodoColumns: KanbanColumn[] = [
   { value: 'Open', title: 'Open', color: '$blue9' },
@@ -233,6 +242,7 @@ const liveTodoFixtures: LiveToDo[] = [
   { name: 'TODO-104', doctype: 'ToDo', description: 'Fixture: old spike', status: 'Cancelled' },
 ];
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype, not a task marker */
 /**
  * Live board against the real bench (STORYBOOK_FRAPPE_URL, default the local
  * dev bench proxied by the Storybook dev server). Cards are driven by
@@ -241,6 +251,7 @@ const liveTodoFixtures: LiveToDo[] = [
  * client's optimistic mutation path. Falls back to fixtures when the bench is
  * unreachable.
  */
+/* oxlint-enable sonarjs/todo-tag */
 export const Live = () => (
   <FrappeStoryProvider fixtures={new InMemoryFixtureProvider({ ToDo: liveTodoFixtures })}>
     <FrappeKanban<LiveToDo>
@@ -292,7 +303,7 @@ const bugFixtures: Bug[] = [
     doctype: 'Bug',
     title: 'Dashboard loading slowly',
     severity: 'Medium',
-    status: 'In Progress',
+    status: IN_PROGRESS,
   },
   {
     name: 'BUG-004',
@@ -313,7 +324,7 @@ const bugFixtures: Bug[] = [
 const bugColumns: KanbanColumn[] = [
   { value: 'New', title: 'New', color: '#EF4444' },
   { value: 'Confirmed', title: 'Confirmed', color: '#F97316' },
-  { value: 'In Progress', title: 'In Progress', color: '#3B82F6' },
+  { value: IN_PROGRESS, title: IN_PROGRESS, color: '#3B82F6' },
   { value: 'Testing', title: 'Testing', color: '#8B5CF6' },
   { value: 'Closed', title: 'Closed', color: '#22C55E' },
 ];
@@ -348,7 +359,9 @@ BugTracker.parameters = {
 
 /** Fixture provider whose list fetch never resolves — holds the real collection in loading. */
 class PendingFixtureProvider extends InMemoryFixtureProvider {
+  // oxlint-disable-next-line eslint/class-methods-use-this -- overrides the FixtureProvider instance method
   async getList(): Promise<never[]> {
+    // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a list fetch that never settles holds the collection in loading
     return await new Promise(() => {});
   }
 }
@@ -396,6 +409,7 @@ export const LoadError = () => (
       statusField="status"
       titleField="description"
       minColumnHeight={200}
+      // oxlint-disable-next-line react/no-unstable-nested-components -- `error` is a render prop FrappeKanban calls as a function, not a component
       error={(err) => (
         <YStack
           padding="$4"

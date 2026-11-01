@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { DateRangeField } from '.';
 import type { DateRangeFieldProps } from '.';
@@ -30,9 +30,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = DateRangeFieldProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <DateRangeField
@@ -44,10 +45,13 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
+
+const STORY_LABEL = 'Date Range';
+const STORY_PLACEHOLDER = 'Select range';
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
-Main.args = { label: 'Date Range', placeholder: 'Select range' } as Partial<StoryProps>;
+Main.args = { label: STORY_LABEL, placeholder: STORY_PLACEHOLDER } as Partial<StoryProps>;
 Main.storyName = 'Main';
 
 export const States = (args: StoryProps) => (
@@ -82,7 +86,7 @@ export const States = (args: StoryProps) => (
     />
   </YStack>
 );
-States.args = { label: 'Date Range', placeholder: 'Select range' } as Partial<StoryProps>;
+States.args = { label: STORY_LABEL, placeholder: STORY_PLACEHOLDER } as Partial<StoryProps>;
 
 /**
  * Thin-adapter contract probe: forwards readOnly / skeleton / compact through
@@ -110,7 +114,7 @@ export const ContractProbe = (args: StoryProps) => (
     />
   </YStack>
 );
-ContractProbe.args = { label: 'Date Range', placeholder: 'Select range' } as Partial<StoryProps>;
+ContractProbe.args = { label: STORY_LABEL, placeholder: STORY_PLACEHOLDER } as Partial<StoryProps>;
 
 type DateRangeValue = { start: Date; end: Date } | null;
 interface DateRangeRow {
@@ -121,6 +125,7 @@ interface DateRangeRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<DateRangeRow[]>([
       {
@@ -137,7 +142,7 @@ export const InTable = {
     ]);
     const columns: DataTableColumn<DateRangeRow>[] = [
       { accessorKey: 'label', header: 'Row' },
-      { accessorKey: 'value', header: 'Date Range', ...fieldtypeToTableField('Date Range') },
+      { accessorKey: 'value', header: STORY_LABEL, ...fieldtypeToTableField(STORY_LABEL) },
     ];
     return (
       <FrappeStoryProvider>

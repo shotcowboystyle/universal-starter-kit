@@ -25,29 +25,37 @@ export default {
 };
 
 const host = 'https://listview-cards.mock.test';
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.href;
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 const errorHost = 'https://error.listview-cards.mock.test';
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeListViewCardsMockFetch?: boolean } = window;
   if (w.__frappeListViewCardsMockFetch) {
     return;
   }
   w.__frappeListViewCardsMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     if (url.startsWith(host) || url.startsWith(errorHost)) {
       const body = url.includes('/api/resource/DocType/') ? { data: rosterPokemonMeta } : { data: [] };
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      // Response.json sets the same `application/json` content type the hand-built Response did.
+      return Response.json(body, { status: 200 });
     }
     return await realFetch(input as RequestInfo, init);
   };
 })();
 
-function PokemonTile({ pokemon }: { pokemon: Partial<RosterPokemon> }) {
+const PokemonTile = ({ pokemon }: { pokemon: Partial<RosterPokemon> }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Card>
@@ -74,7 +82,7 @@ function PokemonTile({ pokemon }: { pokemon: Partial<RosterPokemon> }) {
       </YStack>
     </Card>
   );
-}
+};
 
 const renderCard = (pokemon: Partial<RosterPokemon>) => <PokemonTile pokemon={pokemon} />;
 
@@ -124,13 +132,13 @@ export const EmptyRoster = () => (
   </FrappeProvider>
 );
 
-function failingFixtures() {
+const failingFixtures = () => {
   const fixtures = createRosterFixtures();
   fixtures.getList = async () => {
     throw Object.assign(new Error('Not permitted'), { status: 403 });
   };
   return fixtures;
-}
+};
 
 export const PermissionDenied = () => (
   <FrappeProvider

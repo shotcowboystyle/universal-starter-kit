@@ -1,30 +1,34 @@
 import { FrappeApp, Order, matchesFilters, useDocTypeMeta, useFrappeDoctypeEvents } from '@repo/frappe';
+import type { UseFrappeCollectionConfig } from '@repo/frappe';
 import { DataTable, FilterManager, SavedFilterDropdown, useSavedFilters } from '@repo/table';
 import type {
   DataTableColumn,
   DataTablePageLoader,
   DataTableProps,
   DataTableState,
+  FilterOperator,
   FilterValue,
   FilterableField,
   PageLoadQuery,
+  ParsedFilter,
 } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
 import { AsyncBoundary } from '@repo/ui';
+import type { AsyncBoundaryProps } from '@repo/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { XStack, YStack } from 'tamagui';
 
-import { docFieldsToFilterFields } from './filterFields';
-import type { DocRights } from './formEngine/docPermissions';
-import { buildPermLevelMatrix } from './formEngine/fieldPermissions';
-import { useDocRights } from './formEngine/useDocRights';
+import { docFieldsToFilterFields } from './filter-fields';
+import type { DocRights } from './formEngine/doc-permissions';
+import { buildPermLevelMatrix } from './formEngine/field-permissions';
+import { useDocRights } from './formEngine/use-doc-rights';
 import { useFrappeConfig } from './FrappeProvider';
 import { FrappeReconnectIndicator } from './FrappeReconnectIndicator';
-import { buildListColumns } from './list/listColumns';
-import { listFieldsToFetch } from './list/listFields';
-import { isPermissionError } from './liveErrors';
-import { useFrappeRows } from './useFrappeRows';
+import { buildListColumns } from './list/list-columns';
+import { listFieldsToFetch } from './list/list-fields';
+import { isPermissionError } from './live-errors';
+import { useFrappeRows } from './use-frappe-rows';
 
 /**
  * Props for the FrappeTable component.
@@ -66,7 +70,7 @@ export interface FrappeTableProps<TDoc extends { name: string; doctype: string }
     type?: string;
   };
   /** Sync options for the live data subscription */
-  syncOptions?: any;
+  syncOptions?: UseFrappeCollectionConfig['syncOptions'];
   /** The Frappe DocType to display */
   doctype: string;
   /**
@@ -90,7 +94,7 @@ export interface FrappeTableProps<TDoc extends { name: string; doctype: string }
    */
   fields?: readonly (keyof TDoc & string)[];
   /** Initial filter criteria */
-  filters?: Partial<TDoc> | [keyof TDoc & string, string, any][];
+  filters?: Partial<TDoc> | [keyof TDoc & string, string, unknown][];
   /**
    * Callback when a row is activated. Rides DataTable's first-class
    * `onRowPress` contract: the whole row is ONE pressable unit (no
@@ -155,117 +159,106 @@ export interface FrappeTableProps<TDoc extends { name: string; doctype: string }
   rights?: Pick<DocRights, 'create' | 'write' | 'delete'>;
 }
 
+type FrappeFilterTuple = [string, string, unknown];
+
+/** A caller-written `%` wildcard is kept as-is instead of being wrapped again. */
+const likeOperand = (value: FilterValue['value'], pattern: string): string =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- FilterValue.value is untyped by contract; only a string can carry a wildcard
+  typeof value === 'string' && value.includes('%') ? value : pattern;
+
+/** Operators that read `values` (or nothing); a missing list yields null. */
+const LIST_OPERATORS = new Map<FilterOperator, (values: FilterValue['values']) => [string, unknown] | null>([
+  ['isEmpty', () => ['is', 'not set']],
+  ['isNotEmpty', () => ['is', 'set']],
+  ['isAnyOf', (values) => ((values?.length ?? 0) > 0 ? ['in', values] : null)],
+  ['isNoneOf', (values) => ((values?.length ?? 0) > 0 ? ['not in', values] : null)],
+  ['isBetween', (values) => (values?.length === 2 ? ['between', values] : null)],
+]);
+
+/** Operators that read `value`; any operator not listed here (isNotBetween) maps to equality. */
+const VALUE_OPERATORS = new Map<FilterOperator, (value: FilterValue['value']) => [string, unknown]>([
+  ['contains', (value) => ['like', likeOperand(value, `%${value}%`)]],
+  ['doesNotContain', (value) => ['not like', likeOperand(value, `%${value}%`)]],
+  ['startsWith', (value) => ['like', likeOperand(value, `${value}%`)]],
+  ['endsWith', (value) => ['like', likeOperand(value, `%${value}`)]],
+  ['is', (value) => ['=', value]],
+  ['isNot', (value) => ['!=', value]],
+  ['isLessThan', (value) => ['<', value]],
+  ['isBefore', (value) => ['<', value]],
+  ['isGreaterThan', (value) => ['>', value]],
+  ['isAfter', (value) => ['>', value]],
+  ['isLessThanOrEqual', (value) => ['<=', value]],
+  ['isOnOrBefore', (value) => ['<=', value]],
+  ['isGreaterThanOrEqual', (value) => ['>=', value]],
+  ['isOnOrAfter', (value) => ['>=', value]],
+]);
+
 /**
  * Map one table FilterValue to a Frappe filter tuple. Returns null when the
  * filter carries no usable value (e.g. "contains" with an empty string) so
  * half-built live-commit filters never reach the API.
  */
-export function filterValueToFrappeTuple(
-  fieldname: string,
-  filterValue: FilterValue,
-): [string, string, unknown] | null {
-  const { operator, value, values } = filterValue;
-  const wrap = (pattern: string) => (typeof value === 'string' && value.includes('%') ? value : pattern);
-  switch (operator) {
-    case 'isEmpty': {
-      return [fieldname, 'is', 'not set'];
-    }
-    case 'isNotEmpty': {
-      return [fieldname, 'is', 'set'];
-    }
-    case 'isAnyOf': {
-      return values?.length ? [fieldname, 'in', values] : null;
-    }
-    case 'isNoneOf': {
-      return values?.length ? [fieldname, 'not in', values] : null;
-    }
-    case 'isBetween': {
-      return values?.length === 2 ? [fieldname, 'between', values] : null;
-    }
+export const filterValueToFrappeTuple = (fieldname: string, filterValue: FilterValue): FrappeFilterTuple | null => {
+  const listOperator = LIST_OPERATORS.get(filterValue.operator);
+  if (listOperator !== undefined) {
+    const entry = listOperator(filterValue.values);
+    return entry === null ? null : [fieldname, ...entry];
   }
-  if (value == null || value === '') {
+  if (filterValue.value == null || filterValue.value === '') {
     return null;
   }
-  switch (operator) {
-    case 'contains': {
-      return [fieldname, 'like', wrap(`%${value}%`)];
-    }
-    case 'doesNotContain': {
-      return [fieldname, 'not like', wrap(`%${value}%`)];
-    }
-    case 'startsWith': {
-      return [fieldname, 'like', wrap(`${value}%`)];
-    }
-    case 'endsWith': {
-      return [fieldname, 'like', wrap(`%${value}`)];
-    }
-    case 'is': {
-      return [fieldname, '=', value];
-    }
-    case 'isNot': {
-      return [fieldname, '!=', value];
-    }
-    case 'isLessThan':
-    case 'isBefore': {
-      return [fieldname, '<', value];
-    }
-    case 'isGreaterThan':
-    case 'isAfter': {
-      return [fieldname, '>', value];
-    }
-    case 'isLessThanOrEqual':
-    case 'isOnOrBefore': {
-      return [fieldname, '<=', value];
-    }
-    case 'isGreaterThanOrEqual':
-    case 'isOnOrAfter': {
-      return [fieldname, '>=', value];
-    }
-    default: {
-      return [fieldname, '=', value];
-    }
-  }
-}
+  const valueOperator = VALUE_OPERATORS.get(filterValue.operator);
+  return valueOperator === undefined
+    ? [fieldname, '=', filterValue.value]
+    : [fieldname, ...valueOperator(filterValue.value)];
+};
 
 /** True when a column-filter value is FilterValue-shaped ({operator, ...}). */
-function isOperatorFilterValue(value: unknown): value is FilterValue {
-  return typeof value === 'object' && value !== null && typeof (value as FilterValue).operator === 'string';
-}
+const isOperatorFilterValue = (value: unknown): value is FilterValue =>
+  typeof value === 'object' && value !== null && 'operator' in value && typeof value.operator === 'string';
+
+/** Ascending comparison of one field; null/undefined sorts first. */
+const compareFieldAscending = <T extends Record<string, unknown>>(a: T, b: T, field: string): number => {
+  const av = a[field];
+  const bv = b[field];
+  if (av == null && bv == null) {
+    return 0;
+  }
+  if (av == null) {
+    return -1;
+  }
+  if (bv == null) {
+    return 1;
+  }
+  if (av < bv) {
+    return -1;
+  }
+  return av > bv ? 1 : 0;
+};
 
 /** Sort the current page locally so a sort change is visible before reconcile. */
-function sortRowsLocally<T extends Record<string, unknown>>(
+const sortRowsLocally = <T extends Record<string, unknown>>(
   rows: T[],
   orderBy: { field: string; order: Order }[] | undefined,
-): T[] {
-  if (!orderBy?.length) {
+): T[] => {
+  if (orderBy === undefined || orderBy.length === 0) {
     return rows;
   }
-  return [...rows].sort((a, b) => {
+  return rows.toSorted((a, b) => {
     for (const { field, order } of orderBy) {
-      const av = a[field];
-      const bv = b[field];
-      if (av == null && bv == null) {
-        continue;
-      }
-      if (av == null) {
-        return order === Order.Asc ? -1 : 1;
-      }
-      if (bv == null) {
-        return order === Order.Asc ? 1 : -1;
-      }
-      if (av < bv) {
-        return order === Order.Asc ? -1 : 1;
-      }
-      if (av > bv) {
-        return order === Order.Asc ? 1 : -1;
+      const ascending = compareFieldAscending(a, b, field);
+      if (ascending !== 0) {
+        return order === Order.Asc ? ascending : -ascending;
       }
     }
     return 0;
   });
-}
+};
 
 /** Convert DataTableState to Frappe API params */
-function stateToFrappeParams(state: DataTableState) {
+const stateToFrappeParams = (
+  state: Pick<DataTableState, 'pagination' | 'sorting' | 'filters' | 'columnFilters' | 'globalFilter'>,
+) => {
   const { pagination, sorting, filters, columnFilters, globalFilter } = state;
   const limitStart = pagination.pageIndex * pagination.pageSize;
   const limit = pagination.pageSize;
@@ -293,17 +286,33 @@ function stateToFrappeParams(state: DataTableState) {
       frappeFilters.push([cf.id, '=', cf.value]);
     }
   }
-  if (globalFilter && typeof globalFilter === 'string' && globalFilter.trim()) {
+  if (globalFilter !== undefined && globalFilter.trim() !== '') {
     frappeFilters.push(['name', 'like', `%${globalFilter}%`]);
   }
 
   const orderBy =
-    sorting?.length && sorting[0]
-      ? sorting.map((s) => ({ field: s.id, order: s.desc ? Order.Desc : Order.Asc }))
-      : undefined;
+    sorting.length > 0 ? sorting.map((s) => ({ field: s.id, order: s.desc ? Order.Desc : Order.Asc })) : undefined;
 
   return { limitStart, limit, filters: frappeFilters, orderBy };
-}
+};
+
+/** Saved-filter and FilterManager surfaces speak `[field, operator, value]` tuples. */
+const toFilterTuples = <TDoc,>(
+  filters: Partial<TDoc> | [keyof TDoc & string, string, unknown][] | undefined,
+): FrappeFilterTuple[] => {
+  if (filters === undefined) {
+    return [];
+  }
+  if (Array.isArray(filters)) {
+    return filters;
+  }
+  return Object.entries(filters).map(([key, value]): FrappeFilterTuple => [key, '=', value]);
+};
+
+const asFilterableDoc = (row: { name: string; doctype: string }) =>
+  // SAFETY: matchesFilters only reads document fields by name, which every TDoc row (a Frappe document) carries
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
+  row as unknown as Parameters<typeof matchesFilters>[0];
 
 /**
  * A data table component connected to Frappe Live data.
@@ -321,37 +330,36 @@ function stateToFrappeParams(state: DataTableState) {
  * network whatever `baseURL` the host also carries, and a `getdoctype` call
  * otherwise. Each prop's own entry has the detail.
  *
- * @typeParam TDoc - The document type with at least name and doctype fields
+ * @template TDoc - The document type with at least name and doctype fields
  *
  * @example
  * ```tsx
- * interface ToDo {
+ * interface Task {
  *   name: string;
  *   doctype: string;
- *   description: string;
- *   status: 'Open' | 'Closed';
+ *   subject: string;
+ *   status: 'Open' | 'Completed';
  * }
  *
- * function ToDoTable() {
+ * function TaskTable() {
  *   return (
  *     <FrappeProvider baseURL="https://mysite.frappe.cloud">
- *       <FrappeTable<ToDo>
- *         doctype="ToDo"
+ *       <FrappeTable<Task>
+ *         doctype="Task"
  *         columns={[
- *           { accessorKey: 'description', header: 'Description' },
+ *           { accessorKey: 'subject', header: 'Subject' },
  *           { accessorKey: 'status', header: 'Status' }
  *         ]}
- *         fields={['name', 'description', 'status']}
+ *         fields={['name', 'subject', 'status']}
  *         onRowClick={(row) => console.log('Clicked:', row)}
  *       />
  *     </FrappeProvider>
  *   );
  * }
  * ```
- *
- * @category Components
  */
-export function FrappeTable<TDoc extends { name: string; doctype: string }>({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one component wires three data paths (client live rows, paged and infinite serverSide) that share state; splitting it is a refactor beyond lint cleanup
+export const FrappeTable = <TDoc extends { name: string; doctype: string }>({
   baseURL,
   auth,
   syncOptions,
@@ -375,7 +383,8 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   layout,
   initialState,
   ...dataTableProps
-}: FrappeTableProps<TDoc>) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the complexity note on FrappeTable above
+}: FrappeTableProps<TDoc>) => {
   // Infinite + serverSide: DataTable's page cache drives fetching through a
   // Frappe-backed page loader (prefetch-ahead), replacing the legacy
   // fetch-on-state-change path below.
@@ -384,7 +393,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   const { t } = useTranslation();
   const [errorState, setErrorState] = React.useState<Error | null>(null);
   const [activeFilters, setActiveFilters] = React.useState<
-    Partial<TDoc> | [keyof TDoc & string, string, any][] | undefined
+    Partial<TDoc> | [keyof TDoc & string, string, unknown][] | undefined
   >(initialFilters);
   const config = useFrappeConfig();
 
@@ -403,7 +412,9 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
       return;
     }
     adoptedFiltersPropRef.current = filtersPropKey;
-    setActiveFilters(JSON.parse(filtersPropKey));
+    // SAFETY: filtersPropKey is JSON.stringify(initialFilters), so it parses back to the filters prop's shape
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    setActiveFilters(JSON.parse(filtersPropKey) as FrappeTableProps<TDoc>['filters']);
   }, [filtersPropKey]);
 
   const finalBaseURL = baseURL ?? config?.baseURL;
@@ -412,7 +423,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
 
   // A fixture corpus is a complete data source, so it satisfies the same
   // requirement a baseURL does: fixture mode never dials a server.
-  if (!finalBaseURL && !config?.fixtures) {
+  if ((finalBaseURL === undefined || finalBaseURL === '') && !config?.fixtures) {
     throw new Error('FrappeTable requires baseURL prop or FrappeProvider with baseURL or fixtures');
   }
 
@@ -442,9 +453,11 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   );
 
   const frappeApp = useMemo(() => {
-    if (!serverSide || !finalBaseURL) {
+    if (!serverSide || finalBaseURL === undefined || finalBaseURL === '') {
       return null;
     }
+    // SAFETY: the auth prop/config is FrappeApp's AuthConfig shape; only the token getter's declared return differs
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above
     return new FrappeApp(finalBaseURL, (finalAuth ?? {}) as Record<string, unknown>);
   }, [serverSide, finalBaseURL, finalAuth]);
 
@@ -460,11 +473,13 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   const skipMeta = !deriveColumns && !!filterableFieldsProp && (!!rightsProp || !!connectionConfig.fixtures);
   const metaConnection = useMemo(() => {
     if (skipMeta) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- consistent-return needs a value beside the connection returns
+      return undefined;
     }
     if (!connectionConfig.fixtures) {
       return connectionConfig;
     }
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the fixture host's baseURL is withheld so meta never dials getdoctype
     return { ...connectionConfig, baseURL: undefined };
   }, [skipMeta, connectionConfig]);
   const { meta, isLoading: isMetaLoading } = useDocTypeMeta(metaConnection, doctype);
@@ -481,18 +496,21 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
     () => (deriveColumns ? buildPermLevelMatrix(meta?.permissions, sessionRoles) : undefined),
     [deriveColumns, meta?.permissions, sessionRoles],
   );
-  const derivedColumns = useMemo(
-    () =>
-      deriveColumns
-        ? (buildListColumns({
-            meta,
-            t: (_key, fallback) => t(fallback),
-            sessionUser,
-            permMatrix,
-          }) as DataTableColumn<Partial<TDoc>>[])
-        : undefined,
-    [deriveColumns, meta, t, sessionUser, permMatrix],
-  );
+  const derivedColumns = useMemo(() => {
+    if (!deriveColumns) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- consistent-return needs a value beside the columns return
+      return undefined;
+    }
+    const built = buildListColumns({
+      meta,
+      t: (_key, fallback) => t(fallback),
+      sessionUser,
+      permMatrix,
+    });
+    // SAFETY: buildListColumns builds columns over this doctype's own fields, which TDoc describes
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    return built as DataTableColumn<Partial<TDoc>>[];
+  }, [deriveColumns, meta, t, sessionUser, permMatrix]);
   const columns = columnsProp ?? derivedColumns ?? [];
   // Derived columns settle once meta and the roles that prune them land;
   // reading before that would fetch one field list and then another.
@@ -506,22 +524,24 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
 
   // Keyed on content, not on the columns array, so an inline `columns`
   // literal cannot re-key the fetch every render and refetch in a loop.
-  const columnFieldsKey = fields
-    ? undefined
-    : JSON.stringify(
-        deriveColumns
-          ? listFieldsToFetch(meta, permMatrix)
-          : columns
-              .map((column): unknown => column.accessorKey)
-              .filter((key): key is string => typeof key === 'string'),
-      );
-  const serverFields = useMemo<string[]>(
-    () => (fields ? (fields as string[]) : [...new Set<string>(['name', ...JSON.parse(columnFieldsKey ?? '[]')])]),
-    [fields, columnFieldsKey],
-  );
+  const columnAccessorKeys = deriveColumns
+    ? listFieldsToFetch(meta, permMatrix)
+    : columns.map((column) => column.accessorKey).filter((key): key is keyof TDoc & string => typeof key === 'string');
+  const columnFieldsKey = fields ? undefined : JSON.stringify(columnAccessorKeys);
+  const serverFields = useMemo<string[]>(() => {
+    if (fields) {
+      return [...fields];
+    }
+    // SAFETY: columnFieldsKey is JSON.stringify of a string[] (columnAccessorKeys)
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    const columnKeys = JSON.parse(columnFieldsKey ?? '[]') as string[];
+    return [...new Set<string>(['name', ...columnKeys])];
+  }, [fields, columnFieldsKey]);
   // Client mode over a fixture corpus keeps whole documents: narrowing it
   // would drop the non-column fields (a title field, a filter-only field)
   // fixture hosts read today.
+  // SAFETY: serverFields is `name` plus the columns' accessor keys, all TDoc field names
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const clientFields = (fields ?? (connectionConfig.fixtures ? undefined : serverFields)) as typeof fields;
 
   const metaFilterFields = useMemo(() => (meta?.fields ? docFieldsToFilterFields(meta.fields) : undefined), [meta]);
@@ -534,14 +554,20 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   const titleField = meta?.title_field;
   const rowLabel = useCallback(
     (row: Partial<TDoc>): string => {
-      const fromTitle = titleField ? (row as Record<string, unknown>)[titleField] : undefined;
-      if (typeof fromTitle === 'string' && fromTitle) {
-        return fromTitle;
+      if (titleField !== undefined && titleField !== '') {
+        // SAFETY: a Frappe document is a plain JSON object, so any field name reads as an unknown value
+        // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above
+        const fromTitle = (row as Record<string, unknown>)[titleField];
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the title field holds whatever the doctype stores; only text labels a row
+        if (typeof fromTitle === 'string' && fromTitle !== '') {
+          return fromTitle;
+        }
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- numeric title fields (an autoname series) still label a row
+        if (typeof fromTitle === 'number') {
+          return String(fromTitle);
+        }
       }
-      if (typeof fromTitle === 'number') {
-        return String(fromTitle);
-      }
-      return typeof row.name === 'string' ? row.name : '';
+      return row.name ?? '';
     },
     [titleField],
   );
@@ -596,14 +622,14 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
           setServerData((previous) => {
             let next = previous;
             if (filtersChanged && params.filters.length > 0) {
-              const narrowed = previous.filter((row) =>
-                matchesFilters(row as unknown as Parameters<typeof matchesFilters>[0], params.filters),
-              );
+              const narrowed = previous.filter((row) => matchesFilters(asFilterableDoc(row), params.filters));
               if (narrowed.length > 0) {
                 next = narrowed;
               }
             }
-            if (sortChanged && params.orderBy?.length) {
+            if (sortChanged && params.orderBy !== undefined) {
+              // SAFETY: TDoc rows are plain JSON documents keyed by field name; sorting only reorders them
+              // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion, anti-slop/no-unsafe-dictionary-type -- see SAFETY above
               next = sortRowsLocally(next as unknown as Record<string, unknown>[], params.orderBy) as TDoc[];
             }
             return next;
@@ -617,7 +643,8 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
       fetchAbortRef.current?.abort();
       const controller = new AbortController();
       fetchAbortRef.current = controller;
-      const seq = ++fetchSeq.current;
+      fetchSeq.current += 1;
+      const seq = fetchSeq.current;
       setServerLoading(true);
       try {
         const [data, count] = await Promise.all([
@@ -647,7 +674,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
         setServerRowCount(count);
         lastGoodServerRows.current = data;
         setErrorState(null);
-      } catch (error) {
+      } catch (fetchError) {
         if (seq !== fetchSeq.current) {
           return;
         }
@@ -655,7 +682,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
         if (controller.signal.aborted) {
           return;
         }
-        setErrorState(error instanceof Error ? error : new Error(String(error)));
+        setErrorState(fetchError instanceof Error ? fetchError : new Error(String(fetchError)));
         // Keep last-good rows on a refetch failure — only the first load
         // may settle as empty.
         if (!hasLoadedOnceRef.current) {
@@ -690,7 +717,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
       liveRefetchTimer.current = setTimeout(() => {
         lastFetchKey.current = '';
         if (lastStateRef.current) {
-          fetchServerData(lastStateRef.current);
+          void fetchServerData(lastStateRef.current);
         }
       }, 250);
     },
@@ -721,7 +748,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
     }
     lastFetchKey.current = '';
     if (lastStateRef.current) {
-      fetchServerData(lastStateRef.current);
+      void fetchServerData(lastStateRef.current);
     }
   }, [refreshToken, serverSide, infiniteServerMode, fetchServerData]);
 
@@ -739,7 +766,19 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
         filters: query.filters,
         columnFilters: query.columnFilters,
         globalFilter: query.globalFilter,
-      } as DataTableState);
+      });
+      // Frappe refuses get_count to Guest while /api/resource still lists the
+      // rows (LC-96): the page loads without a total.
+      const loadTotalCount = async (): Promise<number | null> => {
+        try {
+          return await frappeApp.db().getCount(doctype, params.filters.length > 0 ? params.filters : undefined);
+        } catch (countError) {
+          if (isPermissionError(countError)) {
+            return null;
+          }
+          throw countError;
+        }
+      };
       const [rows, count] = await Promise.all([
         frappeApp.db().getDocList<TDoc>(doctype, {
           fields: serverFields,
@@ -748,19 +787,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
           limit: params.limit,
           orderBy: params.orderBy,
         }),
-        query.pageIndex === 0
-          ? frappeApp
-              .db()
-              .getCount(doctype, params.filters.length ? params.filters : undefined)
-              // Frappe refuses get_count to Guest while /api/resource still
-              // lists the rows (LC-96): the page loads without a total.
-              .catch((error: unknown) => {
-                if (isPermissionError(error)) {
-                  return;
-                }
-                throw error;
-              })
-          : Promise.resolve(),
+        query.pageIndex === 0 ? loadTotalCount() : null,
       ]);
       return { rows, totalCount: count ?? undefined };
     },
@@ -773,31 +800,35 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
     (state: DataTableState) => {
       onStateChangeProp?.(state);
       if (serverSide && !infiniteServerMode) {
-        fetchServerData(state);
+        void fetchServerData(state);
       }
     },
     [onStateChangeProp, serverSide, infiniteServerMode, fetchServerData],
   );
 
+  const hasFrappeApp = frappeApp !== null;
   useEffect(() => {
-    if (serverSide && !infiniteServerMode && frappeApp && !columnsPending) {
+    if (serverSide && !infiniteServerMode && hasFrappeApp && !columnsPending) {
       lastFetchKey.current = '';
-      fetchServerData(
-        lastStateRef.current ??
-          ({
-            data: [],
-            columns: columns as any,
-            pagination: { pageIndex: 0, pageSize: 10 },
-            sorting: [],
-            filters: [],
-            columnFilters: [],
-            columnVisibility: {},
-            columnOrder: columns.map((c) => c.id ?? ''),
-            columnSizing: {},
-          } as DataTableState),
+      // oxlint-disable-next-line react-doctor/no-pass-live-state-to-parent -- fetchServerData issues the first server query; it pushes nothing to a parent
+      void fetchServerData(
+        lastStateRef.current ?? {
+          data: [],
+          // SAFETY: fetchServerData only reads the query fields of this state; columns ride along for shape only
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+          columns: columns as DataTableColumn[],
+          pagination: { pageIndex: 0, pageSize: 10 },
+          sorting: [],
+          filters: [],
+          columnFilters: [],
+          columnVisibility: {},
+          columnOrder: columns.map((c) => c.id ?? ''),
+          columnSizing: {},
+        },
       );
     }
-  }, [serverSide, infiniteServerMode, !!frappeApp, columnsPending, fetchServerData]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- columns is left out on purpose: an inline columns literal would refetch every render
+  }, [serverSide, infiniteServerMode, hasFrappeApp, columnsPending, fetchServerData]);
 
   // Always call the hook — toggling `savedFilters` must not change hook order (SB-M-012).
   const savedFiltersHook = useSavedFilters({ userId });
@@ -848,18 +879,15 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
     if (!activeFilters) {
       return held;
     }
-    const narrowed = held.filter((row) =>
-      matchesFilters(row as unknown as Parameters<typeof matchesFilters>[0], activeFilters),
-    );
+    const narrowed = held.filter((row) => matchesFilters(asFilterableDoc(row), activeFilters));
     // A local pass that would empty the body is skipped — held rows stay
     // as placeholderData until the new collection reconciles.
     return narrowed.length > 0 ? narrowed : held;
   }, [serverSide, clientRows, isRowsLoading, activeFilters]);
 
+  const serverPageEmptyWhileLoading = serverSide && serverLoading && serverData.length === 0;
   const serverRowsResolved =
-    serverSide && serverLoading && serverData.length === 0 && lastGoodServerRows.current.length > 0
-      ? lastGoodServerRows.current
-      : serverData;
+    serverPageEmptyWhileLoading && lastGoodServerRows.current.length > 0 ? lastGoodServerRows.current : serverData;
   const rows = serverSide ? serverRowsResolved : clientRowsResolved;
   // Infinite serverSide: DataTable owns loading/empty chrome (skeleton +
   // honest end state) — FrappeTable must not early-return on its own.
@@ -867,38 +895,31 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   // refetches swap rows in place without flashing (LC-06-adjacent).
   // Client mode: the skeleton shows only before the FIRST ready pass —
   // collection swaps keep the last-good rows rendered.
-  const isRowsLoadingResolved = serverSide
-    ? infiniteServerMode
-      ? false
-      : serverLoading && !hasLoadedOnce
-    : isRowsLoading && lastGoodClientRows.current === null;
-  const isFetching = serverSide
-    ? !infiniteServerMode && serverLoading && hasLoadedOnce
-    : isRowsLoading && lastGoodClientRows.current !== null;
+  const hasHeldClientRows = lastGoodClientRows.current !== null;
+  const serverFirstLoad = !infiniteServerMode && serverLoading && !hasLoadedOnce;
+  const isRowsLoadingResolved = serverSide ? serverFirstLoad : isRowsLoading && !hasHeldClientRows;
+  const serverRefetching = !infiniteServerMode && serverLoading && hasLoadedOnce;
+  const isFetching = serverSide ? serverRefetching : isRowsLoading && hasHeldClientRows;
 
-  const handleSelectFilter = (filter: any) => {
-    if (filter) {
-      setActiveFilters(filter.filters);
-    } else {
+  const handleSelectFilter = (filter: ParsedFilter | null) => {
+    if (filter === null) {
       setActiveFilters(initialFilters);
+      return;
     }
+    // SAFETY: saved filters are saved from this table's own activeFilters, so their fields are TDoc keys
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    setActiveFilters(filter.filters as [keyof TDoc & string, string, unknown][]);
   };
 
   const handleSaveFilter = async (filterName: string, isGlobal: boolean) => {
-    if (!savedFiltersHook || !activeFilters) {
+    if (activeFilters === undefined) {
       return;
     }
-    const filterArray = Array.isArray(activeFilters)
-      ? activeFilters
-      : Object.entries(activeFilters).map(([key, value]) => [key, '=', value] as [string, string, any]);
-    await savedFiltersHook.saveFilter(filterName, filterArray, isGlobal);
+    await savedFiltersHook.saveFilter(filterName, toFilterTuples(activeFilters), isGlobal);
   };
 
-  const handleDeleteFilter = async (name: string) => {
-    if (!savedFiltersHook) {
-      return;
-    }
-    await savedFiltersHook.deleteFilter(name);
+  const handleDeleteFilter = (name: string) => {
+    void savedFiltersHook.deleteFilter(name);
   };
 
   // serverSide failures come from the fetch above; client/live failures come
@@ -914,13 +935,14 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
   // Infinite serverSide delegates loading/empty chrome to DataTable.
   // After the first load, NEVER replace DataTable with empty/loading chrome
   // while a refetch is in flight — that was the named blank-the-list defect.
-  const boundaryState = resolvedError
-    ? { error: resolvedError }
-    : isRowsLoadingResolved || columnsPending
-      ? { loading: loading ?? true }
-      : rowData.length === 0 && !infiniteServerMode && !isFetching
-        ? { empty: true }
-        : null;
+  let boundaryState: Pick<AsyncBoundaryProps, 'error' | 'loading' | 'empty'> | null = null;
+  if (resolvedError) {
+    boundaryState = { error: resolvedError };
+  } else if (isRowsLoadingResolved || columnsPending) {
+    boundaryState = { loading: loading ?? true };
+  } else if (rowData.length === 0 && !infiniteServerMode && !isFetching) {
+    boundaryState = { empty: true };
+  }
   if (boundaryState) {
     return (
       <YStack
@@ -954,7 +976,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
       flexBasis="auto"
       minHeight={0}>
       <FrappeReconnectIndicator config={connectionConfig} />
-      {savedFilters && savedFiltersHook && (
+      {savedFilters && (
         <XStack
           {...knobProps.gap}
           padding="$2">
@@ -965,13 +987,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
             onDeleteFilter={handleDeleteFilter}
           />
           <FilterManager
-            currentFilters={
-              Array.isArray(activeFilters)
-                ? activeFilters
-                : activeFilters
-                  ? Object.entries(activeFilters).map(([key, value]) => [key, '=', value] as [string, string, any])
-                  : []
-            }
+            currentFilters={toFilterTuples(activeFilters)}
             onSaveFilter={handleSaveFilter}
             canCreateGlobal={canCreateGlobalFilters}
           />
@@ -1000,7 +1016,7 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
           manualPagination: true,
           manualSorting: true,
           onStateChange: handleStateChange,
-          ...(infiniteServerMode ? {} : { rowCount: serverRowCount }),
+          rowCount: infiniteServerMode ? undefined : serverRowCount,
         })}
         paginationMode={paginationMode}
         {...(resolvedLoadPage ? { loadPage: resolvedLoadPage } : {})}
@@ -1015,4 +1031,4 @@ export function FrappeTable<TDoc extends { name: string; doctype: string }>({
       />
     </YStack>
   );
-}
+};

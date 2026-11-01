@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Numeric } from '.';
 import type { NumericProps } from '.';
@@ -40,7 +40,7 @@ export default {
   },
 };
 
-function ControlledNumeric(props: Omit<NumericProps, 'onChange'>) {
+const ControlledNumeric = (props: Omit<NumericProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value);
   return (
     <Numeric
@@ -52,7 +52,7 @@ function ControlledNumeric(props: Omit<NumericProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const AllTypes = () => (
   <YStack gap="$3">
@@ -133,10 +133,12 @@ interface NumericRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<NumericRow[]>([
       { id: '1', label: 'Alpha', value: 42 },
       { id: '2', label: 'Beta', value: 7 },
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an empty Int cell is undefined in NumericRow's contract
       { id: '3', label: 'Gamma', value: undefined },
     ]);
     const columns: DataTableColumn<NumericRow>[] = [

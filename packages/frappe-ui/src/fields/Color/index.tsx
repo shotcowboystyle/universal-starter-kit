@@ -10,6 +10,7 @@ import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 
 export type ColorProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -35,9 +36,13 @@ export type ColorProps<
     presetColors?: string[];
   };
 
-export function Color<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Color = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: ColorProps<TData, TName>,
-) {
+) => {
   const {
     defaultValue,
     form,
@@ -51,10 +56,9 @@ export function Color<TData extends Record<string, unknown> = Record<string, unk
     value,
     // hex-escape: a Color field stores hex; the placeholder shows that format and paints nothing
     placeholder = '#000000',
-    _showPresets = true,
     presetColors,
     ...fieldProps
-  } = useProps(props) as ColorProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
 
   return (
     <FormsColorPicker
@@ -62,7 +66,7 @@ export function Color<TData extends Record<string, unknown> = Record<string, unk
       form={form}
       validators={validators}
       value={value}
-      onChange={onChange as ((v: string) => void) | undefined}
+      onChange={onChange}
       defaultValue={defaultValue}
       label={fieldProps.label}
       labelProps={fieldProps.labelProps}
@@ -83,4 +87,4 @@ export function Color<TData extends Record<string, unknown> = Record<string, unk
       preserveValue={preserveValue}
     />
   );
-}
+};

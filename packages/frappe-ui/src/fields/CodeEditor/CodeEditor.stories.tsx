@@ -7,8 +7,8 @@ import { useForm } from '@tanstack/react-form';
 import { useState } from 'react';
 import { Theme, YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { CodeEditorField, frappeCodeLanguage } from '.';
 import type { CodeEditorFieldProps } from '.';
@@ -63,9 +63,11 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = CodeEditorFieldProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Omit over the args index signature widens value to unknown; only a string seeds the editor
   const [value, setValue] = useState<string>(typeof props.value === 'string' ? props.value : '');
   return (
     <CodeEditorField
@@ -77,7 +79,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 // CSF3 objects (not `export const Main = (args) => …; Main.args = …`).
 // Native Kitchen Sink `storyIndex.ts` treats a function export as
@@ -105,6 +107,7 @@ export const Json = {
 
 export const FormIntegrated = {
   name: 'Form Integrated',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function FormIntegratedRender() {
     const form = useForm({
       defaultValues: { script: PYTHON_FIXTURE },
@@ -162,7 +165,7 @@ export const States = {
       <CodeEditorField
         label="Skeleton"
         skeleton
-        onChange={() => {}}
+        onChange={action('onChange')}
       />
     </YStack>
   ),
@@ -193,6 +196,7 @@ interface CodeRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<CodeRow[]>([
       { id: '1', label: 'Alpha', value: PYTHON_FIXTURE },

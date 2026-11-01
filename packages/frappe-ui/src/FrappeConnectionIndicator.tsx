@@ -25,7 +25,7 @@ export interface FrappeConnectionIndicatorProps {
  * connected, in fixture mode, or during SSR (realtime never up), so
  * fixture-backed stories stay clean.
  */
-export function FrappeConnectionIndicator({ config, connection }: FrappeConnectionIndicatorProps) {
+export const FrappeConnectionIndicator = ({ config, connection }: FrappeConnectionIndicatorProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const hooked = useFrappeConnection(config);
@@ -35,6 +35,7 @@ export function FrappeConnectionIndicator({ config, connection }: FrappeConnecti
   }
   return (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- XStack renders a Tamagui View (a <div> on web, no <output> equivalent on native); role=status gives the live-region semantics
       role="status"
       aria-live="polite"
       alignSelf="flex-start"
@@ -60,4 +61,4 @@ export function FrappeConnectionIndicator({ config, connection }: FrappeConnecti
       </Text>
     </XStack>
   );
-}
+};

@@ -30,16 +30,20 @@ import { RichEditor } from '@repo/rich-text';
 import type { RichEditorRef } from '@repo/rich-text';
 import { sizeRecipeForToken } from '@repo/theme';
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { YStack } from 'tamagui';
 
 /** Approximate source-row height used to map the row props onto the editor */
 const ROW_HEIGHT = 24;
 
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
 export interface MarkdownEditorFieldProps {
   name?: string;
   form?: AnyFormApi;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the forms FieldValidators shape; validator keys are TanStack's
   validators?: Record<string, unknown>;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
@@ -56,7 +60,7 @@ export interface MarkdownEditorFieldProps {
   defaultValue?: string;
   /** Canonical change contract (LC-14): emits the markdown source string. */
   onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: ComponentProps<typeof FieldLayout>['onBlur'];
   placeholder?: string;
   /** Minimum visible content rows (default 6). */
   minRows?: number;
@@ -65,7 +69,7 @@ export interface MarkdownEditorFieldProps {
   'aria-label'?: string;
 }
 
-export function MarkdownEditorField({
+export const MarkdownEditorField = ({
   name,
   form: formProp,
   validators,
@@ -88,7 +92,7 @@ export function MarkdownEditorField({
   minRows = 6,
   maxRows = 16,
   'aria-label': ariaLabel,
-}: MarkdownEditorFieldProps) {
+}: MarkdownEditorFieldProps) => {
   const { resolvedForm, knobProps, id } = useFormField({ form: formProp, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const inTableCell = useIsInTableCell();
@@ -102,10 +106,12 @@ export function MarkdownEditorField({
 
   // External (controlled) value change: push into the editor without
   // emitting onChange back (setMarkdown is emitUpdate: false).
+  // oxlint-disable-next-line react-doctor/no-derived-state-effect -- semi-controlled: typed markdown stays visible until the parent pushes a new value
   useEffect(() => {
     if (value === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-derived-state -- adopts the controlled `value` prop into display state
     setInternalValue(value);
     if (value !== lastEmittedRef.current) {
       lastEmittedRef.current = value;
@@ -118,7 +124,7 @@ export function MarkdownEditorField({
       <YStack
         {...knobProps.gap}
         width="100%">
-        {label && (
+        {Boolean(label) && (
           <Skeleton
             variant="text"
             width="30%"
@@ -138,7 +144,7 @@ export function MarkdownEditorField({
     markdownValue: string,
     handleChange?: (markdown: string) => void,
     handleFieldBlur?: () => void,
-    hasError?: boolean,
+    hasError = false,
   ) => (
     <RichEditor
       ref={editorRef}
@@ -166,8 +172,8 @@ export function MarkdownEditorField({
     />
   );
 
-  if (!resolvedForm || !name) {
-    const standaloneControl = renderControl(internalValue, setInternalValue, onBlur, !!error);
+  if (!resolvedForm || name === undefined || name === '') {
+    const standaloneControl = renderControl(internalValue, setInternalValue, onBlur, hasErrorValue(error));
     if (inTableCell) {
       return standaloneControl;
     }
@@ -198,9 +204,10 @@ export function MarkdownEditorField({
       validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the form value is untyped; only a string is editor source
         const fieldValue = typeof field.state.value === 'string' ? field.state.value : '';
         const handleChange = (markdown: string) => {
-          field.handleChange(markdown as any);
+          field.handleChange(markdown);
         };
         const formControl = renderControl(
           fieldValue,
@@ -208,7 +215,7 @@ export function MarkdownEditorField({
           () => {
             field.handleBlur();
           },
-          !!resolvedError,
+          hasErrorValue(resolvedError),
         );
         if (inTableCell) {
           return formControl;
@@ -233,4 +240,4 @@ export function MarkdownEditorField({
       }}
     </Field>
   );
-}
+};

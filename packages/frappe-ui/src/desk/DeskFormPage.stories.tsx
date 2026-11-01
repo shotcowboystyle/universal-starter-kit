@@ -28,59 +28,53 @@ export default {
 
 const MOCK_HOST = 'https://deskformpage.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock payload
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
-function todoMeta(name: string) {
-  return {
-    name,
-    module: 'Desk',
-    title_field: 'description',
-    fields: [
-      { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
-      {
-        fieldname: 'description',
-        fieldtype: 'Data',
-        label: 'Description',
-        in_list_view: 1,
-        required: 1,
-      },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Open\nWorking\nCompleted',
-        in_list_view: 1,
-      },
-      { fieldname: 'col_break', fieldtype: 'Column Break' },
-      {
-        fieldname: 'priority',
-        fieldtype: 'Select',
-        label: 'Priority',
-        options: 'Low\nMedium\nHigh',
-      },
-      { fieldname: 'due_date', fieldtype: 'Date', label: 'Due Date' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const todoMeta = (name: string) => ({
+  name,
+  module: 'Desk',
+  title_field: 'description',
+  fields: [
+    { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
+    {
+      fieldname: 'description',
+      fieldtype: 'Data',
+      label: 'Description',
+      in_list_view: 1,
+      required: 1,
+    },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Open\nWorking\nCompleted',
+      in_list_view: 1,
+    },
+    { fieldname: 'col_break', fieldtype: 'Column Break' },
+    {
+      fieldname: 'priority',
+      fieldtype: 'Select',
+      label: 'Priority',
+      options: 'Low\nMedium\nHigh',
+    },
+    { fieldname: 'due_date', fieldtype: 'Date', label: 'Due Date' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__deskFormPageMockFetch) {
+  // Install once per page: a window flag survives story re-renders and HMR.
+  if (Object.hasOwn(window, '__deskFormPageMockFetch')) {
     return;
   }
-  w.__deskFormPageMockFetch = true;
+  Reflect.set(window, '__deskFormPageMockFetch', true);
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : input.toString();
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: todoMeta(decodeURIComponent(metaMatch[1])) });
       }

@@ -32,18 +32,18 @@
       "default": "./dist/esm/index.mjs"
     },
     "./dependsOn": {
-      "source": "./src/dependsOn.ts",
-      "types": "./types/dependsOn.d.ts",
-      "import": "./dist/esm/dependsOn.mjs",
-      "require": "./dist/cjs/dependsOn.cjs",
-      "default": "./src/dependsOn.ts"
+      "source": "./src/depends-on.ts",
+      "types": "./types/depends-on.d.ts",
+      "import": "./dist/esm/depends-on.mjs",
+      "require": "./dist/cjs/depends-on.cjs",
+      "default": "./src/depends-on.ts"
     },
     "./formActions": {
-      "source": "./src/formEngine/formActions.ts",
-      "types": "./types/formEngine/formActions.d.ts",
-      "import": "./dist/esm/formEngine/formActions.mjs",
-      "require": "./dist/cjs/formEngine/formActions.cjs",
-      "default": "./src/formEngine/formActions.ts"
+      "source": "./src/formEngine/form-actions.ts",
+      "types": "./types/formEngine/form-actions.d.ts",
+      "import": "./dist/esm/formEngine/form-actions.mjs",
+      "require": "./dist/cjs/formEngine/form-actions.cjs",
+      "default": "./src/formEngine/form-actions.ts"
     }
   },
   "scripts": {

@@ -7,14 +7,15 @@ import { useTranslation } from 'react-i18next';
 
 import { FacetBadge } from '../list/FacetBadge';
 
-import { formatMetric, metricValue } from './insightsRecord';
-import type { FrappeInsightsMetric, InsightsRecordView } from './insightsRecord';
+import { formatMetric, metricValue } from './insights-record';
+import type { FrappeInsightsMetric, InsightsRecordView } from './insights-record';
 
 interface TableRow<TDoc> extends DataTableData {
   doc: TDoc;
   code: string;
   title: string;
   values: string[];
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- metric columns are keyed by arbitrary doctype field names; each holds a metricValue number
   [metric: string]: unknown;
 }
 
@@ -33,7 +34,7 @@ export interface InsightsTableProps<TDoc> {
  * Every record in the catalog DataTable: sortable metric columns, a pager,
  * and the stacked card layout below `$sm`. A row opens its record.
  */
-export function InsightsTable<TDoc>({
+export const InsightsTable = <TDoc,>({
   rows,
   metrics,
   record,
@@ -41,7 +42,7 @@ export function InsightsTable<TDoc>({
   pageSize = 5,
   label,
   testID,
-}: InsightsTableProps<TDoc>) {
+}: InsightsTableProps<TDoc>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact: true });
   const nestedPx = knobProps.nestedControl.px;
@@ -68,6 +69,7 @@ export function InsightsTable<TDoc>({
               accessorKey: 'code',
               header: t('No.'),
               size: 72,
+              // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
               cell: ({ row }: { row: { original: TableRow<TDoc> } }) => (
                 <Text
                   {...knobProps.label}
@@ -83,6 +85,7 @@ export function InsightsTable<TDoc>({
         id: 'record',
         accessorKey: 'title',
         header: t('Record'),
+        // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
         cell: ({ row }) => (
           <XStack
             gap="$2"
@@ -107,7 +110,7 @@ export function InsightsTable<TDoc>({
           </XStack>
         ),
       },
-      ...(facetLabel
+      ...(facetLabel !== undefined && facetLabel !== ''
         ? [
             {
               id: 'facet',
@@ -115,6 +118,7 @@ export function InsightsTable<TDoc>({
               accessorFn: (row: TableRow<TDoc>) => row.values.join(', '),
               enableSorting: false,
               sortable: false,
+              // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
               cell: ({ row }: { row: { original: TableRow<TDoc> } }) => (
                 <XStack
                   gap="$1.5"
@@ -147,9 +151,14 @@ export function InsightsTable<TDoc>({
             accessorKey: metric.field,
             header: metric.label,
             align: 'right',
+            // oxlint-disable-next-line react/no-unstable-nested-components -- DataTable cell renderer invoked as a function, never mounted as a component type
             cell: ({ row }: { row: { original: TableRow<TDoc> } }) => (
               <Text fontWeight={index === 0 ? '700' : undefined}>
-                {formatMetric(metric, row.original[metric.field] as number)}
+                {
+                  // SAFETY: `data` fills every metric field with metricValue(), which returns a number
+                  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+                  formatMetric(metric, row.original[metric.field] as number)
+                }
               </Text>
             ),
           }) satisfies DataTableColumn<TableRow<TDoc>>,
@@ -179,4 +188,4 @@ export function InsightsTable<TDoc>({
       />
     </YStack>
   );
-}
+};

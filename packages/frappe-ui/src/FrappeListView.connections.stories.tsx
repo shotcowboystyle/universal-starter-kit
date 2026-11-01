@@ -7,7 +7,7 @@ import { XStack, YStack } from 'tamagui';
 import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
 import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
 
-import type { FrappeConnection } from './frappeConnections';
+import type { FrappeConnection } from './frappe-connections';
 import { FrappeListView } from './FrappeListView';
 import { FrappeProvider } from './FrappeProvider';
 
@@ -28,21 +28,27 @@ export default {
 
 const host = 'https://listview-connections.mock.test';
 
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.href;
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
+
 (() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeListViewConnectionsMockFetch) {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeListViewConnectionsMockFetch?: boolean };
+  if (w.__frappeListViewConnectionsMockFetch === true) {
     return;
   }
   w.__frappeListViewConnectionsMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    const url = requestUrl(input);
     if (url.startsWith(host)) {
       const body = url.includes('/api/resource/DocType/') ? { data: rosterPokemonMeta } : { data: [] };
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json(body, { status: 200 });
     }
     return await realFetch(input as RequestInfo, init);
   };
@@ -51,7 +57,7 @@ const host = 'https://listview-connections.mock.test';
 const pokemonConnections: FrappeConnection[] = [{ doctype: 'Pokemon Poke Type', fieldname: 'pokemon' }];
 const types = ['', 'grass', 'poison', 'fire', 'water', 'electric', 'ghost', 'normal'];
 
-function TypeFilteredRoster({ declared }: { declared: boolean }) {
+const TypeFilteredRoster = ({ declared }: { declared: boolean }) => {
   const { knobProps } = useResolvedKnobs();
   const [type, setType] = useState('poison');
   return (
@@ -85,7 +91,7 @@ function TypeFilteredRoster({ declared }: { declared: boolean }) {
       />
     </YStack>
   );
-}
+};
 
 export const ByJunctionValue = () => (
   <FrappeProvider

@@ -2,7 +2,7 @@ import { Carousel, YStack } from '@repo/ui';
 import { useState } from 'react';
 
 import { ImageWell } from '../list/ImageWell';
-import type { FrappeRecordSlide } from '../list/recordLook';
+import type { FrappeRecordSlide } from '../list/record-look';
 
 export interface RecordGalleryProps {
   /** The record's image candidates: the first slide walks them on error. */
@@ -19,7 +19,9 @@ export interface RecordGalleryProps {
  * empty. Wells take the measured width and slides sit flush, so each lands
  * exactly one width over.
  */
-export function RecordGallery({ images, slides = [], alt, tints }: RecordGalleryProps) {
+const NO_SLIDES: readonly FrappeRecordSlide[] = [];
+
+export const RecordGallery = ({ images, slides = NO_SLIDES, alt, tints }: RecordGalleryProps) => {
   const [width, setWidth] = useState(0);
   const first = (
     <ImageWell
@@ -62,4 +64,4 @@ export function RecordGallery({ images, slides = [], alt, tints }: RecordGallery
       )}
     </YStack>
   );
-}
+};

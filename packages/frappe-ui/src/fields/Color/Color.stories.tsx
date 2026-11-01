@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Color } from '.';
 import type { ColorProps } from '.';
@@ -34,7 +34,7 @@ export default {
   },
 };
 
-function ControlledColor(props: Omit<ColorProps, 'onChange'>) {
+const ControlledColor = (props: Omit<ColorProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Color
@@ -46,7 +46,7 @@ function ControlledColor(props: Omit<ColorProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Default = (args: ColorProps) => <ControlledColor {...args} />;
 Default.args = {

@@ -14,26 +14,26 @@
  * `@repo/backoffice/src/form/*` deep — keep resolving.
  */
 
-export type { DocFieldMeta, DocLinkMeta, DocPermissionRule, DoctypeMeta } from './doctypeMeta';
+export type { DocFieldMeta, DocLinkMeta, DocPermissionRule, DoctypeMeta } from './doctype-meta';
 
-export { buildPermLevelMatrix, canReadLevel, canWriteLevel } from './fieldPermissions';
-export type { LevelPerm, PermLevelMatrix } from './fieldPermissions';
+export { buildPermLevelMatrix, canReadLevel, canWriteLevel } from './field-permissions';
+export type { LevelPerm, PermLevelMatrix } from './field-permissions';
 
-export { applyFetchedValues, buildFetchMap, isFetchLocked } from './fetchFrom';
-export type { FetchMap, FetchRule } from './fetchFrom';
+export { applyFetchedValues, buildFetchMap, isFetchLocked } from './fetch-from';
+export type { FetchMap, FetchRule } from './fetch-from';
 
-export { computeDirtyFields, isEmptyValue, isSameValue } from './dirtyTracking';
+export { computeDirtyFields, isEmptyValue, isSameValue } from './dirty-tracking';
 
-export { setCreatePrefill, takeCreatePrefill } from './createPrefill';
+export { setCreatePrefill, takeCreatePrefill } from './create-prefill';
 
-export { buildCopyValues, buildCreateDefaults, buildFormTabs, isPromptNamed } from './formLayout';
-export type { BuildTabsOptions, FormTab } from './formLayout';
+export { buildCopyValues, buildCreateDefaults, buildFormTabs, isPromptNamed } from './form-layout';
+export type { BuildTabsOptions, FormTab } from './form-layout';
 
-export { useFormEngine } from './useFormEngine';
-export type { FormEngine } from './useFormEngine';
+export { useFormEngine } from './use-form-engine';
+export type { FormEngine } from './use-form-engine';
 
-export { useFrappeSession, useSessionRoles } from './useSessionRoles';
-export type { FrappeSession } from './useSessionRoles';
+export { useFrappeSession, useSessionRoles } from './use-session-roles';
+export type { FrappeSession } from './use-session-roles';
 
 export {
   allDocRights,
@@ -42,14 +42,14 @@ export {
   fixtureDocRights,
   resolveDocRights,
   sessionDocRights,
-} from './docPermissions';
+} from './doc-permissions';
 export type {
   DocRight,
   DocRights,
   DocShareGrant,
   ResolveDocRightsInput,
   SessionDocRightsInput,
-} from './docPermissions';
+} from './doc-permissions';
 
-export { useDocRights } from './useDocRights';
-export type { DocRightsOptions, DocRightsResult } from './useDocRights';
+export { useDocRights } from './use-doc-rights';
+export type { DocRightsOptions, DocRightsResult } from './use-doc-rights';

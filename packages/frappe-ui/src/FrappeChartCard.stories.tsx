@@ -2,9 +2,9 @@ import { InMemoryFixtureProvider } from '@repo/frappe';
 import { XStack, YStack } from 'tamagui';
 
 import { ChartCard } from './ChartCard';
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeChartCard } from './FrappeChartCard';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
 
 // hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
 
@@ -36,52 +36,62 @@ export default {
 
 const MOCK_HOST = 'https://frappechartcard.mock.test';
 
-function todoMetaRaw(name: string) {
-  return {
-    name,
-    module: 'Desk',
-    title_field: 'description',
-    fields: [
-      { fieldname: 'description', fieldtype: 'Small Text', label: 'Description', in_list_view: 1 },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        options: 'Open\nClosed\nCancelled',
-        in_list_view: 1,
-        in_standard_filter: 1,
-      },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
+const todoMetaRaw = (name: string) => ({
+  name,
+  module: 'Desk',
+  title_field: 'description',
+  fields: [
+    { fieldname: 'description', fieldtype: 'Small Text', label: 'Description', in_list_view: 1 },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      options: 'Open\nClosed\nCancelled',
+      in_list_view: 1,
+      in_standard_filter: 1,
+    },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeChartCardMockFetch?: boolean } = window;
   if (w.__frappeChartCardMockFetch) {
     return;
   }
   w.__frappeChartCardMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'ToDo';
         return jsonResponse({ docs: [todoMetaRaw(decodeURIComponent(doctype))] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: todoMetaRaw(decodeURIComponent(metaMatch[1])) });
       }

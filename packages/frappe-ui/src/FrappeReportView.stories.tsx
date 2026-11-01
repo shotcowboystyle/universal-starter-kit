@@ -1,8 +1,8 @@
 import { action } from '@repo/storybook';
 
+import { FrappeStoryProvider, frappeStoriesLive } from './frappe-story-target';
 import { FrappeReportView } from './FrappeReportView';
 import type { FrappeReportRunResponse } from './FrappeReportView';
-import { FrappeStoryProvider, frappeStoriesLive } from './frappeStoryTarget';
 
 export default {
   title: 'FrappeUI/FrappeReportView',
@@ -82,27 +82,42 @@ Main.parameters = {
 // Filters — loader fixture re-runs on every (debounced) filter change
 // ---------------------------------------------------------------------------
 
+/** A filter value as text, or undefined when the filter is unset or empty. */
+const filterText = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- filter values arrive untyped from the report filter bar
+  value: unknown,
+): string | undefined =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the text, select and date filters this story declares all produce strings
+  typeof value === 'string' && value !== '' ? value : undefined;
+
 const filterableLoader = async ({
   filters,
 }: {
   reportName: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the report loader contract hands filters over keyed by fieldname
   filters: Record<string, unknown>;
 }): Promise<FrappeReportRunResponse> => {
   action('run')(filters);
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- report rows are keyed by column fieldname
   const rows = (salesReport.result ?? []).filter((row): row is Record<string, unknown> => !Array.isArray(row));
-  const status = filters.status ? String(filters.status) : undefined;
-  const customer = filters.customer ? String(filters.customer).toLowerCase() : undefined;
-  const fromDate = filters.from_date ? String(filters.from_date) : undefined;
+  const status = filterText(filters.status);
+  const customer = filterText(filters.customer)?.toLowerCase();
+  const fromDate = filterText(filters.from_date);
   const paidOnly = Boolean(filters.paid_only);
   return {
     columns: salesReport.columns,
-    result: rows.filter(
-      (row) =>
-        (!status || row.status === status) &&
-        (!customer || String(row.customer).toLowerCase().includes(customer)) &&
-        (!fromDate || String(row.posting_date) >= fromDate) &&
-        (!paidOnly || row.paid === 1),
-    ),
+    result: rows.filter((row) => {
+      if (status !== undefined && row.status !== status) {
+        return false;
+      }
+      if (customer !== undefined && !String(row.customer).toLowerCase().includes(customer)) {
+        return false;
+      }
+      if (fromDate !== undefined && String(row.posting_date) < fromDate) {
+        return false;
+      }
+      return !paidOnly || row.paid === 1;
+    }),
   };
 };
 

@@ -1,5 +1,5 @@
 /**
- * @repo/frappe-ui
+ * `@repo/frappe-ui`
  *
  * Pre-wired Tamagui components for Frappe doctypes with live data.
  *
@@ -34,7 +34,7 @@ export {
   type FrappeNavigation,
   type FrappeRouter,
   type FrappeRouteTarget,
-} from './frappeNavigation';
+} from './frappe-navigation';
 export { FrappeReconnectIndicator, type FrappeReconnectIndicatorProps } from './FrappeReconnectIndicator';
 // Storybook story target (live bench through the SB proxy, fixtures
 // otherwise) — exported so feature stories don't need local copies.
@@ -43,7 +43,7 @@ export {
   frappeStoriesLive,
   frappeStoryBaseUrl,
   type FrappeStoryProviderProps,
-} from './frappeStoryTarget';
+} from './frappe-story-target';
 
 // ---------------------------------------------------------------------------
 // Frappe View Wrappers
@@ -59,7 +59,7 @@ export {
   type FrappeFormMetaSource,
   type FrappeFormStatus,
   type UseFrappeFormOptions,
-} from './useFrappeForm';
+} from './use-frappe-form';
 export {
   FrappeFormConnectionSection,
   FrappeFormConnections,
@@ -94,7 +94,7 @@ export {
   type FrappeListRange,
   type FrappeListSort,
   type FrappeListState,
-} from './list/listState';
+} from './list/list-state';
 export {
   createFavoritesStore,
   favoritesKey,
@@ -110,7 +110,7 @@ export { ShufflePanel, type ShufflePanelProps } from './list/ShufflePanel';
 export { FacetBadge, type FacetBadgeProps } from './list/FacetBadge';
 export { ImageWell, type ImageWellProps } from './list/ImageWell';
 export { RecordCard, type RecordCardBadge, type RecordCardProps } from './list/RecordCard';
-export { recordTitle, type FrappeRecordLook, type FrappeRecordSlide } from './list/recordLook';
+export { recordTitle, type FrappeRecordLook, type FrappeRecordSlide } from './list/record-look';
 export {
   FrappeRecordView,
   type FrappeRecordAction,
@@ -128,7 +128,7 @@ export {
   type FrappeDoctypeFilter,
   type FrappeFieldFilter,
   type FrappeFilters,
-} from './useConnectionFilters';
+} from './use-connection-filters';
 
 export { FrappeKanban, type FrappeKanbanProps, type KanbanColumn, type KanbanCardRenderer } from './FrappeKanban';
 
@@ -141,7 +141,7 @@ export {
 
 export { FrappeGantt, type FrappeGanttProps } from './FrappeGantt';
 
-export { resolveFrappeEventColor, frappeEventColorNames } from './frappeEventColor';
+export { resolveFrappeEventColor, frappeEventColorNames } from './frappe-event-color';
 
 export { FrappeDashboard, type FrappeDashboardProps, type DashboardDataSource } from './FrappeDashboard';
 
@@ -172,7 +172,7 @@ export {
   type TrendDirection,
 } from '@repo/ui';
 
-export { FrappeKPICard, type FrappeKPICardProps, type FrappeKPIDataSource } from './FrappeKPICard';
+export { FrappeKPICard, type FrappeKPICardProps, type FrappeKPIDataSource } from './FrappeKpiCard';
 
 export { FrappeChartCard, type FrappeChartCardProps, type FrappeChartDataSource } from './FrappeChartCard';
 
@@ -187,18 +187,21 @@ export {
   type FrappeRowsMessages,
   type UseFrappeRowsOptions,
   type UseFrappeRowsResult,
-} from './useFrappeRows';
+} from './use-frappe-rows';
 
 // What a view lays itself out from when meta is refused (LC-96).
 export {
   fieldsFromRecord,
   recordFieldKeys,
   recordKeyLabel,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- public export consumed by backoffice and apps; renaming breaks them
   useRecordShape,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- public export consumed by backoffice and apps; renaming breaks them
   type RecordShape,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- public export consumed by backoffice and apps; renaming breaks them
   type RecordShapeConnection,
-} from './recordShape';
-export { isPermissionError, refusalReason } from './liveErrors';
+} from './record-shape';
+export { isPermissionError, refusalReason } from './live-errors';
 
 export {
   useFrappeAggregate,
@@ -207,7 +210,7 @@ export {
   type FrappeAggregateOperation,
   type FrappeAggregateSpec,
   type UseFrappeAggregateResult,
-} from './useFrappeAggregate';
+} from './use-frappe-aggregate';
 
 export {
   useFrappeFacets,
@@ -223,7 +226,7 @@ export {
   type FrappeFacetsConnection,
   type UseFrappeFacetsOptions,
   type UseFrappeFacetsResult,
-} from './useFrappeFacets';
+} from './use-frappe-facets';
 
 export { FrappeImageView, type FrappeImageViewProps } from './FrappeImageView';
 export { FrappeTreeView, type FrappeTreeViewProps } from './FrappeTreeView';
@@ -247,7 +250,7 @@ export { SyncErrorNotice, type SyncErrorNoticeProps } from './SyncErrorNotice';
 // Shared depends_on expression evaluator (SchemaForm + backoffice form engine).
 // Exported from the barrel because deep `/src/*` subpath imports do not resolve
 // under the storybook workspace aliases (bare-name alias → src/index.ts).
-export { compileDependsOn, evaluateDependsOn, type DependsDoc, type DependsEvaluator } from './dependsOn';
+export { compileDependsOn, evaluateDependsOn, type DependsDoc, type DependsEvaluator } from './depends-on';
 
 export { SchemaForm, applyFieldOrder, applyOrderToSchema } from './schemaForm';
 export type { SchemaFormProps, FormSchema, FormSection, FormColumn, FieldOverride } from './schemaForm';
@@ -262,10 +265,10 @@ export {
   childFieldsToDetailColumns,
   childCellHidden,
   fieldtypeToTableField,
-} from './fieldRegistry';
-export { FieldOverridesProvider, useFieldResolver } from './fieldOverrides';
-export type { FieldOverrides, FieldOverridesProviderProps } from './fieldOverrides';
-export type { FieldRenderProps, FieldSchema, ChildTableFieldDef } from './fieldRegistry';
+} from './field-registry';
+export { FieldOverridesProvider, useFieldResolver } from './field-overrides';
+export type { FieldOverrides, FieldOverridesProviderProps } from './field-overrides';
+export type { FieldRenderProps, FieldSchema, ChildTableFieldDef } from './field-registry';
 
 export {
   resolveChoiceControl,
@@ -273,8 +276,8 @@ export {
   SINGLE_RADIO_MAX,
   SINGLE_SELECT_MAX,
   MULTI_CHECKBOX_MAX,
-} from './resolveControl';
-export type { ChoiceControl, ChoiceOption, CommitMode, ResolveChoiceControlArgs } from './resolveControl';
+} from './resolve-control';
+export type { ChoiceControl, ChoiceOption, CommitMode, ResolveChoiceControlArgs } from './resolve-control';
 
 // ---------------------------------------------------------------------------
 // Frappe Field Type Renderers (map Frappe DocType field types to UI)
@@ -324,9 +327,10 @@ export { SwitchField, type SwitchFieldProps } from './fields/Switch';
 // import and pins the TipTap/ProseMirror editor stack into every consumer's
 // eager bundle (rolldown INEFFECTIVE_DYNAMIC_IMPORT; perf audit
 // p-results/web-perf-audit.md §1.3). Render under <Suspense>.
-export const TextEditor = lazy(
-  async () => await import('./fields/TextEditor').then((m) => ({ default: m.TextEditor })),
-);
+export const TextEditor = lazy(async () => {
+  const { TextEditor: component } = await import('./fields/TextEditor');
+  return { default: component };
+});
 export { ToggleGroupField, type ToggleGroupFieldProps } from './fields/ToggleGroup';
 
 // ---------------------------------------------------------------------------
@@ -380,7 +384,7 @@ export {
   type FrappeComment,
   type FrappeVersion,
 } from './components/timeline';
-export { useFrappeCommentActions, type FrappeCommentActions, type AddCommentInput } from './commentActions';
+export { useFrappeCommentActions, type FrappeCommentActions, type AddCommentInput } from './comment-actions';
 
 // ---------------------------------------------------------------------------
 // Pagination Bridge
@@ -390,7 +394,7 @@ export {
   useFrappePagination,
   type UseFrappePaginationOptions,
   type UseFrappePaginationResult,
-} from './useFrappePagination';
+} from './use-frappe-pagination';
 
 // ---------------------------------------------------------------------------
 // Re-exports for Convenience
@@ -449,7 +453,7 @@ export {
   type QueryReportRow,
   type QueryReportRunMessage,
   type ScriptFilterExtraction,
-} from './report/queryReport';
+} from './report/query-report';
 export {
   reportCall,
   useFrappeReport,
@@ -457,13 +461,13 @@ export {
   type FrappeReportFixture,
   type UseFrappeReportOptions,
   type UseFrappeReportResult,
-} from './report/useFrappeReport';
-export { useQueryReport, type UseQueryReportOptions, type UseQueryReportResult } from './report/useQueryReport';
+} from './report/use-frappe-report';
+export { useQueryReport, type UseQueryReportOptions, type UseQueryReportResult } from './report/use-query-report';
 export {
   buildQueryReportColumns,
   buildQueryReportCsv,
   type BuildQueryReportColumnsArgs,
-} from './report/queryReportColumns';
+} from './report/query-report-columns';
 export {
   FrappeReportBuilder,
   type FrappeReportBuilderProps,
@@ -501,7 +505,7 @@ export {
   type ReportSortState,
   type ReportTotalsCell,
   type ReportViewConfig,
-} from './report/reportViewModel';
+} from './report/report-view-model';
 export { ReportGrid, type ReportGridProps } from './report/ReportGrid';
 export { ReportViewToolbar, type ReportViewToolbarProps } from './report/ReportViewToolbar';
 export {
@@ -509,7 +513,7 @@ export {
   type SavedReportSummary,
   type SavedReportsConnection,
   type UseSavedReportsResult,
-} from './report/savedReports';
+} from './report/saved-reports';
 export { dialogBodyMinWidth, overlayListMaxHeight } from './measures';
 
 // ---------------------------------------------------------------------------
@@ -524,7 +528,7 @@ export { dialogBodyMinWidth, overlayListMaxHeight } from './measures';
 // higher-tier import; backoffice re-exports these names from their old paths.
 //
 // `formActions` stays deep-import only
-// (`@repo/frappe-ui/src/formEngine/formActions`) — its RPC
+// (`@repo/frappe-ui/src/formEngine/form-actions`) — its RPC
 // helper names collide with the list and shell surfaces.
 export {
   allDocRights,
@@ -574,7 +578,7 @@ export type {
   ResolveDocRightsInput,
   SessionDocRightsInput,
 } from './formEngine';
-export { connectionFields, connectionsFromMeta, type FrappeConnection } from './frappeConnections';
+export { connectionFields, connectionsFromMeta, type FrappeConnection } from './frappe-connections';
 
 // ---------------------------------------------------------------------------
 // Desk List (MPO-15)
@@ -585,8 +589,8 @@ export { connectionFields, connectionsFromMeta, type FrappeConnection } from './
 // of @repo/backoffice so FrappeTable can default its columns
 // and filter menu from them; backoffice re-exports these names from their
 // old paths.
-export { buildListColumns, type BuildListColumnsArgs, type ListDoc, type ListRow } from './list/listColumns';
-export { listDocumentColumnIds, listFieldsToFetch, listViewFields } from './list/listFields';
+export { buildListColumns, type BuildListColumnsArgs, type ListDoc, type ListRow } from './list/list-columns';
+export { listDocumentColumnIds, listFieldsToFetch, listViewFields } from './list/list-fields';
 export {
   formatDateCell,
   formatTimeAgo,
@@ -594,8 +598,8 @@ export {
   parseTagsField,
   parseUserListField,
   stripHtmlPreview,
-} from './list/listFormat';
-export { statusPillColors, type StatusPillColors } from './list/statusColors';
+} from './list/list-format';
+export { statusPillColors, type StatusPillColors } from './list/status-colors';
 export {
   defaultOperatorForKind,
   DESK_OPERATOR_LABELS,
@@ -616,4 +620,4 @@ export {
   type FilterFieldDescriptor,
   type FilterFieldKind,
   type FilterRowDraft,
-} from './filterFields';
+} from './filter-fields';

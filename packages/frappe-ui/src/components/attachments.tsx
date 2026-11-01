@@ -7,7 +7,7 @@ import { YStack } from 'tamagui';
 
 import { useFrappeConfig } from '../FrappeProvider';
 import { FrappeReconnectIndicator } from '../FrappeReconnectIndicator';
-import { toLiveLoadError } from '../liveErrors';
+import { toLiveLoadError } from '../live-errors';
 
 export interface FrappeFile {
   name: string;
@@ -31,17 +31,15 @@ export interface FrappeAttachmentsProps extends Omit<AttachmentsProps, 'items'> 
   fieldname?: string;
 }
 
-function frappeFileToItem(file: FrappeFile): AttachmentItem {
-  return {
-    id: file.name,
-    fileName: file.file_name,
-    fileUrl: file.file_url,
-    fileSize: file.file_size,
-    fileType: file.file_type,
-  };
-}
+const frappeFileToItem = (file: FrappeFile): AttachmentItem => ({
+  id: file.name,
+  fileName: file.file_name,
+  fileUrl: file.file_url,
+  fileSize: file.file_size,
+  fileType: file.file_type,
+});
 
-function AttachmentsBody({ doctype, docname, fieldname, onRetry, ...props }: FrappeAttachmentsProps) {
+const AttachmentsBody = ({ doctype, docname, fieldname, onRetry, ...props }: FrappeAttachmentsProps) => {
   const config = useFrappeConfig();
   const { t } = useTranslation();
   // Honest error state (DG-ST-01 / Axiom 6): the collection swallows failed
@@ -59,7 +57,7 @@ function AttachmentsBody({ doctype, docname, fieldname, onRetry, ...props }: Fra
       ['attached_to_doctype', '=', doctype],
       ['attached_to_name', '=', docname],
     ];
-    if (fieldname) {
+    if (fieldname !== undefined && fieldname !== '') {
       base.push(['attached_to_field', '=', fieldname]);
     }
     return base;
@@ -102,6 +100,7 @@ function AttachmentsBody({ doctype, docname, fieldname, onRetry, ...props }: Fra
 
   const { data, isLoading } = useLiveQuery((q) => (collection ? q.from({ _list: collection }) : null), [collection]);
 
+  // SAFETY: the query selects whole rows of the File Collection<FrappeFile>, so each row is a FrappeFile.
   const items = useMemo(() => ((data as FrappeFile[] | undefined) ?? []).map(frappeFileToItem), [data]);
 
   const loadError =
@@ -127,9 +126,9 @@ function AttachmentsBody({ doctype, docname, fieldname, onRetry, ...props }: Fra
       />
     </YStack>
   );
-}
+};
 
-export function Attachments(props: FrappeAttachmentsProps) {
+export const Attachments = (props: FrappeAttachmentsProps) => {
   // Retry re-creates the File collection (fresh initial sync) by remounting
   // the body — useFrappeCollection has no refetch surface of its own.
   const [retryNonce, setRetryNonce] = useState(0);
@@ -143,4 +142,4 @@ export function Attachments(props: FrappeAttachmentsProps) {
       {...props}
     />
   );
-}
+};

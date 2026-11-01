@@ -19,8 +19,8 @@ import {
 import type { ChartDatum } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
-import { childBars } from './recordData';
-import type { FrappeRecordBarsSection } from './recordSections';
+import { childBars } from './record-data';
+import type { FrappeRecordBarsSection } from './record-sections';
 
 const chartHeight = 220;
 const chartTicks = 4;
@@ -31,7 +31,7 @@ const chartTicks = 4;
  * which makes two records' bars incomparable. `nice: false` keeps the
  * ceiling exactly `max`.
  */
-function FixedScaleBars({
+const FixedScaleBars = ({
   data,
   max,
   label,
@@ -41,7 +41,7 @@ function FixedScaleBars({
   max: number;
   label: string;
   testID?: string;
-}) {
+}) => {
   const { palette, labelFontSize } = useChartTheme();
   const fills = data.map(() => palette.single);
   const domain: [number, number] = [0, max];
@@ -100,21 +100,22 @@ function FixedScaleBars({
       }}
     </ChartSurface>
   );
-}
+};
 
 /**
  * A child table's numbers as bars on one shared scale: the sum above, the
  * chart, then each exact value in a chip (the axis only approximates).
  */
-export function RecordBars({
+export const RecordBars = ({
   rows,
   section,
   testID,
 }: {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- child-table rows are DocType-defined; fields are only known from the section config
   rows: readonly Record<string, unknown>[];
   section: FrappeRecordBarsSection;
   testID?: string;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { knobProps: nested } = useResolvedKnobs({ compact: true });
@@ -154,7 +155,7 @@ export function RecordBars({
             {total}
           </Text>
         </YStack>
-        {section.description ? (
+        {section.description !== undefined && section.description !== '' ? (
           <Text
             {...nested.label}
             color="$color10"
@@ -206,4 +207,4 @@ export function RecordBars({
       </XStack>
     </YStack>
   );
-}
+};

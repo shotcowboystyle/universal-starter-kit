@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField, getFieldComponent, initDefaultRegistry } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField, getFieldComponent, initDefaultRegistry } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Icon } from '.';
 import type { IconProps } from '.';
@@ -35,7 +35,7 @@ export default {
   },
 };
 
-function ControlledIcon(props: Omit<IconProps, 'onChange'>) {
+const ControlledIcon = (props: Omit<IconProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Icon
@@ -47,7 +47,7 @@ function ControlledIcon(props: Omit<IconProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 export const Default = (args: IconProps) => <ControlledIcon {...args} />;
 Default.args = {
@@ -118,11 +118,12 @@ export const ViaRegistry = () => {
     <YStack
       gap="$4"
       width={400}>
+      {/* oxlint-disable-next-line react/static-components -- resolved from the module-level field registry, not created during render */}
       <RegisteredIcon
         label="Workspace icon (through the registry)"
         value={value}
-        onChange={(v: unknown) => {
-          setValue(String(v ?? ''));
+        onChange={(v: string) => {
+          setValue(v);
           action('onChange')(v);
         }}
       />

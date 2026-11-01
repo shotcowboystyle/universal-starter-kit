@@ -11,7 +11,7 @@ export interface FrappeNotConfiguredProps {
  * What a doctype's list or form shows when neither a bench URL nor a fixture
  * corpus is configured (a host built with Frappe off), in place of the view.
  */
-export function FrappeNotConfigured({ doctype, page = false }: FrappeNotConfiguredProps) {
+export const FrappeNotConfigured = ({ doctype, page = false }: FrappeNotConfiguredProps) => {
   const { t } = useTranslation();
   const state = (
     <EmptyState
@@ -35,4 +35,4 @@ export function FrappeNotConfigured({ doctype, page = false }: FrappeNotConfigur
       {state}
     </ListPageLayout>
   );
-}
+};

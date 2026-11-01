@@ -35,10 +35,34 @@ interface RailChipProps {
   onPress: () => void;
   onFocusChip: () => void;
   onBlurChip: () => void;
-  onMove: (direction: -1 | 1 | 'home' | 'end') => void;
+  onMove: (direction: ChipMove) => void;
   testID?: string;
-  register: (node: { focus?: () => void } | null) => void;
+  register: (node: ChipNode | null) => void;
 }
+
+/** Where an arrow/Home/End key moves the rail's selection. */
+type ChipMove = -1 | 1 | 'home' | 'end';
+
+/** The focusable host behind a chip (a DOM element on web). */
+interface ChipNode {
+  focus?: () => void;
+  scrollIntoView?: (options: ScrollIntoViewOptions) => void;
+}
+
+const chipKeys = new Map<string, ChipMove>([
+  ['ArrowRight', 1],
+  ['ArrowLeft', -1],
+  ['Home', 'home'],
+  ['End', 'end'],
+]);
+
+/** `$<hue><step>` from the chip's tint ramp, or the neutral `$color<step>`. */
+const rampToken = (hue: string | undefined, step: number): string =>
+  hue !== undefined && hue !== '' ? `$${hue}${step}` : `$color${step}`;
+
+// SAFETY: every caller passes a `$<ramp><step>` theme color token, which Tamagui resolves at runtime; its color props only type the literal token union.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+const colorToken = (token: string) => token as never;
 
 // Chips paint a notch under the ~40px toolbar controls; hitSlop restores the
 // 44px press target (DG-LAY-04, ViewSwitcher precedent).
@@ -51,7 +75,7 @@ const pipSize = '$1';
  * (DF-04 pairing: tint fill, step-12 text), so selected is fill, never a
  * sibling border (LC-71). An unselected tinted chip carries a hue pip.
  */
-function RailChip({
+const RailChip = ({
   option,
   selected,
   tabStop,
@@ -61,28 +85,23 @@ function RailChip({
   onMove,
   testID,
   register,
-}: RailChipProps) {
+}: RailChipProps) => {
   const { knobProps } = useResolvedKnobs();
   const [kbFocus, setKbFocus] = useState(false);
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
   const hue = option.tint;
-  const fill = selected ? (hue ? `$${hue}5` : '$color5') : hue ? `$${hue}3` : '$color3';
-  const hoverFill = selected ? fill : hue ? `$${hue}4` : '$color4';
-  const textColor = selected ? (hue ? `$${hue}12` : '$color12') : hue ? `$${hue}11` : '$color11';
-  const keys: Record<string, -1 | 1 | 'home' | 'end'> = {
-    ArrowRight: 1,
-    ArrowLeft: -1,
-    Home: 'home',
-    End: 'end',
-  };
+  const hasHue = hue !== undefined && hue !== '';
+  const fill = colorToken(rampToken(hue, selected ? 5 : 3));
+  const hoverFill = selected ? fill : colorToken(rampToken(hue, 4));
+  const textColor = colorToken(rampToken(hue, selected ? 12 : 11));
 
   return (
     <XStack
       ref={register}
       {...knobProps.borderRadius}
-      backgroundColor={fill as never}
+      backgroundColor={fill}
       borderWidth={0}
       paddingHorizontal="$3"
       minHeight={chipVisualHeight}
@@ -90,14 +109,15 @@ function RailChip({
       alignItems="center"
       gap="$1.5"
       cursor="pointer"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the chip is a cross-platform Tamagui stack (no <input> on native); role, aria-checked and the arrow/Enter/Space handlers give radio semantics
       role="radio"
       aria-checked={selected}
       {...(isWeb ? { tabIndex: tabStop ? 0 : -1 } : undefined)}
       {...transitionProps(knobProps.transition)}
-      hoverStyle={{ backgroundColor: hoverFill as never }}
-      pressStyle={{ backgroundColor: fill as never }}
+      hoverStyle={{ backgroundColor: hoverFill }}
+      pressStyle={{ backgroundColor: fill }}
       outlineWidth={0}
-      focusStyle={{ outlineWidth: 0, backgroundColor: fill as never }}
+      focusStyle={{ outlineWidth: 0, backgroundColor: fill }}
       focusVisibleStyle={{ outlineWidth: 0 }}
       {...(isWeb
         ? {
@@ -112,7 +132,7 @@ function RailChip({
               setKbFocus(false);
             },
             onKeyDown: (event: { key?: string; preventDefault?: () => void }) => {
-              const direction = event.key ? keys[event.key] : undefined;
+              const direction = event.key === undefined ? undefined : chipKeys.get(event.key);
               if (direction !== undefined) {
                 event.preventDefault?.();
                 onMove(direction);
@@ -128,37 +148,37 @@ function RailChip({
       {...(kbFocus ? keyboardFocusRingProps : undefined)}
       onPress={onPress}
       testID={testID}>
-      {hue ? (
+      {hasHue ? (
         <XStack
           width={pipSize}
           height={pipSize}
           borderRadius={1000}
-          backgroundColor={`$${hue}9` as never}
+          backgroundColor={colorToken(`$${hue}9`)}
           flexShrink={0}
         />
       ) : null}
       <Text
         {...knobProps.label}
         fontWeight={selected ? '700' : '500'}
-        color={textColor as never}
+        color={textColor}
         textTransform="capitalize"
         userSelect="none">
         {option.label}
       </Text>
-      {typeof option.count === 'number' ? (
+      {option.count === undefined ? null : (
         <Text
           {...knobProps.label}
           fontSize="$1"
           fontWeight="700"
-          color={textColor as never}
+          color={textColor}
           opacity={0.7}
           userSelect="none">
           {option.count}
         </Text>
-      ) : null}
+      )}
     </XStack>
   );
-}
+};
 
 /**
  * A single-select facet as a horizontally scrolling chip rail. One tap
@@ -167,8 +187,8 @@ function RailChip({
  * chip paints the only ring (LC-71). Scrolls on narrow viewports instead of
  * wrapping into a wall of chips.
  */
-export function FacetRail({ label, value, options, onChange, testID }: FacetRailProps) {
-  const itemRefs = useRef<Record<string, { focus?: () => void } | null>>({});
+export const FacetRail = ({ label, value, options, onChange, testID }: FacetRailProps) => {
+  const itemRefs = useRef<Record<string, ChipNode | null>>({});
   const [focusValue, setFocusValue] = useState<string | null>(null);
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -183,15 +203,13 @@ export function FacetRail({ label, value, options, onChange, testID }: FacetRail
       return;
     }
     requestAnimationFrame(() => {
-      const node = itemRefs.current[next] as
-        | ({ focus?: () => void } & { scrollIntoView?: (options: object) => void })
-        | null;
+      const node = itemRefs.current[next];
       node?.focus?.();
       node?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
     });
   };
 
-  const moveFrom = (from: string, direction: -1 | 1 | 'home' | 'end') => {
+  const moveFrom = (from: string, direction: ChipMove) => {
     if (options.length === 0) {
       return;
     }
@@ -200,7 +218,10 @@ export function FacetRail({ label, value, options, onChange, testID }: FacetRail
       return;
     }
     if (direction === 'end') {
-      focusAndSelect(options.at(-1)!.value);
+      const last = options.at(-1);
+      if (last) {
+        focusAndSelect(last.value);
+      }
       return;
     }
     const index = Math.max(
@@ -241,7 +262,7 @@ export function FacetRail({ label, value, options, onChange, testID }: FacetRail
             onMove={(direction) => {
               moveFrom(option.value, direction);
             }}
-            testID={testID ? `${testID}-${option.value || 'all'}` : undefined}
+            testID={testID !== undefined && testID !== '' ? `${testID}-${option.value || 'all'}` : undefined}
             register={(node) => {
               itemRefs.current[option.value] = node;
             }}
@@ -250,4 +271,4 @@ export function FacetRail({ label, value, options, onChange, testID }: FacetRail
       </XStack>
     </ScrollView>
   );
-}
+};

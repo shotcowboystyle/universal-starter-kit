@@ -23,6 +23,8 @@ export default {
 };
 
 const MOCK_HOST = 'https://deskformsidebar.mock.test';
+const JANE = 'jane@example.com';
+const SAM = 'sam@example.com';
 
 /**
  * The document image is an inline data: URI, not "/files/todo.png".
@@ -40,43 +42,37 @@ const storyImage = `data:image/svg+xml;utf8,${encodeURIComponent(
     'stroke-linecap="round" stroke-linejoin="round"/></svg>',
 )}`;
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock payload
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
-function todoMeta(name: string) {
-  return {
-    name,
-    module: 'Desk',
-    title_field: 'description',
-    image_field: 'image',
-    fields: [
-      { fieldname: 'description', fieldtype: 'Data', label: 'Description', required: 1 },
-      { fieldname: 'status', fieldtype: 'Select', label: 'Status' },
-      { fieldname: 'image', fieldtype: 'Attach Image', label: 'Image' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1 }],
-  };
-}
+const todoMeta = (name: string) => ({
+  name,
+  module: 'Desk',
+  title_field: 'description',
+  image_field: 'image',
+  fields: [
+    { fieldname: 'description', fieldtype: 'Data', label: 'Description', required: 1 },
+    { fieldname: 'status', fieldtype: 'Select', label: 'Status' },
+    { fieldname: 'image', fieldtype: 'Attach Image', label: 'Image' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1 }],
+});
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__deskFormSidebarMockFetch) {
+  // Install once per page: a window flag survives story re-renders and HMR.
+  if (Object.hasOwn(window, '__deskFormSidebarMockFetch')) {
     return;
   }
-  w.__deskFormSidebarMockFetch = true;
+  Reflect.set(window, '__deskFormSidebarMockFetch', true);
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = input instanceof Request ? input.url : input.toString();
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: todoMeta(decodeURIComponent(metaMatch[1])) });
       }
@@ -92,11 +88,11 @@ const todoDocs = [
     doctype: 'Todo',
     description: 'Review the quarterly report',
     status: 'Working',
-    owner: 'jane@example.com',
+    owner: JANE,
     modified_by: 'john@example.com',
     creation: '2026-02-01',
     image: storyImage,
-    _assign: JSON.stringify(['jane@example.com']),
+    _assign: JSON.stringify([JANE]),
   },
 ];
 
@@ -104,7 +100,7 @@ const shareDocs = [
   {
     name: 'SHARE-001',
     doctype: 'DocShare',
-    user: 'sam@example.com',
+    user: SAM,
     everyone: 0,
     read: 1,
     write: 1,
@@ -118,20 +114,19 @@ const assignmentDocs = [
   {
     name: 'TODO-ASSIGN-001',
     doctype: 'ToDo',
-    allocated_to: 'jane@example.com',
+    allocated_to: JANE,
     status: 'Open',
     reference_type: 'Todo',
     reference_name: 'TODO-001',
   },
 ];
 
-function makeFixtures() {
-  return new InMemoryFixtureProvider({
+const makeFixtures = () =>
+  new InMemoryFixtureProvider({
     Todo: todoDocs,
     DocShare: shareDocs,
     ToDo: assignmentDocs,
   });
-}
 
 /**
  * Same doc, nothing hanging off it: no `_assign` mirror, no DocShare row, no
@@ -144,19 +139,18 @@ const bareTodoDocs = [
     doctype: 'Todo',
     description: 'File the expense report',
     status: 'Open',
-    owner: 'sam@example.com',
-    modified_by: 'sam@example.com',
+    owner: SAM,
+    modified_by: SAM,
     creation: '2026-02-03',
   },
 ];
 
-function makeBareFixtures() {
-  return new InMemoryFixtureProvider({
+const makeBareFixtures = () =>
+  new InMemoryFixtureProvider({
     Todo: bareTodoDocs,
     DocShare: [],
     ToDo: [],
   });
-}
 
 export const Default = () => (
   <FrappeProvider

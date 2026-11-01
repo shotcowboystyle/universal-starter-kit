@@ -2,8 +2,8 @@ import { DataTable } from '@repo/table';
 import type { DataTableColumn } from '@repo/table';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Html } from '.';
 import type { HtmlProps } from '.';
@@ -26,6 +26,7 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = HtmlProps & Record<string, unknown>;
 
 export const Main = (args: StoryProps) => <Html {...(args as any)} />;
@@ -109,21 +110,19 @@ const htmlCellColumns: DataTableColumn<HtmlCellRow>[] = [
   } as DataTableColumn<HtmlCellRow>,
 ];
 
-function InTableStory() {
-  return (
-    <YStack
-      width="100%"
-      height={280}>
-      <DataTable
-        data={htmlCellRows}
-        columns={htmlCellColumns as DataTableColumn<Record<string, any>>[]}
-        enablePagination={false}
-        readOnly
-        aria-label="HTML read-only cell table"
-      />
-    </YStack>
-  );
-}
+const InTableStory = () => (
+  <YStack
+    width="100%"
+    height={280}>
+    <DataTable
+      data={htmlCellRows}
+      columns={htmlCellColumns}
+      enablePagination={false}
+      readOnly
+      aria-label="HTML read-only cell table"
+    />
+  </YStack>
+);
 
 /**
  * HTML is TABLE_LAYOUT — never an editable child-table column. fieldtypeToTableField

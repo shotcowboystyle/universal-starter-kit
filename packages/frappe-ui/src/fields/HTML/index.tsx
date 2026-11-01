@@ -43,17 +43,18 @@ const FORBIDDEN_TAGS = new Set([
 
 const URI_ATTRS = new Set(['href', 'src', 'xlink:href', 'formaction', 'action', 'poster', 'cite']);
 
-function isDangerousUri(value: string): boolean {
-  const trimmed = value.trim().replaceAll(/[\u0000-\u001F\u007F]/g, '');
-  return /^(?:javascript|vbscript|data\s*:\s*text\/html)/i.test(trimmed);
-}
+const isDangerousUri = (value: string): boolean => {
+  // oxlint-disable-next-line eslint/no-control-regex -- strips control characters browsers ignore inside a URI scheme (java\tscript:)
+  const trimmed = value.trim().replaceAll(/[\u0000-\u001F\u007F]/gu, '');
+  return /^(?:javascript|vbscript|data\s*:\s*text\/html)/iu.test(trimmed);
+};
 
 /**
  * Sanitize HTML for safe display: drop executable tags, event-handler
  * attributes, and javascript:/vbscript: URLs. Prefer DOMParser when available;
  * fall back to regex stripping in non-DOM environments.
  */
-export function sanitizeHtml(html: string): string {
+export const sanitizeHtml = (html: string): string => {
   if (!html) {
     return '';
   }
@@ -70,12 +71,15 @@ export function sanitizeHtml(html: string): string {
         const children = [...node.childNodes];
         for (const child of children) {
           if (child.nodeType === 1) {
+            // SAFETY: nodeType 1 is ELEMENT_NODE, so this child is an Element
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
             const el = child as Element;
             const tag = el.tagName.toLowerCase();
             if (FORBIDDEN_TAGS.has(tag)) {
               el.remove();
               continue;
             }
+            // oxlint-disable-next-line unicorn/no-useless-spread -- el.attributes is live; the copy keeps iteration stable while attributes are removed
             for (const attr of [...el.attributes]) {
               const name = attr.name.toLowerCase();
               if (name.startsWith('on') || name === 'srcdoc') {
@@ -88,38 +92,46 @@ export function sanitizeHtml(html: string): string {
             }
             walk(el);
           } else if (child.nodeType === 8) {
-            child.parentNode?.removeChild(child);
+            child.remove();
           }
         }
       };
 
       walk(root);
+      // oxlint-disable-next-line github/no-inner-html -- reads back the serialized, already-sanitized tree; nothing is assigned
       return root.innerHTML;
     } catch {
       // fall through to regex path
     }
   }
 
-  return html
-    .replaceAll(/<!--[\s\S]*?-->/g, '')
-    .replaceAll(/<\/?(?:script|style|iframe|object|embed|link|meta|base|form|svg|math|template)\b[^>]*>/gi, '')
-    .replaceAll(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replaceAll(/\s+srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replaceAll(
-      /\s+(href|src|xlink:href|formaction|action|poster|cite)\s*=\s*(['"])\s*(?:javascript|vbscript|data\s*:\s*text\/html)[^'"]*\2/gi,
-      '',
-    );
-}
+  return (
+    html
+      .replaceAll(/<!--[\s\S]*?-->/gu, '')
+      .replaceAll(/<\/?(?:script|style|iframe|object|embed|link|meta|base|form|svg|math|template)\b[^>]*>/giu, '')
+      // oxlint-disable-next-line sonarjs/super-linear-regex -- fallback for non-DOM runtimes only, over one field's HTML value
+      .replaceAll(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/giu, '')
+      // oxlint-disable-next-line sonarjs/super-linear-regex -- fallback for non-DOM runtimes only, over one field's HTML value
+      .replaceAll(/\s+srcdoc\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/giu, '')
+      .replaceAll(
+        // oxlint-disable-next-line sonarjs/super-linear-regex -- fallback for non-DOM runtimes only, over one field's HTML value
+        /\s+(?:href|src|xlink:href|formaction|action|poster|cite)\s*=\s*(?<quote>['"])\s*(?:javascript|vbscript|data\s*:\s*text\/html)[^'"]*\k<quote>/giu,
+        '',
+      )
+  );
+};
 
-function HtmlContent({ html }: { html: string }) {
+const HtmlContent = ({ html }: { html: string }) => {
   // Sanitized HTML only — inherit body metrics/color from the card (no 14px).
   const webProps = {
     dangerouslySetInnerHTML: { __html: html },
   };
+  // SAFETY: tamagui's web View forwards dangerouslySetInnerHTML to the DOM node; its prop types just don't declare it
+  // oxlint-disable-next-line anti-slop/no-known-value-widening, anti-slop/no-unsafe-dictionary-type -- see SAFETY above
   return <View {...(webProps as Record<string, unknown>)} />;
-}
+};
 
-export function Html({
+export const Html = ({
   label,
   value = '',
   error,
@@ -130,7 +142,7 @@ export function Html({
   skeleton = false,
   compact = false,
   ...stackProps
-}: HtmlProps) {
+}: HtmlProps) => {
   const { knobProps } = useResolvedKnobs();
   const sanitizedHtml = useMemo(() => sanitizeHtml(value), [value]);
 
@@ -176,4 +188,4 @@ export function Html({
       </FieldLayout>
     </YStack>
   );
-}
+};

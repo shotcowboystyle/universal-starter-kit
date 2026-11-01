@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Signature } from '.';
 import type { SignatureProps } from '.';
@@ -30,9 +30,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = SignatureProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <Signature
@@ -44,7 +45,7 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = { label: 'Signature', width: 320, height: 140 } as Partial<StoryProps>;
@@ -120,6 +121,7 @@ interface SignatureRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<SignatureRow[]>([
       { id: '1', label: 'Alpha', value: '' },

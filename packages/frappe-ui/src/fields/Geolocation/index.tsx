@@ -5,6 +5,7 @@ import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 
 export type GeolocationProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -26,23 +27,14 @@ export type GeolocationProps<
     compact?: boolean;
   };
 
-export function Geolocation<
+export const Geolocation = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- mirrors the TParentData constraint of FormFieldProps/FieldComponentProps
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: GeolocationProps<TData, TName>) {
-  const {
-    defaultValue,
-    form,
-    mode: _mode,
-    name,
-    onBlur,
-    onChange,
-    preserveValue: _preserveValue,
-    validators,
-    disabled,
-    value,
-    ...fieldProps
-  } = useProps(props);
+>(
+  props: GeolocationProps<TData, TName>,
+) => {
+  const { defaultValue, form, name, onBlur, onChange, validators, disabled, value, ...fieldProps } = useProps(props);
 
   return (
     <FormsGeolocation
@@ -67,4 +59,4 @@ export function Geolocation<
       locationIcon={<NavigationArrowIcon size={16} />}
     />
   );
-}
+};

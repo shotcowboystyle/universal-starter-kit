@@ -21,10 +21,11 @@ import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
 import type { YStackProps } from 'tamagui';
 
+import { useFrappeUsers } from './frappe-users';
+import type { FrappeUserDisplay } from './frappe-users';
 import { useFrappeConfig } from './FrappeProvider';
 import { FrappeReconnectIndicator } from './FrappeReconnectIndicator';
-import { useFrappeUsers } from './frappeUsers';
-import { toLiveLoadError } from './liveErrors';
+import { toLiveLoadError } from './live-errors';
 
 const LikedByAvatarSlot = styled(XStack, { name: 'LikedByAvatarSlot' });
 
@@ -36,16 +37,19 @@ const LikedByAvatarSlot = styled(XStack, { name: 'LikedByAvatarSlot' });
  * Parses the raw `_liked_by` value (JSON string on the wire, occasionally
  * already an array) into a clean user-id list. Malformed data → [].
  */
-export function parseLikedBy(raw: unknown): string[] {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the boundary parser for the raw `_liked_by` column
+export const parseLikedBy = (raw: unknown): string[] => {
   if (raw === null || raw === undefined) {
     return [];
   }
   let value = raw;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the column arrives as a JSON string or an already-parsed array
   if (typeof value === 'string') {
     if (!value.trim()) {
       return [];
     }
     try {
+      // oxlint-disable-next-line typescript/no-unsafe-assignment -- the parsed value is checked with Array.isArray below
       value = JSON.parse(value);
     } catch {
       return [];
@@ -55,18 +59,24 @@ export function parseLikedBy(raw: unknown): string[] {
     return [];
   }
   return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
-}
+};
 
 /**
  * Computes the toggled liked-by list for `user`:
  * present → removed (`add: false`), absent → appended (`add: true`).
  */
-export function toggleLikedBy(likedBy: readonly string[], user: string): { next: string[]; add: boolean } {
+/** The liked-by list after a toggle, and whether the toggle adds the user. */
+export interface LikedByToggle {
+  next: string[];
+  add: boolean;
+}
+
+export const toggleLikedBy = (likedBy: readonly string[], user: string): LikedByToggle => {
   if (likedBy.includes(user)) {
     return { next: likedBy.filter((id) => id !== user), add: false };
   }
   return { next: [...likedBy, user], add: true };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,7 +112,117 @@ export interface FrappeLikedByProps extends Omit<YStackProps, 'children' | 'name
 // Component
 // ---------------------------------------------------------------------------
 
-function FrappeLikedByBody({
+type FrappeConfigValue = ReturnType<typeof useFrappeConfig>;
+
+/** A client for the whitelisted like method; fixture corpora answer locally instead. */
+const createLikeHttp = (config: FrappeConfigValue): HttpClient | undefined => {
+  if (!config || config.baseURL === undefined || config.baseURL === '' || config.fixtures) {
+    return undefined;
+  }
+  const { baseURL } = config;
+  // SAFETY: the provider's auth block carries the token fields HttpClient's AuthConfig reads
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  return new HttpClient(baseURL, config.auth as Parameters<typeof HttpClient.prototype.updateAuth>[0]);
+};
+
+/** Resolves the session user once when the consumer did not pin one. */
+const useSessionUser = (http: HttpClient | undefined, currentUser: string | undefined): string | undefined => {
+  const [sessionUser, setSessionUser] = useState<string | undefined>();
+  useEffect(() => {
+    if ((currentUser !== undefined && currentUser !== '') || !http) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
+    }
+    let cancelled = false;
+    const resolveUser = async () => {
+      try {
+        const response = await http.get<{ message?: string }>('/api/method/frappe.auth.get_logged_user');
+        const message = response.payload?.message;
+        if (!cancelled && message !== undefined && message !== '') {
+          setSessionUser(message);
+        }
+      } catch {
+        // Anonymous / unreachable — the heart stays disabled.
+      }
+    };
+    void resolveUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser, http]);
+  return currentUser ?? sessionUser;
+};
+
+const heartColor = (liked: boolean, theme: ReturnType<typeof useTheme>): string | undefined => {
+  if (isWeb) {
+    return liked ? formCommonColors.error : 'currentColor';
+  }
+  const token = liked ? theme.red11 : theme.color;
+  // oxlint-disable-next-line typescript/no-unsafe-return -- tamagui types a theme variable's resolved value loosely; `.val` is its color string
+  return token?.val;
+};
+
+const toConnectionConfig = (config: FrappeConfigValue) =>
+  config
+    ? {
+        baseURL: config.baseURL,
+        socketPort: config.socketPort,
+        siteName: config.siteName,
+        socketBaseURL: config.socketBaseURL,
+        auth: config.auth,
+        syncOptions: config.syncOptions,
+        realtime: config.realtime,
+        fixtures: config.fixtures,
+      }
+    : undefined;
+
+/** The liked-by avatar cluster, collapsing past `visibleAvatars` into a "+N" bubble. */
+const LikedByAvatars = ({
+  users,
+  visibleAvatars,
+  overflow,
+}: {
+  users: Map<string, FrappeUserDisplay>;
+  visibleAvatars: string[];
+  overflow: number;
+}) => {
+  const { t } = useTranslation();
+  if (visibleAvatars.length === 0) {
+    return null;
+  }
+  return (
+    <XStack alignItems="center">
+      {visibleAvatars.map((id, index) => {
+        const info = users.get(id);
+        return (
+          <LikedByAvatarSlot
+            key={id}
+            marginLeft={index === 0 ? 0 : -8}
+            zIndex={index + 1}>
+            <Avatar
+              size="$1.5"
+              src={info?.image}
+              name={info?.label ?? id}
+            />
+          </LikedByAvatarSlot>
+        );
+      })}
+      {overflow > 0 ? (
+        <LikedByAvatarSlot
+          marginLeft={-8}
+          zIndex={visibleAvatars.length + 1}>
+          <Avatar
+            size="$1.5"
+            initials={`+${overflow}`}
+            alt={t('{{count}} more users', { count: overflow })}
+          />
+        </LikedByAvatarSlot>
+      ) : null}
+    </XStack>
+  );
+};
+
+const FrappeLikedByBody = ({
   doctype,
   name,
   currentUser,
@@ -112,7 +232,7 @@ function FrappeLikedByBody({
   onToggle,
   onRetry,
   ...stackProps
-}: FrappeLikedByProps & { onRetry?: () => void }) {
+}: FrappeLikedByProps & { onRetry?: () => void }) => {
   const config = useFrappeConfig();
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
@@ -128,22 +248,7 @@ function FrappeLikedByBody({
   // error chrome, never as "zero likes".
   const [syncError, setSyncError] = useState<unknown>(null);
 
-  const connectionConfig = useMemo(
-    () =>
-      config
-        ? {
-            baseURL: config.baseURL,
-            socketPort: config.socketPort,
-            siteName: config.siteName,
-            socketBaseURL: config.socketBaseURL,
-            auth: config.auth,
-            syncOptions: config.syncOptions,
-            realtime: config.realtime,
-            fixtures: config.fixtures,
-          }
-        : undefined,
-    [config],
-  );
+  const connectionConfig = useMemo(() => toConnectionConfig(config), [config]);
 
   const filters = useMemo<[string, string, unknown][]>(() => [['name', '=', name]], [name]);
 
@@ -155,7 +260,8 @@ function FrappeLikedByBody({
 
   const { data, isLoading } = useLiveQuery((q) => (collection ? q.from({ _list: collection }) : null), [collection]);
 
-  const doc = ((data as FrappeLikedDoc[] | undefined) ?? [])[0];
+  // SAFETY: the live query selects only from the FrappeLikedDoc collection
+  const [doc] = (data as FrappeLikedDoc[] | undefined) ?? [];
   const serverLikedBy = useMemo(() => parseLikedBy(doc?._liked_by), [doc?._liked_by]);
 
   // Any fresh server value supersedes the optimistic flip (it either echoes
@@ -167,46 +273,20 @@ function FrappeLikedByBody({
       return;
     }
     lastServerKeyRef.current = serverKey;
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- a fresh server value must drop the optimistic flip; the ref guard keeps it to real changes
     setOverride(null);
   }, [serverKey]);
 
   const likedBy = override ?? serverLikedBy;
 
-  const http = useMemo(
-    () =>
-      config?.baseURL && !config.fixtures
-        ? new HttpClient(config.baseURL, config.auth as Parameters<typeof HttpClient.prototype.updateAuth>[0])
-        : undefined,
-    [config],
-  );
+  const http = useMemo(() => createLikeHttp(config), [config]);
 
-  // Resolve the session user once when the consumer did not pin one.
-  const [sessionUser, setSessionUser] = useState<string | undefined>();
-  useEffect(() => {
-    if (currentUser || !http) {
-      return;
-    }
-    let cancelled = false;
-    http
-      .get<{ message?: string }>('/api/method/frappe.auth.get_logged_user')
-      .then((response) => {
-        if (!cancelled && response.payload?.message) {
-          setSessionUser(response.payload.message);
-        }
-      })
-      .catch(() => {
-        // Anonymous / unreachable — the heart stays disabled.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUser, http]);
-
-  const effectiveUser = currentUser ?? sessionUser;
-  const liked = !!effectiveUser && likedBy.includes(effectiveUser);
+  const effectiveUser = useSessionUser(http, currentUser);
+  const hasUser = effectiveUser !== undefined && effectiveUser !== '';
+  const liked = hasUser && likedBy.includes(effectiveUser);
 
   const handleToggle = useCallback(async () => {
-    if (disabled || pending || !effectiveUser) {
+    if (disabled || pending || !hasUser) {
       return;
     }
     setActionError(null);
@@ -227,9 +307,8 @@ function FrappeLikedByBody({
         onToggle?.(add, next);
       } catch {
         setActionError(t('Failed to update like'));
-      } finally {
-        setPending(false);
       }
+      setPending(false);
       return;
     }
 
@@ -249,24 +328,39 @@ function FrappeLikedByBody({
       // Honest revert: the server rejected the toggle.
       setOverride(null);
       setActionError(t('Failed to update like'));
-    } finally {
-      setPending(false);
     }
-  }, [disabled, pending, effectiveUser, likedBy, config?.fixtures, collection, http, doctype, name, onToggle, t]);
+    setPending(false);
+  }, [
+    disabled,
+    pending,
+    hasUser,
+    effectiveUser,
+    likedBy,
+    config?.fixtures,
+    collection,
+    http,
+    doctype,
+    name,
+    onToggle,
+    t,
+  ]);
 
   const users = useFrappeUsers(config, likedBy);
   const visibleAvatars = likedBy.slice(0, Math.max(0, maxAvatars));
   const overflow = likedBy.length - visibleAvatars.length;
 
-  const loadError =
-    syncError === null
-      ? null
-      : toLiveLoadError(syncError, {
-          permissionMessage: t('You do not have permission to view likes'),
-          genericMessage: t('Failed to load likes'),
-        });
+  const loadError = useMemo(
+    () =>
+      syncError === null
+        ? null
+        : toLiveLoadError(syncError, {
+            permissionMessage: t('You do not have permission to view likes'),
+            genericMessage: t('Failed to load likes'),
+          }),
+    [syncError, t],
+  );
 
-  const canToggle = !disabled && !pending && !!effectiveUser && !!collection;
+  const canToggle = !disabled && !pending && hasUser && !!collection;
 
   return (
     <YStack
@@ -289,20 +383,13 @@ function FrappeLikedByBody({
             disabled={!canToggle}
             aria-pressed={liked}
             aria-label={liked ? t('Unlike') : t('Like')}
+            // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects
             onPress={handleToggle}
             icon={
               <HeartIcon
                 size={16}
                 weight={liked ? 'fill' : 'regular'}
-                color={
-                  liked
-                    ? isWeb
-                      ? formCommonColors.error
-                      : theme.red11?.val
-                    : isWeb
-                      ? 'currentColor'
-                      : theme.color?.val
-                }
+                color={heartColor(liked, theme)}
               />
             }
           />
@@ -315,39 +402,16 @@ function FrappeLikedByBody({
               {likedBy.length}
             </Text>
           ) : null}
-          {showAvatars && visibleAvatars.length > 0 ? (
-            <XStack alignItems="center">
-              {visibleAvatars.map((id, index) => {
-                const info = users.get(id);
-                return (
-                  <LikedByAvatarSlot
-                    key={id}
-                    marginLeft={index === 0 ? 0 : -8}
-                    zIndex={index + 1}>
-                    <Avatar
-                      size="$1.5"
-                      src={info?.image}
-                      name={info?.label ?? id}
-                    />
-                  </LikedByAvatarSlot>
-                );
-              })}
-              {overflow > 0 ? (
-                <LikedByAvatarSlot
-                  marginLeft={-8}
-                  zIndex={visibleAvatars.length + 1}>
-                  <Avatar
-                    size="$1.5"
-                    initials={`+${overflow}`}
-                    alt={t('{{count}} more users', { count: overflow })}
-                  />
-                </LikedByAvatarSlot>
-              ) : null}
-            </XStack>
+          {showAvatars ? (
+            <LikedByAvatars
+              users={users}
+              visibleAvatars={visibleAvatars}
+              overflow={overflow}
+            />
           ) : null}
         </XStack>
       </AsyncBoundary>
-      {actionError ? (
+      {actionError !== null && actionError !== '' ? (
         <Text
           role="alert"
           {...knobProps.label}
@@ -357,13 +421,13 @@ function FrappeLikedByBody({
       ) : null}
     </YStack>
   );
-}
+};
 
 /**
  * Heart / like toggle with count and liked-by avatar cluster, live-synced
  * to the document's `_liked_by` field.
  */
-export function FrappeLikedBy(props: FrappeLikedByProps) {
+export const FrappeLikedBy = (props: FrappeLikedByProps) => {
   // Retry re-creates the doc collection (fresh initial sync) by remounting
   // the body — useFrappeCollection has no refetch surface of its own.
   const [retryNonce, setRetryNonce] = useState(0);
@@ -377,4 +441,4 @@ export function FrappeLikedBy(props: FrappeLikedByProps) {
       {...props}
     />
   );
-}
+};

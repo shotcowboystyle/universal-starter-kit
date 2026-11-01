@@ -52,12 +52,15 @@ interface PressLikeEvent {
   nativeEvent?: PressLikeEvent;
 }
 
-function isModifiedPress(event?: PressLikeEvent): boolean {
+const NO_BADGES: readonly RecordCardBadge[] = [];
+
+const isModifiedPress = (event?: PressLikeEvent): boolean => {
   const native = event?.nativeEvent ?? event;
-  return Boolean(
-    native && (native.metaKey || native.ctrlKey || native.shiftKey || native.altKey || (native.button ?? 0) !== 0),
-  );
-}
+  if (!native) {
+    return false;
+  }
+  return [native.metaKey, native.ctrlKey, native.shiftKey, native.altKey].includes(true) || (native.button ?? 0) !== 0;
+};
 
 /**
  * A record as a tile: the image well is the card (tinted by the record's
@@ -67,20 +70,20 @@ function isModifiedPress(event?: PressLikeEvent): boolean {
  * on the heart never follows the link; modified clicks keep the browser's
  * new-tab semantics.
  */
-export function RecordCard({
+export const RecordCard = ({
   title,
   subtitle,
   code,
   images,
   tints,
-  badges = [],
+  badges = NO_BADGES,
   href,
   onPress,
   favorite,
   lazy = false,
   testID,
   favoriteTestID,
-}: RecordCardProps) {
+}: RecordCardProps) => {
   const { t } = useTranslation();
   const { knobProps, elevation: elevationState } = useResolvedKnobs({ component: 'Card' });
   const focusRing = ensureFocusVisibleRing({ outlineOffset: -2 });
@@ -89,9 +92,14 @@ export function RecordCard({
     ensureKeyboardModalityTracking();
   }
 
+  const hasHref = href !== undefined && href !== '';
+
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- Tamagui hands a DOM MouseEvent on web and a GestureResponderEvent on native; only optional fields are probed
   const handlePress = (event: unknown) => {
+    // SAFETY: both press event shapes carry PressLikeEvent's fields optionally, and every access below is optional-chained.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     const press = event as PressLikeEvent | undefined;
-    if (href && isModifiedPress(press)) {
+    if (hasHref && isModifiedPress(press)) {
       return;
     }
     press?.preventDefault?.();
@@ -99,7 +107,10 @@ export function RecordCard({
     onPress?.();
   };
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- see handlePress: web and native press events differ in shape
   const handleToggleFavorite = (event: unknown) => {
+    // SAFETY: see handlePress; every access below is optional-chained.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     const press = event as PressLikeEvent | undefined;
     press?.preventDefault?.();
     press?.stopPropagation?.();
@@ -108,8 +119,38 @@ export function RecordCard({
     favorite?.toggle();
   };
 
-  const passThrough = href ? 'box-none' : undefined;
-  const inert = href ? 'none' : undefined;
+  const passThrough = hasHref ? 'box-none' : undefined;
+  const inert = hasHref ? 'none' : undefined;
+  const anchorRingProps = anchorKeyboardFocus ? keyboardFocusRingProps : null;
+  // A routed card is a link (the anchor paints the ring); otherwise the card itself is the button.
+  const cardPressProps = hasHref
+    ? anchorRingProps
+    : {
+        role: 'button' as const,
+        'aria-label': title,
+        onPress: handlePress,
+        focusVisibleStyle: focusRing,
+      };
+  const anchorFocusProps = isWeb
+    ? {
+        onFocus: () => {
+          if (wasKeyboardFocus()) {
+            setAnchorKeyboardFocus(true);
+          }
+        },
+        onBlur: () => {
+          setAnchorKeyboardFocus(false);
+        },
+      }
+    : undefined;
+  // Swallow the click that would otherwise reach the stretched link under the heart.
+  const heartClickCapture = isWeb
+    ? {
+        onClickCapture: (event: { preventDefault: () => void }) => {
+          event.preventDefault();
+        },
+      }
+    : undefined;
 
   return (
     <Card
@@ -121,18 +162,11 @@ export function RecordCard({
       transition={knobProps.transition}
       hoverStyle={{ ...elevationState.hoverKnobProps }}
       pressStyle={{ ...elevationState.pressKnobProps }}
-      {...(href
-        ? anchorKeyboardFocus
-          ? keyboardFocusRingProps
-          : null
-        : {
-            role: 'button',
-            'aria-label': title,
-            onPress: handlePress,
-            focusVisibleStyle: focusRing,
-          })}>
-      {href ? (
+      {...cardPressProps}>
+      {hasHref ? (
         <Anchor
+          // SAFETY: href is a plain URL string; the Anchor's href prop is typed to the router's narrower Href union.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
           href={href as never}
           position="absolute"
           top={0}
@@ -144,18 +178,7 @@ export function RecordCard({
           outlineWidth={0}
           aria-label={title}
           onPress={handlePress}
-          {...(isWeb
-            ? {
-                onFocus: () => {
-                  if (wasKeyboardFocus()) {
-                    setAnchorKeyboardFocus(true);
-                  }
-                },
-                onBlur: () => {
-                  setAnchorKeyboardFocus(false);
-                },
-              }
-            : undefined)}
+          {...anchorFocusProps}
         />
       ) : null}
       <YStack
@@ -173,7 +196,7 @@ export function RecordCard({
             lazy={lazy}
             pointerEvents={inert}
           />
-          {code ? (
+          {code !== undefined && code !== '' ? (
             <XStack
               position="absolute"
               top="$2"
@@ -201,13 +224,7 @@ export function RecordCard({
               right="$1"
               zIndex={2}
               pointerEvents="auto"
-              {...(isWeb
-                ? {
-                    onClickCapture: (event: { preventDefault: () => void }) => {
-                      event.preventDefault();
-                    },
-                  }
-                : undefined)}>
+              {...heartClickCapture}>
               <Button
                 size="$3"
                 circular
@@ -221,6 +238,8 @@ export function RecordCard({
                 onPress={handleToggleFavorite}
                 render="button"
                 type="button"
+                // SAFETY: both values are theme color tokens; the house Button's `col` prop is typed narrower than Tamagui's color token union.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
                 col={(favorite.active ? '$red9' : '$color11') as never}
                 icon={
                   <HeartIcon
@@ -281,4 +300,4 @@ export function RecordCard({
       </YStack>
     </Card>
   );
-}
+};

@@ -5,12 +5,16 @@
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { TextArea } from '@repo/forms';
 import type { DeepKeys } from '@tanstack/form-core';
+import type { ComponentProps } from 'react';
 import { useProps } from 'tamagui';
 
-export type LongTextProps<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
-> = Omit<
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+type FieldData = Record<string, unknown>;
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms TextArea
+type PassThroughProps = Record<string, unknown>;
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+export type LongTextProps<TData extends FieldData = FieldData, TName extends string = string> = Omit<
   FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown, unknown, string>,
   'children' | 'field'
 > &
@@ -29,22 +33,20 @@ export type LongTextProps<
     compact?: boolean;
     maxLength?: number;
     minHeight?: number;
-    textAreaProps?: Record<string, unknown>;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque pass-through bag forwarded verbatim to the forms TextArea
+    textAreaProps?: PassThroughProps;
   };
 
-export function LongText<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TName extends string = string,
->(props: LongTextProps<TData, TName>) {
+export const LongText = <TData extends FieldData = FieldData, TName extends string = string>(
+  props: LongTextProps<TData, TName>,
+) => {
   const {
     defaultValue,
     form,
-    _mode,
     name,
     onBlur,
     onChange,
     placeholder,
-    _preserveValue,
     validators,
     disabled,
     value,
@@ -52,9 +54,9 @@ export function LongText<
     minHeight,
     textAreaProps,
     ...fieldProps
-  } = useProps(props) as LongTextProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
 
-  const minRows = typeof minHeight === 'number' && minHeight > 0 ? Math.max(4, Math.round(minHeight / 24)) : 6;
+  const minRows = minHeight !== undefined && minHeight > 0 ? Math.max(4, Math.round(minHeight / 24)) : 6;
 
   return (
     <TextArea
@@ -73,14 +75,16 @@ export function LongText<
       id={fieldProps.id}
       size={fieldProps.size}
       value={value}
-      onChangeText={onChange}
+      onChange={onChange}
       onBlur={onBlur}
       placeholder={placeholder}
       disabled={disabled}
       maxLength={maxLength}
       minRows={minRows}
       maxRows={16}
-      textAreaProps={textAreaProps as any}
+      // SAFETY: textAreaProps is the consumer's pass-through bag, forwarded to TextArea unchanged as before
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      textAreaProps={textAreaProps as ComponentProps<typeof TextArea>['textAreaProps']}
     />
   );
-}
+};

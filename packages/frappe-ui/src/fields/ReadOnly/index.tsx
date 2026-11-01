@@ -26,9 +26,13 @@ export type ReadOnlyType =
   | 'SmallText'
   | 'LongText';
 
+type ReadOnlyValue = string | number | boolean | null;
+
+type NumericReadOnlyType = 'Int' | 'Float' | 'Currency' | 'Percent';
+
 export interface ReadOnlyProps extends Omit<YStackProps, 'children'> {
   label?: string;
-  value?: string | number | boolean | null;
+  value?: ReadOnlyValue;
   type?: ReadOnlyType;
   currencySymbol?: string;
   precision?: number;
@@ -50,20 +54,15 @@ export interface ReadOnlyProps extends Omit<YStackProps, 'children'> {
  * datetime, instead of the wire string passing straight through in one
  * branch and an en-GB conversion in the other.
  */
-function formatTime(value: string, _format?: string): string {
+const formatTime = (value: string, _format?: string): string => {
   if (!value) {
     return '';
   }
   return formatTimeOfDay(value);
-}
+};
 
-function formatNumeric(
-  value: number | undefined | null,
-  type: 'Int' | 'Float' | 'Currency' | 'Percent',
-  precision: number,
-  currencySymbol: string,
-): string {
-  if (value === undefined || value === null || Number.isNaN(value)) {
+const formatNumeric = (value: number, type: NumericReadOnlyType, precision: number, currencySymbol: string): string => {
+  if (Number.isNaN(value)) {
     return '';
   }
   switch (type) {
@@ -85,56 +84,57 @@ function formatNumeric(
       return value.toString();
     }
   }
+};
+
+interface FormatOptions {
+  currencySymbol: string;
+  precision: number;
+  dateFormat?: string;
+  datetimeFormat?: string;
+  timeFormat?: string;
 }
 
-function formatValue(
-  value: string | number | boolean | null | undefined,
-  type: ReadOnlyType,
-  options: {
-    currencySymbol: string;
-    precision: number;
-    dateFormat?: string;
-    datetimeFormat?: string;
-    timeFormat?: string;
-  },
-): string {
+const NUMERIC_TYPES: ReadonlySet<ReadOnlyType> = new Set<NumericReadOnlyType>(['Int', 'Float', 'Currency', 'Percent']);
+
+const isNumericType = (type: ReadOnlyType): type is NumericReadOnlyType => NUMERIC_TYPES.has(type);
+
+const formatText = (text: string, type: ReadOnlyType, options: FormatOptions): string => {
+  if (type === 'Date') {
+    return text === '' ? '' : formatDateText(text, { dateFormat: options.dateFormat });
+  }
+  if (type === 'Datetime') {
+    return text === '' ? '' : formatDateText(text, { withTime: true, dateFormat: options.datetimeFormat });
+  }
+  if (type === 'Time') {
+    return formatTime(text, options.timeFormat);
+  }
+  if (type === 'Color') {
+    return text.toUpperCase();
+  }
+  return text;
+};
+
+const formatValue = (value: ReadOnlyValue | undefined, type: ReadOnlyType, options: FormatOptions): string => {
   if (value === undefined || value === null) {
     return '';
   }
-  switch (type) {
-    case 'Check': {
-      return value ? 'Yes' : 'No';
-    }
-    case 'Int':
-    case 'Float':
-    case 'Currency':
-    case 'Percent': {
-      return formatNumeric(
-        typeof value === 'number' ? value : Number.parseFloat(String(value)),
-        type,
-        options.precision,
-        options.currencySymbol,
-      );
-    }
-    case 'Date': {
-      return value === '' ? '' : formatDateText(String(value), { dateFormat: options.dateFormat });
-    }
-    case 'Datetime': {
-      return value === '' ? '' : formatDateText(String(value), { withTime: true, dateFormat: options.datetimeFormat });
-    }
-    case 'Time': {
-      return formatTime(String(value), options.timeFormat);
-    }
-    case 'Color': {
-      return String(value).toUpperCase();
-    }
-    default: {
-      return String(value);
-    }
+  if (type === 'Check') {
+    const checked = Boolean(value);
+    return checked ? 'Yes' : 'No';
   }
-}
+  if (isNumericType(type)) {
+    return formatNumeric(
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof, unicorn/prefer-number-coercion -- picks the number arm of the declared value union; parseFloat keeps Frappe's lenient "12.5 kg" parse
+      typeof value === 'number' ? value : Number.parseFloat(String(value)),
+      type,
+      options.precision,
+      options.currencySymbol,
+    );
+  }
+  return formatText(String(value), type, options);
+};
 
-export function ReadOnly({
+export const ReadOnly = ({
   label,
   value,
   type = 'Data',
@@ -151,7 +151,7 @@ export function ReadOnly({
   skeleton = false,
   compact = false,
   ...stackProps
-}: ReadOnlyProps) {
+}: ReadOnlyProps) => {
   const { knobProps } = useResolvedKnobs();
   const displayValue = useMemo(() => {
     const formatted = formatValue(value, type, {
@@ -186,7 +186,7 @@ export function ReadOnly({
       return null;
     }
     const colorValue = String(value);
-    if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(colorValue)) {
+    if (!/^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/u.test(colorValue)) {
       return null;
     }
     return (
@@ -196,7 +196,7 @@ export function ReadOnly({
         {...knobProps.containerRadius}
         borderWidth={1}
         borderColor={formCommonColors.divider}
-        backgroundColor={colorValue as any}
+        backgroundColor={colorValue}
         marginInlineEnd="$2"
       />
     );
@@ -216,7 +216,8 @@ export function ReadOnly({
         </XStack>
       );
     }
-    if (type === 'Link' && (linkHref || onLinkPress) && !isEmpty) {
+    const hasLinkTarget = (linkHref !== undefined && linkHref !== '') || onLinkPress !== undefined;
+    if (type === 'Link' && hasLinkTarget && !isEmpty) {
       return (
         <Text
           {...knobProps.body}
@@ -230,6 +231,7 @@ export function ReadOnly({
       );
     }
     if (type === 'Check') {
+      const checked = Boolean(value);
       return (
         <XStack
           alignItems="center"
@@ -243,11 +245,11 @@ export function ReadOnly({
             // (LC-55 FRAGMENT-LICENSE).
             {...knobProps.containerRadius}
             borderWidth={1}
-            borderColor={value ? '$green10' : formCommonColors.divider}
-            backgroundColor={value ? '$green5' : '$color3'}
+            borderColor={checked ? '$green10' : formCommonColors.divider}
+            backgroundColor={checked ? '$green5' : '$color3'}
             alignItems="center"
             justifyContent="center">
-            {value ? (
+            {checked ? (
               <Text
                 fontSize="$1"
                 color="$green10">
@@ -299,4 +301,4 @@ export function ReadOnly({
       </FieldLayout>
     </YStack>
   );
-}
+};

@@ -21,19 +21,20 @@ export interface ShufflePanelProps<TDoc extends { name?: string }> {
 
 const pickWidth = '$12';
 
-function randomOtherIndex(current: number, length: number): number {
+const randomOtherIndex = (current: number, length: number): number => {
   if (length < 2) {
     return Math.max(0, current);
   }
+  // oxlint-disable-next-line sonarjs/pseudo-random -- a UI shuffle over list records; nothing security-sensitive depends on it
   const offset = 1 + Math.floor(Math.random() * (length - 1));
   return (Math.max(0, current) + offset) % length;
-}
+};
 
 /**
  * Pick a random record: a wheel of record labels beside the current pick.
  * Drag or flick the wheel, or Spin for a random jump, then Go opens it.
  */
-export function ShufflePanel<TDoc extends { name?: string }>({
+export const ShufflePanel = <TDoc extends { name?: string }>({
   id,
   label,
   rows,
@@ -41,16 +42,19 @@ export function ShufflePanel<TDoc extends { name?: string }>({
   renderPick,
   onGo,
   testID,
-}: ShufflePanelProps<TDoc>) {
+}: ShufflePanelProps<TDoc>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
-  const named = useMemo(() => rows.filter((row) => row.name), [rows]);
-  const items = useMemo(() => named.map((row) => ({ value: row.name!, label: itemLabel(row) })), [named, itemLabel]);
+  const named = useMemo(
+    () => rows.filter((row): row is TDoc & { name: string } => row.name !== undefined && row.name !== ''),
+    [rows],
+  );
+  const items = useMemo(() => named.map((row) => ({ value: row.name, label: itemLabel(row) })), [named, itemLabel]);
   const [selected, setSelected] = useState<string>(() => named[randomOtherIndex(0, named.length)]?.name ?? '');
   // The rows can change while the panel is open; a pick that dropped out
   // falls back to the first row.
-  const pick = named.find((row) => row.name === selected) ?? named[0];
-  if (!pick) {
+  const pick = named.find((row) => row.name === selected) ?? named.at(0);
+  if (pick === undefined) {
     return null;
   }
 
@@ -62,6 +66,7 @@ export function ShufflePanel<TDoc extends { name?: string }>({
   return (
     <XStack
       id={id}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <section> on native); the labelled role gives the landmark on web
       role="region"
       aria-label={label}
       {...knobProps.surface}
@@ -75,7 +80,7 @@ export function ShufflePanel<TDoc extends { name?: string }>({
         items={items}
         value={pick.name}
         onChange={(next) => {
-          setSelected(String(next));
+          setSelected(next);
         }}
         visibleItems={3}
         loop
@@ -94,7 +99,7 @@ export function ShufflePanel<TDoc extends { name?: string }>({
           outlined
           onPress={spin}
           icon={<ArrowCounterClockwiseIcon size={16} />}
-          testID={testID ? `${testID}-spin` : undefined}>
+          testID={testID !== undefined && testID !== '' ? `${testID}-spin` : undefined}>
           {t('Spin')}
         </Button>
         <Button
@@ -103,10 +108,10 @@ export function ShufflePanel<TDoc extends { name?: string }>({
             onGo(pick);
           }}
           iconAfter={<ArrowRightIcon size={16} />}
-          testID={testID ? `${testID}-go` : undefined}>
+          testID={testID !== undefined && testID !== '' ? `${testID}-go` : undefined}>
           {t('Go')}
         </Button>
       </XStack>
     </XStack>
   );
-}
+};

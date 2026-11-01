@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack } from 'tamagui';
 
 import { Timeline } from './components/timeline';
-import type { FieldSchema } from './fieldRegistry';
+import type { FieldSchema } from './field-registry';
 import type { HeadingLevel } from './fields/Heading';
 import {
   canDeleteDoc,
@@ -21,34 +21,47 @@ import {
   isAmendable,
   resolveDocAction,
   resolveDocIndicator,
-} from './formEngine/docLifecycle';
-import type { FormTab } from './formEngine/formLayout';
+} from './formEngine/doc-lifecycle';
+import type { FormTab } from './formEngine/form-layout';
 import { FormSidebar } from './FormSidebar';
 import type { SidebarSection, SidebarMetadataEntry } from './FormSidebar';
-import { connectionFields, connectionsFromMeta } from './frappeConnections';
-import type { FrappeConnection } from './frappeConnections';
+import { connectionFields, connectionsFromMeta } from './frappe-connections';
+import type { FrappeConnection } from './frappe-connections';
+import { frappeRouteHref, frappeRouteTarget, useFrappeRouter } from './frappe-navigation';
+import type { FrappeRouteTarget } from './frappe-navigation';
 import { FrappeFormActions } from './FrappeFormActions';
 import { FrappeFormConnections } from './FrappeFormConnections';
-import { frappeRouteHref, frappeRouteTarget, useFrappeRouter } from './frappeNavigation';
-import type { FrappeRouteTarget } from './frappeNavigation';
 import { FrappeNotConfigured } from './FrappeNotConfigured';
 import { useFrappeConfig } from './FrappeProvider';
 import { FrappeReconnectIndicator } from './FrappeReconnectIndicator';
 import { FrappeRowsReader } from './FrappeRowsReader';
 import type { FrappeRowsSnapshot } from './FrappeRowsReader';
-import { isPermissionError } from './liveErrors';
-import { fieldsFromRecord } from './recordShape';
+import { isPermissionError } from './live-errors';
+import { fieldsFromRecord } from './record-shape';
 import { SchemaForm } from './schemaForm';
 import type { FieldOverride, SchemaFormProps } from './schemaForm';
-import { useFrappeForm } from './useFrappeForm';
-import type { FrappeFormController } from './useFrappeForm';
+import { useFrappeForm } from './use-frappe-form';
+import type { FrappeFormController } from './use-frappe-form';
+import type { UseFrappeRowsOptions } from './use-frappe-rows';
 
 /** Linked rows per connection doctype, as the render prop receives them. */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a linked row carries whatever fields its doctype declares
 export type FrappeConnectionRows = Record<string, Record<string, unknown>[]>;
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a linked row carries whatever fields its doctype declares
+type ConnectionRow = Record<string, unknown> & { name: string; doctype: string };
+
+/** Live-read options for one connection's rows of record `name`. */
+const connectionReadOptions = (link: FrappeConnection, name: string): UseFrappeRowsOptions<ConnectionRow> => ({
+  fields: connectionFields(link),
+  filters: [[link.fieldname, '=', name]],
+  limit: link.limit ?? 0,
+});
 
 export interface FrappeFormProps<TDoc extends { name: string; doctype: string }> {
   baseURL?: string;
   auth?: { useToken?: boolean; token?: string; type?: string };
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- passed through untouched to the sync engine's own options
   syncOptions?: Record<string, unknown>;
   doctype: string;
   name?: string;
@@ -56,6 +69,7 @@ export interface FrappeFormProps<TDoc extends { name: string; doctype: string }>
   /** Render-prop children. When provided, schema-driven mode is bypassed. */
   children?: (props: {
     doc: Partial<TDoc>;
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a field's value type depends on its meta fieldtype
     setValue: (field: keyof TDoc, value: unknown) => void;
     isSubmitting: boolean;
     errors: Record<string, string>;
@@ -169,14 +183,14 @@ export interface FrappeFormProps<TDoc extends { name: string; doctype: string }>
  * A record's own fields as read-only schema fields, for a reader without meta
  * (LC-96).
  */
-function schemaFieldsFromRecord(doc: Record<string, unknown>): FieldSchema[] {
-  return fieldsFromRecord(doc).map((field) => ({
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- a record read without meta has no declared field types
+const schemaFieldsFromRecord = (doc: Record<string, unknown>): FieldSchema[] =>
+  fieldsFromRecord(doc).map((field) => ({
     name: field.fieldname,
     label: field.label,
     type: field.fieldtype,
     readOnly: true,
   }));
-}
 
 // ---------------------------------------------------------------------------
 // Sidebar Mappers
@@ -195,7 +209,7 @@ export interface DocShareRow {
 
 /**
  * Assignment row shape for the live "Assigned To" sidebar section: the open
- * ToDo documents referencing the form's document. Assignments must be read
+ * assignment documents referencing the form's document. Assignments must be read
  * from these rows (not the doc's `_assign` mirror) to be live — frappe
  * writes `_assign` with `update_modified=False` and no realtime event, so
  * the mirror is invisible to both the realtime channel and the CDC feed,
@@ -215,18 +229,38 @@ export interface AssignmentTodoRow {
  * A site-relative path needs a server to hang off, so it resolves to nothing
  * on a fixtures-only host (no baseURL); absolute URLs still pass through.
  */
-export function resolveFileUrl(value: unknown, baseURL: string | undefined): string | undefined {
-  if (!value || typeof value !== 'string') {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- takes a raw doc field of any fieldtype; only strings are file paths
+export const resolveFileUrl = (value: unknown, baseURL: string | undefined): string | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the field value is untyped; a non-string is never a file path
+  if (typeof value !== 'string' || value === '') {
     return undefined;
   }
   if (value.startsWith('http://') || value.startsWith('https://')) {
     return value;
   }
   if (value.startsWith('/')) {
-    return baseURL ? `${baseURL.replace(/\/$/, '')}${value}` : undefined;
+    return baseURL !== undefined && baseURL !== '' ? `${baseURL.replace(/\/$/u, '')}${value}` : undefined;
   }
   return value;
-}
+};
+
+/** A DocShare flag is granted when set to true or a non-zero number. */
+const isGranted = (flag: number | boolean | undefined): boolean => flag !== undefined && flag !== false && flag !== 0;
+
+/** A share's access sublabel: edit beats view; neither leaves it off. */
+const shareAccessLabel = (share: DocShareRow, t: TFunction): string | undefined => {
+  if (isGranted(share.write)) {
+    return t('Can edit');
+  }
+  if (isGranted(share.read)) {
+    return t('Can view');
+  }
+  return undefined;
+};
+
+/** A doc bookkeeping value worth showing: set and non-empty. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- takes raw doc bookkeeping fields, untyped in the doc record
+const isPresent = (value: unknown): boolean => value !== undefined && value !== null && value !== '';
 
 /**
  * Builds the live sidebar sections (assignments from the open assignment
@@ -238,23 +272,27 @@ export function resolveFileUrl(value: unknown, baseURL: string | undefined): str
  * When the subscription exists its rows are authoritative, even when empty
  * (the `_assign` mirror can lag behind removals).
  */
-export function buildSidebarSections(
+export const buildSidebarSections = (
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- reads only the doc's `_assign` mirror; other fields pass by
   doc: Record<string, unknown>,
   shares: DocShareRow[] | undefined,
   t: TFunction,
   assignments?: AssignmentTodoRow[],
-): SidebarSection[] {
+): SidebarSection[] => {
   const sections: SidebarSection[] = [];
 
   // Assignments section (live via the referencing assignment ToDos)
   let assignees: string[] = [];
   if (assignments) {
     assignees = assignments.map((row) => row.allocated_to).filter((user): user is string => Boolean(user));
-  } else if (doc._assign && typeof doc._assign === 'string') {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `_assign` is untyped doc data; only a string can hold the JSON list
+  } else if (typeof doc._assign === 'string' && doc._assign !== '') {
     try {
-      assignees = JSON.parse(doc._assign || '[]') as string[];
+      // SAFETY: frappe writes `_assign` as a JSON array of user ids
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      assignees = JSON.parse(doc._assign) as string[];
     } catch {
-      // ignore parse errors
+      // Safe to continue: a malformed `_assign` mirror leaves the section empty
     }
   }
   sections.push({
@@ -274,159 +312,50 @@ export function buildSidebarSections(
       title: t('Shared With'),
       items: shares.map((share) => ({
         id: share.name,
-        label: share.everyone ? t('Everyone') : (share.user ?? share.name),
-        sublabel: share.write ? t('Can edit') : share.read ? t('Can view') : undefined,
+        label: isGranted(share.everyone) ? t('Everyone') : (share.user ?? share.name),
+        sublabel: shareAccessLabel(share, t),
       })),
       emptyText: t('Not shared'),
     });
   }
 
   return sections;
-}
+};
 
 /**
  * Maps a Frappe document to generic SidebarMetadataEntry[] for FormSidebar.
  */
-export function mapDocToSidebarMetadata(doc: Record<string, unknown>, t: TFunction): SidebarMetadataEntry[] {
+export const mapDocToSidebarMetadata = (
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- reads only the bookkeeping fields every doc carries
+  doc: Record<string, unknown>,
+  t: TFunction,
+): SidebarMetadataEntry[] => {
   const metadata: SidebarMetadataEntry[] = [];
 
-  if (doc.owner) {
+  if (isPresent(doc.owner)) {
     metadata.push({ label: t('Created by {{user}}', { user: doc.owner }) });
   }
-  if (doc.modified_by) {
+  if (isPresent(doc.modified_by)) {
     metadata.push({ label: t('Modified by {{user}}', { user: doc.modified_by }) });
   }
-  if (doc.creation) {
+  if (isPresent(doc.creation)) {
     metadata.push({ label: t('Created on {{date}}', { date: doc.creation }) });
   }
 
   return metadata;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-
-/**
- * The form for a Frappe doctype, resolved from meta by the desk form engine.
- *
- * Fetches doctype metadata and the document, lays the fields out through
- * `buildFormTabs` (tabs, sections, `depends_on`, `mandatory_depends_on`,
- * `read_only_depends_on`, `collapsible_depends_on`, permlevel,
- * `set_only_once`, `fetch_from` and docstatus), and renders each tab with
- * `SchemaForm`. With a `route` it is the doctype's record page. With neither
- * a bench URL nor a fixture corpus it says Frappe is not configured.
- */
-export function FrappeForm<TDoc extends { name: string; doctype: string }>(props: FrappeFormProps<TDoc>) {
-  const config = useFrappeConfig();
-  const { route, ...formProps } = props;
-  if (!(props.baseURL ?? config?.baseURL) && !config?.fixtures) {
-    return (
-      <FrappeNotConfigured
-        doctype={props.doctype}
-        page={route !== undefined}
-      />
-    );
-  }
-  if (route === undefined) {
-    return <FrappeFormBody<TDoc> {...formProps} />;
-  }
-  return (
-    <FrappeFormRoute<TDoc>
-      {...formProps}
-      route={route}
-    />
-  );
-}
 
 type FrappeFormBodyProps<TDoc extends { name: string; doctype: string }> = Omit<FrappeFormProps<TDoc>, 'route'> & {
   /** Routed page: the detail template, with a back action to the list. */
   routePage?: { onBack: () => void };
 };
 
-function FrappeFormRoute<TDoc extends { name: string; doctype: string }>({
-  route,
-  name: nameProp,
-  onSave,
-  onCancel,
-  onDelete,
-  onEdit,
-  onAmend,
-  ...props
-}: Omit<FrappeFormProps<TDoc>, 'route'> & { route: string }) {
-  const router = useFrappeRouter();
-  const fromPath = router ? frappeRouteTarget(route, router.pathname) : undefined;
-  const target: FrappeRouteTarget = nameProp
-    ? { mode: fromPath?.mode === 'view' ? 'view' : 'edit', name: nameProp }
-    : fromPath?.mode === 'view' || fromPath?.mode === 'edit'
-      ? fromPath
-      : { mode: 'create' };
-  const go = (next: FrappeRouteTarget) => router?.navigate(frappeRouteHref(route, next));
-  const name = target.mode === 'view' || target.mode === 'edit' ? target.name : undefined;
-
-  return (
-    <FrappeFormBody<TDoc>
-      {...props}
-      // A new target is a new page: no state carries over from the last one.
-      key={`${target.mode}:${name ?? ''}`}
-      name={name}
-      routePage={{ onBack: () => go({ mode: 'list' }) }}
-      onEdit={target.mode === 'view' ? (onEdit ?? (() => go({ mode: 'edit', name: target.name }))) : undefined}
-      onSave={
-        onSave ??
-        ((doc) => {
-          const saved = doc.name ?? name;
-          go(saved ? { mode: 'view', name: saved } : { mode: 'list' });
-        })
-      }
-      onCancel={onCancel ?? (() => go(name ? { mode: 'view', name } : { mode: 'list' }))}
-      onDelete={onDelete ?? (() => go({ mode: 'list' }))}
-      onAmend={onAmend ?? (() => go({ mode: 'create' }))}
-    />
-  );
-}
-
-function FrappeFormBody<TDoc extends { name: string; doctype: string }>(props: FrappeFormBodyProps<TDoc>) {
-  if (props.form) {
-    return (
-      <FrappeFormView<TDoc>
-        {...props}
-        form={props.form}
-      />
-    );
-  }
-  return <FrappeFormOwned<TDoc> {...props} />;
-}
-
-function FrappeFormOwned<TDoc extends { name: string; doctype: string }>(props: FrappeFormBodyProps<TDoc>) {
-  const config = useFrappeConfig();
-  if (!(props.baseURL ?? config?.baseURL)) {
-    throw new Error('FrappeForm requires baseURL prop or FrappeProvider with baseURL');
-  }
-  const form = useFrappeForm<TDoc>({
-    doctype: props.doctype,
-    name: props.name,
-    baseURL: props.baseURL,
-    auth: props.auth,
-    syncOptions: props.syncOptions,
-    fields: props.fields,
-    sections: props.sections,
-    hideFields: props.hideFields,
-    hideSections: props.hideSections,
-    roles: props.roles,
-    readShares: props.showSidebar ?? true,
-    disabled: props.disabled,
-    initialDoc: props.initialDoc,
-  });
-  return (
-    <FrappeFormView<TDoc>
-      {...props}
-      form={form}
-    />
-  );
-}
-
-function FrappeFormView<TDoc extends { name: string; doctype: string }>({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component, typescript/promise-function-async -- one render per form state over a shared controller; ReactNode's union includes Promise, nothing here is async
+const FrappeFormView = <TDoc extends { name: string; doctype: string }>({
   form,
   doctype,
   name,
@@ -454,7 +383,8 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   notFoundFallback,
   errorFallback,
   routePage,
-}: FrappeFormBodyProps<TDoc> & { form: FrappeFormController<TDoc> }) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- one early return per form state; the branches read top to bottom like desk's form states
+}: FrappeFormBodyProps<TDoc> & { form: FrappeFormController<TDoc> }) => {
   const { knobProps } = useResolvedKnobs();
   const { t } = useTranslation();
   const {
@@ -481,7 +411,11 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     amendedAs,
   } = form;
   const frappeConfig = form.connection;
-  const isCreate = !name;
+  const hasName = name !== undefined && name !== '';
+  const isCreate = !hasName;
+  // SAFETY: a doc is a plain record of its fields; meta addresses them by fieldname
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above; field types come from meta at runtime
+  const docRecord = localDoc as Record<string, unknown>;
   const hasUnsavedChanges = form.isDirty;
   // Meta is permission-gated (Guest gets 403) while the record may still be
   // readable: the form then lays the record's own fields out, read-only.
@@ -490,6 +424,8 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     if (!readsWithoutMeta || !baselineDoc) {
       return undefined;
     }
+    // SAFETY: a doc is a plain record of its fields
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see SAFETY above; no meta declares the field types
     const recordFields = schemaFieldsFromRecord(baselineDoc as Record<string, unknown>);
     return [
       {
@@ -506,8 +442,9 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   // insert/update events, so their name-filtered subscription is the live
   // source of truth. Fixture mode keeps the `_assign` fallback (no fixture
   // data exists for referencing ToDos), signalled by assignmentRows=undefined.
+  const readsAssignments = showSidebar && hasName && frappeConfig !== undefined && !frappeConfig.fixtures;
   const assignmentCollection = useFrappeCollection<AssignmentTodoRow>(
-    showSidebar && name && frappeConfig && !frappeConfig.fixtures ? frappeConfig : undefined,
+    readsAssignments ? frappeConfig : undefined,
     'ToDo',
     {
       fields: ['name', 'allocated_to', 'status', 'reference_type', 'reference_name'],
@@ -519,34 +456,33 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     [assignmentCollection],
   );
   const assignmentRows = useMemo(
+    // SAFETY: the live query reads the assignment collection typed AssignmentTodoRow above
     () => (assignmentCollection ? ((rawAssignmentRows as AssignmentTodoRow[] | undefined) ?? []) : undefined),
     [assignmentCollection, rawAssignmentRows],
   );
 
   const effectiveConnections = useMemo(() => connections ?? connectionsFromMeta(meta), [connections, meta]);
   const readsConnections = Boolean(children) && Boolean(name) && effectiveConnections.length > 0;
-  const [connectionSnapshots, setConnectionSnapshots] = useState<
-    Record<string, FrappeRowsSnapshot<Record<string, unknown> & { name: string; doctype: string }>>
-  >({});
+  const [connectionSnapshots, setConnectionSnapshots] = useState<Record<string, FrappeRowsSnapshot<ConnectionRow>>>({});
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- drops the previous record's connection rows when the record changes
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- see the reset note above
     setConnectionSnapshots({});
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- doctype and name are the reset trigger, not inputs
   }, [doctype, name]);
   const connectionReads = useMemo(
     () =>
-      readsConnections && name
+      readsConnections && hasName
         ? effectiveConnections.map((link) => ({
             link,
-            options: {
-              fields: connectionFields(link),
-              filters: [[link.fieldname, '=', name]] as [string, string, unknown][],
-              limit: link.limit ?? 0,
-            },
-            onChange: (snapshot: FrappeRowsSnapshot<Record<string, unknown> & { name: string; doctype: string }>) => {
+            options: connectionReadOptions(link, name),
+            onChange: (snapshot: FrappeRowsSnapshot<ConnectionRow>) => {
+              // oxlint-disable-next-line sonarjs/no-nested-functions -- each connection's reporter closes over its own link
               setConnectionSnapshots((prev) => ({ ...prev, [link.doctype]: snapshot }));
             },
           }))
         : [],
-    [readsConnections, effectiveConnections, name],
+    [readsConnections, hasName, effectiveConnections, name],
   );
   const connectionRows = useMemo(() => {
     const rows: FrappeConnectionRows = {};
@@ -559,7 +495,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
 
   const handleSave = async () => {
     const saved = await form.save();
-    if (!saved) {
+    if (saved === undefined || saved === '') {
       return;
     }
     onSave?.(isCreate ? { ...localDoc, name: saved } : localDoc);
@@ -571,7 +507,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   };
 
   const handleDelete = async () => {
-    if (!name || wasDeleted || !rights.delete) {
+    if (!hasName || wasDeleted || !rights.delete) {
       return;
     }
     if (!(await dialog.confirm(t('Delete this {{doctype}}?', { doctype })))) {
@@ -583,7 +519,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   };
 
   const handleSubmitDocument = async () => {
-    if (!name || wasDeleted || !rights.submit) {
+    if (!hasName || wasDeleted || !rights.submit) {
       return;
     }
     const requiredErrors = form.validate();
@@ -598,7 +534,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   };
 
   const handleCancelDocument = async () => {
-    if (!name || wasDeleted || !rights.cancel) {
+    if (!hasName || wasDeleted || !rights.cancel) {
       return;
     }
     if (!(await dialog.confirm(t('Permanently Cancel {{name}}?', { name })))) {
@@ -618,8 +554,10 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   };
 
   const titleField = meta?.title_field;
-  const titleValue = titleField ? (localDoc as Record<string, unknown>)[titleField] : undefined;
+  const titleValue = titleField !== undefined && titleField !== '' ? docRecord[titleField] : undefined;
+  // oxlint-disable-next-line typescript/no-base-to-string -- title_field names a scalar Data/Link field; String() renders it as desk does
   const pageTitle = isCreate ? t('New {{doctype}}', { doctype }) : String(titleValue ?? name);
+  // oxlint-disable-next-line typescript/promise-function-async -- ReactNode's union includes Promise; this returns JSX synchronously
   const frame = (content: React.ReactNode, aside?: React.ReactNode) =>
     routePage ? (
       // flexBasis auto: see DeskFormPage (react-native-web's min-height:0
@@ -631,6 +569,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
             size="$3"
             chromeless
             icon={ArrowLeftIcon}
+            // oxlint-disable-next-line react/jsx-handler-names -- forwards the routed page's own onBack callback
             onPress={routePage.onBack}
             aria-label={t('Back to {{doctype}} list', { doctype })}>
             {doctype}
@@ -680,7 +619,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     );
   }
 
-  if (!children && metaError && !meta && !name) {
+  if (!children && metaError && !meta && !hasName) {
     return frame(
       isPermissionError(metaError) ? (
         <EmptyState
@@ -698,7 +637,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     );
   }
 
-  if (name && form.status === 'error' && docError) {
+  if (hasName && form.status === 'error' && docError) {
     if (errorFallback !== undefined) {
       return frame(errorFallback);
     }
@@ -720,7 +659,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     );
   }
 
-  if (name && form.status === 'loading') {
+  if (hasName && form.status === 'loading') {
     if (loadingFallback !== undefined) {
       return frame(loadingFallback);
     }
@@ -735,7 +674,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
 
   // Never-loaded miss (bad name, or read denied) — distinct from the
   // deleted-while-open state below, which keeps the form mounted.
-  if (name && form.status === 'notFound') {
+  if (hasName && form.status === 'notFound') {
     if (notFoundFallback !== undefined) {
       return frame(notFoundFallback);
     }
@@ -780,17 +719,20 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     },
     isReadOnlyView: Boolean(onEdit),
   });
-  const showDelete = Boolean(name && onDelete && !wasDeleted && rights.delete && canDeleteDoc(docstatus));
+  const canDelete = !wasDeleted && rights.delete && canDeleteDoc(docstatus);
+  const showDelete = Boolean(hasName && onDelete && canDelete);
   const showEdit = Boolean(onEdit && rights.write && canEditDoc(docstatus, meta));
   const showAmend = Boolean(onAmend && isAmendable(meta));
   const showClose = !onEdit && Boolean(onCancel);
-  const toolbarShown =
-    showToolbar && !readsWithoutMeta && Boolean((indicator ?? docAction ?? showDelete) || showEdit || showClose);
+  const hasLifecycleState = indicator !== undefined || docAction !== undefined;
+  const hasToolbarActions = hasLifecycleState || showDelete || showEdit || showClose;
+  const toolbarShown = showToolbar && !readsWithoutMeta && hasToolbarActions;
   const shownTabs = formTabs ?? recordTabs;
   const imageFieldName = meta?.image_field;
-  const sidebarImageUrl = imageFieldName
-    ? resolveFileUrl((localDoc as Record<string, unknown>)[imageFieldName], frappeConfig?.baseURL)
-    : undefined;
+  const sidebarImageUrl =
+    imageFieldName !== undefined && imageFieldName !== ''
+      ? resolveFileUrl(docRecord[imageFieldName], frappeConfig?.baseURL)
+      : undefined;
   const conflictLabels = conflictFields
     .map((fieldname) => {
       const field = meta?.fields.find((metaField) => metaField.fieldname === fieldname);
@@ -798,12 +740,16 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     })
     .join(', ');
 
+  const showConnectionsTab =
+    showConnections && hasName && frappeConfig !== undefined && effectiveConnections.length > 0;
   const formTabItems: TabsItem[] = (shownTabs ?? []).map((tab) => {
     const content = (
       <SchemaForm
         schema={tab.schema}
-        doc={localDoc as Record<string, any>}
+        doc={docRecord}
         setValue={(field, value) => {
+          // SAFETY: SchemaForm reports fieldnames from tab.schema, which the form laid out from TDoc's meta
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
           setValue(field as keyof TDoc, value);
         }}
         errors={errors}
@@ -823,7 +769,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
   });
   const tabItems: TabsItem[] = [
     ...formTabItems,
-    ...(showConnections && name && frappeConfig && effectiveConnections.length > 0
+    ...(showConnectionsTab
       ? [
           {
             value: '__connections',
@@ -840,21 +786,78 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
       : []),
     ...(extraTabs ?? []),
   ];
-  const effectiveTab = activeTab && tabItems.some((tab) => tab.value === activeTab) ? activeTab : tabItems[0]?.value;
-  const localName = (localDoc as Record<string, unknown>).name;
+  const hasActiveTab = activeTab !== undefined && activeTab !== '' && tabItems.some((tab) => tab.value === activeTab);
+  const effectiveTab = hasActiveTab ? activeTab : tabItems[0]?.value;
   const sidebar =
-    showSidebar && name && meta ? (
+    showSidebar && hasName && meta ? (
       <FormSidebar
         imageUrl={sidebarImageUrl}
         sections={buildSidebarSections(
-          localDoc as Record<string, any>,
+          docRecord,
+          // SAFETY: the form reads DocShare rows whole; DocShareGrant is the permission subset of the same rows
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
           form.shareRows as DocShareRow[] | undefined,
           t,
           assignmentRows,
         )}
-        metadata={mapDocToSidebarMetadata(localDoc as Record<string, any>, t)}
+        metadata={mapDocToSidebarMetadata(docRecord, t)}
       />
     ) : undefined;
+
+  let formBody: React.ReactNode;
+  if (children) {
+    // Render-prop mode
+    formBody = children({
+      doc: localDoc,
+      setValue,
+      isSubmitting,
+      errors,
+      meta,
+      disabled: fieldsDisabled,
+      connections: connectionRows,
+      connectionsLoading,
+    });
+  } else if (shownTabs) {
+    formBody = (
+      <YStack {...knobProps.gapLg}>
+        {promptNamed && (
+          <Input
+            label={t('Name')}
+            value={localDoc.name ?? ''}
+            onChangeText={(value) => {
+              setValue('name', value);
+            }}
+            placeholder={t('New document name')}
+            error={errors.name}
+            disabled={effectiveDisabled || !canWriteRecord}
+          />
+        )}
+        {tabItems.length > 1 ? (
+          <Tabs
+            items={tabItems}
+            value={effectiveTab}
+            onChange={setActiveTab}
+            lazyMount
+          />
+        ) : (
+          (tabItems[0]?.content ?? null)
+        )}
+      </YStack>
+    );
+  } else {
+    // Metadata unavailable (should be covered by metaError branch above)
+    formBody = (
+      <YStack
+        {...knobProps.panelPadding}
+        alignItems="center">
+        <Text
+          color={formCommonColors.muted}
+          {...knobProps.body}>
+          {t('Form schema unavailable')}
+        </Text>
+      </YStack>
+    );
+  }
 
   return frame(
     // flexBasis auto (not the flex:1 shorthand's 0%): inside scroll-flow page
@@ -873,7 +876,8 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
               key={read.link.doctype}
               connection={frappeConfig}
               doctype={read.link.doctype}
-              options={read.options as never}
+              options={read.options}
+              // oxlint-disable-next-line react/jsx-handler-names -- forwards the connection read's own reporter
               onChange={read.onChange}
             />
           ))
@@ -904,6 +908,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
 
       {showBanners && !wasDeleted && conflictFields.length > 0 && (
         <XStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui's XStack renders a div; the role gives it the live-region semantics
           role="status"
           alignItems="center"
           {...knobProps.containerRadius}
@@ -936,55 +941,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
         <YStack
           flex={1}
           {...knobProps.gapLg}>
-          {children ? (
-            // Render-prop mode
-            children({
-              doc: localDoc,
-              setValue,
-              isSubmitting,
-              errors,
-              meta,
-              disabled: fieldsDisabled,
-              connections: connectionRows,
-              connectionsLoading,
-            })
-          ) : shownTabs ? (
-            <YStack {...knobProps.gapLg}>
-              {promptNamed && (
-                <Input
-                  label={t('Name')}
-                  value={typeof localName === 'string' ? localName : ''}
-                  onChangeText={(value) => {
-                    setValue('name' as keyof TDoc, value);
-                  }}
-                  placeholder={t('New document name')}
-                  error={errors.name}
-                  disabled={effectiveDisabled || !canWriteRecord}
-                />
-              )}
-              {tabItems.length > 1 ? (
-                <Tabs
-                  items={tabItems}
-                  value={effectiveTab}
-                  onChange={setActiveTab}
-                  lazyMount
-                />
-              ) : (
-                (tabItems[0]?.content ?? null)
-              )}
-            </YStack>
-          ) : (
-            // Metadata unavailable (should be covered by metaError branch above)
-            <YStack
-              {...knobProps.panelPadding}
-              alignItems="center">
-              <Text
-                color={formCommonColors.muted}
-                {...knobProps.body}>
-                {t('Form schema unavailable')}
-              </Text>
-            </YStack>
-          )}
+          {formBody}
 
           {errors.general && (
             <Text
@@ -1001,11 +958,15 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
               action={docAction}
               busy={isSubmitting}
               disabled={effectiveDisabled}
+              // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler; the action bar fires it without awaiting
               onSave={handleSave}
+              // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler; the action bar fires it without awaiting
               onSubmit={handleSubmitDocument}
+              // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler; the action bar fires it without awaiting
               onCancelDocument={handleCancelDocument}
               onAmend={showAmend ? handleAmend : undefined}
               amendedAs={amendedAs}
+              // oxlint-disable-next-line typescript/no-misused-promises -- awaitable handler; the action bar fires it without awaiting
               onDelete={showDelete ? handleDelete : undefined}
               onEdit={showEdit ? onEdit : undefined}
               onClose={showClose ? handleCancel : undefined}
@@ -1016,7 +977,7 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
       </XStack>
 
       {/* Timeline (edit mode only) — live Comment/Version via useFrappeCollection */}
-      {showTimeline && name && !readsWithoutMeta && (
+      {showTimeline && hasName && !readsWithoutMeta && (
         <Timeline
           doctype={doctype}
           docname={name}
@@ -1026,4 +987,121 @@ function FrappeFormView<TDoc extends { name: string; doctype: string }>({
     </YStack>,
     routePage ? sidebar : undefined,
   );
-}
+};
+
+const FrappeFormOwned = <TDoc extends { name: string; doctype: string }>(props: FrappeFormBodyProps<TDoc>) => {
+  const config = useFrappeConfig();
+  const baseURL = props.baseURL ?? config?.baseURL;
+  if (baseURL === undefined || baseURL === '') {
+    throw new Error('FrappeForm requires baseURL prop or FrappeProvider with baseURL');
+  }
+  const form = useFrappeForm<TDoc>({
+    doctype: props.doctype,
+    name: props.name,
+    baseURL: props.baseURL,
+    auth: props.auth,
+    syncOptions: props.syncOptions,
+    fields: props.fields,
+    sections: props.sections,
+    hideFields: props.hideFields,
+    hideSections: props.hideSections,
+    roles: props.roles,
+    readShares: props.showSidebar ?? true,
+    disabled: props.disabled,
+    initialDoc: props.initialDoc,
+  });
+  return (
+    <FrappeFormView<TDoc>
+      {...props}
+      form={form}
+    />
+  );
+};
+
+const FrappeFormBody = <TDoc extends { name: string; doctype: string }>(props: FrappeFormBodyProps<TDoc>) => {
+  if (props.form) {
+    return (
+      <FrappeFormView<TDoc>
+        {...props}
+        form={props.form}
+      />
+    );
+  }
+  return <FrappeFormOwned<TDoc> {...props} />;
+};
+
+const FrappeFormRoute = <TDoc extends { name: string; doctype: string }>({
+  route,
+  name: nameProp,
+  onSave,
+  onCancel,
+  onDelete,
+  onEdit,
+  onAmend,
+  ...props
+}: Omit<FrappeFormProps<TDoc>, 'route'> & { route: string }) => {
+  const router = useFrappeRouter();
+  const fromPath = router ? frappeRouteTarget(route, router.pathname) : undefined;
+  let target: FrappeRouteTarget = { mode: 'create' };
+  if (nameProp !== undefined && nameProp !== '') {
+    target = { mode: fromPath?.mode === 'view' ? 'view' : 'edit', name: nameProp };
+  } else if (fromPath?.mode === 'view' || fromPath?.mode === 'edit') {
+    target = fromPath;
+  }
+  const go = (next: FrappeRouteTarget) => router?.navigate(frappeRouteHref(route, next));
+  const name = target.mode === 'view' || target.mode === 'edit' ? target.name : undefined;
+
+  return (
+    <FrappeFormBody<TDoc>
+      {...props}
+      // A new target is a new page: no state carries over from the last one.
+      key={`${target.mode}:${name ?? ''}`}
+      name={name}
+      routePage={{ onBack: () => go({ mode: 'list' }) }}
+      onEdit={target.mode === 'view' ? (onEdit ?? (() => go({ mode: 'edit', name: target.name }))) : undefined}
+      onSave={
+        onSave ??
+        ((doc) => {
+          const saved = doc.name ?? name;
+          go(saved !== undefined && saved !== '' ? { mode: 'view', name: saved } : { mode: 'list' });
+        })
+      }
+      onCancel={onCancel ?? (() => go(name !== undefined && name !== '' ? { mode: 'view', name } : { mode: 'list' }))}
+      onDelete={onDelete ?? (() => go({ mode: 'list' }))}
+      onAmend={onAmend ?? (() => go({ mode: 'create' }))}
+    />
+  );
+};
+
+/**
+ * The form for a Frappe doctype, resolved from meta by the desk form engine.
+ *
+ * Fetches doctype metadata and the document, lays the fields out through
+ * `buildFormTabs` (tabs, sections, `depends_on`, `mandatory_depends_on`,
+ * `read_only_depends_on`, `collapsible_depends_on`, permlevel,
+ * `set_only_once`, `fetch_from` and docstatus), and renders each tab with
+ * `SchemaForm`. With a `route` it is the doctype's record page. With neither
+ * a bench URL nor a fixture corpus it says Frappe is not configured.
+ */
+export const FrappeForm = <TDoc extends { name: string; doctype: string }>(props: FrappeFormProps<TDoc>) => {
+  const config = useFrappeConfig();
+  const { route, ...formProps } = props;
+  const baseURL = props.baseURL ?? config?.baseURL;
+  if ((baseURL === undefined || baseURL === '') && !config?.fixtures) {
+    return (
+      <FrappeNotConfigured
+        doctype={props.doctype}
+        page={route !== undefined}
+      />
+    );
+  }
+  if (route === undefined) {
+    return <FrappeFormBody<TDoc> {...formProps} />;
+  }
+  return (
+    <FrappeFormRoute<TDoc>
+      {...formProps}
+      route={route}
+    />
+  );
+};

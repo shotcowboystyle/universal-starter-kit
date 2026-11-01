@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { LongText } from '.';
 import type { LongTextProps } from '.';
@@ -29,9 +29,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = LongTextProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <LongText
@@ -43,12 +44,14 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
+
+const STORY_VALUE = 'Line one\nLine two\nLine three';
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
   label: 'Description',
-  value: 'Line one\nLine two\nLine three',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 Main.storyName = 'Main';
@@ -87,7 +90,7 @@ export const States = (args: StoryProps) => (
 );
 States.args = {
   label: 'Description',
-  value: 'Line one\nLine two\nLine three',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 
@@ -119,7 +122,7 @@ export const ContractProbe = (args: StoryProps) => (
 );
 ContractProbe.args = {
   label: 'Description',
-  value: 'Line one\nLine two\nLine three',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 
@@ -133,7 +136,7 @@ const longTextCellRows: LongTextCellRow[] = [
   {
     id: '1',
     label: 'Alpha',
-    value: 'Line one\nLine two\nLine three',
+    value: STORY_VALUE,
   },
   {
     id: '2',
@@ -152,7 +155,7 @@ const longTextCellColumns: DataTableColumn<LongTextCellRow>[] = [
   } as DataTableColumn<LongTextCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(longTextCellRows);
   return (
     <YStack
@@ -160,17 +163,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={longTextCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={longTextCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as LongTextCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Long Text cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Long Text") — in-cell textarea. */
 export const InTable = () => (

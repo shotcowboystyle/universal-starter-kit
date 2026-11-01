@@ -2,7 +2,7 @@
  * Safe evaluator for Frappe `depends_on` / `mandatory_depends_on` /
  * `read_only_depends_on` expressions.
  *
- * The implementation lives in `@repo/frappe-ui/src/dependsOn`
+ * The implementation lives in `@repo/frappe-ui/src/depends-on`
  * so SchemaForm (which receives raw `depends_on` strings on the standalone
  * FrappeForm path) shares the exact same Hermes/GJS/CSP-safe parser instead
  * of a string-eval fork. This module re-exports it for the backoffice form

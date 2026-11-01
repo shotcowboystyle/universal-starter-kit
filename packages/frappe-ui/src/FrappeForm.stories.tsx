@@ -4,13 +4,13 @@ import { YStack } from 'tamagui';
 
 import { Check } from './fields/Check';
 import { Data } from './fields/Data';
-import { Date } from './fields/Date';
+import { Date as DateField } from './fields/Date';
 import { Numeric } from './fields/Numeric';
 import { RadioGroupField } from './fields/RadioGroup';
 import { Select } from './fields/Select';
+import { FrappeStoryProvider, LiveToDoGate } from './frappe-story-target';
 import { FrappeForm } from './FrappeForm';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider, LiveToDoGate } from './frappeStoryTarget';
 
 export default {
   title: 'FrappeUI/FrappeForm',
@@ -32,104 +32,65 @@ const ERR_HOST = 'https://frappeform-error.mock.test';
 const PENDING_HOST = 'https://pending.frappeform.mock.test';
 const GUEST_HOST = 'https://guest.frappeform.mock.test';
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+/** The Frappe response envelopes the mock bench answers with. */
+interface MockBody {
+  data?: unknown;
+  message?: unknown;
+  exc_type?: string;
 }
 
-function contactMeta() {
-  return {
-    name: 'Contact',
-    module: 'Contacts',
-    title_field: 'first_name',
-    fields: [
-      { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
-      { fieldname: 'first_name', fieldtype: 'Data', label: 'First Name', required: 1 },
-      { fieldname: 'last_name', fieldtype: 'Data', label: 'Last Name', required: 1 },
-      { fieldname: 'email', fieldtype: 'Data', label: 'Email', required: 1 },
-      { fieldname: 'phone', fieldtype: 'Data', label: 'Phone' },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        // >5 options: shorter single-select lists trip `select-too-few-options` (DG-CTRL-01).
-        options: 'Active\nLead\nProspect\nCustomer\nInactive\nArchived',
-      },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
 
-function salesOrderMeta() {
-  return {
-    name: 'SalesOrder',
-    module: 'Selling',
-    title_field: 'customer',
-    fields: [
-      { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
-      { fieldname: 'customer', fieldtype: 'Data', label: 'Customer', required: 1 },
-      { fieldname: 'order_date', fieldtype: 'Date', label: 'Order Date', required: 1 },
-      { fieldname: 'total_amount', fieldtype: 'Currency', label: 'Total Amount' },
-      {
-        fieldname: 'status',
-        fieldtype: 'Select',
-        label: 'Status',
-        // >5 options: shorter single-select lists trip `select-too-few-options` (DG-CTRL-01).
-        options: 'Draft\nSubmitted\nIn Progress\nOn Hold\nCompleted\nCancelled',
-      },
-      { fieldname: 'is_paid', fieldtype: 'Check', label: 'Payment Received' },
-      { fieldname: 'notes', fieldtype: 'Small Text', label: 'Notes' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
-
-(() => {
-  const w = window as unknown as Record<string, unknown>;
-  if (w.__frappeFormMockFetch) {
-    return;
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
   }
-  w.__frappeFormMockFetch = true;
-  const realFetch = window.fetch.bind(window);
-  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-    if (urlStr.startsWith(PENDING_HOST)) {
-      return await new Promise<Response>(() => {});
-    }
-    if (urlStr.startsWith(ERR_HOST)) {
-      return jsonResponse({ message: 'DocType meta unavailable' }, 500);
-    }
-    if (urlStr.startsWith(GUEST_HOST)) {
-      const url = new URL(urlStr);
-      if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
-        return jsonResponse({ exc_type: 'PermissionError', message: 'Sign in to read the Contact form' }, 403);
-      }
-      if (url.pathname.startsWith('/api/resource/Contact')) {
-        if (urlStr.includes('CONTACT-PRIVATE')) {
-          return jsonResponse({ exc_type: 'PermissionError', message: 'Not permitted' }, 403);
-        }
-        const record = { ...contactFixtures[0], owner: 'Administrator' };
-        return jsonResponse({ data: url.pathname.endsWith('/Contact') ? [record] : record });
-      }
-      return jsonResponse({ data: [], message: [] });
-    }
-    if (urlStr.startsWith(MOCK_HOST)) {
-      const url = new URL(urlStr);
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
-      if (metaMatch) {
-        const doctype = decodeURIComponent(metaMatch[1]);
-        if (doctype === 'SalesOrder') {
-          return jsonResponse({ data: salesOrderMeta() });
-        }
-        return jsonResponse({ data: contactMeta() });
-      }
-      return jsonResponse({ data: [] });
-    }
-    return await realFetch(input as RequestInfo, init);
-  };
-})();
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates fetch's declared `string | Request` input union
+  return typeof input === 'string' ? input : input.url;
+};
+
+const contactMeta = () => ({
+  name: 'Contact',
+  module: 'Contacts',
+  title_field: 'first_name',
+  fields: [
+    { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
+    { fieldname: 'first_name', fieldtype: 'Data', label: 'First Name', required: 1 },
+    { fieldname: 'last_name', fieldtype: 'Data', label: 'Last Name', required: 1 },
+    { fieldname: 'email', fieldtype: 'Data', label: 'Email', required: 1 },
+    { fieldname: 'phone', fieldtype: 'Data', label: 'Phone' },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      // >5 options: shorter single-select lists trip `select-too-few-options` (DG-CTRL-01).
+      options: 'Active\nLead\nProspect\nCustomer\nInactive\nArchived',
+    },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
+
+const salesOrderMeta = () => ({
+  name: 'SalesOrder',
+  module: 'Selling',
+  title_field: 'customer',
+  fields: [
+    { fieldname: 'main_section', fieldtype: 'Section Break', label: 'Details' },
+    { fieldname: 'customer', fieldtype: 'Data', label: 'Customer', required: 1 },
+    { fieldname: 'order_date', fieldtype: 'Date', label: 'Order Date', required: 1 },
+    { fieldname: 'total_amount', fieldtype: 'Currency', label: 'Total Amount' },
+    {
+      fieldname: 'status',
+      fieldtype: 'Select',
+      label: 'Status',
+      // >5 options: shorter single-select lists trip `select-too-few-options` (DG-CTRL-01).
+      options: 'Draft\nSubmitted\nIn Progress\nOn Hold\nCompleted\nCancelled',
+    },
+    { fieldname: 'is_paid', fieldtype: 'Check', label: 'Payment Received' },
+    { fieldname: 'notes', fieldtype: 'Small Text', label: 'Notes' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
 interface Contact {
   name: string;
@@ -161,6 +122,57 @@ const contactFixtures: Contact[] = [
     status: 'Lead',
   },
 ];
+
+const guestResponse = (urlStr: string): Response => {
+  const url = new URL(urlStr);
+  if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
+    return jsonResponse({ exc_type: 'PermissionError', message: 'Sign in to read the Contact form' }, 403);
+  }
+  if (url.pathname.startsWith('/api/resource/Contact')) {
+    if (urlStr.includes('CONTACT-PRIVATE')) {
+      return jsonResponse({ exc_type: 'PermissionError', message: 'Not permitted' }, 403);
+    }
+    const record = { ...contactFixtures[0], owner: 'Administrator' };
+    return jsonResponse({ data: url.pathname.endsWith('/Contact') ? [record] : record });
+  }
+  return jsonResponse({ data: [], message: [] });
+};
+
+(() => {
+  // SAFETY: the flag is an optional property this module alone sets on window
+  const w = window as Window & { __frappeFormMockFetch?: boolean };
+  if (w.__frappeFormMockFetch === true) {
+    return;
+  }
+  w.__frappeFormMockFetch = true;
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const urlStr = requestUrl(input);
+    if (urlStr.startsWith(PENDING_HOST)) {
+      // oxlint-disable-next-line promise/avoid-new, eslint/no-empty-function -- a fetch that never settles holds the story in its pending state
+      return await new Promise<Response>(() => {});
+    }
+    if (urlStr.startsWith(ERR_HOST)) {
+      return jsonResponse({ message: 'DocType meta unavailable' }, 500);
+    }
+    if (urlStr.startsWith(GUEST_HOST)) {
+      return guestResponse(urlStr);
+    }
+    if (urlStr.startsWith(MOCK_HOST)) {
+      const url = new URL(urlStr);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
+      if (metaMatch) {
+        const doctype = decodeURIComponent(metaMatch[1]);
+        if (doctype === 'SalesOrder') {
+          return jsonResponse({ data: salesOrderMeta() });
+        }
+        return jsonResponse({ data: contactMeta() });
+      }
+      return jsonResponse({ data: [] });
+    }
+    return await realFetch(input as RequestInfo, init);
+  };
+})();
 
 export const CreateForm = () => (
   <FrappeProvider
@@ -440,7 +452,7 @@ export const ComplexForm = () => (
             required
             error={errors.customer}
           />
-          <Date
+          <DateField
             label="Order Date"
             type="date"
             value={doc.order_date ?? ''}
@@ -496,6 +508,7 @@ ComplexForm.parameters = {
 };
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
 // Live bench story — real ToDo document over the live data path
 // ---------------------------------------------------------------------------
 
@@ -521,12 +534,12 @@ const liveFormFixtures = new InMemoryFixtureProvider({
 
 /**
  * Live edit form against the real bench (STORYBOOK_FRAPPE_URL, default the
- * local dev bench proxied by the Storybook dev server) on the stock ToDo
+ * local dev bench proxied by the Storybook dev server) on Frappe's stock to-do
  * doctype. External edits to the open doc patch fields in place; edits the
  * user has dirty are preserved and flagged via the conflict banner;
  * `doc_deleted` for the open doc renders the read-only deleted banner. The
  * `name` arg selects the document (harnesses pass the real doc name via URL
- * args). When live with no arg, {@link LiveToDoGate} resolves a real ToDo
+ * args). When live with no arg, {@link LiveToDoGate} resolves a real to-do
  * (TODO-LIVE-001 if present, else the first readable row, else a seeded one)
  * so the story does not 404 on a hash-named doctype. Falls back to fixtures
  * when the bench is down.

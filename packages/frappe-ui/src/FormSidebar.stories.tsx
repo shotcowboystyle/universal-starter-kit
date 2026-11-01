@@ -18,9 +18,9 @@ import { Text, XStack, YStack } from 'tamagui';
 
 import { FormSidebar } from './FormSidebar';
 import type { SidebarMetadataEntry, SidebarPerson, SidebarSection } from './FormSidebar';
+import { FrappeStoryProvider, LiveToDoGate, frappeStoriesLive } from './frappe-story-target';
 import { FrappeForm } from './FrappeForm';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider, LiveToDoGate, frappeStoriesLive } from './frappeStoryTarget';
 
 // hex-escape: generated image fixtures are data, not paint
 
@@ -39,6 +39,13 @@ export default {
   },
 };
 
+/** Drops the item with `id` (keeps the story's state updaters one level shallow). */
+const withoutId = <T extends { id: string }>(items: T[], id: string): T[] => items.filter((x) => x.id !== id);
+
+const ASSIGNED_TO = 'Assigned To';
+const SHARED_WITH = 'Shared With';
+const SECTION_BREAK = 'Section Break';
+
 const people = [
   { id: 'u1', label: 'jane@example.com', sublabel: 'Owner' },
   { id: 'u2', label: 'john@example.com' },
@@ -47,14 +54,14 @@ const people = [
 const sections: SidebarSection[] = [
   {
     key: 'assigned',
-    title: 'Assigned To',
+    title: ASSIGNED_TO,
     items: people,
     onAdd: action('onAdd assigned'),
     onRemoveItem: action('onRemoveItem assigned'),
   },
   {
     key: 'shared',
-    title: 'Shared With',
+    title: SHARED_WITH,
     items: [{ id: 'u3', label: 'sam@example.com' }],
     onAdd: action('onAdd shared'),
     onRemoveItem: action('onRemoveItem shared'),
@@ -100,8 +107,8 @@ export const Empty = () => <FormSidebar />;
 export const EmptySections = () => (
   <FormSidebar
     sections={[
-      { key: 'assigned', title: 'Assigned To', items: [], onAdd: action('onAdd') },
-      { key: 'shared', title: 'Shared With', items: [] },
+      { key: 'assigned', title: ASSIGNED_TO, items: [], onAdd: action('onAdd') },
+      { key: 'shared', title: SHARED_WITH, items: [] },
     ]}
     metadata={[{ label: 'Created by admin' }]}
   />
@@ -113,7 +120,7 @@ export const LongLabels = () => (
     sections={[
       {
         key: 'assigned',
-        title: 'Assigned To',
+        title: ASSIGNED_TO,
         items: [
           {
             id: 'u1',
@@ -139,7 +146,7 @@ export const BrokenImage = () => (
   <FormSidebar
     imageUrl="https://broken.invalid/missing.png"
     onImageAdd={action('onImageAdd')}
-    sections={[{ key: 'assigned', title: 'Assigned To', items: people }]}
+    sections={[{ key: 'assigned', title: ASSIGNED_TO, items: people }]}
     metadata={metadata.slice(0, 2)}
   />
 );
@@ -148,7 +155,7 @@ export const BrokenImage = () => (
 export const ImagePlaceholder = () => (
   <FormSidebar
     onImageAdd={action('onImageAdd')}
-    sections={[{ key: 'assigned', title: 'Assigned To', items: people }]}
+    sections={[{ key: 'assigned', title: ASSIGNED_TO, items: people }]}
     metadata={metadata.slice(0, 2)}
   />
 );
@@ -204,7 +211,7 @@ export const AddRemoveFlow = () => {
       sections={[
         {
           key: 'assigned',
-          title: 'Assigned To',
+          title: ASSIGNED_TO,
           items: assigned,
           emptyText: 'No one assigned',
           onAdd: addPerson,
@@ -238,7 +245,7 @@ export const DeskParity = () => {
   const deskSections: SidebarSection[] = [
     {
       key: 'assigned',
-      title: 'Assigned To',
+      title: ASSIGNED_TO,
       icon: <UsersIcon size={14} />,
       items: assigned,
       emptyText: 'No one assigned',
@@ -258,7 +265,7 @@ export const DeskParity = () => {
           compact
           items={attachments}
           onRemove={(a) => {
-            setAttachments((prev) => prev.filter((x) => x.id !== a.id));
+            setAttachments((prev) => withoutId(prev, a.id));
           }}
           onAdd={(file) => {
             setAttachments((prev) => [
@@ -274,7 +281,7 @@ export const DeskParity = () => {
     },
     {
       key: 'shared',
-      title: 'Shared With',
+      title: SHARED_WITH,
       icon: <UsersIcon size={14} />,
       items: shared,
       emptyText: 'Not shared',
@@ -303,7 +310,7 @@ export const DeskParity = () => {
             setTags((prev) => [...prev, { id: `t${Date.now()}`, label: name }]);
           }}
           onRemove={(tag) => {
-            setTags((prev) => prev.filter((x) => x.id !== tag.id));
+            setTags((prev) => withoutId(prev, tag.id));
           }}
           enableAdd
         />
@@ -354,6 +361,7 @@ export const DeskParity = () => {
 // Live bench story — sidebar data plumbing over the live data path
 // ---------------------------------------------------------------------------
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype, not a task marker */
 /**
  * Getdoctype-shaped ToDo meta for the fixture fallback, mirroring the bench's
  * own ToDo (title_field `description`, the Reference section, the two fields
@@ -361,6 +369,7 @@ export const DeskParity = () => {
  * "falls back to fixtures when the bench is down" promise needs this entry —
  * without it the offline story only ever showed a failed meta request.
  */
+/* oxlint-enable sonarjs/todo-tag */
 const todoFixtureMeta = {
   name: 'ToDo',
   doctype: 'DocType',
@@ -369,7 +378,7 @@ const todoFixtureMeta = {
   sort_field: 'modified',
   sort_order: 'DESC',
   fields: [
-    { fieldname: 'description_and_status', fieldtype: 'Section Break' },
+    { fieldname: 'description_and_status', fieldtype: SECTION_BREAK },
     {
       fieldname: 'status',
       fieldtype: 'Select',
@@ -388,9 +397,9 @@ const todoFixtureMeta = {
     { fieldname: 'color', fieldtype: 'Color', label: 'Color' },
     { fieldname: 'date', fieldtype: 'Date', label: 'Due Date', in_list_view: 1 },
     { fieldname: 'allocated_to', fieldtype: 'Link', label: 'Allocated To', options: 'User' },
-    { fieldname: 'description_section', fieldtype: 'Section Break' },
+    { fieldname: 'description_section', fieldtype: SECTION_BREAK },
     { fieldname: 'description', fieldtype: 'Text Editor', label: 'Description', required: 1 },
-    { fieldname: 'section_break_6', fieldtype: 'Section Break', label: 'Reference' },
+    { fieldname: 'section_break_6', fieldtype: SECTION_BREAK, label: 'Reference' },
     {
       fieldname: 'reference_type',
       fieldtype: 'Link',
@@ -450,25 +459,37 @@ const liveSidebarFixtures = new InMemoryFixtureProvider({
   ],
 });
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
+
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeFormSidebarMockFetch?: boolean } = window;
   if (w.__frappeFormSidebarMockFetch) {
     return;
   }
   w.__frappeFormSidebarMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
@@ -476,7 +497,7 @@ function jsonResponse(body: unknown, status = 200): Response {
         const meta = doctype === 'ToDo' ? todoFixtureMeta : { ...todoFixtureMeta, name: doctype };
         return jsonResponse({ docs: [meta] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         const doctype = decodeURIComponent(metaMatch[1]);
         const meta = doctype === 'ToDo' ? todoFixtureMeta : { ...todoFixtureMeta, name: doctype };
@@ -492,6 +513,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   };
 })();
 
+/* oxlint-disable sonarjs/todo-tag -- the comment names the Frappe doctype, not a task marker */
 /**
  * Live sidebar plumbing: renders FrappeForm (schema mode + showSidebar)
  * against the real bench ToDo doctype so the sidebar's assignments
@@ -502,6 +524,7 @@ function jsonResponse(body: unknown, status = 200): Response {
  * hash-named doctype. Falls back to MOCK_HOST + fixtures when the bench is
  * down — native never needs the bench or demo.frappe.cloud.
  */
+/* oxlint-enable sonarjs/todo-tag */
 export const Live = (args: { name?: string }) => {
   const form = (
     <LiveToDoGate name={args.name}>

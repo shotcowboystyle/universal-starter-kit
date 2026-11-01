@@ -23,7 +23,7 @@ export interface PreviewSurfaceProps {
 }
 
 /** Bordered, scrollable surface both preview panes render into. */
-export function PreviewSurface({ compact, horizontalScroll, children }: PreviewSurfaceProps) {
+export const PreviewSurface = ({ compact, horizontalScroll, children }: PreviewSurfaceProps) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const body = (
     <YStack
@@ -59,7 +59,7 @@ export function PreviewSurface({ compact, horizontalScroll, children }: PreviewS
       </ScrollView>
     </YStack>
   );
-}
+};
 
 export interface EditorPreviewPanesProps {
   /** Editing surface (textarea pane). */
@@ -73,14 +73,14 @@ export interface EditorPreviewPanesProps {
   defaultPreview?: boolean;
 }
 
-export function EditorPreviewPanes({
+export const EditorPreviewPanes = ({
   editor,
   preview,
   editTabLabel,
   previewTabLabel,
   compact,
   defaultPreview,
-}: EditorPreviewPanesProps) {
+}: EditorPreviewPanesProps) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const [containerWidth, setContainerWidth] = useState(0);
   const [mode, setMode] = useState<'edit' | 'preview'>(defaultPreview ? 'preview' : 'edit');
@@ -126,4 +126,4 @@ export function EditorPreviewPanes({
       )}
     </YStack>
   );
-}
+};

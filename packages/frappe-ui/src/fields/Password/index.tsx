@@ -30,6 +30,7 @@ import type { SizeTokens, TamaguiElement } from 'tamagui';
 import { useProps } from 'tamagui';
 
 export type PasswordProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -49,8 +50,9 @@ export type PasswordProps<
     readOnly?: boolean;
     skeleton?: boolean;
     compact?: boolean;
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- pass-through props spread onto the native input
     inputProps?: Record<string, unknown>;
-    size?: import('tamagui').SizeTokens;
+    size?: SizeTokens;
   };
 
 const SHOW_PASSWORD = 'Show password';
@@ -61,37 +63,54 @@ interface Selection {
   end: number;
 }
 
-function nativeInput(node: unknown, id?: string): HTMLInputElement | null {
+const isErrorShown = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives the Tamagui ref: a DOM input on web, an opaque host handle on native
+const nativeInput = (node: unknown, id?: string): HTMLInputElement | null => {
+  // SAFETY: a duck-typed probe; every member is optional and checked before use
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const fromRef = node as { selectionStart?: number; setSelectionRange?: unknown } | null;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- duck-types a DOM input; native handles lack setSelectionRange
   if (fromRef && typeof fromRef.setSelectionRange === 'function') {
+    // SAFETY: only DOM text inputs expose setSelectionRange, checked just above
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     return fromRef as HTMLInputElement;
   }
-  if (typeof document === 'undefined' || !id) {
+  if (typeof document === 'undefined' || id === undefined || id === '') {
     return null;
   }
   return document.querySelector(`#${id}`);
-}
+};
 
-function readSelection(node: unknown, id?: string): Selection | null {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards the opaque Tamagui ref to nativeInput
+const readSelection = (node: unknown, id?: string): Selection | null => {
   const el = nativeInput(node, id);
-  if (!el || typeof el.selectionStart !== 'number') {
+  if (!el || el.selectionStart === null) {
     return null;
   }
   return { start: el.selectionStart, end: el.selectionEnd ?? el.selectionStart };
-}
+};
 
-function restoreSelection(node: unknown, sel: Selection | null, id?: string) {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards the opaque Tamagui ref to nativeInput
+const restoreSelection = (node: unknown, sel: Selection | null, id?: string) => {
   const el = nativeInput(node, id);
   el?.focus();
   if (sel) {
     el?.setSelectionRange(sel.start, sel.end);
   }
-}
+};
 
-export function Password<
+export const Password = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
->(props: PasswordProps<TData, TName>) {
+>(
+  props: PasswordProps<TData, TName>,
+) => {
+  // SAFETY: useProps only expands Tamagui shorthands/media props; the keys remain PasswordProps'
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- useProps widens the bag; unknown keys flow into fieldProps
+  const resolvedProps = useProps(props) as PasswordProps<TData, TName> & { size?: unknown } & Record<string, unknown>;
   const {
     defaultValue,
     form,
@@ -107,7 +126,7 @@ export function Password<
     value,
     size: sizeFromProps,
     ...fieldProps
-  } = useProps(props) as PasswordProps<TData, TName> & { size?: unknown } & Record<string, unknown>;
+  } = resolvedProps;
 
   const { resolvedForm, knobProps, id } = useFormField({
     form,
@@ -115,6 +134,8 @@ export function Password<
     compact: fieldProps.compact,
   });
   const resolvedValidators = useResolvedValidators(fieldProps.required, validators, fieldProps.label, name);
+  // SAFETY: every source is a Tamagui size token (prop, field prop, or density knob)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const resolvedSize: SizeTokens = (sizeFromProps ?? fieldProps.size ?? knobProps.sizeToken) as SizeTokens;
   const visualHeight = sizeRecipeForToken(String(resolvedSize), {
     touch: isTouchSurface(),
@@ -122,14 +143,15 @@ export function Password<
   const belowFloor = visualHeight < MIN_PRESS_TARGET;
 
   const isControlled = value !== undefined;
-  const [internalText, setInternalText] = useState(String(defaultValue ?? ''));
-  const text = isControlled ? String(value ?? '') : internalText;
+  const [internalText, setInternalText] = useState(defaultValue ?? '');
+  const text = isControlled ? (value ?? '') : internalText;
   const [revealed, setRevealed] = useState(false);
   const inputRef = useRef<TamaguiElement>(null);
   const pendingSelection = useRef<Selection | null>(null);
 
   useEffect(() => {
     if (!text) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- clearing re-masks the field and it must stay masked when retyped, so it cannot be derived from text
       setRevealed(false);
     }
   }, [text]);
@@ -140,6 +162,7 @@ export function Password<
     }
     restoreSelection(inputRef.current, pendingSelection.current, id);
     pendingSelection.current = null;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- revealed is the trigger: restore the caret after the input re-renders with its new type
   }, [id, revealed]);
 
   const handleChangeText = useCallback(
@@ -182,15 +205,17 @@ export function Password<
     placeholder,
   };
 
+  // oxlint-disable-next-line sonarjs/no-unused-vars -- destructured out so callers cannot override the password input type
   const { type: _omitInputType, ...areaInputProps } = inputProps ?? {};
 
-  const renderBox = (inputValue: string | undefined, handleChange?: (text: string) => void, hasError?: boolean) => (
+  const renderBox = (inputValue: string | undefined, handleChange?: (text: string) => void, hasError = false) => (
     <FormsInput.Box
       {...boxContract}
       disabled={disabled}
       {...(hasError ? { theme: 'error' } : undefined)}>
       <FormsInput.Area
         ref={inputRef}
+        // SAFETY: caller-supplied native input props, spread as-is like any host prop bag
         {...(areaInputProps as object)}
         id={id}
         value={inputValue ?? ''}
@@ -203,7 +228,7 @@ export function Password<
         autoComplete="current-password"
         spellCheck={false}
         aria-required={fieldProps.required ?? undefined}
-        aria-invalid={hasError ?? undefined}
+        aria-invalid={hasError}
         aria-readonly={fieldProps.readOnly ?? undefined}
         onChangeText={(next: string) => {
           handleChange?.(next);
@@ -220,6 +245,8 @@ export function Password<
         hitSlop={belowFloor ? pressTargetHitSlop(visualHeight) : undefined}
         onPress={disabled || fieldProps.readOnly ? undefined : toggleReveal}
         onKeyDown={
+          // SAFETY: on web Tamagui forwards the DOM KeyboardEvent; the prop type is the native no-arg press signature
+          // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
           ((e: KeyboardEvent) => {
             if (disabled || fieldProps.readOnly) {
               return;
@@ -252,7 +279,7 @@ export function Password<
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         {...layoutBind}
@@ -261,7 +288,7 @@ export function Password<
         <FormsInput
           size={resolvedSize}
           error={fieldProps.error}>
-          {renderBox(text, undefined, !!fieldProps.error)}
+          {renderBox(text, undefined, isErrorShown(fieldProps.error))}
         </FormsInput>
       </FieldLayout>
     );
@@ -286,9 +313,11 @@ export function Password<
               {renderBox(
                 field.state.value,
                 (next) => {
+                  // SAFETY: Password binds string-valued fields only (FormFieldProps' value type is string)
+                  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
                   field.handleChange(next as never);
                 },
-                !!resolvedError,
+                isErrorShown(resolvedError),
               )}
             </FormsInput>
           </FieldLayout>
@@ -296,4 +325,4 @@ export function Password<
       }}
     </Field>
   );
-}
+};

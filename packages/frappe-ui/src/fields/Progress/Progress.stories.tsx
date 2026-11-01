@@ -1,11 +1,10 @@
-import { action } from '@repo/storybook';
 import { DataTable } from '@repo/table';
 import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { ProgressField } from '.';
 import type { ProgressFieldProps } from '.';
@@ -30,17 +29,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = ProgressFieldProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
-  const [value, setValue] = useState(props.value);
-  return (
-    <ProgressField
-      {...(props as any)}
-      value={value as any}
-    />
-  );
-}
+const Controlled = (props: StoryProps) => <ProgressField {...(props as any)} />;
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = { label: 'Completion', value: 65, max: 100 } as Partial<StoryProps>;
@@ -116,6 +108,7 @@ interface ProgressRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<ProgressRow[]>([
       { id: '1', label: 'Alpha', value: 65 },

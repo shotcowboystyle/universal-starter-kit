@@ -1,6 +1,6 @@
 /**
  * Desk RPC helpers — moved to
- * `@repo/frappe-ui/src/formEngine/formActions` (MPO-15),
+ * `@repo/frappe-ui/src/formEngine/form-actions` (MPO-15),
  * because useFormEngine consumes them and the engine now lives there.
  *
  * Deep-import only on both sides: these utility names collide with the list

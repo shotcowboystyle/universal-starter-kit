@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { SmallText } from '.';
 import type { SmallTextProps } from '.';
@@ -29,9 +29,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = SmallTextProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <SmallText
@@ -43,12 +44,14 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
+
+const STORY_VALUE = 'A short note';
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
   label: 'Notes',
-  value: 'A short note',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 Main.storyName = 'Main';
@@ -87,7 +90,7 @@ export const States = (args: StoryProps) => (
 );
 States.args = {
   label: 'Notes',
-  value: 'A short note',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 
@@ -119,7 +122,7 @@ export const ContractProbe = (args: StoryProps) => (
 );
 ContractProbe.args = {
   label: 'Notes',
-  value: 'A short note',
+  value: STORY_VALUE,
   placeholder: 'Type here',
 } as Partial<StoryProps>;
 
@@ -144,7 +147,7 @@ const smallTextCellColumns: DataTableColumn<SmallTextCellRow>[] = [
   } as DataTableColumn<SmallTextCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(smallTextCellRows);
   return (
     <YStack
@@ -152,17 +155,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={smallTextCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={smallTextCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as SmallTextCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Small Text cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Small Text") — in-cell textarea. */
 export const InTable = () => (

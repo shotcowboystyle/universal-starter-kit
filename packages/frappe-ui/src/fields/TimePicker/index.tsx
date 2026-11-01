@@ -6,8 +6,8 @@ import { useProps } from 'tamagui';
 export type TimePickerProps = FormsTimePickerProps;
 
 /** Thin adapter — forwards helperText / readOnly / skeleton / compact via props spread. */
-export function TimePicker(props: TimePickerProps) {
-  const { helperText, readOnly, skeleton, compact, ...resolvedProps } = useProps(props) as TimePickerProps;
+export const TimePicker = (props: TimePickerProps) => {
+  const { helperText, readOnly, skeleton, compact, ...resolvedProps } = useProps(props);
   return (
     <FormsTimePicker
       clockIcon={<ClockIcon size={16} />}
@@ -18,4 +18,4 @@ export function TimePicker(props: TimePickerProps) {
       {...resolvedProps}
     />
   );
-}
+};

@@ -40,13 +40,13 @@ export type { DateProps } from './types';
  * picker re-seeds its display state from every new `value` identity, which
  * would otherwise discard an in-progress edit on an unrelated re-render.
  */
-function toPickerDate(value: string | undefined): Date | null {
-  if (!value) {
+const toPickerDate = (value: string | undefined): Date | null => {
+  if (value === undefined || value === '') {
     return null;
   }
   const date = fromFrappeDateValue(value, 'datetime');
   return Number.isNaN(date.getTime()) ? null : date;
-}
+};
 
 /**
  * `TimePicker` speaks `HH:mm`; Frappe stores `HH:mm:ss`. Round-tripping
@@ -54,21 +54,31 @@ function toPickerDate(value: string | undefined): Date | null {
  * what keeps the two platform halves byte-identical, since the native half
  * serializes its wheel pick through exactly this call.
  */
-function toTimeWireValue(picked: string): string {
+const toTimeWireValue = (picked: string): string => {
   if (!picked) {
     return '';
   }
   const date = fromFrappeDateValue(picked, 'time');
   return Number.isNaN(date.getTime()) ? '' : toFrappeDateValue(date, 'time');
-}
+};
 
-export function Date<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+const defaultPlaceholder = (type: 'date' | 'datetime' | 'time'): string => {
+  if (type === 'time') {
+    return 'Select time';
+  }
+  return type === 'datetime' ? 'Select date & time' : 'Select date';
+};
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- TanStack form data shape; its keys are the doctype's fields, unknown to this adapter
+type FieldData = Record<string, unknown>;
+
+// oxlint-disable-next-line sonarjs/no-built-in-override, sonarjs/no-globals-shadowing -- public export named after the Frappe `Date` fieldtype; renaming breaks importers
+export const Date = <TData extends FieldData = FieldData, TName extends string = string>(
   props: DateProps<TData, TName>,
-) {
+) => {
   const {
     defaultValue,
     form,
-    inputProps: _inputProps,
     mode,
     name,
     onBlur,
@@ -79,21 +89,20 @@ export function Date<TData extends Record<string, unknown> = Record<string, unkn
     value,
     type = 'date',
     ...fieldProps
-  } = useProps(props) as DateProps<TData, TName> & Record<string, unknown>;
+  } = useProps(props);
 
   const wireValue = value;
-  const emit = onChange as ((v: string) => void) | undefined;
+  const emit = onChange;
   const datetimeValue = useMemo(() => (type === 'datetime' ? toPickerDate(wireValue) : null), [type, wireValue]);
 
-  const placeholder =
-    fieldProps.placeholder ??
-    (type === 'time' ? 'Select time' : type === 'datetime' ? 'Select date & time' : 'Select date');
+  const placeholder = fieldProps.placeholder ?? defaultPlaceholder(type);
 
   if (type === 'time') {
     return (
       <TimePicker
         // `TimePicker` is not generic over the form's data shape, so the
         // three form props are re-cast to its own non-generic surface.
+        // SAFETY: the name is the same field key either way; only the generic form typing differs
         name={name as TimePickerProps['name']}
         form={form}
         validators={validators}
@@ -186,4 +195,4 @@ export function Date<TData extends Record<string, unknown> = Record<string, unkn
       preserveValue={preserveValue}
     />
   );
-}
+};

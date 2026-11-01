@@ -5,6 +5,7 @@ import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 
 export type BarcodeProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
 > = Omit<
@@ -27,24 +28,15 @@ export type BarcodeProps<
     formats?: string[];
   };
 
-export function Barcode<TData extends Record<string, unknown> = Record<string, unknown>, TName extends string = string>(
+export const Barcode = <
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- form data shape is caller-defined; mirrors FormFieldProps' default
+  TData extends Record<string, unknown> = Record<string, unknown>,
+  TName extends string = string,
+>(
   props: BarcodeProps<TData, TName>,
-) {
-  const {
-    defaultValue,
-    form,
-    mode: _mode,
-    name,
-    onBlur,
-    onChange,
-    preserveValue: _preserveValue,
-    validators,
-    disabled,
-    value,
-    enableScan,
-    formats: _formats,
-    ...fieldProps
-  } = useProps(props);
+) => {
+  const { defaultValue, form, name, onBlur, onChange, validators, disabled, value, enableScan, ...fieldProps } =
+    useProps(props);
 
   return (
     <FormsBarcode
@@ -72,4 +64,4 @@ export function Barcode<TData extends Record<string, unknown> = Record<string, u
       stopIcon={<XIcon size={18} />}
     />
   );
-}
+};

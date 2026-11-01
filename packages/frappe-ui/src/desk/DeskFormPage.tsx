@@ -52,18 +52,16 @@ export interface DeskFormPageProps {
  * Convert a URL slug to a display name.
  * "pokemon" → "Pokemon", "poke-type" → "Poke Type"
  */
-function toDisplayName(slug: string): string {
-  return slug.replaceAll('-', ' ').replaceAll(/\b\w/g, (c) => c.toUpperCase());
-}
+const toDisplayName = (slug: string): string => slug.replaceAll('-', ' ').replaceAll(/\b\w/gu, (c) => c.toUpperCase());
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function DeskFormPage({ doctype, name, onNavigate }: DeskFormPageProps) {
+export const DeskFormPage = ({ doctype, name, onNavigate }: DeskFormPageProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
-  const isCreate = !name || name === 'new';
+  const isCreate = name === undefined || name === '' || name === 'new';
   const displayName = toDisplayName(doctype);
 
   // Track recent visits for edit mode
@@ -158,7 +156,7 @@ export function DeskFormPage({ doctype, name, onNavigate }: DeskFormPageProps) {
           showSidebar={false}
           showTimeline
           onSave={(doc) => {
-            if (isCreate && doc.name) {
+            if (isCreate && doc.name !== undefined && doc.name !== '') {
               handleNavigate(`/desk/${doctype}/${doc.name}`);
             }
           }}
@@ -175,4 +173,4 @@ export function DeskFormPage({ doctype, name, onNavigate }: DeskFormPageProps) {
       </DetailPageLayout>
     </DeskShell>
   );
-}
+};

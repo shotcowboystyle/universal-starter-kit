@@ -1,6 +1,6 @@
 /**
  * Status pill colors — moved to
- * `@repo/frappe-ui/src/list/statusColors` (MPO-15) with the
+ * `@repo/frappe-ui/src/list/status-colors` (MPO-15) with the
  * column builder that consumes them. Re-exported here so existing imports
  * keep resolving (the GNOME shim deep-imports this path).
  */

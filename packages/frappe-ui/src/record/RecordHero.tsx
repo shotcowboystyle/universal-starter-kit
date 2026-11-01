@@ -19,21 +19,23 @@ export interface RecordHeroFrameProps extends YStackProps {
   children: ReactNode;
 }
 
-export function RecordHeroFrame({ tint, children, ...rest }: RecordHeroFrameProps) {
+export const RecordHeroFrame = ({ tint, children, ...rest }: RecordHeroFrameProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
       {...knobProps.borderRadius}
       {...knobProps.panelPadding}
-      backgroundColor={tint ? (`$${tint}2` as never) : '$color3'}
+      // SAFETY: `$<hue>2` names a theme color token; the prop type does not list the hue ramps
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      backgroundColor={tint !== undefined && tint !== '' ? (`$${tint}2` as never) : '$color3'}
       width="100%"
       {...rest}>
       {children}
     </YStack>
   );
-}
+};
 
-export function RecordHeroRow({ children }: { children: ReactNode }) {
+export const RecordHeroRow = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <XStack
@@ -43,9 +45,9 @@ export function RecordHeroRow({ children }: { children: ReactNode }) {
       {children}
     </XStack>
   );
-}
+};
 
-export function RecordHeroArtColumn({ children, ...rest }: YStackProps & { children: ReactNode }) {
+export const RecordHeroArtColumn = ({ children, ...rest }: YStackProps & { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -58,9 +60,9 @@ export function RecordHeroArtColumn({ children, ...rest }: YStackProps & { child
       {children}
     </YStack>
   );
-}
+};
 
-export function RecordHeroIdentityColumn({ children, ...rest }: YStackProps & { children: ReactNode }) {
+export const RecordHeroIdentityColumn = ({ children, ...rest }: YStackProps & { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -72,7 +74,7 @@ export function RecordHeroIdentityColumn({ children, ...rest }: YStackProps & { 
       {children}
     </YStack>
   );
-}
+};
 
 export interface RecordVitalTile {
   id: string;
@@ -83,7 +85,7 @@ export interface RecordVitalTile {
 }
 
 /** Nested fact tiles under the title: compact density so they recede. */
-export function RecordVitals({ tiles }: { tiles: readonly RecordVitalTile[] }) {
+export const RecordVitals = ({ tiles }: { tiles: readonly RecordVitalTile[] }) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   if (tiles.length === 0) {
     return null;
@@ -126,26 +128,24 @@ export function RecordVitals({ tiles }: { tiles: readonly RecordVitalTile[] }) {
       ))}
     </XStack>
   );
-}
+};
 
 const bone = (px: number) => sizeRecipeEscape(px, 'loading bones sized to the record page they stand in for');
 
 /** The breadcrumb line's loading twin. */
-export function RecordBreadcrumbBone() {
-  return (
-    <XStack
-      alignItems="center"
-      minHeight={bone(20)}>
-      <Skeleton
-        width={bone(180)}
-        height={bone(14)}
-      />
-    </XStack>
-  );
-}
+export const RecordBreadcrumbBone = () => (
+  <XStack
+    alignItems="center"
+    minHeight={bone(20)}>
+    <Skeleton
+      width={bone(180)}
+      height={bone(14)}
+    />
+  </XStack>
+);
 
 /** The hero and tab strip's loading twin, on the same geometry. */
-export function RecordSkeleton({ testID }: { testID?: string }) {
+export const RecordSkeleton = ({ testID }: { testID?: string }) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   return (
@@ -222,4 +222,4 @@ export function RecordSkeleton({ testID }: { testID?: string }) {
       </YStack>
     </YStack>
   );
-}
+};

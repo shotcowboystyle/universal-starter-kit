@@ -5,8 +5,8 @@ import { SIZE_RECIPE_TOKENS } from '@repo/theme';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Password } from '.';
 import type { PasswordProps } from '.';
@@ -29,9 +29,10 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field; controls own the values
 type StoryProps = PasswordProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <Password
@@ -43,13 +44,15 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
+
+const STORY_PLACEHOLDER = 'Enter password';
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
   label: 'Password',
   value: 'hunter2',
-  placeholder: 'Enter password',
+  placeholder: STORY_PLACEHOLDER,
 } as Partial<StoryProps>;
 Main.storyName = 'Main';
 
@@ -88,7 +91,7 @@ export const States = (args: StoryProps) => (
 States.args = {
   label: 'Password',
   value: 'hunter2',
-  placeholder: 'Enter password',
+  placeholder: STORY_PLACEHOLDER,
 } as Partial<StoryProps>;
 
 /**
@@ -120,7 +123,7 @@ export const ContractProbe = (args: StoryProps) => (
 ContractProbe.args = {
   label: 'Password',
   value: 'hunter2',
-  placeholder: 'Enter password',
+  placeholder: STORY_PLACEHOLDER,
 } as Partial<StoryProps>;
 
 interface PasswordCellRow {
@@ -144,7 +147,7 @@ const passwordCellColumns: DataTableColumn<PasswordCellRow>[] = [
   } as DataTableColumn<PasswordCellRow>,
 ];
 
-function InTableStory() {
+const InTableStory = () => {
   const [data, setData] = useState(passwordCellRows);
   return (
     <YStack
@@ -152,17 +155,17 @@ function InTableStory() {
       height={280}>
       <DataTable
         data={data}
-        columns={passwordCellColumns as DataTableColumn<Record<string, any>>[]}
+        columns={passwordCellColumns}
         enablePagination={false}
-        onDataChange={(next: Record<string, any>[]) => {
-          setData(next as PasswordCellRow[]);
+        onDataChange={(next) => {
+          setData(next);
           action('onDataChange')(next);
         }}
         aria-label="Password cell editor table"
       />
     </YStack>
   );
-}
+};
 
 /** 3-row DataTable mapped through fieldtypeToTableField("Password") — masked in-cell input. */
 export const InTable = () => (
@@ -203,6 +206,6 @@ export const Sizes = (args: StoryProps) => (
 );
 Sizes.args = {
   value: 'hunter2',
-  placeholder: 'Enter password',
+  placeholder: STORY_PLACEHOLDER,
 } as Partial<StoryProps>;
 Sizes.storyName = 'Sizes';

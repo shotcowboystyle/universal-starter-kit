@@ -3,9 +3,11 @@ import { action } from '@repo/storybook';
 import { resolveChartPalette } from '@repo/theme';
 import { Text } from 'tamagui';
 
+import { FrappeStoryProvider } from './frappe-story-target';
 import { FrappeCalendar } from './FrappeCalendar';
 import { FrappeProvider } from './FrappeProvider';
-import { FrappeStoryProvider } from './frappeStoryTarget';
+
+const PALETTE_REFERENCE = 'Frappe palette reference';
 
 // hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
 
@@ -36,7 +38,7 @@ export default {
 
 const MOCK_HOST = 'https://frappecalendar.mock.test';
 
-function eventMetaRaw(name: string) {
+const eventMetaRaw = (name: string) => {
   const isLeave = name === 'LeaveApplication';
   return {
     name,
@@ -58,34 +60,46 @@ function eventMetaRaw(name: string) {
         ],
     permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
   };
+};
+
+interface MockBody {
+  message?: string;
+  docs?: unknown[];
+  data?: unknown;
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// Response.json sets the same `application/json` content type the hand-built Response did.
+const jsonResponse = (body: MockBody, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeCalendarMockFetch?: boolean } = window;
   if (w.__frappeCalendarMockFetch) {
     return;
   }
   w.__frappeCalendarMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname === '/api/method/frappe.desk.form.load.getdoctype') {
         const doctype = url.searchParams.get('doctype') ?? 'CalEvent';
         return jsonResponse({ docs: [eventMetaRaw(doctype)] });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: eventMetaRaw(decodeURIComponent(metaMatch[1])) });
       }
@@ -313,6 +327,7 @@ MondayFirstDay.parameters = {
 };
 
 // ---------------------------------------------------------------------------
+// oxlint-disable-next-line sonarjs/todo-tag -- names a Frappe doctype, not a task marker
 // Live bench story — real ToDo doctype (date field) over the live data path
 // ---------------------------------------------------------------------------
 
@@ -341,6 +356,7 @@ const liveTodoEventFixtures: LiveToDo[] = [
   },
 ];
 
+// oxlint-disable sonarjs/todo-tag -- the comment names a Frappe doctype, not a task marker
 /**
  * Live calendar against the real bench: ToDo docs with a `date` render as
  * month events. External date changes re-slot events between days without a
@@ -348,6 +364,7 @@ const liveTodoEventFixtures: LiveToDo[] = [
  * through the client's optimistic mutation path. Fixture fallback when the
  * bench is unreachable.
  */
+// oxlint-enable sonarjs/todo-tag
 export const Live = () => (
   <FrappeStoryProvider fixtures={new InMemoryFixtureProvider({ ToDo: liveTodoEventFixtures })}>
     <FrappeCalendar<LiveToDo>
@@ -449,7 +466,7 @@ const namedColorFixtures: CalEvent[] = [
     starts_on: `${formatDate(today)} 09:00:00`,
     ends_on: `${formatDate(today)} 10:00:00`,
     color: 'blue',
-    description: 'Frappe palette reference',
+    description: PALETTE_REFERENCE,
   },
   {
     name: 'NAMED-002',
@@ -467,7 +484,7 @@ const namedColorFixtures: CalEvent[] = [
     starts_on: `${formatDate(new Date(today.getTime() + 172_800_000))} 11:00:00`,
     ends_on: `${formatDate(new Date(today.getTime() + 172_800_000))} 12:00:00`,
     color: 'green',
-    description: 'Frappe palette reference',
+    description: PALETTE_REFERENCE,
   },
   {
     name: 'NAMED-004',
@@ -476,7 +493,7 @@ const namedColorFixtures: CalEvent[] = [
     starts_on: `${formatDate(new Date(today.getTime() + 259_200_000))} 14:00:00`,
     ends_on: `${formatDate(new Date(today.getTime() + 259_200_000))} 15:00:00`,
     color: 'orange',
-    description: 'Frappe palette reference',
+    description: PALETTE_REFERENCE,
   },
   {
     name: 'NAMED-005',

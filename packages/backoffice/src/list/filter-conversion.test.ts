@@ -7,7 +7,7 @@
  * dep chain resolves to raw TS that node loads natively), so the mock
  * below is a VERBATIM mirror of filterValueToFrappeTuple from
  * public/frappe-ui/src/FrappeTable.tsx — the real implementation is
- * itself pinned by public/frappe-ui/src/filterFields.spec.ts. If that
+ * itself pinned by public/frappe-ui/src/filter-fields.test.ts. If that
  * function changes, update this mirror to match.
  * Tuple fixtures mirror bench-verified shapes from
  * p-results/backoffice/integration-notes.md.

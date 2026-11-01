@@ -4,13 +4,15 @@ import { YStack } from 'tamagui';
 import { AttachLibrary } from './AttachLibrary';
 import type { FileBrowserFile } from './types';
 
+const INVOICES_FOLDER = 'Home/Invoices';
+
 const files: FileBrowserFile[] = [
   { name: 'Home', file_name: 'Home', folder: '', is_folder: 1 },
-  { name: 'Home/Invoices', file_name: 'Invoices', folder: 'Home', is_folder: 1 },
+  { name: INVOICES_FOLDER, file_name: 'Invoices', folder: 'Home', is_folder: 1 },
   {
     name: 'inv-1',
     file_name: 'hetzner-hel1-invoice-aug.pdf',
-    folder: 'Home/Invoices',
+    folder: INVOICES_FOLDER,
     file_size: 72_400,
     file_type: 'pdf',
     file_url: '/files/invoice.pdf',
@@ -19,7 +21,7 @@ const files: FileBrowserFile[] = [
   {
     name: 'img-1',
     file_name: 'swarm01-topology.png',
-    folder: 'Home/Invoices',
+    folder: INVOICES_FOLDER,
     file_size: 612_000,
     file_type: 'png',
     file_url: '/files/topology.png',
@@ -87,9 +89,13 @@ Empty.parameters = {
 export const Closed = () => (
   <AttachLibrary
     open={false}
-    onOpenChange={() => {}}
+    onOpenChange={() => {
+      // Closed story: the dialog never opens.
+    }}
     files={files}
     currentFolder="Home/Invoices"
-    onPick={() => {}}
+    onPick={() => {
+      // Closed story: nothing to pick.
+    }}
   />
 );

@@ -14,13 +14,14 @@ export interface AttachLibraryProps {
   onOpenChange: (open: boolean) => void;
   value?: unknown;
   onPick: (file: FileBrowserFile) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- the return value is ignored; unknown accepts both sync and async uploaders
   onUpload?: (file: File) => unknown;
   files?: FileBrowserFile[];
   currentFolder?: string;
   accept?: string;
 }
 
-export function AttachLibrary({
+export const AttachLibrary = ({
   open,
   onOpenChange,
   value,
@@ -29,11 +30,12 @@ export function AttachLibrary({
   files,
   currentFolder,
   accept,
-}: AttachLibraryProps) {
+}: AttachLibraryProps) => {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const drill = width < OVERLAY_BREAKPOINT;
   const [tab, setTab] = useState('library');
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the Attach field value arrives untyped from the form registry; only a URL string marks the current file
   const current = typeof value === 'string' ? value : undefined;
 
   return (
@@ -115,4 +117,4 @@ export function AttachLibrary({
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

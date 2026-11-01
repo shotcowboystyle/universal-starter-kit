@@ -4,8 +4,8 @@ import type { DataTableColumn } from '@repo/table';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField } from '../../fieldRegistry';
-import { FrappeStoryProvider } from '../../frappeStoryTarget';
+import { fieldtypeToTableField } from '../../field-registry';
+import { FrappeStoryProvider } from '../../frappe-story-target';
 
 import { Geolocation } from '.';
 import type { GeolocationProps } from '.';
@@ -31,9 +31,12 @@ export default {
   },
 };
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to the field
 type StoryProps = GeolocationProps & Record<string, unknown>;
 
-function Controlled(props: StoryProps) {
+const AUSTIN = '{"lat": 30.2672, "lng": -97.7431}';
+
+const Controlled = (props: StoryProps) => {
   const [value, setValue] = useState(props.value);
   return (
     <Geolocation
@@ -45,12 +48,12 @@ function Controlled(props: StoryProps) {
       }}
     />
   );
-}
+};
 
 export const Main = (args: StoryProps) => <Controlled {...args} />;
 Main.args = {
   label: 'Location',
-  value: '{"lat": 30.2672, "lng": -97.7431}',
+  value: AUSTIN,
 } as Partial<StoryProps>;
 Main.storyName = 'Main';
 
@@ -88,7 +91,7 @@ export const States = (args: StoryProps) => (
 );
 States.args = {
   label: 'Location',
-  value: '{"lat": 30.2672, "lng": -97.7431}',
+  value: AUSTIN,
 } as Partial<StoryProps>;
 // LC-57 allowlist: the Disabled rows demo the disabled dial, and Geolocation's
 // internal Locate/Coordinates Buttons have no disabledReason plumbing yet
@@ -129,7 +132,7 @@ export const ContractProbe = (args: StoryProps) => (
 );
 ContractProbe.args = {
   label: 'Location',
-  value: '{"lat": 30.2672, "lng": -97.7431}',
+  value: AUSTIN,
 } as Partial<StoryProps>;
 
 type GeoValue = { lat: number; lng: number } | null;
@@ -141,6 +144,7 @@ interface GeoRow {
 
 export const InTable = {
   name: 'In table',
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function InTableRender() {
     const [data, setData] = useState<GeoRow[]>([
       { id: '1', label: 'Alpha', value: { lat: 30.2672, lng: -97.7431 } },

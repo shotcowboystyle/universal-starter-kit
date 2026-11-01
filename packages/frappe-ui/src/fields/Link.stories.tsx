@@ -6,9 +6,9 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { fieldtypeToTableField, getFieldComponent } from '../fieldRegistry';
+import { fieldtypeToTableField, getFieldComponent } from '../field-registry';
+import { FrappeStoryProvider } from '../frappe-story-target';
 import { FrappeProvider } from '../FrappeProvider';
-import { FrappeStoryProvider } from '../frappeStoryTarget';
 
 import { Link } from './Link';
 import type { LinkProps } from './Link';
@@ -50,22 +50,22 @@ export default {
 // ---------------------------------------------------------------------------
 
 const MOCK_HOST = 'https://frappelink.mock.test';
+const JOHN_CONTACT = 'CONTACT-001';
+const JANE_EMAIL = 'jane@example.com';
 
-function contactMeta() {
-  return {
-    name: 'Contact',
-    // FixtureDoc requires `doctype`; a DocType meta doc's own doctype is DocType.
-    doctype: 'DocType',
-    module: 'Contacts',
-    title_field: 'first_name',
-    fields: [
-      { fieldname: 'first_name', fieldtype: 'Data', label: 'First Name', required: 1 },
-      { fieldname: 'last_name', fieldtype: 'Data', label: 'Last Name' },
-      { fieldname: 'email_id', fieldtype: 'Data', label: 'Email' },
-    ],
-    permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
-  };
-}
+const contactMeta = () => ({
+  name: 'Contact',
+  // FixtureDoc requires `doctype`; a DocType meta doc's own doctype is DocType.
+  doctype: 'DocType',
+  module: 'Contacts',
+  title_field: 'first_name',
+  fields: [
+    { fieldname: 'first_name', fieldtype: 'Data', label: 'First Name', required: 1 },
+    { fieldname: 'last_name', fieldtype: 'Data', label: 'Last Name' },
+    { fieldname: 'email_id', fieldtype: 'Data', label: 'Email' },
+  ],
+  permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
+});
 
 interface Contact {
   name: string;
@@ -77,7 +77,7 @@ interface Contact {
 
 const contactFixtures: Contact[] = [
   {
-    name: 'CONTACT-001',
+    name: JOHN_CONTACT,
     doctype: 'Contact',
     first_name: 'John',
     last_name: 'Doe',
@@ -88,7 +88,7 @@ const contactFixtures: Contact[] = [
     doctype: 'Contact',
     first_name: 'Jane',
     last_name: 'Smith',
-    email_id: 'jane@example.com',
+    email_id: JANE_EMAIL,
   },
   {
     name: 'CONTACT-003',
@@ -105,25 +105,31 @@ const contactLinks = contactFixtures.map((doc) => ({
   description: `${doc.first_name} ${doc.last_name}`,
 }));
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- each mocked Frappe method replies with its own payload shape
+const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
+
+const requestUrl = (input: RequestInfo | URL): string => {
+  if (input instanceof URL) {
+    return input.toString();
+  }
+  if (input instanceof Request) {
+    return input.url;
+  }
+  return input;
+};
 
 (() => {
   if (typeof window === 'undefined') {
     return;
   }
-  const w = window as unknown as Record<string, unknown>;
+  const w: Window & { __frappeLinkMockFetch?: boolean } = window;
   if (w.__frappeLinkMockFetch) {
     return;
   }
   w.__frappeLinkMockFetch = true;
   const realFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const urlStr = requestUrl(input);
     if (urlStr.startsWith(MOCK_HOST)) {
       const url = new URL(urlStr);
       if (url.pathname.includes('frappe.desk.form.load.getdoctype')) {
@@ -144,7 +150,7 @@ function jsonResponse(body: unknown, status = 200): Response {
       if (url.pathname.includes('frappe.sessions.get_csrf_token')) {
         return jsonResponse({ message: 'mock-csrf' });
       }
-      const metaMatch = /^\/api\/resource\/DocType\/(.+)$/.exec(url.pathname);
+      const metaMatch = /^\/api\/resource\/DocType\/(?<doctype>.+)$/u.exec(url.pathname);
       if (metaMatch) {
         return jsonResponse({ data: contactMeta() });
       }
@@ -154,9 +160,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   };
 })();
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- story args carry Storybook controls beyond LinkProps
 type StoryProps = LinkProps & Record<string, unknown>;
 
-function Controlled(props: Omit<StoryProps, 'onChange'>) {
+const Controlled = (props: Omit<StoryProps, 'onChange'>) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Link
@@ -168,7 +175,7 @@ function Controlled(props: Omit<StoryProps, 'onChange'>) {
       }}
     />
   );
-}
+};
 
 const contactFixturesProvider = () =>
   new InMemoryFixtureProvider({
@@ -192,7 +199,7 @@ export const WithValue = (args: StoryProps) => withProvider(<Controlled {...args
 WithValue.args = {
   label: 'Preselected contact',
   doctype: 'Contact',
-  value: 'CONTACT-001',
+  value: JOHN_CONTACT,
 } as Partial<StoryProps>;
 
 export const States = (args: StoryProps) =>
@@ -240,7 +247,7 @@ export const ContractProbe = (args: StoryProps) =>
       <Controlled
         {...args}
         label="readOnly+helper probe"
-        {...({ readOnly: true, helperText: 'help', value: 'CONTACT-001' } as any)}
+        {...({ readOnly: true, helperText: 'help', value: JOHN_CONTACT } as any)}
       />
       <Controlled
         {...args}
@@ -264,13 +271,15 @@ ContractProbe.args = { doctype: 'Contact' } as Partial<StoryProps>;
  * LIVE standalone field: search Users on the real bench. Type to watch
  * debounced search_link requests; results show value + description.
  */
-export const Live = (args: StoryProps) => (
+const renderLive = (args: StoryProps) => (
   <FrappeStoryProvider>
     <YStack maxWidth={420}>
       <Controlled {...args} />
     </YStack>
   </FrappeStoryProvider>
 );
+
+export const Live = (args: StoryProps) => renderLive(args);
 Live.args = { label: 'User', doctype: 'User' } as Partial<StoryProps>;
 Live.parameters = {
   docs: {
@@ -285,13 +294,7 @@ Live.parameters = {
  * LIVE with a preset foreign key: the display title resolves on mount via
  * get_link_title (before any search has run).
  */
-export const LiveWithValue = (args: StoryProps) => (
-  <FrappeStoryProvider>
-    <YStack maxWidth={420}>
-      <Controlled {...args} />
-    </YStack>
-  </FrappeStoryProvider>
-);
+export const LiveWithValue = (args: StoryProps) => renderLive(args);
 LiveWithValue.args = {
   label: 'Assigned to',
   doctype: 'User',
@@ -304,7 +307,7 @@ LiveWithValue.args = {
  */
 const RegistryLinkAdapter = getFieldComponent('Link')!;
 
-function ControlledAdapter() {
+const ControlledAdapter = () => {
   const [value, setValue] = useState('');
   return (
     <RegistryLinkAdapter
@@ -317,7 +320,7 @@ function ControlledAdapter() {
       fieldMeta={{ type: 'Link', name: 'allocated_to', options: 'User' }}
     />
   );
-}
+};
 
 export const LiveFormAdapter = () => (
   <FrappeStoryProvider>
@@ -361,21 +364,21 @@ const linkCellColumns: DataTableColumn<LinkCellRow>[] = [
   } as DataTableColumn<LinkCellRow>,
 ];
 
-function LiveCellStory() {
+const LiveCellStory = () => {
   const [data, setData] = useState(linkCellRows);
   return (
     <DataTable
       data={data}
-      columns={linkCellColumns as DataTableColumn<Record<string, any>>[]}
-      onDataChange={(next: Record<string, any>[]) => {
-        setData(next as LinkCellRow[]);
+      columns={linkCellColumns}
+      onDataChange={(next) => {
+        setData(next);
         action('onDataChange')(next);
       }}
       showRowNumbers
       aria-label="Link cell editor table"
     />
   );
-}
+};
 
 export const LiveCell = () => (
   <FrappeStoryProvider>
@@ -397,7 +400,7 @@ const userFixtures = new InMemoryFixtureProvider({
   User: [
     { name: 'Administrator', doctype: 'User', full_name: 'Administrator' },
     { name: 'Guest', doctype: 'User', full_name: 'Guest' },
-    { name: 'jane@example.com', doctype: 'User', full_name: 'Jane Example' },
+    { name: JANE_EMAIL, doctype: 'User', full_name: 'Jane Example' },
   ],
 });
 
@@ -410,7 +413,7 @@ interface LinkInTableRow {
 export const InTable = () => {
   const [data, setData] = useState<LinkInTableRow[]>([
     { id: '1', label: 'Alpha', allocated_to: 'Administrator' },
-    { id: '2', label: 'Beta', allocated_to: 'jane@example.com' },
+    { id: '2', label: 'Beta', allocated_to: JANE_EMAIL },
     { id: '3', label: 'Gamma', allocated_to: '' },
   ]);
   const columns: DataTableColumn<LinkInTableRow>[] = [
