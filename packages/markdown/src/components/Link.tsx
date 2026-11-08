@@ -2,32 +2,35 @@ import { openUrl } from '@repo/platform';
 import { FOCUS_RING_HALO_OFFSET, useResolvedKnobs } from '@repo/theme';
 import { Text, isWeb } from 'tamagui';
 
-import { markdownLinkColors } from '../shared/colorRamps';
+import { markdownLinkColors } from '../shared/color-ramps';
 import type { LinkProps } from '../types';
 
 const safeProtocols = new Set(['http', 'https', 'mailto', 'tel', 'sms']);
+const SCHEME_PATTERN = /^(?<scheme>[a-z][a-z0-9+.-]*):/iu;
+const EXTERNAL_PATTERN = /^https?:\/\//iu;
 
-function getSafeHref(href?: string): string | undefined {
-  if (!href) {
+const getSafeHref = (href?: string): string | undefined => {
+  if (href === undefined || href === '') {
     return undefined;
   }
   const trimmed = href.trim();
-  const match = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed);
+  const scheme = SCHEME_PATTERN.exec(trimmed)?.groups?.scheme;
   // relative, hash, and query hrefs have no scheme and are safe
-  if (!match) {
+  if (scheme === undefined) {
     return trimmed;
   }
-  return safeProtocols.has(match[1].toLowerCase()) ? trimmed : undefined;
-}
+  return safeProtocols.has(scheme.toLowerCase()) ? trimmed : undefined;
+};
 
-export function Link({ href, title, children }: LinkProps) {
+export const Link = ({ href, title, children }: LinkProps) => {
   const { knobProps } = useResolvedKnobs();
   const safeHref = getSafeHref(href);
-  const isExternal = !!safeHref && /^https?:\/\//i.test(safeHref);
+  const hasHref = safeHref !== undefined && safeHref !== '';
+  const isExternal = hasHref && EXTERNAL_PATTERN.test(safeHref);
 
   const handlePress = () => {
     // web navigation is handled natively by the anchor element
-    if (!isWeb && safeHref) {
+    if (!isWeb && hasHref) {
       openUrl(safeHref);
     }
   };
@@ -57,4 +60,4 @@ export function Link({ href, title, children }: LinkProps) {
       {children}
     </Text>
   );
-}
+};

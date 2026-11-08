@@ -10,15 +10,15 @@ interface IconProps {
  * Resolve theme tokens like "$color10" to concrete values — raw SVG stroke
  * attributes cannot consume unresolved token strings (SB-M-1206).
  */
-function useIconColor(color?: string): string {
-  const theme = useTheme();
-  if (color?.startsWith('$')) {
-    return (theme as any)[color.slice(1)]?.val ?? theme.color?.val ?? 'currentColor';
+const useIconColor = (color?: string): string => {
+  const theme: Record<string, { val?: string } | undefined> = useTheme();
+  if (color?.startsWith('$') === true) {
+    return theme[color.slice(1)]?.val ?? theme.color?.val ?? 'currentColor';
   }
   return color ?? theme.color?.val ?? 'currentColor';
-}
+};
 
-export function ClipboardIcon({ size = 16, color }: IconProps) {
+export const ClipboardIcon = ({ size = 16, color }: IconProps) => {
   const fill = useIconColor(color);
   return (
     <Svg
@@ -42,9 +42,9 @@ export function ClipboardIcon({ size = 16, color }: IconProps) {
       />
     </Svg>
   );
-}
+};
 
-export function CheckIcon({ size = 16, color, strokeWidth = 2.5 }: IconProps & { strokeWidth?: number }) {
+export const CheckIcon = ({ size = 16, color, strokeWidth = 2.5 }: IconProps & { strokeWidth?: number }) => {
   const stroke = useIconColor(color);
   return (
     <Svg
@@ -61,9 +61,9 @@ export function CheckIcon({ size = 16, color, strokeWidth = 2.5 }: IconProps & {
       />
     </Svg>
   );
-}
+};
 
-export function CheckCircleIcon({ size = 16, color }: IconProps) {
+export const CheckCircleIcon = ({ size = 16, color }: IconProps) => {
   const fill = useIconColor(color);
   return (
     <Svg
@@ -87,9 +87,9 @@ export function CheckCircleIcon({ size = 16, color }: IconProps) {
       />
     </Svg>
   );
-}
+};
 
-export function LinkIcon({ size = 12, color }: IconProps) {
+export const LinkIcon = ({ size = 12, color }: IconProps) => {
   const fill = useIconColor(color);
   return (
     <Svg
@@ -113,7 +113,7 @@ export function LinkIcon({ size = 12, color }: IconProps) {
       />
     </Svg>
   );
-}
+};
 
 // AlertTriangleIcon / InfoIcon / ChevronRightIcon were removed in the
 // duplication census: they duplicated the catalog's intent icons and were

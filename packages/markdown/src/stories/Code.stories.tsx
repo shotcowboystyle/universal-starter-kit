@@ -4,6 +4,9 @@ import { YStack } from 'tamagui';
 import { CodeBlock } from '../components/CodeBlock';
 import { MDXCodeBlock } from '../MdxCodeBlock';
 
+const EMPTY_SOURCE = '';
+const COPY_DISABLED_SOURCE = '// copy disabled';
+
 const meta: Meta = {
   title: 'Markdown/Code',
   parameters: {
@@ -55,7 +58,7 @@ export const CodeBlockEdge: Story = {
       maxWidth={700}
       padding="$4">
       <CodeBlock lang="notareallanguage">unknown language fallback</CodeBlock>
-      <CodeBlock lang="typescript" />
+      <CodeBlock lang="typescript">{EMPTY_SOURCE}</CodeBlock>
       <CodeBlock lang="javascript">{longLineSample}</CodeBlock>
     </YStack>
   ),
@@ -134,7 +137,7 @@ export const MdxCodeBlockEdge: Story = {
       <MDXCodeBlock
         className="language-js"
         disableCopy>
-        // copy disabled
+        {COPY_DISABLED_SOURCE}
       </MDXCodeBlock>
       <MDXCodeBlock className="language-js">{longLineSample}</MDXCodeBlock>
     </YStack>

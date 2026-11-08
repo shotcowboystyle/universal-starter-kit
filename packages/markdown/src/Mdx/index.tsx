@@ -3,8 +3,8 @@ import { ErrorBoundary } from '@repo/ui';
 import type { DebugProp } from '@tamagui/web';
 import type { MDXComponents } from 'mdx/types';
 
-import { useCompileAndEvaluateMdx } from '../hooks';
-import { mdxComponents } from '../mdxComponents';
+import { useCompileAndEvaluateMdx } from '../hooks/use-compile-and-evaluate-mdx';
+import { mdxComponents } from '../mdx-components';
 
 export interface MDXProps {
   children: string;
@@ -14,13 +14,13 @@ export interface MDXProps {
 
 const logger = console;
 
-export function MDX({ children, debug, ...props }: MDXProps) {
+export const MDX = ({ children, debug, ...props }: MDXProps) => {
   const components = useMDXComponents();
   const { Component, code, frontmatter } = useCompileAndEvaluateMdx(children);
   if (!Component) {
-    return <>{}</>;
+    return null;
   }
-  if (debug) {
+  if (debug !== undefined && debug !== false) {
     logger.debug('MDX', { frontmatter });
     logger.debug(code);
   }
@@ -37,4 +37,4 @@ export function MDX({ children, debug, ...props }: MDXProps) {
       />
     </ErrorBoundary>
   );
-}
+};

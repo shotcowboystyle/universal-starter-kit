@@ -3,7 +3,7 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { MarkdownTable, MarkdownTableRow, MarkdownTableCell } from '../components/Table';
 import { MarkdownSimpleTable } from '../MarkdownSimpleTable';
-import { TableHighlight } from '../mdxComponents';
+import { TableHighlight } from '../mdx-components';
 import { MDXTable, MDXTableBody, MDXTableCell, MDXTableHead, MDXTableHeaderCell, MDXTableRow } from '../Table';
 
 const meta: Meta = {

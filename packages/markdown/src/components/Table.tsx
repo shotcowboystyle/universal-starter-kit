@@ -7,20 +7,20 @@
  * flagged `isHeader`); MarkdownTable partitions them into head and body.
  */
 
-import { ScrollView } from '@repo/ui';
 import { Table } from '@repo/table-primitives';
+import { ScrollView } from '@repo/ui';
 import { Children, isValidElement } from 'react';
+import type { ReactNode } from 'react';
 import { Paragraph, YStack } from 'tamagui';
 
-import { useMarkdownTableKnobs } from '../shared/useMarkdownTableKnobs';
+import { useMarkdownTableKnobs } from '../shared/use-markdown-table-knobs';
 import type { TableProps, TableRowProps, TableCellProps } from '../types';
 
-function isHeaderRow(row: unknown): boolean {
-  return isValidElement(row) && Boolean((row.props as TableRowProps).isHeader);
-}
+const isHeaderRow = (row: ReactNode): boolean => isValidElement<TableRowProps>(row) && row.props.isHeader === true;
 
-export function MarkdownTable({ children }: TableProps) {
+export const MarkdownTable = ({ children }: TableProps) => {
   const { frameProps, headRule } = useMarkdownTableKnobs();
+  // oxlint-disable-next-line react/no-react-children -- the renderer emits a flat row list as children; partitioning into thead/tbody must read each row's isHeader prop
   const rows = Children.toArray(children);
   const headerRows = rows.filter((row) => isHeaderRow(row));
   const bodyRows = rows.filter((row) => !isHeaderRow(row));
@@ -55,14 +55,12 @@ export function MarkdownTable({ children }: TableProps) {
       </YStack>
     </ScrollView>
   );
-}
+};
 
-export function MarkdownTableRow({ children }: TableRowProps) {
-  // `isHeader` is consumed by MarkdownTable to place the row in thead/tbody.
-  return <Table.Row render="tr">{children}</Table.Row>;
-}
+// `isHeader` is consumed by MarkdownTable to place the row in thead/tbody.
+export const MarkdownTableRow = ({ children }: TableRowProps) => <Table.Row render="tr">{children}</Table.Row>;
 
-export function MarkdownTableCell({ children, isHeader, align }: TableCellProps) {
+export const MarkdownTableCell = ({ children, isHeader, align }: TableCellProps) => {
   const { headerTextProps, cellTextProps, cellPad } = useMarkdownTableKnobs();
   const textAlign = align ?? 'left';
 
@@ -95,4 +93,4 @@ export function MarkdownTableCell({ children, isHeader, align }: TableCellProps)
       </Paragraph>
     </Table.Cell>
   );
-}
+};

@@ -9,19 +9,20 @@
  * code color ramp.
  */
 
-import { Code, HighlightedCode, useShikiTokens, ScrollView } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Code, HighlightedCode, useShikiTokens, ScrollView } from '@repo/ui';
 import { View } from 'tamagui';
 import type { FontSizeTokens } from 'tamagui';
 
-import { markdownCodeColors } from '../shared/colorRamps';
+import { markdownCodeColors } from '../shared/color-ramps';
 import type { CodeBlockProps } from '../types';
 
 interface CodeBlockInternalProps extends CodeBlockProps {
-  theme?: string | 'auto';
+  /** A shiki theme name, or 'auto' for the house syntax theme. */
+  theme?: string;
 }
 
-export function CodeBlock({ children, lang, theme: themeProp = 'auto' }: CodeBlockInternalProps) {
+export const CodeBlock = ({ children, lang, theme: themeProp = 'auto' }: CodeBlockInternalProps) => {
   const { knobProps } = useResolvedKnobs();
   // "auto" defers to useShikiTokens' default, the house syntax theme, whose
   // token inks follow the scheme (SB-M-1216, MPO-474).
@@ -54,6 +55,7 @@ export function CodeBlock({ children, lang, theme: themeProp = 'auto' }: CodeBlo
           <HighlightedCode
             tokens={tokens}
             // SAFETY: sizeToken is always a registered size token ($1-$6), which doubles as a font-size token
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
             fontSize={knobProps.sizeToken as FontSizeTokens}>
             {children}
           </HighlightedCode>
@@ -61,4 +63,4 @@ export function CodeBlock({ children, lang, theme: themeProp = 'auto' }: CodeBlo
       </ScrollView>
     </View>
   );
-}
+};

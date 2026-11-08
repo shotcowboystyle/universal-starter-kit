@@ -57,7 +57,7 @@ export const AsideEdge: Story = {
       <MDXAside>
         <Paragraph>Short element child (still gets cutoff frame per implementation).</Paragraph>
       </MDXAside>
-      <MDXAside />
+      <MDXAside>{null}</MDXAside>
     </YStack>
   ),
 };
@@ -82,7 +82,7 @@ export const NoteStory: Story = {
           interactive child
         </Button>
       </MDXNote>
-      <MDXNote />
+      <MDXNote>{null}</MDXNote>
       <YStack width={220}>
         <MDXNote>Narrow width note that must wrap cleanly.</MDXNote>
       </YStack>
@@ -145,7 +145,7 @@ export const NoticeEdge: Story = {
     <YStack
       maxWidth={700}
       padding="$4">
-      <Notice />
+      <Notice>{null}</Notice>
       <Notice theme="blue">
         A long notice body without a title. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco

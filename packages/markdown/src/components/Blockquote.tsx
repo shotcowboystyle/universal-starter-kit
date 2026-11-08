@@ -1,15 +1,25 @@
 import { useResolvedKnobs } from '@repo/theme';
 import { View, getTokens, isWeb, useTheme } from 'tamagui';
+import type { Variable } from 'tamagui';
 
-import { markdownBlockquoteColors } from '../shared/colorRamps';
+import { markdownBlockquoteColors } from '../shared/color-ramps';
 import type { BlockquoteProps } from '../types';
 
-export function Blockquote({ children }: BlockquoteProps) {
+export const Blockquote = ({ children }: BlockquoteProps) => {
   const { knobProps } = useResolvedKnobs();
   const theme = useTheme();
-  const padToken = knobProps.panelPadding.padding as number | string;
-  const pad = typeof padToken === 'number' ? padToken : ((getTokens().space as any)?.[padToken]?.val ?? padToken);
+  const padToken = knobProps.panelPadding.padding;
+  const spaceTokens: Partial<Record<string, Variable<number | string>>> = getTokens().space;
+  const pad = spaceTokens[padToken]?.val ?? padToken;
   const railWidth = knobProps.borderRadius.borderWidth;
+  // Tamagui types a theme variable's resolved value as `any`; it is only forwarded into a DOM style.
+  const railColor: unknown = theme.color8?.val ?? theme.borderColor?.val;
+  const webRailStyle = {
+    borderInlineStartWidth: railWidth,
+    borderInlineStartStyle: railWidth ? 'solid' : 'none',
+    borderInlineStartColor: railColor,
+    paddingInlineStart: pad,
+  };
   return (
     <View
       backgroundColor={markdownBlockquoteColors.background.base}
@@ -25,12 +35,9 @@ export function Blockquote({ children }: BlockquoteProps) {
       // border/padding props, which flip with I18nManager.
       {...(isWeb
         ? {
-            style: {
-              borderInlineStartWidth: railWidth,
-              borderInlineStartStyle: railWidth ? 'solid' : 'none',
-              borderInlineStartColor: theme.color8?.val ?? theme.borderColor?.val,
-              paddingInlineStart: pad,
-            } as any,
+            // SAFETY: web-only branch; CSS logical properties are valid DOM styles but absent from React Native's style type.
+            // oxlint-disable-next-line typescript/no-explicit-any, typescript/no-unsafe-assignment, typescript/no-unsafe-type-assertion -- see SAFETY above
+            style: webRailStyle as any,
           }
         : {
             borderStartWidth: railWidth,
@@ -40,4 +47,4 @@ export function Blockquote({ children }: BlockquoteProps) {
       {children}
     </View>
   );
-}
+};

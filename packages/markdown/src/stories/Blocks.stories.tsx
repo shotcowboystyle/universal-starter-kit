@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
-import { Paragraph as TamaguiParagraph, XStack, YStack } from 'tamagui';
+import { Paragraph as TamaguiParagraph, YStack } from 'tamagui';
 
 import { Blockquote } from '../components/Blockquote';
 import { Heading } from '../components/Heading';
@@ -9,9 +9,9 @@ import { Strong, Emphasis } from '../components/InlineStyles';
 import { Link } from '../components/Link';
 import { MarkdownList, MarkdownListItem } from '../components/List';
 import { Paragraph } from '../components/Paragraph';
-import { HR } from '../Hr';
-import { LI } from '../Li';
-import { UL } from '../Ul';
+import { HR as Hr } from '../Hr';
+import { LI as Li } from '../Li';
+import { UL as Ul } from '../Ul';
 
 const meta: Meta = {
   title: 'Markdown/Blocks',
@@ -55,7 +55,7 @@ export const HeadingEdge: Story = {
       maxWidth={700}
       padding="$4">
       <Heading level={args.level}>{args.children}</Heading>
-      <Heading level={2} />
+      <Heading level={2}>{null}</Heading>
       <Heading level={2}>
         A very long duplicate heading that keeps going far beyond a single line to prove wrapping behaviour holds for
         headings too
@@ -84,7 +84,7 @@ export const ParagraphStory: Story = {
       maxWidth={700}
       padding="$4">
       <Paragraph>{args.children}</Paragraph>
-      <Paragraph />
+      <Paragraph>{null}</Paragraph>
       <Paragraph>
         A long paragraph exercising wrapping and selection. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
         do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
@@ -146,14 +146,14 @@ export const Rules: Story = {
       <TamaguiParagraph>HorizontalRule (markdown mapped):</TamaguiParagraph>
       <HorizontalRule />
       <TamaguiParagraph>HR (MDX alias):</TamaguiParagraph>
-      <HR />
+      <Hr />
       <TamaguiParagraph>Narrow container (160px):</TamaguiParagraph>
       <YStack
         width={160}
         borderWidth={1}
         borderColor="$color5">
         <HorizontalRule />
-        <HR />
+        <Hr />
       </YStack>
     </YStack>
   ),
@@ -236,23 +236,23 @@ export const UlLi: Story = {
     <YStack
       maxWidth={700}
       padding="$4">
-      <UL>
-        <LI>custom LI one</LI>
-        <LI>
+      <Ul>
+        <Li>custom LI one</Li>
+        <Li>
           a multiline custom LI long enough to wrap so we can confirm the list-item display keeps its disc marker
           aligned with the first line of text
-        </LI>
-        <LI />
-        <LI>
+        </Li>
+        <Li />
+        <Li>
           nested UL below:
-          <UL>
-            <LI>nested LI</LI>
-            <UL>
-              <LI>deep nested LI</LI>
-            </UL>
-          </UL>
-        </LI>
-      </UL>
+          <Ul>
+            <Li>nested LI</Li>
+            <Ul>
+              <Li>deep nested LI</Li>
+            </Ul>
+          </Ul>
+        </Li>
+      </Ul>
     </YStack>
   ),
 };

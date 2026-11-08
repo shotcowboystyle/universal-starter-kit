@@ -12,11 +12,11 @@ import { useResolvedKnobs } from '@repo/theme';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View, useThemeName } from 'tamagui';
 
-import { CodeBlock } from '../components';
-import { markdownCodeColors } from '../shared/colorRamps';
+import { CodeBlock } from '../components/CodeBlock';
+import { markdownCodeColors } from '../shared/color-ramps';
 
-import { mountDiagramSvg } from './mountDiagramSvg';
-import { renderMermaidDiagram } from './renderMermaidDiagram';
+import { mountDiagramSvg } from './mount-diagram-svg';
+import { renderMermaidDiagram } from './render-mermaid-diagram';
 
 export interface MermaidBlockProps {
   /** Mermaid diagram source */
@@ -25,22 +25,40 @@ export interface MermaidBlockProps {
 
 type MermaidState = { status: 'loading' } | { status: 'ok'; svg: string } | { status: 'error'; error: string };
 
-export function MermaidBlock({ children }: MermaidBlockProps) {
+/** A settled render, tagged with the inputs it was rendered from. */
+interface SettledRender {
+  code: string;
+  scheme: 'light' | 'dark';
+  state: MermaidState;
+}
+
+const LOADING: MermaidState = { status: 'loading' };
+
+export const MermaidBlock = ({ children }: MermaidBlockProps) => {
   const { knobProps } = useResolvedKnobs();
   const themeName = useThemeName();
-  const scheme = String(themeName).startsWith('dark') ? 'dark' : 'light';
-  const [state, setState] = useState<MermaidState>({ status: 'loading' });
+  const scheme = themeName.startsWith('dark') ? 'dark' : 'light';
+  const [settled, setSettled] = useState<SettledRender | null>(null);
+  // A render settled for other inputs is stale: show loading until the
+  // current source/scheme settles.
+  const state = settled?.code === children && settled.scheme === scheme ? settled.state : LOADING;
   const svgHostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
-    renderMermaidDiagram(children, { scheme }).then((result) => {
+    const render = async () => {
+      // renderMermaidDiagram never rejects: failures come back as { ok: false }
+      const result = await renderMermaidDiagram(children, { scheme });
       if (cancelled) {
         return;
       }
-      setState(result.ok ? { status: 'ok', svg: result.svg } : { status: 'error', error: result.error });
-    });
+      setSettled({
+        code: children,
+        scheme,
+        state: result.ok ? { status: 'ok', svg: result.svg } : { status: 'error', error: result.error },
+      });
+    };
+    void render();
     return () => {
       cancelled = true;
     };
@@ -66,6 +84,7 @@ export function MermaidBlock({ children }: MermaidBlockProps) {
         overflow="hidden">
         <div
           ref={svgHostRef}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline SVG host, not an <img> source; the role names the diagram for assistive tech
           role="img"
           aria-label="Mermaid diagram"
           data-mermaid-diagram="true"
@@ -88,4 +107,4 @@ export function MermaidBlock({ children }: MermaidBlockProps) {
       <CodeBlock lang="mermaid">{children}</CodeBlock>
     </View>
   );
-}
+};

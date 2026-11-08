@@ -15,7 +15,7 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useEffect, useRef, useState } from 'react';
 import { Paragraph, View, YStack } from 'tamagui';
 
-import { mountDiagramSvg } from './mountDiagramSvg';
+import { mountDiagramSvg } from './mount-diagram-svg';
 
 const meta: Meta = {
   title: 'Markdown/Mermaid Mount',
@@ -34,7 +34,7 @@ export default meta;
 type Story = StoryObj;
 
 /** Mounts `svg` on mount and reports what mountDiagramSvg returned. */
-function MountSpecimen({ label, svg }: { label: string; svg: string }) {
+const MountSpecimen = ({ label, svg }: { label: string; svg: string }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState<{ mounted: boolean; html: string } | null>(null);
 
@@ -43,6 +43,7 @@ function MountSpecimen({ label, svg }: { label: string; svg: string }) {
       return;
     }
     const mounted = mountDiagramSvg(hostRef.current, svg);
+    // oxlint-disable-next-line github/no-inner-html -- reads the sanitized result back for display; nothing is assigned
     setResult({ mounted, html: hostRef.current.innerHTML });
   }, [svg]);
 
@@ -73,7 +74,7 @@ function MountSpecimen({ label, svg }: { label: string; svg: string }) {
       </Paragraph>
     </YStack>
   );
-}
+};
 
 const plainDiagram = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="90" viewBox="0 0 220 90">
   <rect x="4" y="4" width="92" height="42" rx="6" fill="none" stroke="#7c8ea0" stroke-width="2"/>

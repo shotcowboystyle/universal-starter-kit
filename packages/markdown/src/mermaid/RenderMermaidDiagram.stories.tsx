@@ -16,9 +16,9 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useEffect, useRef, useState } from 'react';
 import { Paragraph, View, XStack, YStack } from 'tamagui';
 
-import { mountDiagramSvg } from './mountDiagramSvg';
-import { renderMermaidDiagram } from './renderMermaidDiagram';
-import type { MermaidRenderResult } from './renderMermaidDiagram';
+import { mountDiagramSvg } from './mount-diagram-svg';
+import { renderMermaidDiagram } from './render-mermaid-diagram';
+import type { MermaidRenderResult } from './render-mermaid-diagram';
 
 const meta: Meta = {
   title: 'Markdown/Mermaid Engine',
@@ -43,33 +43,42 @@ const FLOWCHART = `graph TD
 
 const INVALID = 'graph TD\n A--';
 
-/** Calls the engine once and shows the union it resolved to. */
-function EngineSpecimen({
-  label,
-  code,
-  scheme,
-  fontFamily,
-}: {
+interface EngineSpecimenProps {
   label: string;
   code: string;
   scheme?: 'light' | 'dark';
   fontFamily?: string;
-}) {
+}
+
+const describeResult = (result: MermaidRenderResult | null): string => {
+  if (result === null) {
+    return 'awaiting the lazy engine…';
+  }
+  return result.ok ? `ok: true · ${result.svg.length} chars of svg` : `ok: false · ${result.error}`;
+};
+
+/** Calls the engine once and shows the union it resolved to. */
+const EngineSpecimen = ({ label, code, scheme, fontFamily }: EngineSpecimenProps) => {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [result, setResult] = useState<MermaidRenderResult | null>(null);
+  const inputKey = `${code}|${scheme ?? ''}|${fontFamily ?? ''}`;
+  const [settled, setSettled] = useState<{ key: string; result: MermaidRenderResult } | null>(null);
+  // A result settled for other inputs is stale: show "awaiting" until the current call resolves.
+  const result = settled?.key === inputKey ? settled.result : null;
 
   useEffect(() => {
     let cancelled = false;
-    setResult(null);
-    renderMermaidDiagram(code, { scheme, fontFamily }).then((next) => {
+    const render = async () => {
+      // renderMermaidDiagram never rejects: failures come back as { ok: false }
+      const next = await renderMermaidDiagram(code, { scheme, fontFamily });
       if (cancelled) {
         return;
       }
-      setResult(next);
+      setSettled({ key: `${code}|${scheme ?? ''}|${fontFamily ?? ''}`, result: next });
       if (next.ok && hostRef.current) {
         mountDiagramSvg(hostRef.current, next.svg);
       }
-    });
+    };
+    void render();
     return () => {
       cancelled = true;
     };
@@ -92,16 +101,13 @@ function EngineSpecimen({
       <Paragraph
         size="$1"
         color={result && !result.ok ? '$red11' : '$color10'}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a Tamagui Paragraph; the live-region role announces the async engine result
         role="status">
-        {result === null
-          ? 'awaiting the lazy engine…'
-          : result.ok
-            ? `ok: true · ${result.svg.length} chars of svg`
-            : `ok: false · ${result.error}`}
+        {describeResult(result)}
       </Paragraph>
     </YStack>
   );
-}
+};
 
 export const Main: Story = {
   render: () => (

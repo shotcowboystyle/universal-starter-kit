@@ -1,61 +1,55 @@
-import {
-  Code,
-  ErrorBoundary,
-  HighlightedCode,
-  Pre,
-  useClipboard,
-  useShikiTokens,
-  ScrollView,
-} from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Code, ErrorBoundary, HighlightedCode, Pre, useClipboard, useShikiTokens, ScrollView } from '@repo/ui';
+import type { CodeProps } from '@repo/ui';
 import { LinearGradient } from '@tamagui/linear-gradient';
 import rangeParser from 'parse-numeric-range';
 import type { ReactNode } from 'react';
-import { useContext, useMemo, useState } from 'react';
+import { isValidElement, useContext, useMemo, useState } from 'react';
 import { Button, TooltipSimple, XStack, YStack } from 'tamagui';
 
 import { CheckCircleIcon, ClipboardIcon } from '../icons';
-import { useCutoffGradientColors } from '../shared/cutoffGradient';
-import { tokenPx } from '../shared/tokenPx';
+import { useCutoffGradientColors } from '../shared/cutoff-gradient';
+import { tokenPx } from '../shared/token-px';
+
+import type { MDXCodeBlockContextValue } from './mdx-code-block-context';
+import { MDXCodeBlockContext } from './mdx-code-block-context';
 
 const zIndex = { localTop: 100 };
-import type { MDXCodeBlockContextValue } from './mdxCodeBlockContext';
-import { MDXCodeBlockContext } from './mdxCodeBlockContext';
+const LANGUAGE_CLASS_REGEX = /language-(?<language>\w+)/u;
+const TRAILING_NEWLINE_REGEX = /\n$/u;
 
 export interface MDXCodeBlockProps extends MDXCodeBlockContextValue {
   className?: string;
   id?: string;
+  /** Line ranges to highlight (code fence `line` meta, e.g. "1-3,5"). */
+  line?: string;
 }
 
 /**
  * Extract raw code text from MDX children.
  * Children are typically a plain string, but this handles nested elements for safety.
  */
-function extractCodeText(children: ReactNode): string {
-  if (typeof children === 'string') {
-    return children;
-  }
+const extractCodeText = (children: ReactNode): string => {
   if (Array.isArray(children)) {
     return children.map(extractCodeText).join('');
   }
-  if (children && typeof children === 'object' && 'props' in children) {
-    return extractCodeText((children as any).props?.children);
+  if (isValidElement<{ children?: ReactNode }>(children)) {
+    return extractCodeText(children.props.children);
   }
-  return String(children ?? '');
-}
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the ReactNode union: only primitives carry code text
+  if (typeof children === 'string' || typeof children === 'number' || typeof children === 'bigint') {
+    return String(children);
+  }
+  return '';
+};
 
 /**
  * Extract language from className like "language-tsx" -> "tsx"
  */
-function extractLanguage(className?: string): string {
-  if (!className) {
-    return 'text';
-  }
-  const match = /language-(\w+)/.exec(className);
-  return match?.[1] ?? 'text';
-}
+const extractLanguage = (className?: string): string =>
+  LANGUAGE_CLASS_REGEX.exec(className ?? '')?.groups?.language ?? 'text';
 
-export function MDXCodeBlock(props: MDXCodeBlockProps) {
+export const MDXCodeBlock = (props: MDXCodeBlockProps) => {
   const {
     children,
     className,
@@ -67,16 +61,14 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
     size,
     line,
     ...codeProps
-  } = { ...useContext(MDXCodeBlockContext), ...props } as MDXCodeBlockProps & {
-    line?: string;
-  };
+  }: MDXCodeBlockProps = { ...useContext(MDXCodeBlockContext), ...props };
 
   const { knobProps } = useResolvedKnobs();
   const gradientColors = useCutoffGradientColors();
   const cutoffMaxHeight = tokenPx(knobProps.sizeToken, 24) * 16;
   const gradientHeight = tokenPx(knobProps.sizeToken, 24) * 8;
-  const iconPx = tokenPx(knobProps.label.fontSize as string, 14, 'fontSize');
-  const codeText = useMemo(() => extractCodeText(children).replace(/\n$/, ''), [children]);
+  const iconPx = tokenPx(knobProps.label.fontSize, 14, 'fontSize');
+  const codeText = useMemo(() => extractCodeText(children).replace(TRAILING_NEWLINE_REGEX, ''), [children]);
   const language = useMemo(() => extractLanguage(className), [className]);
   const tokens = useShikiTokens(codeText, language);
 
@@ -88,7 +80,7 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
   const { hasCopied, onCopy } = useClipboard(codeText);
 
   const highlightLines = useMemo(() => {
-    if (!isHighlightingLines || !line) {
+    if (isHighlightingLines !== true || line === undefined || line === '') {
       return [];
     }
     return rangeParser(line);
@@ -104,7 +96,7 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
           {...(isCutoff && {
             maxHeight: cutoffMaxHeight,
             overflow: 'hidden',
-            ...knobProps.borderRadiusOuter,
+            ...knobProps.borderRadiusNested,
           })}>
           {(!isCollapsed || !isCollapsible) && isCutoff && (
             <>
@@ -153,7 +145,9 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
                   // inset rides the space knob, content type rides the size
                   // knob — components-CodeBlock parity. Explicit props eject.
                   {...knobProps.panelPadding}
-                  size={(size ?? knobProps.sizeToken) as any}
+                  // SAFETY: sizeToken is a `$n` size stop, a valid Code size variant
+                  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+                  size={size ?? (knobProps.sizeToken as CodeProps['size'])}
                   {...codeProps}>
                   <HighlightedCode
                     tokens={tokens}
@@ -176,7 +170,9 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
                   aria-label="Copy code to clipboard"
                   size="$2"
                   icon={hasCopied ? <CheckCircleIcon size={iconPx} /> : <ClipboardIcon size={iconPx} />}
-                  onPress={onCopy}
+                  onPress={() => {
+                    void onCopy();
+                  }}
                   $max-xs={{
                     display: 'none',
                   }}
@@ -198,4 +194,4 @@ export function MDXCodeBlock(props: MDXCodeBlockProps) {
       </ErrorBoundary>
     </YStack>
   );
-}
+};

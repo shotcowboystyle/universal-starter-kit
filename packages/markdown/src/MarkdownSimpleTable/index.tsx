@@ -1,23 +1,59 @@
-import { ScrollView } from '@repo/ui';
 import { Table } from '@repo/table-primitives';
+import { ScrollView } from '@repo/ui';
 import type { ReactNode } from 'react';
 import { Paragraph, Text, useMedia } from 'tamagui';
 
 import { InlineCode } from '../components/InlineCode';
 import { Link } from '../components/Link';
-import { useMarkdownTableKnobs } from '../shared/useMarkdownTableKnobs';
+import { useMarkdownTableKnobs } from '../shared/use-markdown-table-knobs';
 
 type CellContent = ReactNode;
 
-const markdownPattern = /(\*\*\[([^\]]+)\]\(([^)]+)\)\*\*)|(\[([^\]]+)\]\(([^)]+)\))|(\*\*([^*]+)\*\*)|(`([^`]+)`)/g;
+// Each class also excludes its opening delimiter so a failed attempt stops at
+// the next candidate instead of rescanning the rest of the cell (linear time).
+const MARKDOWN_PATTERN =
+  /\*\*\[(?<boldLinkText>[^[\]]+)\]\((?<boldLinkHref>[^()]+)\)\*\*|\[(?<linkText>[^[\]]+)\]\((?<linkHref>[^()]+)\)|\*\*(?<bold>[^*]+)\*\*|`(?<code>[^`]+)`/gu;
 
-function parseCell(content: CellContent): ReactNode {
+const renderMatch = (groups: Record<string, string>, key: string): ReactNode => {
+  const { boldLinkText, boldLinkHref, linkText, linkHref, bold, code } = groups;
+  if (boldLinkText !== undefined) {
+    return (
+      <Text
+        key={key}
+        fontWeight="700">
+        <Link href={boldLinkHref}>{boldLinkText}</Link>
+      </Text>
+    );
+  }
+  if (linkText !== undefined) {
+    return (
+      <Link
+        key={key}
+        href={linkHref}>
+        {linkText}
+      </Link>
+    );
+  }
+  if (bold !== undefined) {
+    return (
+      <Text
+        key={key}
+        fontWeight="700">
+        {bold}
+      </Text>
+    );
+  }
+  return <InlineCode key={key}>{code}</InlineCode>;
+};
+
+const parseCell = (content: CellContent): ReactNode => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the ReactNode union: only string cells get the inline-markdown pass
   if (typeof content !== 'string') {
     return content;
   }
 
-  const matches = [...content.matchAll(markdownPattern)];
-  if (!matches.length) {
+  const matches = [...content.matchAll(MARKDOWN_PATTERN)];
+  if (matches.length === 0) {
     return content;
   }
 
@@ -25,40 +61,11 @@ function parseCell(content: CellContent): ReactNode {
   let lastIndex = 0;
 
   for (const match of matches) {
-    const matchIndex = match.index ?? 0;
+    const matchIndex = match.index;
     if (matchIndex > lastIndex) {
       parts.push(content.slice(lastIndex, matchIndex));
     }
-
-    const key = `m-${matchIndex}`;
-    if (match[1]) {
-      parts.push(
-        <Text
-          key={key}
-          fontWeight="700">
-          <Link href={match[3]}>{match[2]}</Link>
-        </Text>,
-      );
-    } else if (match[4]) {
-      parts.push(
-        <Link
-          key={key}
-          href={match[6]}>
-          {match[5]}
-        </Link>,
-      );
-    } else if (match[7]) {
-      parts.push(
-        <Text
-          key={key}
-          fontWeight="700">
-          {match[8]}
-        </Text>,
-      );
-    } else if (match[9]) {
-      parts.push(<InlineCode key={key}>{match[10]}</InlineCode>);
-    }
-
+    parts.push(renderMatch(match.groups ?? {}, `m-${matchIndex}`));
     lastIndex = matchIndex + match[0].length;
   }
 
@@ -67,7 +74,7 @@ function parseCell(content: CellContent): ReactNode {
   }
 
   return parts.length === 1 ? parts[0] : parts;
-}
+};
 
 export interface MarkdownSimpleTableProps {
   headers: CellContent[];
@@ -81,7 +88,7 @@ export interface MarkdownSimpleTableProps {
  * (links, bold, inline code). Not a data table — for that use
  * `SimpleTable` from `@repo/table`.
  */
-export function MarkdownSimpleTable({ headers, rows }: MarkdownSimpleTableProps) {
+export const MarkdownSimpleTable = ({ headers, rows }: MarkdownSimpleTableProps) => {
   const { frameProps, headerTextProps, cellTextProps, cellPad, headRule } = useMarkdownTableKnobs();
   const media = useMedia();
   const isMobile = media.sm;
@@ -150,4 +157,4 @@ export function MarkdownSimpleTable({ headers, rows }: MarkdownSimpleTableProps)
   }
 
   return table;
-}
+};

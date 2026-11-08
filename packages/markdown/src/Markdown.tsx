@@ -3,6 +3,7 @@
  * Cross-platform markdown renderer with Shiki syntax highlighting
  */
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { View } from 'tamagui';
 import type { ViewProps } from 'tamagui';
 
@@ -28,8 +29,9 @@ export interface MarkdownComponentProps extends MarkdownProps, Omit<ViewProps, '
  * </Markdown>
  * ```
  */
-export function Markdown({ children, components, codeTheme = 'auto', ...viewProps }: MarkdownComponentProps) {
-  const rendered = useMemo(() => {
+export const Markdown = ({ children, components, codeTheme = 'auto', ...viewProps }: MarkdownComponentProps) => {
+  const rendered = useMemo((): ReactNode => {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- untyped callers pass elements as children; the guard renders nothing instead of crashing the parser
     if (!children || typeof children !== 'string') {
       return null;
     }
@@ -44,4 +46,4 @@ export function Markdown({ children, components, codeTheme = 'auto', ...viewProp
   }, [children, components, codeTheme]);
 
   return <View {...viewProps}>{rendered}</View>;
-}
+};

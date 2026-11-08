@@ -3,7 +3,7 @@ import { Text } from 'tamagui';
 
 import type { InlineProps } from '../types';
 
-export function Strong({ children }: InlineProps) {
+export const Strong = ({ children }: InlineProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -13,9 +13,9 @@ export function Strong({ children }: InlineProps) {
       {children}
     </Text>
   );
-}
+};
 
-export function Emphasis({ children }: InlineProps) {
+export const Emphasis = ({ children }: InlineProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -25,9 +25,9 @@ export function Emphasis({ children }: InlineProps) {
       {children}
     </Text>
   );
-}
+};
 
-export function Strikethrough({ children }: InlineProps) {
+export const Strikethrough = ({ children }: InlineProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -37,4 +37,4 @@ export function Strikethrough({ children }: InlineProps) {
       {children}
     </Text>
   );
-}
+};

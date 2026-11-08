@@ -1,5 +1,5 @@
 import { Alert, unwrapText } from '@repo/ui';
-import type { AlertIntent } from '@repo/ui';
+import type { AlertIntent, AlertProps } from '@repo/ui';
 import type { ReactNode } from 'react';
 
 type NoticeTheme = 'yellow' | 'blue' | 'green' | 'red';
@@ -19,14 +19,14 @@ export interface NoticeProps {
 }
 
 /** Markdown-facing callout: a thin wrapper mapping Notice themes onto Alert intents. */
-export function Notice({
+export const Notice = ({
   children,
   theme = 'yellow',
   disableUnwrap,
   title,
   ...props
-}: NoticeProps & Record<string, unknown>) {
-  const content = disableUnwrap ? children : unwrapText(children);
+}: NoticeProps & Omit<AlertProps, keyof NoticeProps | 'intent'>) => {
+  const content = disableUnwrap === true ? children : unwrapText(children);
   return (
     <Alert
       intent={themeIntentMap[theme]}
@@ -36,4 +36,4 @@ export function Notice({
       {content}
     </Alert>
   );
-}
+};

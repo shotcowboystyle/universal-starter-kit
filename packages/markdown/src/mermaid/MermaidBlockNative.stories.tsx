@@ -23,6 +23,8 @@ const SEQUENCE = `sequenceDiagram
   Client->>Server: parse
   Server-->>Client: mdast`;
 
+const EMPTY_SOURCE = '';
+
 const meta: Meta<typeof NativeMermaidBlock> = {
   title: 'Markdown/Mermaid Native',
   component: NativeMermaidBlock,
@@ -82,7 +84,7 @@ export const Edge: Story = {
       gap="$4"
       maxWidth={700}
       padding="$4">
-      <NativeMermaidBlock />
+      <NativeMermaidBlock>{EMPTY_SOURCE}</NativeMermaidBlock>
       <NativeMermaidBlock>{'graph LR; A-->B'}</NativeMermaidBlock>
     </YStack>
   ),

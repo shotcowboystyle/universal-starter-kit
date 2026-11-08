@@ -18,11 +18,11 @@ export interface MDXTabsProps {
   defaultValue?: string;
 }
 
-export function MDXTabs({ items, children, defaultValue }: MDXTabsProps) {
+export const MDXTabs = ({ items, children, defaultValue }: MDXTabsProps) => {
   const childArray = Array.isArray(children) ? children : [children];
   // Doc labels may repeat; index-suffixed values keep tab identity unique.
   const values = items.map((label, index) => `${label}-${index}`);
-  const defaultIndex = defaultValue ? Math.max(items.indexOf(defaultValue), 0) : 0;
+  const defaultIndex = defaultValue === undefined ? 0 : Math.max(items.indexOf(defaultValue), 0);
 
   return (
     <YStack marginVertical="$4">
@@ -39,12 +39,10 @@ export function MDXTabs({ items, children, defaultValue }: MDXTabsProps) {
       />
     </YStack>
   );
-}
+};
 
 export interface MDXTabProps {
   children: ReactNode;
 }
 
-export function MDXTab({ children }: MDXTabProps) {
-  return <YStack>{children}</YStack>;
-}
+export const MDXTab = ({ children }: MDXTabProps) => <YStack>{children}</YStack>;

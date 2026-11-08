@@ -7,13 +7,14 @@ import type { HorizontalRuleProps } from '../types';
  * Semantic divider. House paint is a filled 1px rule (R9 G10 — weight is
  * not a knob). `borderWidth=none` hides the rule without leaving a 1px gap.
  */
-export function HorizontalRule(_props: HorizontalRuleProps) {
+export const HorizontalRule = (_props: HorizontalRuleProps) => {
   const { knobProps } = useResolvedKnobs();
   if (knobProps.borderRadius.borderWidth === 0) {
     return null;
   }
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui View (no <hr> on native); the role gives separator semantics on web
       role="separator"
       height={1}
       backgroundColor="$borderColor"
@@ -23,4 +24,4 @@ export function HorizontalRule(_props: HorizontalRuleProps) {
       marginVertical="$4"
     />
   );
-}
+};

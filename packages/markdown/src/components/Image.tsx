@@ -3,7 +3,7 @@ import { Image as TamaguiImage, View } from 'tamagui';
 
 import type { ImageProps } from '../types';
 
-export function MarkdownImage({ src, alt, title }: ImageProps) {
+export const MarkdownImage = ({ src, alt, title }: ImageProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <View marginVertical="$2">
@@ -22,4 +22,4 @@ export function MarkdownImage({ src, alt, title }: ImageProps) {
       />
     </View>
   );
-}
+};

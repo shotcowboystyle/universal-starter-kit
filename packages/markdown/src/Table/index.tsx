@@ -1,16 +1,16 @@
-import { ScrollView } from '@repo/ui';
 import { Table as BaseTable } from '@repo/table-primitives';
-import type { ReactNode } from 'react';
+import { ScrollView } from '@repo/ui';
+import type { GetProps } from 'tamagui';
 import { Paragraph, YStack, styled } from 'tamagui';
 
-import { useMarkdownTableKnobs } from '../shared/useMarkdownTableKnobs';
+import { useMarkdownTableKnobs } from '../shared/use-markdown-table-knobs';
 
 const MDXTableFrame = styled(YStack, {
   marginVertical: '$4',
   overflow: 'hidden',
 });
 
-export function MDXTable({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
+export const MDXTable = ({ children, ...props }: GetProps<typeof BaseTable>) => {
   const { frameProps } = useMarkdownTableKnobs();
   return (
     <ScrollView
@@ -33,9 +33,9 @@ export function MDXTable({ children, ...props }: { children?: ReactNode } & Reco
       </MDXTableFrame>
     </ScrollView>
   );
-}
+};
 
-export function MDXTableHead({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
+export const MDXTableHead = ({ children, ...props }: GetProps<typeof BaseTable.Head>) => {
   const { headRule } = useMarkdownTableKnobs();
   return (
     <BaseTable.Head
@@ -45,30 +45,26 @@ export function MDXTableHead({ children, ...props }: { children?: ReactNode } & 
       {children}
     </BaseTable.Head>
   );
-}
+};
 
-export function MDXTableBody({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
-  return (
-    <BaseTable.Body
-      render="tbody"
-      {...props}>
-      {children}
-    </BaseTable.Body>
-  );
-}
+export const MDXTableBody = ({ children, ...props }: GetProps<typeof BaseTable.Body>) => (
+  <BaseTable.Body
+    render="tbody"
+    {...props}>
+    {children}
+  </BaseTable.Body>
+);
 
-export function MDXTableRow({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
-  return (
-    <BaseTable.Row
-      render="tr"
-      rowLocation="middle"
-      {...props}>
-      {children}
-    </BaseTable.Row>
-  );
-}
+export const MDXTableRow = ({ children, ...props }: GetProps<typeof BaseTable.Row>) => (
+  <BaseTable.Row
+    render="tr"
+    rowLocation="middle"
+    {...props}>
+    {children}
+  </BaseTable.Row>
+);
 
-export function MDXTableHeaderCell({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
+export const MDXTableHeaderCell = ({ children, ...props }: GetProps<typeof BaseTable.HeaderCell>) => {
   const { headerTextProps, cellPad } = useMarkdownTableKnobs();
   return (
     <BaseTable.HeaderCell
@@ -78,9 +74,9 @@ export function MDXTableHeaderCell({ children, ...props }: { children?: ReactNod
       <Paragraph {...headerTextProps}>{children}</Paragraph>
     </BaseTable.HeaderCell>
   );
-}
+};
 
-export function MDXTableCell({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) {
+export const MDXTableCell = ({ children, ...props }: GetProps<typeof BaseTable.Cell>) => {
   const { cellTextProps, cellPad } = useMarkdownTableKnobs();
   return (
     <BaseTable.Cell
@@ -95,4 +91,4 @@ export function MDXTableCell({ children, ...props }: { children?: ReactNode } & 
       </Paragraph>
     </BaseTable.Cell>
   );
-}
+};

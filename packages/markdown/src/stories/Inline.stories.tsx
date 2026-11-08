@@ -10,6 +10,9 @@ import { Link } from '../components/Link';
 import { Paragraph } from '../components/Paragraph';
 import { ExternalIcon } from '../ExternalIcon';
 
+const EMPTY_CODE = '';
+const BIDI_CODE = "const שלום = 'עולם'";
+
 const meta: Meta = {
   title: 'Markdown/Inline',
   parameters: {
@@ -47,11 +50,11 @@ export const InlineBaseline: Story = {
         <Strikethrough>हटाया 删除 محذوف</Strikethrough>.
       </Paragraph>
       <Paragraph>
-        Empty runs render nothing: [<Strong />
+        Empty runs render nothing: [<Strong>{null}</Strong>
         ][
-        <Emphasis />
+        <Emphasis>{null}</Emphasis>
         ][
-        <Strikethrough />]
+        <Strikethrough>{null}</Strikethrough>]
       </Paragraph>
     </YStack>
   ),
@@ -94,7 +97,7 @@ export const InlineCodeStory: Story = {
         without a baseline jump.
       </Paragraph>
       <Paragraph>
-        Bidi code: <InlineCode>const שלום = 'עולם'</InlineCode> and empty: <InlineCode />.
+        Bidi code: <InlineCode>{BIDI_CODE}</InlineCode> and empty: <InlineCode>{EMPTY_CODE}</InlineCode>.
       </Paragraph>
     </YStack>
   ),
@@ -119,10 +122,12 @@ export const LinkVariants: Story = {
         <Link href="mailto:test@example.com">mail me</Link> · tel <Link href="tel:+15125551234">call</Link>
       </Paragraph>
       <Paragraph>
-        Unsafe URL policy: <Link href="javascript:alert(1)">javascript: link</Link>
+        Unsafe URL policy:{' '}
+        {/* oxlint-disable-next-line eslint/no-script-url -- demonstrates the unsafe-URL policy; the Link must refuse it */}
+        <Link href="javascript:alert(1)">javascript: link</Link>
       </Paragraph>
       <Paragraph>
-        Empty label link: [<Link href="https://example.com" />] and long label:{' '}
+        Empty label link: [<Link href="https://example.com">{null}</Link>] and long label:{' '}
         <Link href="https://example.com/very/long/path">
           a very long link label that should wrap across multiple lines while staying underlined and keeping its pointer
           affordance the whole way through the wrap

@@ -14,10 +14,10 @@
  * `./MermaidBlock` directly.
  */
 
-export { mountDiagramSvg } from './mountDiagramSvg';
+export { mountDiagramSvg } from './mount-diagram-svg';
 export {
   renderMermaidDiagram,
   resetMermaidForTesting,
   type MermaidRenderOptions,
   type MermaidRenderResult,
-} from './renderMermaidDiagram';
+} from './render-mermaid-diagram';

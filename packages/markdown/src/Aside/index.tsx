@@ -1,13 +1,15 @@
-import { Alert } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Alert } from '@repo/ui';
+import type { AlertProps } from '@repo/ui';
 import { LinearGradient } from '@tamagui/linear-gradient';
 import { Children, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Button, Paragraph, XStack, YStack } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
-import { useCutoffGradientColors } from '../shared/cutoffGradient';
-import { isBareTextChild, wrapBareTextChildren } from '../shared/textRidesText';
-import { tokenPx } from '../shared/tokenPx';
+import { useCutoffGradientColors } from '../shared/cutoff-gradient';
+import { isBareTextChild, wrapBareTextChildren } from '../shared/text-rides-text';
+import { tokenPx } from '../shared/token-px';
 
 const zIndex = { localTop: 100 };
 
@@ -15,16 +17,18 @@ export interface MDXAsideProps {
   children: ReactNode;
 }
 
-export function MDXAside({ children, ...props }: MDXAsideProps & Record<string, unknown>) {
+export const MDXAside = ({ children, ...props }: MDXAsideProps & Omit<GetProps<typeof YStack>, 'children'>) => {
   const { knobProps } = useResolvedKnobs();
   const gradientColors = useCutoffGradientColors();
   const cutoffMaxHeight = tokenPx(knobProps.sizeToken, 24) * 12;
   const gradientHeight = tokenPx(knobProps.sizeToken, 24) * 8;
   // LC-82 TEXT-RIDES-TEXT: an ARRAY of bare strings is text too — treat it
   // like the singleton string path (one coalesced Paragraph, no cutoff).
+  // oxlint-disable-next-line react/no-react-children -- toArray flattens nested arrays and drops null/boolean holes exactly as React renders them
   const flattened = Array.isArray(children) ? Children.toArray(children) : null;
+  const textChildren = flattened?.filter(isBareTextChild) ?? [];
   const areChildrenString =
-    isBareTextChild(children) || Boolean(flattened && flattened.length > 0 && flattened.every(isBareTextChild));
+    isBareTextChild(children) || (textChildren.length > 0 && textChildren.length === flattened?.length);
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | undefined>();
   // only cut off element children whose content actually exceeds the max height
@@ -52,7 +56,7 @@ export function MDXAside({ children, ...props }: MDXAsideProps & Record<string, 
       })}
       {...props}>
       {areChildrenString ? (
-        <Paragraph color="$color10">{flattened ? flattened.join('') : children}</Paragraph>
+        <Paragraph color="$color10">{flattened ? textChildren.join('') : children}</Paragraph>
       ) : (
         <YStack
           onLayout={(event) => {
@@ -100,23 +104,21 @@ export function MDXAside({ children, ...props }: MDXAsideProps & Record<string, 
       )}
     </YStack>
   );
-}
+};
 
 export interface MDXNoteProps {
   children: ReactNode;
 }
 
 /** Markdown-facing note box: renders Alert (info intent, no icon). */
-export function MDXNote({ children, ...props }: MDXNoteProps & Record<string, unknown>) {
-  return (
-    <Alert
-      render="aside"
-      intent="info"
-      icon={null}
-      marginTop="$5"
-      marginBottom="$5"
-      {...props}>
-      {children}
-    </Alert>
-  );
-}
+export const MDXNote = ({ children, ...props }: MDXNoteProps & Omit<AlertProps, 'children'>) => (
+  <Alert
+    render="aside"
+    intent="info"
+    icon={null}
+    marginTop="$5"
+    marginBottom="$5"
+    {...props}>
+    {children}
+  </Alert>
+);

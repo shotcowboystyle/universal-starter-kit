@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { Paragraph, YStack } from 'tamagui';
 
-import { MDX } from '../Mdx';
+import { MDX as MdxRenderer } from '../Mdx';
 import { Notice } from '../Notice';
+
+const EMPTY_SOURCE = '';
 
 const meta: Meta = {
   title: 'Markdown/MDX',
@@ -53,7 +55,7 @@ export const Baseline: Story = {
     <YStack
       maxWidth={700}
       padding="$4">
-      <MDX>{mdxDoc}</MDX>
+      <MdxRenderer>{mdxDoc}</MdxRenderer>
     </YStack>
   ),
 };
@@ -63,7 +65,7 @@ export const CustomComponentAndProps: Story = {
     <YStack
       maxWidth={700}
       padding="$4">
-      <MDX
+      <MdxRenderer
         components={{
           Notice: Notice as any,
         }}>
@@ -75,7 +77,7 @@ Nested components:
 
 <Notice theme="yellow" title="Outer"><Notice theme="green" title="Inner">nested</Notice></Notice>
 `}
-      </MDX>
+      </MdxRenderer>
     </YStack>
   ),
 };
@@ -88,7 +90,7 @@ export const EmptySource: Story = {
       borderWidth={1}
       borderColor="$color5">
       <Paragraph>Frame around an empty MDX source:</Paragraph>
-      <MDX />
+      <MdxRenderer>{EMPTY_SOURCE}</MdxRenderer>
     </YStack>
   ),
 };
@@ -99,7 +101,7 @@ export const InvalidSource: Story = {
       maxWidth={700}
       padding="$4">
       <Paragraph>Invalid MDX below (unclosed JSX tag) — should fail predictably:</Paragraph>
-      <MDX>{'# Broken\n\n<Unclosed\n'}</MDX>
+      <MdxRenderer>{'# Broken\n\n<Unclosed\n'}</MdxRenderer>
       <Paragraph>Text after the invalid MDX renderer.</Paragraph>
     </YStack>
   ),
@@ -111,7 +113,7 @@ export const MissingComponentMapping: Story = {
       maxWidth={700}
       padding="$4">
       <Paragraph>MDX referencing an unmapped component:</Paragraph>
-      <MDX>{'<NotMapped>hello</NotMapped>\n'}</MDX>
+      <MdxRenderer>{'<NotMapped>hello</NotMapped>\n'}</MdxRenderer>
       <Paragraph>Text after the MDX renderer.</Paragraph>
     </YStack>
   ),

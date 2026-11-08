@@ -8,12 +8,12 @@
  * the same source renders on native (React Native has no % font sizes).
  */
 
-import { CodeInline } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { CodeInline } from '@repo/ui';
 
 import type { InlineCodeProps } from '../types';
 
-export function InlineCode({ children }: InlineCodeProps) {
+export const InlineCode = ({ children }: InlineCodeProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <CodeInline
@@ -26,4 +26,4 @@ export function InlineCode({ children }: InlineCodeProps) {
       {children}
     </CodeInline>
   );
-}
+};

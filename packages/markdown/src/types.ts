@@ -1,28 +1,7 @@
-import type {
-  Root,
-  Heading,
-  Paragraph,
-  Text,
-  Emphasis,
-  Strong,
-  Delete,
-  InlineCode,
-  Code,
-  Link,
-  Image,
-  List,
-  ListItem,
-  Blockquote,
-  ThematicBreak,
-  Table,
-  TableRow,
-  TableCell,
-  Html,
-  Break,
-} from 'mdast';
 /**
  * Types for the markdown renderer
  */
+import type { AlignType, Heading as MdastHeading } from 'mdast';
 import type { ReactNode } from 'react';
 
 export type {
@@ -46,7 +25,7 @@ export type {
   TableCell,
   Html,
   Break,
-};
+} from 'mdast';
 
 /**
  * Code theme for syntax highlighting. "auto" paints the house syntax theme,
@@ -101,7 +80,7 @@ export interface MarkdownComponents {
  * Props for heading components
  */
 export interface HeadingProps {
-  level: 1 | 2 | 3 | 4 | 5 | 6;
+  level: MdastHeading['depth'];
   children: ReactNode;
 }
 
@@ -180,7 +159,7 @@ export interface BlockquoteProps {
 /**
  * Props for horizontal rules
  */
-export interface HorizontalRuleProps {}
+export type HorizontalRuleProps = object;
 
 /**
  * Props for tables
@@ -203,13 +182,13 @@ export interface TableRowProps {
 export interface TableCellProps {
   children: ReactNode;
   isHeader?: boolean;
-  align?: 'left' | 'center' | 'right' | null;
+  align?: AlignType;
 }
 
 /**
  * Props for line breaks
  */
-export interface BreakProps {}
+export type BreakProps = object;
 
 /**
  * Render context passed to renderer
