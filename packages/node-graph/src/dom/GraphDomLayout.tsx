@@ -43,9 +43,9 @@ export const graphDomLayoutCss = [
 ].join('\n');
 
 /** The sheet, and nothing else. Renders nothing where there is no DOM. */
-export function GraphDomLayout(): ReactNode {
+export const GraphDomLayout = (): ReactNode => {
   if (typeof document === 'undefined') {
     return null;
   }
   return <style data-mpo-graph-layout="root-height">{graphDomLayoutCss}</style>;
-}
+};

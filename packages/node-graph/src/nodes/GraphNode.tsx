@@ -22,14 +22,14 @@ import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import { useGraphNodeKnobs } from '../knobs/graphKnobs';
+import { useGraphNodeKnobs } from '../knobs/graph-knobs';
 import { useUpdateNodeInternals } from '../react-flow/xy';
 
-import { paintedPortSize } from './handleGeometry';
+import { paintedPortSize } from './handle-geometry';
 import { detailOpacity, isOverview } from './lod';
 import type { GraphRenderMode } from './lod';
-import { containerRadiusPx, graphNodeMinHeight, graphNodeWidth, portSpacing } from './nodeMeasure';
-import type { GraphNodeMeasure, GraphNodePort, GraphNodeSizeKnob } from './nodeMeasure';
+import { containerRadiusPx, graphNodeMinHeight, graphNodeWidth, portSpacing } from './node-measure';
+import type { GraphNodeMeasure, GraphNodePort, GraphNodeSizeKnob } from './node-measure';
 
 export interface GraphNodeProps {
   /** Node id. React Flow addresses `updateNodeInternals` by it. */
@@ -61,7 +61,7 @@ export interface GraphNodeProps {
  * array identity changes. Never on mount: React Flow measures a fresh node
  * itself, so a mount-time call is a redundant forced layout.
  */
-function usePortInternals(id: string, ports: readonly GraphNodePort[] | undefined) {
+const usePortInternals = (id: string, ports: readonly GraphNodePort[] | undefined) => {
   const updateNodeInternals = useUpdateNodeInternals();
   const first = useRef(true);
   useEffect(() => {
@@ -70,10 +70,11 @@ function usePortInternals(id: string, ports: readonly GraphNodePort[] | undefine
       return;
     }
     updateNodeInternals(id);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `ports` is the trigger: its identity changing is the whole reason to fire
   }, [id, ports, updateNodeInternals]);
-}
+};
 
-export function GraphNode({
+export const GraphNode = ({
   id,
   title,
   subtitle,
@@ -86,7 +87,7 @@ export function GraphNode({
   coarsePointer = false,
   renderPort,
   children,
-}: GraphNodeProps) {
+}: GraphNodeProps) => {
   // `useGraphNodeKnobs`, not `useResolvedKnobs` directly: it is task 1.6's ONE
   // node knob call site, so a §11 law gets added in one place rather than per
   // node kind. It resolves through the same real Preset / Surface / Intent
@@ -96,6 +97,10 @@ export function GraphNode({
 
   usePortInternals(id, ports);
 
+  // SAFETY: the knob resolver only ever hands a graph component one of the
+  // three size stops its kind declares (small / medium / large), which is
+  // exactly `GraphNodeSizeKnob`; the resolver's own type is the wider union.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const size = knobProps.size as GraphNodeSizeKnob;
   const portSpacingPx = portSpacing({ coarsePointer });
   // The dot straddles the row's edge, so half of it lands inside the row. The
@@ -111,7 +116,7 @@ export function GraphNode({
   // are still laid out and still hold the box open, so the node's height is
   // the same number in both modes and React Flow's per-node ResizeObserver has
   // nothing to chase across a zoom tick. Design §5, and it is the invariant
-  // `lod.spec.tsx` exists for.
+  // `lod.test.tsx` exists for.
   const fade = detailOpacity(renderMode);
 
   return (
@@ -153,7 +158,7 @@ export function GraphNode({
           it painted the heading one. The rendered result was right — design §11
           declares this ink honours `bodyFont` — but only by spread order, and a
           reorder would have flipped a documented law silently. One fragment,
-          one law. `GraphNode.spec.tsx` pins that `headingFont` does not move it.
+          one law. `GraphNode.test.tsx` pins that `headingFont` does not move it.
         */}
         <SizableText
           {...knobProps.label}
@@ -164,7 +169,7 @@ export function GraphNode({
         {selected ? <YStack data-graph-node-selected="" /> : null}
       </XStack>
 
-      {subtitle ? (
+      {subtitle !== undefined && subtitle !== '' ? (
         <SizableText
           {...knobProps.body}
           {...knobProps.label}
@@ -177,7 +182,7 @@ export function GraphNode({
         </SizableText>
       ) : null}
 
-      {ports?.length ? (
+      {ports !== undefined && ports.length > 0 ? (
         <YStack
           data-graph-node-ports=""
           gap={0}
@@ -223,6 +228,7 @@ export function GraphNode({
         design §5 forbids, because React Flow's observer then reports a new
         height and every edge attached to this node moves.
       */}
+      {/* oxlint-disable-next-line typescript/strict-boolean-expressions -- ReactNode truthiness is the intended test: nothing to wrap means no wrapper */}
       {children ? (
         <YStack
           data-graph-node-children=""
@@ -233,4 +239,4 @@ export function GraphNode({
       ) : null}
     </YStack>
   );
-}
+};

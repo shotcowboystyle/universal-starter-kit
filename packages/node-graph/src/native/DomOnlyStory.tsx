@@ -43,7 +43,7 @@ export interface DomOnlyStoryProps {
  * Every style is a whole `knobProps.*` fragment spread (AGENTS.md); nothing here
  * cherry-picks a resolved token and nothing here is a literal.
  */
-export function DomOnlyStory({ needs, readInstead }: DomOnlyStoryProps) {
+export const DomOnlyStory = ({ needs, readInstead }: DomOnlyStoryProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -54,7 +54,7 @@ export function DomOnlyStory({ needs, readInstead }: DomOnlyStoryProps) {
         {...knobProps.label}>
         {`Web only — this story ${needs}, and there is no DOM on this side of the bridge.`}
       </SizableText>
-      {readInstead ? (
+      {readInstead !== undefined && readInstead !== '' ? (
         <SizableText
           {...knobProps.body}
           {...knobProps.label}
@@ -64,7 +64,7 @@ export function DomOnlyStory({ needs, readInstead }: DomOnlyStoryProps) {
       ) : null}
     </YStack>
   );
-}
+};
 
 /**
  * A Storybook decorator, so guarding a whole file is one line in its `meta`.
@@ -73,6 +73,7 @@ export function DomOnlyStory({ needs, readInstead }: DomOnlyStoryProps) {
  * below must never be constructed, and a wrapper that rendered its child and
  * then apologised would still have thrown on the way.
  */
-export function domOnlyStoryDecorator(props: DomOnlyStoryProps) {
-  return (Story: () => React.ReactElement) => (hasDomRealm ? <Story /> : <DomOnlyStory {...props} />);
-}
+export const domOnlyStoryDecorator = (props: DomOnlyStoryProps) =>
+  function DomOnlyStoryGuard(Story: () => React.ReactElement) {
+    return hasDomRealm ? <Story /> : <DomOnlyStory {...props} />;
+  };

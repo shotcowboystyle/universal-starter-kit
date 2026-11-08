@@ -13,7 +13,7 @@
  * O(1) or O(edges of one port) and carries the `tickSafe` marker.
  * `refuseCycle` is O(V+E) and does NOT carry it, so `validateConnection` will
  * not take it — the compiler refuses, rather than a comment asking nicely.
- * `connect.spec.ts` pins that with a `@ts-expect-error` that fails if the two
+ * `connect.test.ts` pins that with a `@ts-expect-error` that fails if the two
  * types ever collapse.
  */
 
@@ -54,17 +54,13 @@ export type ConnectionRule<N extends NodeKindDefs, E extends EdgeKindDefs> = Con
  */
 export type DropOnlyRule<N extends NodeKindDefs, E extends EdgeKindDefs> = ConnectionCheck<N, E>;
 
-export function defineConnectionRule<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const defineConnectionRule = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   check: ConnectionCheck<N, E>,
-): ConnectionRule<N, E> {
-  return Object.assign(check, { tickSafe: true } as const);
-}
+): ConnectionRule<N, E> => Object.assign(check, { tickSafe: true } as const);
 
 const pass: ConnectionVerdict = { ok: true };
 
-function refuse(code: string, message: string): ConnectionVerdict {
-  return { ok: false, code, message };
-}
+const refuse = (code: string, message: string): ConnectionVerdict => ({ ok: false, code, message });
 
 interface Resolved {
   readonly port: PortSpec;
@@ -72,11 +68,11 @@ interface Resolved {
 
 type Lookup = Resolved | { readonly problem: ConnectionVerdict };
 
-function lookup<N extends NodeKindDefs, E extends EdgeKindDefs>(
+const lookup = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   ctx: ConnectionContext<N, E>,
   ref: PortRef,
   end: 'source' | 'target',
-): Lookup {
+): Lookup => {
   const node = ctx.document.nodes.find((candidate) => candidate.id === ref.node);
   if (!node) {
     return {
@@ -93,11 +89,9 @@ function lookup<N extends NodeKindDefs, E extends EdgeKindDefs>(
     };
   }
   return { port };
-}
+};
 
-function isResolved(value: Lookup): value is Resolved {
-  return 'port' in value;
-}
+const isResolved = (value: Lookup): value is Resolved => 'port' in value;
 
 /**
  * Out to in, and nothing else.
@@ -170,10 +164,10 @@ export const refuseDuplicate: ConnectionRule<any, any> = defineConnectionRule((c
  * An untyped port connects to anything, so `dataType` stays opt-in: a schema
  * that never sets it never trips this rule.
  */
-export function refuseDataTypeMismatch(
+export const refuseDataTypeMismatch = (
   compatible: (from: string, to: string) => boolean = (from, to) => from === to,
-): ConnectionRule<any, any> {
-  return defineConnectionRule((ctx) => {
+): ConnectionRule<any, any> =>
+  defineConnectionRule((ctx) => {
     const source = lookup(ctx, ctx.source, 'source');
     const target = lookup(ctx, ctx.target, 'target');
     if (!isResolved(source) || !isResolved(target)) {
@@ -186,48 +180,44 @@ export function refuseDataTypeMismatch(
     }
     return compatible(from, to) ? pass : refuse('data-type-mismatch', `a ${from} output does not fit a ${to} input`);
   });
-}
 
 /**
  * O(V+E) DFS from the candidate's target back to its source. NOT a
  * `ConnectionRule` — see the type above. Its cost at 200 nodes / 400 edges is
  * unmeasured, and it is a bench line before it is ever recommended.
  */
-export function refuseCycle(): DropOnlyRule<any, any> {
-  return (ctx) => {
-    if (ctx.source.node === ctx.target.node) {
-      return refuse('cycle', 'a node cannot feed itself');
+export const refuseCycle = (): DropOnlyRule<any, any> => (ctx) => {
+  if (ctx.source.node === ctx.target.node) {
+    return refuse('cycle', 'a node cannot feed itself');
+  }
+  const out = new Map<string, string[]>();
+  for (const edge of ctx.document.edges) {
+    const list = out.get(edge.source.node);
+    if (list) {
+      list.push(edge.target.node);
+    } else {
+      out.set(edge.source.node, [edge.target.node]);
     }
-    const out = new Map<string, string[]>();
-    for (const edge of ctx.document.edges) {
-      const list = out.get(edge.source.node);
-      if (list) {
-        list.push(edge.target.node);
-      } else {
-        out.set(edge.source.node, [edge.target.node]);
-      }
+  }
+  // Walk forward from where the candidate LANDS. Reaching where it starts
+  // means the candidate closes a loop.
+  const seen = new Set<string>();
+  const stack = [ctx.target.node];
+  for (let current = stack.pop(); current !== undefined; current = stack.pop()) {
+    if (current === ctx.source.node) {
+      return refuse('cycle', `connecting these would make ${JSON.stringify(ctx.source.node)} reachable from itself`);
     }
-    // Walk forward from where the candidate LANDS. Reaching where it starts
-    // means the candidate closes a loop.
-    const seen = new Set<string>();
-    const stack = [ctx.target.node];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      if (current === ctx.source.node) {
-        return refuse('cycle', `connecting these would make ${JSON.stringify(ctx.source.node)} reachable from itself`);
-      }
-      if (seen.has(current)) {
-        continue;
-      }
-      seen.add(current);
-      const next = out.get(current);
-      if (next) {
-        stack.push(...next);
-      }
+    if (seen.has(current)) {
+      continue;
     }
-    return pass;
-  };
-}
+    seen.add(current);
+    const next = out.get(current);
+    if (next) {
+      stack.push(...next);
+    }
+  }
+  return pass;
+};
 
 /**
  * Order matters: first refusal wins, and `refuseDirection` is first so an
@@ -248,10 +238,10 @@ export const defaultDropRules: readonly DropOnlyRule<any, any>[] = [refuseCycle(
  * The pointer-tick path. Takes `ConnectionRule`s only; a `DropOnlyRule` is a
  * compile error, which is the whole point of the split.
  */
-export function validateConnection<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const validateConnection = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   ctx: ConnectionContext<N, E>,
   rules: readonly ConnectionRule<N, E>[] = ctx.schema.rules,
-): ConnectionVerdict {
+): ConnectionVerdict => {
   for (const rule of rules) {
     const verdict = rule(ctx);
     if (!verdict.ok) {
@@ -259,14 +249,14 @@ export function validateConnection<N extends NodeKindDefs, E extends EdgeKindDef
     }
   }
   return pass;
-}
+};
 
 /** The drop path. Takes both, tick-safe rules first. */
-export function validateDrop<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const validateDrop = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   ctx: ConnectionContext<N, E>,
   rules: readonly ConnectionRule<N, E>[] = ctx.schema.rules,
   dropRules: readonly DropOnlyRule<N, E>[] = ctx.schema.dropRules,
-): ConnectionVerdict {
+): ConnectionVerdict => {
   const cheap = validateConnection(ctx, rules);
   if (!cheap.ok) {
     return cheap;
@@ -278,4 +268,4 @@ export function validateDrop<N extends NodeKindDefs, E extends EdgeKindDefs>(
     }
   }
   return pass;
-}
+};

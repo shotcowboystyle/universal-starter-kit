@@ -17,8 +17,8 @@
  *    `import.meta.env.MODE`, and in a classic script `import.meta` is a
  *    PARSE-time SyntaxError: the script never executes, so no error boundary is
  *    reachable and the WebView is a blank rectangle with no console the user can
- *    see. Its CJS builds carry no such token. Verified in this repo:
- *    @xyflow/react 12.11.5 ships a NESTED zustand 4.5.7 whose esm/index.mjs,
+ *    see. Its CJS builds carry no such token. Verified in this repo: the
+ *    package `@xyflow/react` 12.11.5 ships a NESTED zustand 4.5.7 whose esm/index.mjs,
  *    esm/vanilla.mjs, esm/middleware.mjs, esm/shallow.mjs and esm/context.mjs
  *    all match; the root-hoisted zustand 5.0.0 matches in esm/middleware.mjs.
  *    Neither package's `.js` files do.
@@ -47,10 +47,40 @@
  * because a preset that wraps its own wrapper is a chain nobody can read.
  */
 
+/* oxlint-disable unicorn/prefer-module -- Plain CommonJS on purpose: a metro.config.js require()s this before any transform exists (see above). */
 'use strict';
 
 const fs = require('node:fs');
 const path = require('node:path');
+
+/**
+ * The slice of Metro's resolution context this preset reads.
+ *
+ * @typedef {{ originModulePath?: string, resolveRequest: ResolveRequest }} ResolutionContext
+ */
+/**
+ * A Metro `resolveRequest`.
+ *
+ * @typedef {(context: ResolutionContext, moduleName: string, platform: string | null) => Resolution} ResolveRequest
+ */
+/**
+ * The `sourceFile` resolution this preset produces (Metro has other kinds; none are built here).
+ *
+ * @typedef {{ type: string, filePath: string }} Resolution
+ */
+/**
+ * The slice of a Metro config this preset reads and writes.
+ *
+ * @typedef {{
+ *   resolver?: {
+ *     unstable_enablePackageExports?: boolean,
+ *     resolveRequest?: ResolveRequest,
+ *     extraNodeModules?: Record<string, string>,
+ *   },
+ *   watchFolders?: unknown[],
+ *   [marker: symbol]: unknown,
+ * }} MetroConfig
+ */
 
 const packageName = '@repo/node-graph';
 const packageRoot = path.resolve(__dirname, '..');
@@ -75,7 +105,7 @@ const isWorkspaceCheckout = !packageRoot.split(path.sep).includes('node_modules'
  * @param {string} moduleName the specifier being resolved
  * @returns {string | null} an absolute path, or null to leave the request alone
  */
-function resolveZustandCjs(originModulePath, moduleName) {
+const resolveZustandCjs = (originModulePath, moduleName) => {
   if (moduleName !== 'zustand' && !moduleName.startsWith('zustand/')) {
     return null;
   }
@@ -87,6 +117,7 @@ function resolveZustandCjs(originModulePath, moduleName) {
     return null;
   }
   const bases = [];
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- plain JS: Metro hands over an untyped context, so the type is checked at runtime.
   if (typeof originModulePath === 'string' && originModulePath.length > 0) {
     bases.push(path.dirname(originModulePath));
   }
@@ -100,7 +131,7 @@ function resolveZustandCjs(originModulePath, moduleName) {
       /* try the next base */
     }
   }
-  if (!pkgJsonPath) {
+  if (pkgJsonPath === null) {
     return null;
   }
   const zustandRoot = path.dirname(pkgJsonPath);
@@ -114,35 +145,35 @@ function resolveZustandCjs(originModulePath, moduleName) {
     }
   }
   return null;
-}
+};
 
 /**
  * The resolver alone, for an app that already owns `resolveRequest` and would
  * rather compose by hand than hand its config over.
  *
- * @param {Function | undefined} next the resolver to defer to
- * @returns {Function} a Metro `resolveRequest`
+ * @param {ResolveRequest | undefined} next the resolver to defer to
+ * @returns {ResolveRequest} a Metro `resolveRequest`
  */
-function nodeGraphResolveRequest(next) {
-  return function nodeGraphResolve(context, moduleName, platform) {
-    const cjs = resolveZustandCjs(context && context.originModulePath, moduleName);
-    if (cjs) {
+const nodeGraphResolveRequest = (next) =>
+  function nodeGraphResolve(context, moduleName, platform) {
+    const cjs = resolveZustandCjs(context?.originModulePath, moduleName);
+    if (cjs !== null) {
       return { type: 'sourceFile', filePath: cjs };
     }
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- plain JS: the app's existing resolveRequest is untyped runtime input.
     if (typeof next === 'function') {
       return next(context, moduleName, platform);
     }
     return context.resolveRequest(context, moduleName, platform);
   };
-}
 
 /**
- * @param {object} config a Metro config, mutated in place and returned
- * @returns {object} the same config
+ * @param {MetroConfig | undefined} config a Metro config, mutated in place and returned
+ * @returns {MetroConfig} the same config
  */
-function withNodeGraph(config) {
-  const cfg = config || {};
-  if (cfg[nodeGraphMetroMarker]) {
+const withNodeGraph = (config) => {
+  const cfg = config ?? {};
+  if (cfg[nodeGraphMetroMarker] === true) {
     return cfg;
   }
 
@@ -164,12 +195,13 @@ function withNodeGraph(config) {
     const watchFolders = Array.isArray(cfg.watchFolders) ? cfg.watchFolders : [];
     const covered = watchFolders.some(
       (folder) =>
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- plain JS: watchFolders is untyped app config.
         typeof folder === 'string' && (folder === packageRoot || packageRoot.startsWith(`${folder}${path.sep}`)),
     );
     cfg.watchFolders = covered ? watchFolders : [...watchFolders, packageRoot];
 
     const extraNodeModules = resolver.extraNodeModules ?? {};
-    if (!extraNodeModules[packageName]) {
+    if ((extraNodeModules[packageName] ?? '') === '') {
       resolver.extraNodeModules = { ...extraNodeModules, [packageName]: packageRoot };
     }
   }
@@ -180,6 +212,6 @@ function withNodeGraph(config) {
     configurable: true,
   });
   return cfg;
-}
+};
 
 module.exports = { nodeGraphMetroMarker, nodeGraphResolveRequest, withNodeGraph };

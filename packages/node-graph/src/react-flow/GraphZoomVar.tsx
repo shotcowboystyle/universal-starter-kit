@@ -32,7 +32,7 @@ export interface GraphZoomVarProps {
   readonly rootRef: { current: HTMLElement | null };
 }
 
-export function GraphZoomVar({ rootRef }: GraphZoomVarProps) {
+export const GraphZoomVar = ({ rootRef }: GraphZoomVarProps) => {
   const zoom = useStore((state) => state.transform[2]);
 
   useEffect(() => {
@@ -48,4 +48,4 @@ export function GraphZoomVar({ rootRef }: GraphZoomVarProps) {
   }, [rootRef, zoom]);
 
   return null;
-}
+};

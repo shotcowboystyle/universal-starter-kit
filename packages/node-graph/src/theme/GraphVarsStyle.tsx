@@ -2,12 +2,12 @@
  * The var layer as one `<style>` tag, plus the adapter that reads a live
  * Tamagui theme into `GraphThemeAccess`.
  *
- * Design 6.2 names this file `GraphVars.tsx`, next to `graphVars.ts`. Those two
+ * Design 6.2 names this file `GraphVars.tsx`, next to `graph-vars.ts`. Those two
  * are the SAME module specifier on a case-insensitive filesystem, and the
  * resolver's extension order (.ts before .tsx) means `import … from
- * "./GraphVars"` silently returns `graphVars.ts` — measured on macOS, where
+ * "./GraphVars"` silently returns `graph-vars.ts` — measured on macOS, where
  * `head ./GraphVars.ts` prints the pure module. The COMPONENT keeps its design
- * name; only the file gains a suffix, so `graphVars.ts` and the lint check's
+ * name; only the file gains a suffix, so `graph-vars.ts` and the lint check's
  * exemption path are unchanged.
  *
  * Design: docs/design/node-graph-editor.md 6.2.
@@ -18,8 +18,8 @@ import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { getVariable, useTheme as useTamaguiTheme } from 'tamagui';
 
-import { graphCssVars } from './graphVars';
-import type { GraphCssVarsOptions, GraphThemeAccess } from './graphVars';
+import { graphCssVars } from './graph-vars';
+import type { GraphCssVarsOptions, GraphThemeAccess } from './graph-vars';
 
 /**
  * The class the graph root carries; every rule in `css/graph.css` is scoped to it.
@@ -40,7 +40,7 @@ export interface GraphVarsProps {
    * `vars` is derived from the envelope, so its revision is the authority on
    * whether anything moved, and a fresh `vars` object identity on every render
    * would otherwise re-serialize the whole sheet at 60 Hz during a drag.
-   * `graphCss.spec.ts` pins that behaviour rather than leaving it as a comment.
+   * `graph-css.test.ts` pins that behaviour rather than leaving it as a comment.
    */
   readonly revision: number;
   /** Scope selector. Defaults to the graph root class. */
@@ -48,22 +48,22 @@ export interface GraphVarsProps {
 }
 
 /** A CSS custom-property block, deterministic in key order so a diff is readable. */
-export function graphVarsSheet(
+export const graphVarsSheet = (
   vars: Readonly<Record<string, string>>,
   scheme: 'light' | 'dark',
   selector: string,
-): string {
+): string => {
   const declarations = Object.keys(vars)
-    .sort()
+    .toSorted()
     .map((name) => `  ${name}: ${vars[name]};`)
     .join('\n');
   return `${selector} {\n  color-scheme: ${scheme};\n${declarations}\n}\n`;
-}
+};
 
-export function GraphVars({ vars, scheme, revision, selector }: GraphVarsProps): ReactNode {
+export const GraphVars = ({ vars, scheme, revision, selector }: GraphVarsProps): ReactNode => {
   const scope = selector ?? `.${graphRootClassName}`;
   // biome-ignore-start: the revision IS the dependency — see the prop's doc.
-  // oxlint-disable-next-line exhaustive-deps
+  // oxlint-disable-next-line react/exhaustive-deps -- the revision IS the dependency; see the prop's doc
   const sheet = useMemo(() => graphVarsSheet(vars, scheme, scope), [revision, scope]);
   // biome-ignore-end
   return (
@@ -73,7 +73,7 @@ export function GraphVars({ vars, scheme, revision, selector }: GraphVarsProps):
       {sheet}
     </style>
   );
-}
+};
 
 /**
  * Read a live Tamagui theme into the two forms `graphCssVars` needs.
@@ -83,41 +83,51 @@ export function GraphVars({ vars, scheme, revision, selector }: GraphVarsProps):
  * its custom properties. The raw form is the literal value, and is used only by
  * the two blended entries.
  */
-export function useGraphThemeAccess(): GraphThemeAccess {
+/** One theme slot as Tamagui hands it back: a Variable, a raw literal, or nothing. */
+type ThemeSlot = string | { readonly variable?: string; readonly val?: unknown } | null | undefined;
+
+/* oxlint-disable anti-slop/no-runtime-typeof -- dispatch over the runtime shapes a Tamagui theme slot can take (Variable object vs raw literal) */
+const slotCss = (value: NonNullable<ThemeSlot>): string | undefined => {
+  const variable = typeof value === 'string' ? undefined : value.variable;
+  if (typeof variable === 'string' && variable !== '') {
+    return variable;
+  }
+  // SAFETY: getVariable accepts a Variable or a raw value and returns its CSS form; `value` is one of those by ThemeSlot.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- getVariable's parameter type is Tamagui-internal
+  const resolved: unknown = getVariable(value as never);
+  return typeof resolved === 'string' ? resolved : undefined;
+};
+
+const slotRaw = (value: NonNullable<ThemeSlot>): string | undefined => {
+  if (typeof value === 'string') {
+    return value;
+  }
+  return typeof value.val === 'string' ? value.val : undefined;
+};
+/* oxlint-enable anti-slop/no-runtime-typeof */
+
+export const useGraphThemeAccess = (): GraphThemeAccess => {
   const theme = useTamaguiTheme();
   return useMemo(() => {
-    const read = (key: string): unknown => (theme as unknown as Record<string, unknown>)[key];
+    // SAFETY: a Tamagui theme is a string-keyed table of ThemeSlot entries; an absent key reads as undefined, handled below.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- Tamagui types the theme by its generated key names, not arbitrary strings
+    const table = theme as unknown as Readonly<Record<string, ThemeSlot>>;
     return {
       css: (key: string) => {
-        const value = read(key);
-        if (value == null) {
-          return;
-        }
-        const { variable } = value as { variable?: string };
-        if (typeof variable === 'string' && variable) {
-          return variable;
-        }
-        const resolved = getVariable(value as never);
-        return typeof resolved === 'string' ? resolved : undefined;
+        const value = table[key];
+        return value == null ? undefined : slotCss(value);
       },
       raw: (key: string) => {
-        const value = read(key);
-        if (value == null) {
-          return;
-        }
-        if (typeof value === 'string') {
-          return value;
-        }
-        const { val } = value as { val?: unknown };
-        return typeof val === 'string' ? val : undefined;
+        const value = table[key];
+        return value == null ? undefined : slotRaw(value);
       },
     };
   }, [theme]);
-}
+};
 
 /** `graphCssVars` against the live theme. */
-export function useGraphCssVars(resolved: ResolvedKnobs, options?: GraphCssVarsOptions): Record<string, string> {
+export const useGraphCssVars = (resolved: ResolvedKnobs, options?: GraphCssVarsOptions): Record<string, string> => {
   const theme = useGraphThemeAccess();
   const pointer = options?.pointer;
   return useMemo(() => graphCssVars(resolved, theme, { pointer }), [resolved, theme, pointer]);
-}
+};

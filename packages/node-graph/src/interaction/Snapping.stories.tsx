@@ -21,14 +21,14 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import type { BuiltinEdgeData } from '../edges/edgeKinds';
+import type { BuiltinEdgeData } from '../edges/edge-kinds';
 import type { GraphDocument } from '../model/index';
 import { NodeGraph } from '../NodeGraph';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import type { DemoNodeData } from '../react-flow/fixtures';
 import { Background, Controls, useStore } from '../react-flow/xy';
 
-import { defaultSnapThresholdPx } from './snapAlignment';
+import { defaultSnapThresholdPx } from './snap-alignment';
 
 type Doc = GraphDocument<DemoNodeData, BuiltinEdgeData>;
 
@@ -56,60 +56,54 @@ export default meta;
 type Story = StoryObj<typeof NodeGraph>;
 
 /** Deliberately 3 to 6 units off every line the neighbours offer. */
-function unalignedDocument(): Doc {
-  return {
-    version: 1,
-    nodes: [
-      { id: 'anchorA', kind: 'source', position: { x: 0, y: 0 }, data: { table: 'orders' } },
-      { id: 'anchorB', kind: 'sink', position: { x: 560, y: 320 }, data: { target: 'warehouse' } },
-      {
-        id: 'drag-me',
-        kind: 'transform',
-        position: { x: 274, y: 166 },
-        data: { expression: 'drag me at either zoom' },
-      },
-    ],
-    edges: [
-      {
-        id: 'anchorA->drag-me',
-        kind: 'flow',
-        source: { node: 'anchorA', port: 'rows' },
-        target: { node: 'drag-me', port: 'in' },
-        data: {},
-      },
-    ],
-  };
-}
+const unalignedDocument = (): Doc => ({
+  version: 1,
+  nodes: [
+    { id: 'anchorA', kind: 'source', position: { x: 0, y: 0 }, data: { table: 'orders' } },
+    { id: 'anchorB', kind: 'sink', position: { x: 560, y: 320 }, data: { target: 'warehouse' } },
+    {
+      id: 'drag-me',
+      kind: 'transform',
+      position: { x: 274, y: 166 },
+      data: { expression: 'drag me at either zoom' },
+    },
+  ],
+  edges: [
+    {
+      id: 'anchorA->drag-me',
+      kind: 'flow',
+      source: { node: 'anchorA', port: 'rows' },
+      target: { node: 'drag-me', port: 'in' },
+      data: {},
+    },
+  ],
+});
 
 /** Two nodes 200 apart, five units off the anchor's lines. Drag them together. */
-function pairDocument(): Doc {
-  return {
-    version: 1,
-    nodes: [
-      { id: 'anchor', kind: 'sink', position: { x: 0, y: 340 }, data: { target: 'warehouse' } },
-      { id: 'pair-1', kind: 'source', position: { x: 5, y: 40 }, data: { table: 'orders_1' } },
-      { id: 'pair-2', kind: 'source', position: { x: 325, y: 40 }, data: { table: 'orders_2' } },
-    ],
-    edges: [],
-  };
-}
+const pairDocument = (): Doc => ({
+  version: 1,
+  nodes: [
+    { id: 'anchor', kind: 'sink', position: { x: 0, y: 340 }, data: { target: 'warehouse' } },
+    { id: 'pair-1', kind: 'source', position: { x: 5, y: 40 }, data: { table: 'orders_1' } },
+    { id: 'pair-2', kind: 'source', position: { x: 325, y: 40 }, data: { table: 'orders_2' } },
+  ],
+  edges: [],
+});
 
-function Canvas({ children, height = 520 }: { children: React.ReactNode; height?: number }) {
-  return (
-    <YStack
-      width="100%"
-      height={height}
-      padding="$3">
-      {children}
-    </YStack>
-  );
-}
+const Canvas = ({ children, height = 520 }: { children: React.ReactNode; height?: number }) => (
+  <YStack
+    width="100%"
+    height={height}
+    padding="$3">
+    {children}
+  </YStack>
+);
 
 /**
  * Lives INSIDE the canvas, because the zoom is store state and the store only
  * exists under the provider the editor mounts for you.
  */
-function ZoomReadout({ coarsePointer = false }: { coarsePointer?: boolean }) {
+const ZoomReadout = ({ coarsePointer = false }: { coarsePointer?: boolean }) => {
   const zoom = useStore((state) => state.transform[2]);
   const screenPx = coarsePointer ? defaultSnapThresholdPx.coarse : defaultSnapThresholdPx.fine;
   return (
@@ -131,7 +125,7 @@ function ZoomReadout({ coarsePointer = false }: { coarsePointer?: boolean }) {
       </SizableText>
     </XStack>
   );
-}
+};
 
 export const Main: Story = {
   render: (args) => (
@@ -140,8 +134,8 @@ export const Main: Story = {
         size="$2"
         opacity={0.7}
         paddingBottom="$2">
-        Drag `drag-me`. A vertical guide means its left, centre or right lined up with a neighbour's; a horizontal one
-        means the same on the other axis. Let go and the guides clear.
+        Drag `drag-me`. A vertical guide means its left, centre or right lined up with a neighbour&rsquo;s; a horizontal
+        one means the same on the other axis. Let go and the guides clear.
       </SizableText>
       <YStack flex={1}>
         <NodeGraph
@@ -163,8 +157,8 @@ export const MultiSelect: Story = {
         size="$2"
         opacity={0.7}
         paddingBottom="$2">
-        Shift-click both `pair-*` nodes, then drag either one. The 320 units between them never changes: the SELECTION's
-        bounding box is what snaps, and one delta moves both (S6).
+        Shift-click both `pair-*` nodes, then drag either one. The 320 units between them never changes: the
+        SELECTION&rsquo;s bounding box is what snaps, and one delta moves both (S6).
       </SizableText>
       <YStack flex={1}>
         <NodeGraph

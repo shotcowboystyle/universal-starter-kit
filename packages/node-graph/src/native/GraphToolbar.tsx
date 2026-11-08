@@ -43,7 +43,7 @@ import { Button } from '@repo/forms';
 import { pressTargetStyle, useResolvedKnobs } from '@repo/theme';
 import { XStack, isWeb } from 'tamagui';
 
-import type { GraphInteractionMode } from '../interaction/useLassoSelect';
+import type { GraphInteractionMode } from '../interaction/use-lasso-select';
 
 export interface GraphToolbarProps {
   readonly mode: GraphInteractionMode;
@@ -79,7 +79,7 @@ const modeLabels: Record<GraphInteractionMode, string> = {
 
 const modes: readonly GraphInteractionMode[] = ['pan', 'select'];
 
-export function GraphToolbar({
+export const GraphToolbar = ({
   busy = false,
   canRedo = true,
   canUndo = true,
@@ -90,7 +90,7 @@ export function GraphToolbar({
   onRedo,
   onTidy,
   onUndo,
-}: GraphToolbarProps) {
+}: GraphToolbarProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'GraphToolbar' });
 
   return (
@@ -169,4 +169,4 @@ export function GraphToolbar({
       ) : null}
     </XStack>
   );
-}
+};

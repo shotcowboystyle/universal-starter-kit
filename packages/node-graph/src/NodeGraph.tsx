@@ -20,6 +20,6 @@ export type NodeGraphProps<
   E extends EdgeKindDefs = EdgeKindDefs,
 > = NodeGraphWebProps<N, E>;
 
-export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphProps<N, E>) {
-  return <NodeGraphWeb {...props} />;
-}
+export const NodeGraph = <N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphProps<N, E>) => (
+  <NodeGraphWeb {...props} />
+);

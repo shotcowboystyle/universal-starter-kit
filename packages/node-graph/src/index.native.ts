@@ -29,7 +29,7 @@ export { GraphFallback, graphFallbackDetail } from './native/GraphFallback.nativ
  */
 export { GraphToolbar } from './native/GraphToolbar';
 export type { GraphToolbarProps } from './native/GraphToolbar';
-export type { GraphInteractionMode } from './interaction/useLassoSelect';
+export type { GraphInteractionMode } from './interaction/use-lasso-select';
 /**
  * The imperative handle a native SIBLING drives the canvas with (design §9.1).
  *
@@ -38,9 +38,9 @@ export type { GraphInteractionMode } from './interaction/useLassoSelect';
  * eleven commands and read state back off the wire. Exported here because a
  * consumer needs the TYPE to declare its ref.
  */
-export { graphCommandNames } from './react-flow/graphHandle';
-export type { GraphCommands, GraphCommandSlot, NodeGraphHandle } from './react-flow/graphHandle';
-export { graphChildrenWarning, resetGraphChildrenWarning, warnOnGraphChildren } from './native/graphChildren';
+export { graphCommandNames } from './react-flow/graph-handle';
+export type { GraphCommands, GraphCommandSlot, NodeGraphHandle } from './react-flow/graph-handle';
+export { graphChildrenWarning, resetGraphChildrenWarning, warnOnGraphChildren } from './native/graph-children';
 export { DomOnlyStory, hasDomRealm } from './native/DomOnlyStory';
 export type { DomOnlyStoryProps } from './native/DomOnlyStory';
 
@@ -68,10 +68,10 @@ export type {
   NodeGraphDomProps,
   NodeGraphDomRealmProps,
   NodeGraphDomShellProps,
-} from './dom/NodeGraphDomShell';
+} from './dom/node-graph-dom-shell';
 
-export { clearNodeGraphDomEntry, getNodeGraphDomEntry, setNodeGraphDomEntry } from './native/domEntryRegistry';
-export type { NodeGraphDomEntry } from './native/domEntryRegistry';
+export { clearNodeGraphDomEntry, getNodeGraphDomEntry, setNodeGraphDomEntry } from './native/dom-entry-registry';
+export type { NodeGraphDomEntry } from './native/dom-entry-registry';
 
 export {
   bootStageIndex,
@@ -94,7 +94,7 @@ export type { BootRecord, BootStage } from './dom/boot';
  */
 export { GraphBootFailure, GraphDiagnostics } from './diagnostics/GraphDiagnostics';
 export type { GraphDiagnosticsProps } from './diagnostics/GraphDiagnostics';
-export { graphDiagnosticsFromWire } from './diagnostics/fromWire';
+export { graphDiagnosticsFromWire } from './diagnostics/from-wire';
 export type {
   GraphDiagnostics as GraphDiagnosticsRecord,
   GraphFaceDelivery,
@@ -131,5 +131,5 @@ export { KnobEnvelopeProvider } from './knobs/KnobEnvelopeProvider';
 export { resolveEnvelopeThemeName } from './knobs/KnobEnvelopeProvider';
 export { knobEnvelopeIdentity, knobEnvelopeSchemaVersion, knobsForEnvelope } from './knobs/envelope';
 export type { GraphFontRef, KnobEnvelope } from './knobs/envelope';
-export { useKnobEnvelope } from './knobs/useKnobEnvelope';
-export type { UseKnobEnvelopeOptions } from './knobs/useKnobEnvelope';
+export { useKnobEnvelope } from './knobs/use-knob-envelope';
+export type { UseKnobEnvelopeOptions } from './knobs/use-knob-envelope';

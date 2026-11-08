@@ -21,7 +21,7 @@
  * the distinction that actually matters.
  *
  * No `import.meta`, and none reachable: `verify-no-import-meta.mjs` walks this
- * file, and `worker.generated.spec.ts` re-asserts it against the BUNDLED
+ * file, and `worker.generated.test.ts` re-asserts it against the BUNDLED
  * string, which is the artefact a WebView actually parses.
  */
 
@@ -33,8 +33,13 @@ import type { LayoutWorkerRequest, LayoutWorkerResponse } from './types';
  * not answer. Never throws: a throw inside a Worker surfaces as an `error`
  * event with no line number in a WebView, so a failure is reported as data.
  */
-export function runLayoutMessage(data: unknown): LayoutWorkerResponse | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- the raw `MessageEvent#data` at the worker boundary; it is narrowed below
+export const runLayoutMessage = (data: unknown): LayoutWorkerResponse | undefined => {
+  // SAFETY: only the `t` tag is read before dispatch, and an unknown tag
+  // returns undefined; non-objects are rejected on the next line.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- untyped message data at the worker boundary
   const message = data as LayoutWorkerRequest | null | undefined;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- rejects primitive message payloads at the worker boundary
   if (!message || typeof message !== 'object') {
     return undefined;
   }
@@ -53,30 +58,30 @@ export function runLayoutMessage(data: unknown): LayoutWorkerResponse | undefine
       message: error instanceof Error ? error.message : String(error),
     };
   }
-}
+};
 
-declare const WorkerGlobalScope: (abstract new () => unknown) | undefined;
+declare const WorkerGlobalScope: (abstract new () => object) | undefined;
 declare const self: {
   readonly addEventListener: (type: 'message', listener: (event: { readonly data: unknown }) => void) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- mirrors WorkerGlobalScope#postMessage
   readonly postMessage: (message: unknown) => void;
 };
 
-function inWorkerScope(): boolean {
+const inWorkerScope = (): boolean =>
   // `typeof`, not `!== undefined`: outside a worker these globals are
   // undeclared, and reading an undeclared identifier throws a ReferenceError.
-  return (
-    // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
-    typeof WorkerGlobalScope !== 'undefined' &&
-    // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
-    typeof self !== 'undefined' &&
-    self instanceof (WorkerGlobalScope as abstract new () => unknown)
-  );
-}
+  // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
+  typeof WorkerGlobalScope !== 'undefined' &&
+  // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
+  typeof self !== 'undefined' &&
+  // SAFETY: the typeof check above proves WorkerGlobalScope is defined here.
+  self instanceof (WorkerGlobalScope as abstract new () => object);
 
 if (inWorkerScope()) {
   self.addEventListener('message', (event) => {
     const response = runLayoutMessage(event.data);
     if (response) {
+      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- WorkerGlobalScope#postMessage has no targetOrigin parameter
       self.postMessage(response);
     }
   });

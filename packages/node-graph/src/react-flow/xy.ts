@@ -3,7 +3,7 @@
  *
  * `no-restricted-imports` in the repo's `oxlintrc.json` refuses `@xyflow/*`
  * everywhere else under `public/node-graph/src`, so a React Flow major bump has
- * exactly one reconciliation site instead of thirty. `xy.spec.ts` asserts every
+ * exactly one reconciliation site instead of thirty. `xy.test.ts` asserts every
  * name below still resolves and that the installed version is inside the range
  * `package.json` declares, so an upgrade fails CI rather than a user.
  *
@@ -20,7 +20,7 @@
  * the whole reason the 44pt hit region is a pseudo-element and not element
  * growth (design 7.1 H2). Asserting that law against our own reimplementation
  * would prove nothing, so the spec calls the real one. `package.json` pins
- * `@xyflow/system` to the exact version `@xyflow/react` pins, and `xy.spec.ts`
+ * `@xyflow/system` to the exact version `@xyflow/react` pins, and `xy.test.ts`
  * fails if the two ever split.
  */
 
@@ -88,7 +88,7 @@ export type {
  * the package's exports map on every condition, and a bundler that cannot
  * resolve it would take the whole canvas down to report a version string.
  *
- * `xy.spec.ts` asserts this equals the installed version, so it cannot drift
+ * `xy.test.ts` asserts this equals the installed version, so it cannot drift
  * from reality — an upgrade that forgets it fails CI rather than a user.
  */
 export const xyflowVersion = '12.11.5';
@@ -98,7 +98,7 @@ export const xyflowVersion = '12.11.5';
  *
  * A class name is part of @xyflow's DOM contract exactly as its exported
  * symbols are, so it belongs at the same boundary they do. The long press has
- * to FIND the pane to listen on it (`useLassoSelect.ts`) — that is a DOM
+ * to FIND the pane to listen on it (`use-lasso-select.ts`) — that is a DOM
  * lookup, not a paint rule, and a paint rule is what `checkGraphVarsCoverage`
  * exists to keep out of `src`. Hardcoding the string at the call site would
  * have been the wrong kind of coupling either way: when an upgrade renames the

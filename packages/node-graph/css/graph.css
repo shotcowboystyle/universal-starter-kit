@@ -10,7 +10,7 @@
  * that is not a `--xy-*` variable has to land here, in one file a reviewer can
  * read whole.
  *
- * Nothing below is COLOUR. Colour is the var layer in src/theme/graphVars.ts
+ * Nothing below is COLOUR. Colour is the var layer in src/theme/graph-vars.ts
  * and never appears in this file. What is here is the dash keyframes, the touch
  * rules, and the port hit region — three sections, each appended by the task
  * that owns it (1.10, 1.7, 1.9). Every future addition APPENDS.
@@ -151,8 +151,8 @@
    * from its parent's PADDING box, and the dot is `box-sizing: border-box` with
    * a knob-driven ring, so a 44 asked for rendered as 42.
    *
-   * This expression is `portRegionInsetAtZoom` in `nodes/handleGeometry.ts`,
-   * written twice because one side is CSS. `GraphPort.spec.tsx` reads this rule
+   * This expression is `portRegionInsetAtZoom` in `nodes/handle-geometry.ts`,
+   * written twice because one side is CSS. `GraphPort.test.tsx` reads this rule
    * text and holds the two to the same arithmetic.
    */
   inset: calc(

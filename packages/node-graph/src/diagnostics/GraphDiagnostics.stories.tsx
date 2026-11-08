@@ -19,9 +19,9 @@ import { resetBoot, stampBootStage } from '../dom/boot';
 import type { BootStage } from '../dom/boot';
 
 import { GraphDiagnostics } from './GraphDiagnostics';
-import { recordGraphError, resetGraphError } from './lastError';
+import { recordGraphError, resetGraphError } from './last-error';
 import { LiveGraphDiagnostics } from './LiveGraphDiagnostics';
-import { useGraphDiagnostics } from './useGraphDiagnostics';
+import { useGraphDiagnostics } from './use-graph-diagnostics';
 
 /**
  * Walks the DOM entry's boot sequence, optionally against a module that throws.
@@ -30,7 +30,7 @@ import { useGraphDiagnostics } from './useGraphDiagnostics';
  * because that is the stage `NodeGraphDomInner` stamps immediately before the
  * tree it dynamic-imports would take over.
  */
-function BootHarness({ broken, stopAt }: { broken: boolean; stopAt: BootStage }) {
+const BootHarness = ({ broken, stopAt }: { broken: boolean; stopAt: BootStage }) => {
   const [loaded, setLoaded] = useState(false);
   const [, setTick] = useState(0);
 
@@ -38,6 +38,7 @@ function BootHarness({ broken, stopAt }: { broken: boolean; stopAt: BootStage })
     let cancelled = false;
     resetBoot();
     resetGraphError();
+    // oxlint-disable-next-line react/set-state-in-effect -- the harness re-runs a whole boot when its args change, so it must reset to not-loaded first
     setLoaded(false);
     for (const stage of ['script', 'module', 'faces'] as const) {
       stampBootStage(stage);
@@ -49,7 +50,8 @@ function BootHarness({ broken, stopAt }: { broken: boolean; stopAt: BootStage })
       try {
         if (broken) {
           // A REAL thrown module import, not a simulated one.
-          await import('./deliberateBreak');
+          // oxlint-disable-next-line react/todo -- React Compiler cannot lower import(); a REAL module-eval throw is the point of this story
+          await import('./deliberate-break');
         }
         if (cancelled) {
           return;
@@ -119,7 +121,7 @@ function BootHarness({ broken, stopAt }: { broken: boolean; stopAt: BootStage })
       />
     </YStack>
   );
-}
+};
 
 /**
  * The meta is typed on the HARNESS, not on `GraphDiagnostics`.

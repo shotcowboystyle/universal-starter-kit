@@ -110,9 +110,8 @@ export const graphFaces: readonly GraphFaceDeclaration[] = [
 export const graphFaceCeilingBytes = 96 * 1024;
 
 /** Decoded bytes across every generated face. */
-export function faceBytes(faces: readonly GraphFaceAsset[]): number {
-  return faces.reduce((total, face) => total + face.byteLength, 0);
-}
+export const faceBytes = (faces: readonly GraphFaceAsset[]): number =>
+  faces.reduce((total, face) => total + face.byteLength, 0);
 
 /**
  * Splits a CSS font stack into the family names a browser would try, in order.
@@ -120,17 +119,16 @@ export function faceBytes(faces: readonly GraphFaceAsset[]): number {
  * Quotes are stripped because a family is the same family quoted or not, and
  * the probe compares names rather than re-serializing them.
  */
-export function splitFontStack(stack: string): string[] {
-  return stack
+export const splitFontStack = (stack: string): string[] =>
+  stack
     .split(',')
     .map((part) =>
       part
         .trim()
-        .replaceAll(/^["']|["']$/g, '')
+        .replaceAll(/^["']|["']$/gu, '')
         .trim(),
     )
     .filter((part) => part.length > 0);
-}
 
 /**
  * The suffix that turns a real family name into one no font can answer to.
@@ -145,15 +143,15 @@ const absentSuffix = ' mp-absent';
  *
  * The result is quoted, because the suffix contains a space.
  */
-export function corruptFirstFamily(stack: string): string {
+export const corruptFirstFamily = (stack: string): string => {
   const families = splitFontStack(stack);
   if (families.length === 0) {
     return stack;
   }
   const [first, ...rest] = families;
   const broken = `"${first}${absentSuffix}"`;
-  return [broken, ...rest.map((name) => (/\s/.test(name) ? `"${name}"` : name))].join(', ');
-}
+  return [broken, ...rest.map((name) => (/\s/u.test(name) ? `"${name}"` : name))].join(', ');
+};
 
 /** Design §6.3's probe result, plus the honesty bit the design's shape lacked. */
 export interface FaceProbe {
@@ -182,7 +180,7 @@ export interface ProbeFamilyOptions {
 }
 
 /** The control, with measurement injected so it is testable off a browser. */
-export function probeFamily({ stack, measure }: ProbeFamilyOptions): FaceProbe {
+export const probeFamily = ({ stack, measure }: ProbeFamilyOptions): FaceProbe => {
   const widthStack = measure(stack);
   const corrupted = corruptFirstFamily(stack);
   const widthFirstCorrupted = measure(corrupted);
@@ -196,7 +194,7 @@ export function probeFamily({ stack, measure }: ProbeFamilyOptions): FaceProbe {
     matched: conclusive && widthStack !== widthFirstCorrupted,
     conclusive,
   };
-}
+};
 
 /** The string every probe measures. Latin, mixed case, no spaces to collapse. */
 const probeText = 'AaBbGgQqRrWw0123456789';
@@ -208,7 +206,7 @@ const probeText = 'AaBbGgQqRrWw0123456789';
  * float and never triggers layout, so probing on every render costs nothing and
  * two runs of the same stack cannot disagree by a rounding of the box model.
  */
-function canvasMeasurer(fontSize: string, fontWeight: string): ((stack: string) => number) | null {
+const canvasMeasurer = (fontSize: string, fontWeight: string): ((stack: string) => number) | null => {
   if (typeof document === 'undefined') {
     return null;
   }
@@ -220,7 +218,7 @@ function canvasMeasurer(fontSize: string, fontWeight: string): ((stack: string) 
     context.font = `${fontWeight} ${fontSize} ${stack}`;
     return context.measureText(probeText).width;
   };
-}
+};
 
 /**
  * Design §6.3's entry point: probe the family an element actually rendered in.
@@ -228,7 +226,7 @@ function canvasMeasurer(fontSize: string, fontWeight: string): ((stack: string) 
  * Reads the element's own computed `font-family`, so it reports on the real
  * cascade the knob stack produced rather than on one this module guessed.
  */
-export function probeRenderedFamily(el: Element): FaceProbe {
+export const probeRenderedFamily = (el: Element): FaceProbe => {
   const empty: FaceProbe = {
     stack: '',
     widthStack: 0,
@@ -249,7 +247,7 @@ export function probeRenderedFamily(el: Element): FaceProbe {
     return { ...empty, stack };
   }
   return probeFamily({ stack, measure });
-}
+};
 
 /**
  * The `@font-face` block for a set of faces.
@@ -265,11 +263,11 @@ export function probeRenderedFamily(el: Element): FaceProbe {
  * width, and a swap would let it measure the fallback face during the swap
  * period and report a miss that is really a race.
  */
-export function graphFaceCss(faces: readonly GraphFaceAsset[], assetUris?: Readonly<Record<string, string>>): string {
-  return faces
+export const graphFaceCss = (faces: readonly GraphFaceAsset[], assetUris?: Readonly<Record<string, string>>): string =>
+  faces
     .map((face) => {
       const uri = assetUris?.[face.id];
-      const src = uri ? `url("${uri}")` : `url("data:font/woff2;base64,${face.base64}")`;
+      const src = uri !== undefined && uri !== '' ? `url("${uri}")` : `url("data:font/woff2;base64,${face.base64}")`;
       return [
         '@font-face {',
         `  font-family: "${face.family}";`,
@@ -281,4 +279,3 @@ export function graphFaceCss(faces: readonly GraphFaceAsset[], assetUris?: Reado
       ].join('\n');
     })
     .join('\n');
-}

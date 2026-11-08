@@ -3,7 +3,7 @@
  *
  * One absolutely-positioned div, painted from `--xy-selection-background-color`
  * and `--xy-selection-border` — the SAME two variables React Flow's own
- * `.react-flow__selection` reads (`style.css`), which `graphVars.ts` already
+ * `.react-flow__selection` reads (`style.css`), which `graph-vars.ts` already
  * writes from the mpo token layer. So the long-press marquee and the toolbar-
  * mode marquee are the same rectangle to look at, in both schemes, without this
  * file knowing a colour. `checkGraphVarsCoverage()` would fail the build for a
@@ -38,7 +38,7 @@ export interface LassoOverlayProps {
   readonly rect: Rect | null;
 }
 
-export function LassoOverlay({ rect }: LassoOverlayProps) {
+export const LassoOverlay = ({ rect }: LassoOverlayProps) => {
   if (!rect) {
     return null;
   }
@@ -58,4 +58,4 @@ export function LassoOverlay({ rect }: LassoOverlayProps) {
       }}
     />
   );
-}
+};

@@ -9,6 +9,6 @@
  * `NodeGraph/NodeGraph` story mount, so an app, a spec and a story all render
  * one tree.
  */
-export { demoGraphSchema } from './src/react-flow/demoNodeBody';
+export { demoGraphSchema } from './src/react-flow/demo-node-body';
 export { demoDocument, demoDocumentLarge, demoGraphSchemaId } from './src/react-flow/fixtures';
 export type { DemoNodeData } from './src/react-flow/fixtures';

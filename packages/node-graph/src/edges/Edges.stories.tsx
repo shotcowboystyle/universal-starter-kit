@@ -15,23 +15,23 @@ import '../../css/graph.css';
 
 import { YStack, SizableText, View } from 'tamagui';
 
-import { legalTargets } from '../interaction/legalTargets';
-import { useKnobEnvelope } from '../knobs/useKnobEnvelope';
+import { legalTargets } from '../interaction/legal-targets';
+import { useKnobEnvelope } from '../knobs/use-knob-envelope';
 // Relative, not `@repo/node-graph/model`: the subpath resolves
 // into `dist/`, which a source-consumed workspace package never builds.
 import { createGraphSchema, defaultRules, resolvePorts, validateConnection } from '../model/index';
 import type { GraphDocument } from '../model/index';
 import { domOnlyStoryDecorator } from '../native/DomOnlyStory';
 import { connectionPuckLabel } from '../react-flow/ConnectionPuck';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import { demoDocument } from '../react-flow/fixtures';
 import { NodeGraphWeb } from '../react-flow/NodeGraphWeb';
 import { Position, ReactFlow, ReactFlowProvider } from '../react-flow/xy';
 import type { Edge, Node } from '../react-flow/xy';
 
-import { builtinEdgeKindNames, builtinEdgeKinds } from './edgeKinds';
-import type { BuiltinEdgeData, BuiltinEdgeKind } from './edgeKinds';
-import { edgeMarkerEnd } from './edgeStyle';
+import { builtinEdgeKindNames, builtinEdgeKinds } from './edge-kinds';
+import type { BuiltinEdgeData, BuiltinEdgeKind } from './edge-kinds';
+import { edgeMarkerEnd } from './edge-style';
 import { graphEdgeType, graphEdgeTypes } from './GraphEdge';
 
 export default {
@@ -58,8 +58,8 @@ export default {
 const rowHeight = 110;
 
 /** One source/target pair per kind, stacked, so all four read at once. */
-function laneNodes(labels: readonly string[]): Node[] {
-  return labels.flatMap((label, row) => [
+const laneNodes = (labels: readonly string[]): Node[] =>
+  labels.flatMap((label, row) => [
     {
       id: `s${row}`,
       position: { x: 0, y: row * rowHeight },
@@ -75,22 +75,19 @@ function laneNodes(labels: readonly string[]): Node[] {
       targetPosition: Position.Left,
     },
   ]);
-}
 
-function laneEdge(kind: BuiltinEdgeKind, row: number, label?: string): Edge {
-  return {
-    id: `e${row}`,
-    type: graphEdgeType,
-    source: `s${row}`,
-    target: `t${row}`,
-    // The marker TYPE rides on the edge object: React Flow builds its marker
-    // defs from the edges array.
-    markerEnd: edgeMarkerEnd({ kind }),
-    data: { kind, label },
-  };
-}
+const laneEdge = (kind: BuiltinEdgeKind, row: number, label?: string): Edge => ({
+  id: `e${row}`,
+  type: graphEdgeType,
+  source: `s${row}`,
+  target: `t${row}`,
+  // The marker TYPE rides on the edge object: React Flow builds its marker
+  // defs from the edges array.
+  markerEnd: edgeMarkerEnd({ kind }),
+  data: { kind, label },
+});
 
-function Canvas({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) {
+const Canvas = ({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) => {
   const envelope = useKnobEnvelope();
   return (
     <View
@@ -108,7 +105,7 @@ function Canvas({ nodes, edges }: { nodes: Node[]; edges: Edge[] }) {
       </ReactFlowProvider>
     </View>
   );
-}
+};
 
 export const main = {
   name: 'Main',
@@ -135,10 +132,11 @@ export const labels = {
 // the code and the wording, and this story only shows them. A refusal invented
 // here would drift from the one a user actually sees on a drop.
 
-interface Nodes {
+// oxlint-disable-next-line typescript/consistent-type-definitions -- must stay an alias: interfaces lack the implicit index signature the NodeKindDefs/EdgeKindDefs constraint needs
+type Nodes = {
   readonly numberOut: Record<string, never>;
   readonly textIn: Record<string, never>;
-}
+};
 
 const refusalSchema = createGraphSchema<Nodes, BuiltinEdgeData>({
   id: 'edges-story-refusal',
@@ -235,11 +233,10 @@ export const refused = {
 const connectDoc = demoDocument();
 const connectSchema = demoGraphSchema();
 
-function everyTarget(): { node: string; port: string }[] {
-  return connectDoc.nodes.flatMap((node) =>
+const everyTarget = (): { node: string; port: string }[] =>
+  connectDoc.nodes.flatMap((node) =>
     resolvePorts(connectSchema, node).map((spec) => ({ node: node.id, port: spec.id })),
   );
-}
 
 export const connecting = {
   name: 'Connecting',

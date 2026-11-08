@@ -20,11 +20,11 @@
  *  - `layout()` itself, which is a Promise on every runner.
  */
 
-import type { NodeId, Size, XY } from '../model/document';
-import type { EdgeKindDefs, GraphDocument, GraphSchema, NodeKindDefs } from '../model/index';
-import { nodeKindSpec, resolvePorts } from '../model/index';
-import type { GraphNodeSizeKnob } from '../nodes/nodeMeasure';
-import { FINE_PORT_PITCH, graphNodeMeasure, portSpacing } from '../nodes/nodeMeasure';
+import type { EdgeKindDefs, GraphDocument, NodeId, NodeKindDefs, Size, XY } from '../model/document';
+import type { GraphSchema } from '../model/schema';
+import { nodeKindSpec, resolvePorts } from '../model/schema';
+import type { GraphNodeSizeKnob } from '../nodes/node-measure';
+import { FINE_PORT_PITCH, graphNodeMeasure, portSpacing } from '../nodes/node-measure';
 
 import { getLayoutRunner } from './runner';
 import type { LayoutRunnerOptions } from './runner';
@@ -52,11 +52,11 @@ export interface GraphLayoutOptions extends LayoutOptions {
   readonly runner?: LayoutRunnerOptions;
 }
 
-export function buildLayoutRequest<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const buildLayoutRequest = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   document: GraphDocument<N, E>,
   schema: GraphSchema<N, E>,
   options: GraphLayoutOptions = {},
-): LayoutRequest {
+): LayoutRequest => {
   const { size = 'medium', coarsePointer = false, measured } = options;
   const portSpacingPx = coarsePointer ? portSpacing({ coarsePointer }) : FINE_PORT_PITCH;
   return {
@@ -90,7 +90,7 @@ export function buildLayoutRequest<N extends NodeKindDefs, E extends EdgeKindDef
       subset: options.subset,
     },
   };
-}
+};
 
 /**
  * The result minus everything the user has touched since it was requested.
@@ -99,7 +99,10 @@ export function buildLayoutRequest<N extends NodeKindDefs, E extends EdgeKindDef
  * does nothing because one node was nudged mid-flight is indistinguishable
  * from a broken button.
  */
-export function reconcilePositions(result: LayoutResult, touched: ReadonlySet<NodeId>): Readonly<Record<NodeId, XY>> {
+export const reconcilePositions = (
+  result: LayoutResult,
+  touched: ReadonlySet<NodeId>,
+): Readonly<Record<NodeId, XY>> => {
   if (touched.size === 0) {
     return result.positions;
   }
@@ -111,13 +114,13 @@ export function reconcilePositions(result: LayoutResult, touched: ReadonlySet<No
     positions[id] = point;
   }
   return positions;
-}
+};
 
-export async function layout<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const layout = async <N extends NodeKindDefs, E extends EdgeKindDefs>(
   document: GraphDocument<N, E>,
   schema: GraphSchema<N, E>,
   options: GraphLayoutOptions = {},
-): Promise<LayoutResult> {
+): Promise<LayoutResult> => {
   const runner = await getLayoutRunner(options.runner);
   return await runner.run(buildLayoutRequest(document, schema, options));
-}
+};

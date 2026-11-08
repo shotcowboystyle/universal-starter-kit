@@ -22,7 +22,7 @@ import { GraphFaces } from '../theme/GraphFaces';
 import type { GraphFaceStatus } from '../theme/GraphFaces';
 
 import { GraphNode } from './GraphNode';
-import type { GraphNodePort } from './nodeMeasure';
+import type { GraphNodePort } from './node-measure';
 
 const oneIn: GraphNodePort[] = [{ id: 'in', side: 'left', direction: 'in', label: 'source' }];
 
@@ -244,24 +244,22 @@ const fuzzCombos = [
   },
 ] as const;
 
-function FuzzColumn({ scheme, children }: { scheme: 'light' | 'dark'; children: ReactNode }) {
-  return (
-    <Theme name={scheme}>
-      <YStack
-        gap="$4"
-        padding="$4"
-        backgroundColor="$background"
-        borderRadius="$4">
-        <SizableText
-          size="$2"
-          opacity={0.6}>
-          {scheme}
-        </SizableText>
-        {children}
-      </YStack>
-    </Theme>
-  );
-}
+const FuzzColumn = ({ scheme, children }: { scheme: 'light' | 'dark'; children: ReactNode }) => (
+  <Theme name={scheme}>
+    <YStack
+      gap="$4"
+      padding="$4"
+      backgroundColor="$background"
+      borderRadius="$4">
+      <SizableText
+        size="$2"
+        opacity={0.6}>
+        {scheme}
+      </SizableText>
+      {children}
+    </YStack>
+  </Theme>
+);
 
 export const KnobFuzz: Story = {
   parameters: {
@@ -321,7 +319,7 @@ export const KnobFuzz: Story = {
  * console to open — so every number the control produces has to be legible in
  * the picture.
  */
-function ProbeRow({ label, probe }: { label: string; probe: FaceProbe | null }) {
+const ProbeRow = ({ label, probe }: { label: string; probe: FaceProbe | null }) => {
   if (!probe) {
     return (
       <SizableText
@@ -331,11 +329,8 @@ function ProbeRow({ label, probe }: { label: string; probe: FaceProbe | null }) 
       </SizableText>
     );
   }
-  const verdict = probe.conclusive
-    ? probe.matched
-      ? 'MATCHED — first family painted'
-      : 'MISS — first family never painted'
-    : 'INCONCLUSIVE';
+  const matchVerdict = probe.matched ? 'MATCHED — first family painted' : 'MISS — first family never painted';
+  const verdict = probe.conclusive ? matchVerdict : 'INCONCLUSIVE';
   return (
     <YStack gap="$1">
       <SizableText
@@ -357,7 +352,7 @@ function ProbeRow({ label, probe }: { label: string; probe: FaceProbe | null }) 
       </SizableText>
     </YStack>
   );
-}
+};
 
 /**
  * The corrupted-first-family control, live, with its own negative case beside
@@ -390,7 +385,7 @@ function ProbeRow({ label, probe }: { label: string; probe: FaceProbe | null }) 
  */
 const hasDom = hasDomRealm;
 
-function FontProofPanel() {
+const FontProofPanel = () => {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [real, setReal] = useState<FaceProbe | null>(null);
   const [absent, setAbsent] = useState<FaceProbe | null>(null);
@@ -421,6 +416,7 @@ function FontProofPanel() {
       }
     };
     void run();
+    // oxlint-disable-next-line typescript/consistent-return -- an effect returns a cleanup only when it started something
     return () => {
       live = false;
     };
@@ -533,7 +529,7 @@ function FontProofPanel() {
       </YStack>
     </YStack>
   );
-}
+};
 
 export const FontProof: Story = {
   parameters: {

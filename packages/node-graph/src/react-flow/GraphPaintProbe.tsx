@@ -26,11 +26,12 @@ export interface GraphPaintProbeProps {
   readonly onPaint: () => void;
 }
 
-export function GraphPaintProbe({ onPaint }: GraphPaintProbeProps) {
+export const GraphPaintProbe = ({ onPaint }: GraphPaintProbeProps) => {
   const fired = useRef(false);
   // Read through a ref so a caller rebuilding the callback each render does not
   // re-arm the probe — the whole point is that it fires once.
   const latest = useRef(onPaint);
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   latest.current = onPaint;
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function GraphPaintProbe({ onPaint }: GraphPaintProbeProps) {
     // Firing synchronously there is honest: the tree rendered, and there is no
     // compositor to wait for.
     const raf = globalThis.requestAnimationFrame;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the declared type lies: happy-dom and some realms have no rAF at all
     if (typeof raf !== 'function') {
       fired.current = true;
       latest.current();
@@ -60,6 +62,7 @@ export function GraphPaintProbe({ onPaint }: GraphPaintProbeProps) {
         latest.current();
       });
     });
+    // oxlint-disable-next-line typescript/consistent-return -- a cleanup is returned only when frames were scheduled
     return () => {
       cancelled = true;
       globalThis.cancelAnimationFrame?.(outer);
@@ -70,4 +73,4 @@ export function GraphPaintProbe({ onPaint }: GraphPaintProbeProps) {
   }, []);
 
   return null;
-}
+};

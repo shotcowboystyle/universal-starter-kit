@@ -25,13 +25,13 @@ under Metro.
 ## The token bridge
 
 React Flow reads every paint through `var(--xy-thing, var(--xy-thing-default))`.
-`src/theme/graphVars.ts` sets the non-default layer from `ResolvedKnobs` plus
+`src/theme/graph-vars.ts` sets the non-default layer from `ResolvedKnobs` plus
 the Tamagui theme, so the library stylesheet is never edited and no specificity
 war is possible. 28 of the 35 settable names are mapped; the 7 `--xy-node-*`
 names are allowlisted with reasons, because they bind only to React Flow's four
 built-in node classes and a Tamagui node carries none of them.
 
-Two arms keep it honest. `graphVars.spec.ts` re-derives the vocabulary from the
+Two arms keep it honest. `graph-vars.test.ts` re-derives the vocabulary from the
 INSTALLED `@xyflow/react/dist/style.css` on every run, so an upgrade that adds a
 name fails here; and `checkGraphVarsCoverage()` in `public/config/lint.mjs`
 fails `pnpm lint` on a `.react-flow__` selector anywhere under a package's
@@ -40,7 +40,7 @@ package's `css/graph.css`.
 
 `GraphVars` (the `<style>` component) lives in `src/theme/GraphVarsStyle.tsx`,
 not the design's `GraphVars.tsx`. On a case-insensitive filesystem that name and
-`graphVars.ts` are the same module specifier, and the resolver's `.ts`-before-
+`graph-vars.ts` are the same module specifier, and the resolver's `.ts`-before-
 `.tsx` order makes `import … from "./GraphVars"` silently return the pure map.
 The exported component keeps its design name.
 
@@ -50,9 +50,9 @@ The exported component keeps its design name.
 bounded job:
 
 1. Bump the range in `package.json`.
-2. `pnpm -F @repo/node-graph test` — `xy.spec.ts` fails when a
+2. `pnpm -F @repo/node-graph test` — `xy.test.ts` fails when a
    re-exported name is gone or the installed version leaves the declared range.
-3. Reconcile `src/react-flow/xy.ts` and `src/react-flow/useGraphController.ts`.
+3. Reconcile `src/react-flow/xy.ts` and `src/react-flow/use-graph-controller.ts`.
 4. `pnpm -F @repo/node-graph bench`, re-run the device recipe,
    update the committed baseline.
 5. Record the numbers and the version on MPO-191.

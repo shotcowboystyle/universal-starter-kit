@@ -15,11 +15,11 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { SizableText, Theme, XStack, YStack } from 'tamagui';
 
-import type { BuiltinEdgeData } from '../edges/edgeKinds';
+import type { BuiltinEdgeData } from '../edges/edge-kinds';
 import type { GraphDocument } from '../model/index';
 import { NodeGraph } from '../NodeGraph';
 
-import { demoGraphSchema } from './demoNodeBody';
+import { demoGraphSchema } from './demo-node-body';
 import type { DemoNodeData } from './fixtures';
 import { demoDocument, demoDocumentLarge } from './fixtures';
 import { Background, Controls, MiniMap } from './xy';
@@ -52,16 +52,14 @@ export default meta;
 type Story = StoryObj<typeof NodeGraph>;
 
 /** Every story needs a real box: React Flow measures its parent, not the window. */
-function Canvas({ children, height = 560 }: { children: React.ReactNode; height?: number }) {
-  return (
-    <YStack
-      width="100%"
-      height={height}
-      padding="$3">
-      {children}
-    </YStack>
-  );
-}
+const Canvas = ({ children, height = 560 }: { children: React.ReactNode; height?: number }) => (
+  <YStack
+    width="100%"
+    height={height}
+    padding="$3">
+    {children}
+  </YStack>
+);
 
 /**
  * The controls are named one by one rather than spread from `args`. A
@@ -153,39 +151,41 @@ export const ReadOnly: Story = {
  * Controlled: the story owns the document and writes it back on every change.
  * The counter is the proof a 30-frame drag is ONE change, not thirty.
  */
+const ControlledCanvas = () => {
+  const [document, setDocument] = useState<Doc>(() => demoDocument());
+  const [changes, setChanges] = useState(0);
+  return (
+    <Canvas>
+      <XStack
+        gap="$3"
+        alignItems="center"
+        paddingBottom="$2">
+        <SizableText size="$2">{`onDocumentChange calls: ${changes}`}</SizableText>
+        <SizableText
+          size="$2"
+          opacity={0.6}>
+          {`node a at ${Math.round(document.nodes[0]?.position.x ?? 0)}, ${Math.round(
+            document.nodes[0]?.position.y ?? 0,
+          )}`}
+        </SizableText>
+      </XStack>
+      <YStack flex={1}>
+        <NodeGraph
+          schema={schema}
+          document={document}
+          onDocumentChange={(next) => {
+            setDocument(next);
+            setChanges((count) => count + 1);
+          }}>
+          <Background />
+        </NodeGraph>
+      </YStack>
+    </Canvas>
+  );
+};
+
 export const Controlled: Story = {
-  render: () => {
-    const [document, setDocument] = useState<Doc>(() => demoDocument());
-    const [changes, setChanges] = useState(0);
-    return (
-      <Canvas>
-        <XStack
-          gap="$3"
-          alignItems="center"
-          paddingBottom="$2">
-          <SizableText size="$2">{`onDocumentChange calls: ${changes}`}</SizableText>
-          <SizableText
-            size="$2"
-            opacity={0.6}>
-            {`node a at ${Math.round(document.nodes[0]?.position.x ?? 0)}, ${Math.round(
-              document.nodes[0]?.position.y ?? 0,
-            )}`}
-          </SizableText>
-        </XStack>
-        <YStack flex={1}>
-          <NodeGraph
-            schema={schema}
-            document={document}
-            onDocumentChange={(next) => {
-              setDocument(next);
-              setChanges((count) => count + 1);
-            }}>
-            <Background />
-          </NodeGraph>
-        </YStack>
-      </Canvas>
-    );
-  },
+  render: () => <ControlledCanvas />,
 };
 
 /**

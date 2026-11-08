@@ -8,7 +8,7 @@
  * come up empty, HOW FAR did it get?
  *
  * The record lives on `globalThis` rather than in a module-scoped variable
- * because two different pieces of code write it. `NodeGraphDom.ts` stamps
+ * because two different pieces of code write it. `node-graph-dom.ts` stamps
  * `script` INLINE — it cannot import this module, since the entry must carry no
  * top-level import of ours that could itself throw — and the tree it then
  * dynamic-imports stamps the rest through `stampBootStage`. A module variable
@@ -61,38 +61,38 @@ export interface BootRecord {
 }
 
 /**
- * The key `NodeGraphDom.ts` writes inline. Exported so `domEntry.spec.ts` can
+ * The key `node-graph-dom.ts` writes inline. Exported so `dom-entry.test.ts` can
  * assert the entry's literal and this module's reader still name the same slot
  * — the one place the two halves of the heartbeat could silently drift.
  */
 export const bootGlobalKey = '__mp_graph_boot';
 
-function slot(): Record<string, unknown> {
-  return globalThis as unknown as Record<string, unknown>;
-}
+// SAFETY: widening the literal tuple to readonly string[] only to look a BootStage up in it
+export const bootStageIndex = (stage: BootStage): number => (bootStages as readonly string[]).indexOf(stage);
 
-export function bootStageIndex(stage: BootStage): number {
-  return (bootStages as readonly string[]).indexOf(stage);
-}
-
-function isBootStage(value: unknown): value is BootStage {
-  return typeof value === 'string' && (bootStages as readonly string[]).includes(value);
-}
+const isBootStage = (value: unknown): value is BootStage =>
+  typeof value === 'string' &&
+  // SAFETY: widening the literal tuple to readonly string[] only to call includes on a string
+  (bootStages as readonly string[]).includes(value);
 
 /**
  * The record as written, normalized. A raw `{ stage: "script" }` from the entry
  * gains the history it never had; anything unrecognizable reads as `null`.
  */
-export function readBootRecord(): BootRecord | null {
-  const raw = slot()[bootGlobalKey];
-  if (!raw || typeof raw !== 'object') {
+export const readBootRecord = (): BootRecord | null => {
+  // oxlint-disable-next-line anti-slop/no-reflect-get -- an ad-hoc global slot written by the inline entry; parsed right below
+  const raw: unknown = Reflect.get(globalThis, bootGlobalKey);
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this IS the parse of the untyped global the inline entry writes
+  if (raw === null || typeof raw !== 'object') {
     return null;
   }
+  // SAFETY: every field is re-validated below (isBootStage / Array.isArray / typeof) before use
   const record = raw as Partial<BootRecord>;
   if (!isBootStage(record.stage)) {
     return null;
   }
   const history = Array.isArray(record.history) ? record.history.filter(isBootStage) : [];
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- validating the untyped global's field
   const at = typeof record.at === 'number' ? record.at : 0;
   return {
     stage: record.stage,
@@ -100,10 +100,11 @@ export function readBootRecord(): BootRecord | null {
     // A raw `{ stage: "script" }` from the entry has no `startedAt`; reading it
     // back as `at` makes the elapsed time zero rather than a decade, which is
     // the honest answer for a record that never carried a start.
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- validating the untyped global's field
     startedAt: typeof record.startedAt === 'number' ? record.startedAt : at,
     history: history.length > 0 ? history : [record.stage],
   };
-}
+};
 
 /**
  * Milliseconds since this attempt's first stamp, or `null` with no record.
@@ -112,17 +113,15 @@ export function readBootRecord(): BootRecord | null {
  * reported in design 9.5's panel so the budget can be re-set from a device
  * rather than from a guess.
  */
-export function readBootElapsedMs(now: number = Date.now()): number | null {
+export const readBootElapsedMs = (now: number = Date.now()): number | null => {
   const record = readBootRecord();
   if (!record || record.startedAt === 0) {
     return null;
   }
   return Math.max(0, now - record.startedAt);
-}
+};
 
-export function readBootStage(): BootStage | null {
-  return readBootRecord()?.stage ?? null;
-}
+export const readBootStage = (): BootStage | null => readBootRecord()?.stage ?? null;
 
 /**
  * Record that boot reached `stage`, and return the stage the record now holds.
@@ -132,18 +131,18 @@ export function readBootStage(): BootStage | null {
  * and point whoever reads it at the wrong layer. `script` is the one exception:
  * Retry remounts the WebView under a new key, and boot genuinely starts over.
  */
-export function stampBootStage(stage: BootStage): BootStage {
+export const stampBootStage = (stage: BootStage): BootStage => {
   const previous = readBootRecord();
   if (stage === 'script' || !previous) {
     const now = Date.now();
     const fresh: BootRecord = { stage, at: now, startedAt: now, history: [stage] };
-    slot()[bootGlobalKey] = fresh;
+    Reflect.set(globalThis, bootGlobalKey, fresh);
     return stage;
   }
   if (bootStageIndex(stage) <= bootStageIndex(previous.stage)) {
     return previous.stage;
   }
-  slot()[bootGlobalKey] = {
+  Reflect.set(globalThis, bootGlobalKey, {
     stage,
     at: Date.now(),
     // Carried forward, never re-stamped: the elapsed time is measured from the
@@ -151,11 +150,11 @@ export function stampBootStage(stage: BootStage): BootStage {
     // boot as instant.
     startedAt: previous.startedAt,
     history: [...previous.history, stage],
-  } satisfies BootRecord;
+  } satisfies BootRecord);
   return stage;
-}
+};
 
 /** Test seam, and what Retry calls before remounting. */
-export function resetBoot(): void {
-  delete slot()[bootGlobalKey];
-}
+export const resetBoot = (): void => {
+  Reflect.deleteProperty(globalThis, bootGlobalKey);
+};

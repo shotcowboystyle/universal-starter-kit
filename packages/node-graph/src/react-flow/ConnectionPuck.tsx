@@ -11,7 +11,7 @@
  * not inside it, so nothing here rides the pan/zoom matrix and the puck is the
  * same physical size at zoom 0.25 and at zoom 2. Applying a `scale(1/zoom)` on
  * top of that would counter a transform that was never applied and shrink the
- * puck as the user zoomed IN. `ConnectionPuck.spec.tsx` measures the rendered
+ * puck as the user zoomed IN. `ConnectionPuck.test.tsx` measures the rendered
  * size at both extremes rather than trusting either story.
  *
  * The candidate it names is filtered through `legalTargets`. `connectionRadius`
@@ -23,9 +23,9 @@
 import { useResolvedKnobs } from '@repo/theme';
 import { SizableText, XStack } from 'tamagui';
 
-import { isLegalTarget } from '../interaction/legalTargets';
+import { isLegalTarget } from '../interaction/legal-targets';
 import type { EdgeKindDefs, GraphDocument, GraphSchema, NodeKindDefs, PortRef, PortSpec } from '../model/index';
-import { resolvePorts } from '../model/index';
+import { resolvePorts } from '../model/schema';
 
 import { useStore } from './xy';
 
@@ -45,22 +45,22 @@ export interface ConnectionPuckProps<N extends NodeKindDefs, E extends EdgeKindD
 /** Separator that cannot occur in a node id or a port id, so the key round-trips. */
 const keySeparator = '\u0000';
 
-function portOf<N extends NodeKindDefs, E extends EdgeKindDefs>(
+const portOf = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   document: GraphDocument<N, E>,
   schema: GraphSchema<N, E>,
   ref: PortRef,
-): PortSpec | undefined {
+): PortSpec | undefined => {
   const node = document.nodes.find((candidate) => candidate.id === ref.node);
   if (!node) {
     return undefined;
   }
   return resolvePorts(schema, node).find((candidate) => candidate.id === ref.port);
-}
+};
 
-function splitKey(key: string): PortRef {
+const splitKey = (key: string): PortRef => {
   const at = key.indexOf(keySeparator);
   return { node: key.slice(0, at), port: key.slice(at + 1) };
-}
+};
 
 export interface ConnectionPuckLabel {
   /** What the puck says. */
@@ -80,7 +80,7 @@ export interface ConnectionPuckLabel {
  * through three layers of Tamagui. The component keeps only the two store
  * reads.
  */
-export function connectionPuckLabel<N extends NodeKindDefs, E extends EdgeKindDefs>(opts: {
+export const connectionPuckLabel = <N extends NodeKindDefs, E extends EdgeKindDefs>(opts: {
   readonly document: GraphDocument<N, E>;
   readonly schema: GraphSchema<N, E>;
   /** null when no connection is in progress. */
@@ -88,7 +88,7 @@ export function connectionPuckLabel<N extends NodeKindDefs, E extends EdgeKindDe
   /** null when the drag is over open canvas. */
   readonly candidate: PortRef | null;
   readonly nodeLabel?: (nodeId: string) => string | undefined;
-}): ConnectionPuckLabel | null {
+}): ConnectionPuckLabel | null => {
   const { document, schema, source, candidate, nodeLabel } = opts;
   if (!source) {
     return null;
@@ -106,14 +106,14 @@ export function connectionPuckLabel<N extends NodeKindDefs, E extends EdgeKindDe
     // refused port reads as a broken overlay, not as a refusal.
     text: legal && candidate ? name(candidate) : `from ${name(source)}`,
   };
-}
+};
 
-export function ConnectionPuck<N extends NodeKindDefs, E extends EdgeKindDefs>({
+export const ConnectionPuck = <N extends NodeKindDefs, E extends EdgeKindDefs>({
   document,
   schema,
   nodeLabel,
   intent,
-}: ConnectionPuckProps<N, E>) {
+}: ConnectionPuckProps<N, E>) => {
   const { knobProps } = useResolvedKnobs({ component: 'ConnectionPuck', intent });
 
   // Two STRINGS, not the connection object. The store hands back a fresh
@@ -134,8 +134,8 @@ export function ConnectionPuck<N extends NodeKindDefs, E extends EdgeKindDefs>({
   const label = connectionPuckLabel({
     document,
     schema,
-    source: fromKey ? splitKey(fromKey) : null,
-    candidate: toKey ? splitKey(toKey) : null,
+    source: fromKey === null ? null : splitKey(fromKey),
+    candidate: toKey === null ? null : splitKey(toKey),
     nodeLabel,
   });
   if (!label) {
@@ -174,4 +174,4 @@ export function ConnectionPuck<N extends NodeKindDefs, E extends EdgeKindDefs>({
       </SizableText>
     </XStack>
   );
-}
+};

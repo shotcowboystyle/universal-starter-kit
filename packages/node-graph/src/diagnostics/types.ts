@@ -41,6 +41,7 @@ export interface GraphFaceDelivery {
   readonly id: string;
   readonly family: string;
   readonly weight: number;
+  // oxlint-disable-next-line sonarjs/max-union-size -- the four delivery states of the wire contract; a named alias would add nothing
   readonly source: 'asset' | 'inline' | 'pending' | 'failed';
 }
 

@@ -31,17 +31,17 @@
 import { createElement, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { Ref } from 'react';
 
-import { recordGraphError, resetGraphError } from '../diagnostics/lastError';
+import { recordGraphError, resetGraphError } from '../diagnostics/last-error';
 import type { BootStage } from '../dom/boot';
-import type { NodeGraphDomHandle, NodeGraphDomOptions, NodeGraphDomProps } from '../dom/NodeGraphDomShell';
+import type { NodeGraphDomHandle, NodeGraphDomOptions, NodeGraphDomProps } from '../dom/node-graph-dom-shell';
 import { decodeGraphEvent } from '../dom/wire';
 import type { GraphDiagnosticsWire, GraphEventWire, PerfReportWire } from '../dom/wire';
 import type { KnobEnvelope } from '../knobs/envelope';
 import type { NodeId, Viewport } from '../model/index';
-import type { NodeGraphHandle } from '../react-flow/graphHandle';
+import type { NodeGraphHandle } from '../react-flow/graph-handle';
 
-import { getNodeGraphDomEntry } from './domEntryRegistry';
-import type { NodeGraphDomEntry } from './domEntryRegistry';
+import { getNodeGraphDomEntry } from './dom-entry-registry';
+import type { NodeGraphDomEntry } from './dom-entry-registry';
 import { GraphFallback } from './GraphFallback.native';
 import type { GraphFallbackReason } from './GraphFallback.native';
 
@@ -135,7 +135,8 @@ export interface NodeGraphNativeProps {
 
 const defaultDomProps = { matchContents: false, useExpoDOMWebView: true } as const;
 
-export function NodeGraphNative(props: NodeGraphNativeProps) {
+// oxlint-disable-next-line react-doctor/no-giant-component -- one boot/watchdog/retry state machine; most of the length is the measured device findings that justify each step
+export const NodeGraphNative = (props: NodeGraphNativeProps) => {
   const {
     documentJson,
     envelope,
@@ -242,6 +243,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
    * consumer's `graphRef` is published through a stable forwarder below — the
    * same shape `NodeGraphWeb` uses for `commandSlot`, for the same reason.
    */
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- `attempt` is the whole point: a FRESH ref object per attempt (see above)
   const entryRef = useMemo<{ current: NodeGraphDomHandle | null }>(() => ({ current: null }), [attempt]);
   // Read through a ref so the forwarder can be built ONCE. A forwarder rebuilt
   // per attempt would hand a sibling toolbar a new object mid-session.
@@ -279,6 +281,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
   // A new attempt is a new WebView, so everything the last one reported is
   // stale. Resetting here rather than in the retry handler keeps the two in
   // step even if a consumer remounts us for its own reasons.
+  /* oxlint-disable react-doctor/no-chain-state-updates -- a per-attempt reset keyed on `attempt` by design (see comment above) */
   useEffect(() => {
     setReady(false);
     setPainted(false);
@@ -290,6 +293,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
     // diagnostics panel reads this slot on the Hermes side.
     resetGraphError();
   }, [attempt]);
+  /* oxlint-enable react-doctor/no-chain-state-updates */
 
   /**
    * The watchdog. It stops on the FIRST of paint or ready, which in practice is
@@ -307,6 +311,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
     const timer = setTimeout(() => {
       setFailure({ reason: 'no-ready', message: lastReport.current ?? undefined });
     }, timeout);
+    // oxlint-disable-next-line typescript/consistent-return -- an effect returns a cleanup only when it armed a timer
     return () => {
       clearTimeout(timer);
     };
@@ -326,6 +331,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
   }, [restarting]);
 
   const onEvent = useCallback(
+    // oxlint-disable-next-line eslint/complexity -- one flat dispatch over the wire's event tags; splitting it would scatter the protocol
     async (eventJson: string) => {
       setStarted(true);
       let event: GraphEventWire;
@@ -344,44 +350,45 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
       // Before the switch, and before any typed callback: a consumer reading the
       // raw channel should see an event even when a handler below throws.
       onGraphEvent?.(event);
+      // oxlint-disable-next-line eslint/default-case -- exhaustive over GraphEventWire['t']; TS checks it, and a default would hide a newly added tag
       switch (event.t) {
         case 'ready': {
           setReady(true);
           setStage(event.diagnostics.stage);
           onReady?.(event.diagnostics);
-          return;
+          break;
         }
         case 'commit': {
           onCommit?.(event.rev, event.commandsJson);
-          return;
+          break;
         }
         case 'selection': {
           onSelection?.(event.ids);
-          return;
+          break;
         }
         case 'viewport': {
           onViewport?.(event.viewport);
-          return;
+          break;
         }
         case 'nodeActivate': {
           onNodeActivate?.(event.id);
-          return;
+          break;
         }
         case 'connectRefused': {
           onConnectionRefused?.(event.code, event.message);
-          return;
+          break;
         }
         case 'haptic': {
           onHaptic?.(event.kind);
-          return;
+          break;
         }
         case 'metrics': {
-          return;
+          break;
         }
         case 'paint': {
           setPainted(true);
           onPaint?.(event.bootMs);
-          return;
+          break;
         }
         case 'layoutResult': {
           onLayoutResult?.({
@@ -390,11 +397,11 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
             nodeCount: event.nodeCount,
             error: event.error,
           });
-          return;
+          break;
         }
         case 'perfReport': {
           onPerfReport?.(event.report);
-          return;
+          break;
         }
         case 'lasso': {
           onLasso?.(event);
@@ -404,7 +411,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
           if (event.haptic) {
             onHaptic?.(event.haptic);
           }
-          return;
+          break;
         }
         case 'error': {
           lastReport.current = `${event.phase}: ${event.message}`;
@@ -423,7 +430,7 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
             });
           }
           onError?.(event);
-          return;
+          break;
         }
       }
     },
@@ -511,4 +518,4 @@ export function NodeGraphNative(props: NodeGraphNativeProps) {
     rev,
     schemaId,
   });
-}
+};

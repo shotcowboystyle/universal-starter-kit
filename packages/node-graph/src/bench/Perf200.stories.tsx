@@ -37,7 +37,7 @@
  *     Hermes side — is unreachable from the realm that has to render it. On the
  *     iPhone 16e this story reported `render: no graph schema registered as
  *     "node-graph-demo-control"` and painted nothing. It lives in
- *     `react-flow/demoControlBody.tsx` now, and the Kitchen Sink's `'use dom'`
+ *     `react-flow/demo-control-body.tsx` now, and the Kitchen Sink's `'use dom'`
  *     entry registers it beside the demo schema through `schemas`.
  *  3. **A `window.__mpoPerf200` handle.** Browser automation cannot press a
  *     Tamagui button reliably across an emulated touch surface, and the
@@ -52,17 +52,17 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import type { FrameStats } from '../bench/frameSampler';
-import { gestureEndMark, gestureStartMark } from '../bench/frameSampler';
+import type { FrameStats } from '../bench/frame-sampler';
+import { gestureEndMark, gestureStartMark } from '../bench/frame-sampler';
 import type { GraphEventWire, PerfReportWire } from '../dom/wire';
 import { hasDomRealm } from '../native/DomOnlyStory';
 import { NodeGraph } from '../NodeGraph';
-import { demoControlSchema } from '../react-flow/demoControlBody';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
-import type { NodeGraphHandle } from '../react-flow/graphHandle';
+import { demoControlSchema } from '../react-flow/demo-control-body';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
+import type { NodeGraphHandle } from '../react-flow/graph-handle';
 import { Background, Controls, reactFlowNodeSelector } from '../react-flow/xy';
 
-import { generateBenchGraph } from './generateGraph';
+import { generateBenchGraph } from './generate-graph';
 
 const benchSeed = 1;
 const benchCount = 200;
@@ -90,8 +90,18 @@ export default meta;
 
 type Story = StoryObj<typeof NodeGraph>;
 
+/** The bench's own state, as automation reads it back. */
+interface PerfBenchInfo {
+  readonly variant: 'tamagui' | 'control';
+  readonly culling: boolean;
+  readonly nodeCount: number;
+  readonly layoutRunner: string;
+  /** Mounted React Flow nodes, or null where there is no DOM realm. */
+  readonly mounted: number | null;
+}
+
 /** What automation drives. Every method reaches the canvas through `graphRef`. */
-interface HandleShape {
+interface PerfAutomationHandle {
   readonly start: (label?: string) => void;
   readonly stop: (label?: string) => void;
   readonly mark: (label: string) => void;
@@ -102,7 +112,7 @@ interface HandleShape {
   readonly report: () => PerfReportWire | null;
   readonly relayout: () => void;
   readonly setCulling: (on: boolean) => void;
-  readonly info: () => unknown;
+  readonly info: () => PerfBenchInfo;
   /** Five runs have to start from the same place, or the median of five is of five experiments. */
   readonly setViewport: (viewport: { x: number; y: number; zoom: number }) => void;
   /**
@@ -112,12 +122,9 @@ interface HandleShape {
   readonly startPinch: (options?: { readonly scale?: number; readonly steps?: number }) => void;
 }
 
-function line(stats: FrameStats): string {
-  return (
-    `${stats.samples} frames · p95 ${stats.p95.toFixed(1)} ms · mean ${stats.mean.toFixed(1)} ms · ` +
-    `worst ${stats.worst.toFixed(1)} ms · >33.3 ${stats.over33_3}`
-  );
-}
+const line = (stats: FrameStats): string =>
+  `${stats.samples} frames · p95 ${stats.p95.toFixed(1)} ms · mean ${stats.mean.toFixed(1)} ms · ` +
+  `worst ${stats.worst.toFixed(1)} ms · >33.3 ${stats.over33_3}`;
 
 /**
  * The GESTURE cell when the run bracketed one, and only then.
@@ -128,7 +135,7 @@ function line(stats: FrameStats): string {
  * way to subtract them. A run with no marks still prints the whole window,
  * labelled as one, rather than pretending to be something it is not.
  */
-function summarize(report: PerfReportWire | null): string {
+const summarize = (report: PerfReportWire | null): string => {
   if (!report) {
     return 'idle';
   }
@@ -149,9 +156,9 @@ function summarize(report: PerfReportWire | null): string {
     `GESTURE ${gesture.segments}× · ${line(gesture.stats)} · idle ${gesture.idleFrames}${open}\n` +
     `whole window · ${line(stats)} · didMove true`
   );
-}
+};
 
-function Bench({ variant }: { readonly variant: 'tamagui' | 'control' }) {
+const Bench = ({ variant }: { readonly variant: 'tamagui' | 'control' }) => {
   const [culling, setCulling] = useState(true);
   const [report, setReport] = useState<PerfReportWire | null>(null);
   const [sampling, setSampling] = useState(false);
@@ -228,7 +235,7 @@ function Bench({ variant }: { readonly variant: 'tamagui' | 'control' }) {
   }, []);
 
   useEffect(() => {
-    const value: HandleShape = {
+    const value: PerfAutomationHandle = {
       start,
       stop,
       mark: (label) => graph.current?.perfMark(label),
@@ -252,9 +259,9 @@ function Bench({ variant }: { readonly variant: 'tamagui' | 'control' }) {
       setViewport: (viewport) => graph.current?.setViewport(viewport.x, viewport.y, viewport.zoom),
       startPinch: ({ scale = 1.6, steps = 30 } = {}) => graph.current?.synthPinch(scale, steps),
     };
-    (globalThis as unknown as { __mpoPerf200?: HandleShape }).__mpoPerf200 = value;
+    (globalThis as unknown as { __mpoPerf200?: PerfAutomationHandle }).__mpoPerf200 = value;
     return () => {
-      delete (globalThis as unknown as { __mpoPerf200?: HandleShape }).__mpoPerf200;
+      delete (globalThis as unknown as { __mpoPerf200?: PerfAutomationHandle }).__mpoPerf200;
     };
   }, [culling, layoutRunner, start, stop, variant]);
 
@@ -372,7 +379,7 @@ function Bench({ variant }: { readonly variant: 'tamagui' | 'control' }) {
           mid-session, reset the viewport so five runs started from five
           different states, and killed the imperative handle outright, which is
           why culling OFF sat on `sampling…` forever
-          (`native/graphHandleRemount.spec.tsx`).
+          (`native/graph-handle-remount.test.tsx`).
         */}
         <NodeGraph
           schema={variant === 'tamagui' ? tamaguiSchema : plainSchema}
@@ -391,7 +398,7 @@ function Bench({ variant }: { readonly variant: 'tamagui' | 'control' }) {
       </YStack>
     </YStack>
   );
-}
+};
 
 /** The cell every design §13.2 web and device number is taken in. */
 export const Main: Story = {

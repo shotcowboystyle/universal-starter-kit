@@ -8,8 +8,6 @@
  */
 
 import { IntentContext, Preset, Surface } from '@repo/theme';
-import type { SurfaceDensity, SurfaceSizeIntent } from '@repo/theme';
-import type { ThemeName } from '@tamagui/web';
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { TamaguiProvider, Theme } from 'tamagui';
@@ -50,10 +48,11 @@ export interface KnobEnvelopeProviderProps {
  *
  * @returns the name to mount, or undefined to inherit.
  */
-export function resolveEnvelopeThemeName(
+export const resolveEnvelopeThemeName = (
   envelope: Pick<KnobEnvelope, 'scheme' | 'themeName'>,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- only the theme table's KEYS are inspected; its value type is Tamagui's and irrelevant here
   themes?: Readonly<Record<string, unknown>>,
-): string | undefined {
+): string | undefined => {
   const wanted = envelope.themeName;
   if (!themes) {
     return wanted || undefined;
@@ -65,9 +64,9 @@ export function resolveEnvelopeThemeName(
     return envelope.scheme;
   }
   return undefined;
-}
+};
 
-export function KnobEnvelopeProvider({ envelope, config, children }: KnobEnvelopeProviderProps) {
+export const KnobEnvelopeProvider = ({ envelope, config, children }: KnobEnvelopeProviderProps) => {
   const knobs = useMemo(() => knobsForEnvelope(envelope), [envelope]);
   const themeName = useMemo(() => resolveEnvelopeThemeName(envelope, config?.themes), [config, envelope]);
 
@@ -81,7 +80,7 @@ export function KnobEnvelopeProvider({ envelope, config, children }: KnobEnvelop
       cascade={false}
       overrides={knobs}>
       <Surface
-        size={envelope.surface.size === 'unset' ? undefined : (envelope.surface.size as SurfaceSizeIntent)}
+        size={envelope.surface.size === 'unset' ? undefined : envelope.surface.size}
         density={envelope.surface.density === 'unset' ? undefined : envelope.surface.density}>
         <IntentContext.Provider value={envelope.intent}>{children}</IntentContext.Provider>
       </Surface>
@@ -90,7 +89,7 @@ export function KnobEnvelopeProvider({ envelope, config, children }: KnobEnvelop
 
   // An empty name is not a theme: `<Theme name="">` would ask Tamagui to
   // resolve a theme that does not exist and silently inherit the parent.
-  if (themeName) {
+  if (themeName !== undefined && themeName !== '') {
     tree = <Theme name={themeName}>{tree}</Theme>;
   }
 
@@ -104,5 +103,5 @@ export function KnobEnvelopeProvider({ envelope, config, children }: KnobEnvelop
     );
   }
 
-  return <>{tree}</>;
-}
+  return tree;
+};

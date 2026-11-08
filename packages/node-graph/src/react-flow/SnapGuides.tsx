@@ -21,7 +21,7 @@
  * hairline a hairline at 4x zoom rather than a 2 px bar.
  */
 
-import type { SnapGuide } from '../interaction/snapAlignment';
+import type { SnapGuide } from '../interaction/snap-alignment';
 
 import { ViewportPortal } from './xy';
 
@@ -43,7 +43,7 @@ export interface SnapGuidesBox {
 }
 
 /** The padded box that holds every line. Exported because the spec asserts it. */
-export function snapGuidesBounds(guides: readonly SnapGuide[]): SnapGuidesBox | null {
+export const snapGuidesBounds = (guides: readonly SnapGuide[]): SnapGuidesBox | null => {
   if (guides.length === 0) {
     return null;
   }
@@ -67,7 +67,7 @@ export function snapGuidesBounds(guides: readonly SnapGuide[]): SnapGuidesBox | 
     width: maxX - minX + snapGuidePadding * 2,
     height: maxY - minY + snapGuidePadding * 2,
   };
-}
+};
 
 export interface SnapGuidesProps {
   readonly guides: readonly SnapGuide[];
@@ -78,7 +78,7 @@ export interface SnapGuidesProps {
   readonly animated?: boolean;
 }
 
-export function SnapGuides({ guides, animated = true }: SnapGuidesProps) {
+export const SnapGuides = ({ guides, animated = true }: SnapGuidesProps) => {
   const box = snapGuidesBounds(guides);
   if (!box) {
     return null;
@@ -86,6 +86,7 @@ export function SnapGuides({ guides, animated = true }: SnapGuidesProps) {
   return (
     <ViewportPortal>
       <svg
+        aria-hidden="true"
         className={snapGuidesClassName}
         data-animated={animated ? 'true' : 'false'}
         width={box.width}
@@ -114,4 +115,4 @@ export function SnapGuides({ guides, animated = true }: SnapGuidesProps) {
       </svg>
     </ViewportPortal>
   );
-}
+};

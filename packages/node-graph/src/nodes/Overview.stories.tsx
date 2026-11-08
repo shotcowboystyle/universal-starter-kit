@@ -9,7 +9,7 @@
  * whenever a user zooms.
  *
  * So: zoom slowly through 0.35 and watch an edge endpoint. It must stay welded
- * to its port. `lod.spec.tsx` asserts the CAUSE — the element tree is identical
+ * to its port. `lod.test.tsx` asserts the CAUSE — the element tree is identical
  * across modes and the declared box does not change — because happy-dom lays
  * nothing out and cannot measure the effect. This story is where the effect is
  * checked, in a browser, on the number of nodes that makes it visible.
@@ -24,9 +24,9 @@ import { Preset, Surface } from '@repo/theme';
 import { useState } from 'react';
 import { SizableText, View, XStack, YStack } from 'tamagui';
 
-import type { BuiltinEdgeData } from '../edges/edgeKinds';
+import type { BuiltinEdgeData } from '../edges/edge-kinds';
 import type { GraphDocument } from '../model/index';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import type { DemoNodeData } from '../react-flow/fixtures';
 import { NodeGraphWeb } from '../react-flow/NodeGraphWeb';
 import { Background, Controls, MiniMap, useStore } from '../react-flow/xy';
@@ -54,17 +54,33 @@ type Doc = GraphDocument<DemoNodeData, BuiltinEdgeData>;
  * Deterministic, not random: a story whose graph changes between reloads
  * cannot be compared against a screenshot from five minutes ago.
  */
-function bigDocument(count = 500): Doc {
+const nodeData = (kind: 'source' | 'transform' | 'sink', index: number) => {
+  if (kind === 'source') {
+    return { table: `orders_${index}` };
+  }
+  if (kind === 'transform') {
+    return { expression: `row => row.${index}` };
+  }
+  return { target: `warehouse_${index}` };
+};
+
+/** Sinks have no outgoing port, so they end a chain. */
+const sourcePortOf = (kind: string) => {
+  if (kind === 'source') {
+    return 'rows';
+  }
+  if (kind === 'transform') {
+    return 'ok';
+  }
+  return null;
+};
+
+const bigDocument = (count = 500): Doc => {
   const kinds = ['source', 'transform', 'sink'] as const;
   const perRow = 25;
   const nodes = Array.from({ length: count }, (_, index) => {
     const kind = kinds[index % kinds.length];
-    const data =
-      kind === 'source'
-        ? { table: `orders_${index}` }
-        : kind === 'transform'
-          ? { expression: `row => row.${index}` }
-          : { target: `warehouse_${index}` };
+    const data = nodeData(kind, index);
     return {
       id: `n${index}`,
       kind,
@@ -78,7 +94,7 @@ function bigDocument(count = 500): Doc {
   for (let index = 0; index + 1 < count; index += 1) {
     const from = nodes[index];
     const to = nodes[index + 1];
-    const sourcePort = from.kind === 'source' ? 'rows' : from.kind === 'transform' ? 'ok' : null;
+    const sourcePort = sourcePortOf(from.kind);
     if (!sourcePort) {
       continue;
     }
@@ -91,7 +107,7 @@ function bigDocument(count = 500): Doc {
     } as Doc['edges'][number]);
   }
   return { version: 1, nodes, edges };
-}
+};
 
 const bigDoc = bigDocument(500);
 const schema = demoGraphSchema();
@@ -104,7 +120,7 @@ const schema = demoGraphSchema();
  * directly is reading the thing that must not move — rather than reading a
  * pixel and hoping.
  */
-function Readout({ nodeId }: { nodeId: string }) {
+const Readout = ({ nodeId }: { nodeId: string }) => {
   const zoom = useStore((state) => state.transform[2]);
   const bounds = useStore((state) => {
     const node = state.nodeLookup.get(nodeId);
@@ -150,7 +166,7 @@ function Readout({ nodeId }: { nodeId: string }) {
       </SizableText>
     </XStack>
   );
-}
+};
 
 /**
  * 500 nodes, culling on, the readout pinned above the canvas.
@@ -204,6 +220,46 @@ export const main = {
   ),
 };
 
+const CrossoverStory = () => {
+  const [high, setHigh] = useState(false);
+  return (
+    <Preset>
+      <Surface
+        size="medium"
+        density="comfortable">
+        <YStack
+          gap="$3"
+          padding="$3">
+          <Switch
+            id="overview-zoom"
+            size="$2"
+            checked={high}
+            onChange={setHigh}
+            label={`overviewZoom 1 (everything is overview) instead of ${defaultOverviewZoom}`}
+          />
+          <View
+            width="100%"
+            height={560}>
+            <NodeGraphWeb
+              schema={schema}
+              defaultDocument={bigDoc}
+              overviewZoom={high ? 1 : defaultOverviewZoom}>
+              <Readout nodeId="n1" />
+              <Controls />
+            </NodeGraphWeb>
+          </View>
+          <SizableText
+            size="$2"
+            opacity={0.7}>
+            Flip the switch and read the height. The node fades to a plain box and the number does not change — that is
+            the invariant, and it is why the children fade instead of unmounting.
+          </SizableText>
+        </YStack>
+      </Surface>
+    </Preset>
+  );
+};
+
 /**
  * The crossover with the threshold under your thumb.
  *
@@ -213,43 +269,5 @@ export const main = {
  */
 export const crossover = {
   name: 'Crossover',
-  render: () => {
-    const [high, setHigh] = useState(false);
-    return (
-      <Preset>
-        <Surface
-          size="medium"
-          density="comfortable">
-          <YStack
-            gap="$3"
-            padding="$3">
-            <Switch
-              id="overview-zoom"
-              size="$2"
-              checked={high}
-              onChange={setHigh}
-              label={`overviewZoom 1 (everything is overview) instead of ${defaultOverviewZoom}`}
-            />
-            <View
-              width="100%"
-              height={560}>
-              <NodeGraphWeb
-                schema={schema}
-                defaultDocument={bigDoc}
-                overviewZoom={high ? 1 : defaultOverviewZoom}>
-                <Readout nodeId="n1" />
-                <Controls />
-              </NodeGraphWeb>
-            </View>
-            <SizableText
-              size="$2"
-              opacity={0.7}>
-              Flip the switch and read the height. The node fades to a plain box and the number does not change — that
-              is the invariant, and it is why the children fade instead of unmounting.
-            </SizableText>
-          </YStack>
-        </Surface>
-      </Preset>
-    );
-  },
+  render: () => <CrossoverStory />,
 };

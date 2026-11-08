@@ -25,23 +25,29 @@ export interface GraphDiagnosticsProps {
 }
 
 /** `script → module → …`, with the stage reached marked. */
-function stageTrail(stage: GraphDiagnosticsRecord['stage']): string {
+const stageTrail = (stage: GraphDiagnosticsRecord['stage']): string => {
   if (!stage) {
     return `${bootStages.join(' → ')}  (none reached)`;
   }
   const index = bootStages.indexOf(stage);
   return bootStages.map((name, i) => (i === index ? `[${name}]` : name)).join(' → ');
-}
+};
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <SizableText
-      size="$1"
-      fontFamily="$mono">
-      {label}: {value}
-    </SizableText>
-  );
-}
+/** The probe's verdict as the panel prints it. */
+const faceVerdict = (probe: GraphDiagnosticsRecord['faces'][number]): string => {
+  if (!probe.conclusive) {
+    return 'INCONCLUSIVE';
+  }
+  return probe.matched ? 'MATCHED' : 'MISS';
+};
+
+const Row = ({ label, value }: { label: string; value: string }) => (
+  <SizableText
+    size="$1"
+    fontFamily="$mono">
+    {label}: {value}
+  </SizableText>
+);
 
 /**
  * The failure banner.
@@ -49,7 +55,7 @@ function Row({ label, value }: { label: string; value: string }) {
  * Named separately because it is the part that has to survive a screenshot at
  * phone resolution: a reader must get the stage and the phase without zooming.
  */
-export function GraphBootFailure({ diagnostics }: { diagnostics: GraphDiagnosticsRecord }): ReactNode {
+export const GraphBootFailure = ({ diagnostics }: { diagnostics: GraphDiagnosticsRecord }): ReactNode => {
   const { lastError, stage } = diagnostics;
   if (!lastError) {
     return null;
@@ -82,9 +88,9 @@ export function GraphBootFailure({ diagnostics }: { diagnostics: GraphDiagnostic
       </SizableText>
     </YStack>
   );
-}
+};
 
-export function GraphDiagnostics({ diagnostics, show }: GraphDiagnosticsProps): ReactNode {
+export const GraphDiagnostics = ({ diagnostics, show }: GraphDiagnosticsProps): ReactNode => {
   const visible = show ?? process.env.NODE_ENV !== 'production';
   if (!visible) {
     return null;
@@ -181,11 +187,11 @@ export function GraphDiagnostics({ diagnostics, show }: GraphDiagnosticsProps): 
             key={probe.stack}
             size="$1"
             fontFamily="$mono">
-            face: {probe.conclusive ? (probe.matched ? 'MATCHED' : 'MISS') : 'INCONCLUSIVE'} ·{' '}
-            {probe.widthStack.toFixed(2)}px vs {probe.widthFirstCorrupted.toFixed(2)}px · {probe.stack}
+            face: {faceVerdict(probe)} · {probe.widthStack.toFixed(2)}px vs {probe.widthFirstCorrupted.toFixed(2)}px ·{' '}
+            {probe.stack}
           </SizableText>
         ))
       )}
     </YStack>
   );
-}
+};

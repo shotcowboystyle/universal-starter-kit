@@ -10,11 +10,14 @@
  * importable without React (design §3.1).
  */
 
-import type { BuiltinEdgeData } from '../edges/edgeKinds';
-import { builtinEdgeKinds } from '../edges/edgeKinds';
-import type { GraphDocument, GraphSchema, PortSpec } from '../model/index';
-import { createGraphSchema, defaultRules } from '../model/index';
+import type { BuiltinEdgeData } from '../edges/edge-kinds';
+import { builtinEdgeKinds } from '../edges/edge-kinds';
+import { defaultRules } from '../model/connect';
+import type { GraphDocument } from '../model/document';
+import { createGraphSchema } from '../model/schema';
+import type { GraphSchema, PortSpec } from '../model/schema';
 
+// oxlint-disable-next-line typescript/consistent-type-definitions -- must stay an alias: interfaces lack the implicit index signature the NodeKindDefs constraint needs
 export type DemoNodeData = {
   readonly source: { readonly table: string };
   readonly transform: { readonly expression: string };
@@ -34,13 +37,16 @@ const into = (id: string, label: string): PortSpec => ({
   label,
 });
 
-/** A stand-in `render`. `demoGraphSchema()` in demoNodeBody.tsx swaps in the real bodies. */
+/** A stand-in `render`. `demoGraphSchema()` in demo-node-body.tsx swaps in the real bodies. */
+// SAFETY: model-only specs never mount a node body, so this `render` is never called;
+// `never` lets it stand in for every kind's component type.
+// oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
 const noRender = (() => null) as unknown as never;
 
 /**
  * The schema WITHOUT its `render` components.
  *
- * Split out so `demoNodeBody.tsx` can supply real bodies over the same
+ * Split out so `demo-node-body.tsx` can supply real bodies over the same
  * measures, ports and intents the model-only specs use. A second copy of the
  * kind table is a second thing to keep in step.
  */
@@ -71,93 +77,99 @@ export const demoGraphSchemaId = 'node-graph-demo';
  */
 export const demoControlSchemaId = `${demoGraphSchemaId}-control`;
 
-export function demoSchemaShape() {
-  return {
-    id: demoGraphSchemaId,
-    nodes: {
-      source: {
-        kind: 'source' as const,
-        ports: [out('rows', 'rows')],
-        defaultData: { table: 'orders' },
-        measure: { width: 190, minHeight: 72 },
-      },
-      transform: {
-        kind: 'transform' as const,
-        ports: [into('in', 'rows'), out('ok', 'ok'), out('err', 'error')],
-        defaultData: { expression: 'row => row' },
-        measure: { width: 190, minHeight: 72 },
-        intent: 'accent',
-      },
-      sink: {
-        kind: 'sink' as const,
-        ports: [into('in', 'rows')],
-        defaultData: { target: 'warehouse' },
-        // 240 on purpose: it is not a value the default 172/190/216 table can
-        // produce at any size stop, so a `measure` that fails to reach the
-        // painted node is visible rather than coincidentally right.
-        measure: { width: 240, minHeight: 72 },
-        intent: 'success',
-      },
+export const demoSchemaSpec = () => ({
+  id: demoGraphSchemaId,
+  nodes: {
+    source: {
+      kind: 'source' as const,
+      ports: [out('rows', 'rows')],
+      defaultData: { table: 'orders' },
+      measure: { width: 190, minHeight: 72 },
     },
-  };
-}
+    transform: {
+      kind: 'transform' as const,
+      ports: [into('in', 'rows'), out('ok', 'ok'), out('err', 'error')],
+      defaultData: { expression: 'row => row' },
+      measure: { width: 190, minHeight: 72 },
+      intent: 'accent',
+    },
+    sink: {
+      kind: 'sink' as const,
+      ports: [into('in', 'rows')],
+      defaultData: { target: 'warehouse' },
+      // 240 on purpose: it is not a value the default 172/190/216 table can
+      // produce at any size stop, so a `measure` that fails to reach the
+      // painted node is visible rather than coincidentally right.
+      measure: { width: 240, minHeight: 72 },
+      intent: 'success',
+    },
+  },
+});
 
-export function demoSchema(): GraphSchema<DemoNodeData, BuiltinEdgeData> {
-  const shape = demoSchemaShape();
+export const demoSchema = (): GraphSchema<DemoNodeData, BuiltinEdgeData> => {
+  const spec = demoSchemaSpec();
   return createGraphSchema<DemoNodeData, BuiltinEdgeData>({
-    id: shape.id,
+    id: spec.id,
     nodes: {
-      source: { ...shape.nodes.source, render: noRender },
-      transform: { ...shape.nodes.transform, render: noRender },
-      sink: { ...shape.nodes.sink, render: noRender },
+      source: { ...spec.nodes.source, render: noRender },
+      transform: { ...spec.nodes.transform, render: noRender },
+      sink: { ...spec.nodes.sink, render: noRender },
     },
     edges: builtinEdgeKinds,
     rules: defaultRules,
   });
-}
+};
 
 type Doc = GraphDocument<DemoNodeData, BuiltinEdgeData>;
 
 /** Three nodes, one edge. Small enough that a failing assertion names a node. */
-export function demoDocument(): Doc {
-  return {
-    version: 1,
-    nodes: [
-      { id: 'a', kind: 'source', position: { x: 0, y: 0 }, data: { table: 'orders' } },
-      {
-        id: 'b',
-        kind: 'transform',
-        position: { x: 260, y: 0 },
-        data: { expression: 'row => row' },
-      },
-      { id: 'c', kind: 'sink', position: { x: 520, y: 0 }, data: { target: 'warehouse' } },
-    ],
-    edges: [
-      {
-        id: 'a->b',
-        kind: 'flow',
-        source: { node: 'a', port: 'rows' },
-        target: { node: 'b', port: 'in' },
-        data: {},
-      },
-    ],
-  };
-}
+export const demoDocument = (): Doc => ({
+  version: 1,
+  nodes: [
+    { id: 'a', kind: 'source', position: { x: 0, y: 0 }, data: { table: 'orders' } },
+    {
+      id: 'b',
+      kind: 'transform',
+      position: { x: 260, y: 0 },
+      data: { expression: 'row => row' },
+    },
+    { id: 'c', kind: 'sink', position: { x: 520, y: 0 }, data: { target: 'warehouse' } },
+  ],
+  edges: [
+    {
+      id: 'a->b',
+      kind: 'flow',
+      source: { node: 'a', port: 'rows' },
+      target: { node: 'b', port: 'in' },
+      data: {},
+    },
+  ],
+});
 
 /**
  * Twelve nodes and all four edge kinds — the `Main` story's graph, per design
  * §12.1 ("the default editor, 12 nodes, all four edge kinds").
  */
-export function demoDocumentLarge(count = 12): Doc {
+const demoNodeData = (kind: 'source' | 'transform' | 'sink', index: number) => {
+  if (kind === 'source') {
+    return { table: `orders_${index}` };
+  }
+  if (kind === 'transform') {
+    return { expression: `row => row.${index}` };
+  }
+  return { target: `warehouse_${index}` };
+};
+
+/** The port a demo kind emits on; a sink emits nothing. */
+const demoSourcePort = { source: 'rows', transform: 'ok', sink: null } as const;
+
+export const demoDocumentLarge = (count = 12): Doc => {
   const kinds = ['source', 'transform', 'sink'] as const;
   const nodes: Doc['nodes'] = Array.from({ length: count }, (_, index) => {
     const kind = kinds[index % kinds.length];
-    const data =
-      kind === 'source'
-        ? { table: `orders_${index}` }
-        : kind === 'transform'
-          ? { expression: `row => row.${index}` }
-          : { target: `warehouse_${index}` };
+    const data = demoNodeData(kind, index);
+    // SAFETY: `data` is built by `demoNodeData` for this same `kind`, so the pair is consistent.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     return {
       id: `n${index}`,
       kind,
@@ -171,10 +183,11 @@ export function demoDocumentLarge(count = 12): Doc {
   for (let index = 0; index + 1 < count; index += 1) {
     const from = nodes[index];
     const to = nodes[index + 1];
-    const sourcePort = from.kind === 'source' ? 'rows' : from.kind === 'transform' ? 'ok' : null;
-    if (!sourcePort) {
+    const sourcePort = demoSourcePort[from.kind];
+    if (sourcePort === null) {
       continue;
     }
+    // SAFETY: every edge kind in `edgeKinds` is a builtin kind with empty `data`.
     edges.push({
       id: `${from.id}->${to.id}`,
       kind: edgeKinds[edges.length % edgeKinds.length],
@@ -184,4 +197,4 @@ export function demoDocumentLarge(count = 12): Doc {
     } as Doc['edges'][number]);
   }
   return { version: 1, nodes, edges };
-}
+};

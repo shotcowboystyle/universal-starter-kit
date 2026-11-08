@@ -40,8 +40,8 @@ import type { HandleBounds, InternalNodeBase } from '../react-flow/xy';
 
 import { GraphNode } from './GraphNode';
 import { GraphPort } from './GraphPort';
-import { paintedPortSize, portGeometry, portHitSize } from './handleGeometry';
-import type { GraphNodePort, GraphNodeSizeKnob, GraphPortSide } from './nodeMeasure';
+import { paintedPortSize, portGeometry, portHitSize } from './handle-geometry';
+import type { GraphNodePort, GraphNodeSizeKnob, GraphPortSide } from './node-measure';
 
 const sides: GraphPortSide[] = ['left', 'right', 'top', 'bottom'];
 
@@ -176,6 +176,81 @@ export const Main: Story = {
   ),
 };
 
+const CrowdedStory = () => {
+  const [coarsePointer, setCoarsePointer] = useState(true);
+  const [squareKnob, setSquareKnob] = useState(false);
+  return (
+    <YStack gap="$5">
+      <XStack
+        gap="$6"
+        alignItems="center">
+        <Switch
+          id="coarse"
+          size="$2"
+          checked={coarsePointer}
+          onChange={setCoarsePointer}
+          label="coarse pointer (44pt pitch)"
+        />
+        <Switch
+          id="square"
+          size="$2"
+          checked={squareKnob}
+          onChange={setSquareKnob}
+          label="borderRadius: none — the port stays round anyway"
+        />
+      </XStack>
+      {/*
+        CASCADES, on purpose. `cascade={false}` starts from `defaultKnobs` and
+        merges only the overrides, so it REPLACES the whole knob set — which
+        silently discarded every Storybook global and made this page
+        unfuzzable: the MPO-191 sweep measured a 10px dot and a 1px ring at
+        every size and borderWidth stop, because the toggle's own Preset had
+        reset them. Cascading merges the toggle onto the ambient knobs
+        instead, which is what a demo of ONE override should do.
+      */}
+      <Preset overrides={squareKnob ? { borderRadius: 'none' } : undefined}>
+        <XStack
+          gap="$9"
+          alignItems="flex-start">
+          <GraphNode
+            id="crowded"
+            title="Validate"
+            subtitle="Three in, three out"
+            ports={crowded}
+            coarsePointer={coarsePointer}
+            renderPort={(port) => (
+              <GraphPort
+                id={port.id}
+                side={port.side}
+                direction={port.direction}
+                coarsePointer={coarsePointer}
+              />
+            )}
+          />
+          <GraphNode
+            id="sparse"
+            title="Passthrough"
+            subtitle="One in, one out"
+            ports={[
+              { id: 'in', side: 'left', direction: 'in', label: 'in' },
+              { id: 'out', side: 'right', direction: 'out', label: 'out' },
+            ]}
+            coarsePointer={coarsePointer}
+            renderPort={(port) => (
+              <GraphPort
+                id={port.id}
+                side={port.side}
+                direction={port.direction}
+                coarsePointer={coarsePointer}
+              />
+            )}
+          />
+        </XStack>
+      </Preset>
+    </YStack>
+  );
+};
+
 /**
  * Six ports, three a side. H4's floor is what keeps this node tall enough for
  * six real targets; without it the discs would overlap and the wrong port
@@ -183,80 +258,7 @@ export const Main: Story = {
  * knob at `none`, where a square dot would read as a resize grip.
  */
 export const Crowded: Story = {
-  render: () => {
-    const [coarsePointer, setCoarsePointer] = useState(true);
-    const [squareKnob, setSquareKnob] = useState(false);
-    return (
-      <YStack gap="$5">
-        <XStack
-          gap="$6"
-          alignItems="center">
-          <Switch
-            id="coarse"
-            size="$2"
-            checked={coarsePointer}
-            onChange={setCoarsePointer}
-            label="coarse pointer (44pt pitch)"
-          />
-          <Switch
-            id="square"
-            size="$2"
-            checked={squareKnob}
-            onChange={setSquareKnob}
-            label="borderRadius: none — the port stays round anyway"
-          />
-        </XStack>
-        {/*
-          CASCADES, on purpose. `cascade={false}` starts from `defaultKnobs` and
-          merges only the overrides, so it REPLACES the whole knob set — which
-          silently discarded every Storybook global and made this page
-          unfuzzable: the MPO-191 sweep measured a 10px dot and a 1px ring at
-          every size and borderWidth stop, because the toggle's own Preset had
-          reset them. Cascading merges the toggle onto the ambient knobs
-          instead, which is what a demo of ONE override should do.
-        */}
-        <Preset overrides={squareKnob ? { borderRadius: 'none' } : undefined}>
-          <XStack
-            gap="$9"
-            alignItems="flex-start">
-            <GraphNode
-              id="crowded"
-              title="Validate"
-              subtitle="Three in, three out"
-              ports={crowded}
-              coarsePointer={coarsePointer}
-              renderPort={(port) => (
-                <GraphPort
-                  id={port.id}
-                  side={port.side}
-                  direction={port.direction}
-                  coarsePointer={coarsePointer}
-                />
-              )}
-            />
-            <GraphNode
-              id="sparse"
-              title="Passthrough"
-              subtitle="One in, one out"
-              ports={[
-                { id: 'in', side: 'left', direction: 'in', label: 'in' },
-                { id: 'out', side: 'right', direction: 'out', label: 'out' },
-              ]}
-              coarsePointer={coarsePointer}
-              renderPort={(port) => (
-                <GraphPort
-                  id={port.id}
-                  side={port.side}
-                  direction={port.direction}
-                  coarsePointer={coarsePointer}
-                />
-              )}
-            />
-          </XStack>
-        </Preset>
-      </YStack>
-    );
-  },
+  render: () => <CrowdedStory />,
 };
 
 /**
@@ -264,7 +266,7 @@ export const Crowded: Story = {
  *
  * Two things a unit spec cannot do. jsdom and happy-dom cannot resolve a
  * pseudo-element at all — `getComputedStyle(el, "::after")` returns an empty
- * declaration — so `GraphPort.spec.tsx` reads the RULE TEXT and says so. Here
+ * declaration — so `GraphPort.test.tsx` reads the RULE TEXT and says so. Here
  * the browser resolves it for real: the debug toggle paints the `::after`
  * itself, so what you see outlined is the element the finger will hit, not a
  * div drawn beside it.
@@ -289,7 +291,7 @@ const hitDebugCss = `
 }
 `;
 
-function EndpointRow({ label, painted, hit }: { label: string; painted: number; hit: number }) {
+const EndpointRow = ({ label, painted, hit }: { label: string; painted: number; hit: number }) => {
   const geometry = portGeometry({
     painted,
     hit,
@@ -342,118 +344,120 @@ function EndpointRow({ label, painted, hit }: { label: string; painted: number; 
       </SizableText>
     </XStack>
   );
-}
+};
+
+const HitTargetStory = () => {
+  const [debug, setDebug] = useState(true);
+  return (
+    <YStack gap="$6">
+      {/* oxlint-disable-next-line react/no-danger -- story-local debug paint from a module constant, no user input */}
+      <style dangerouslySetInnerHTML={{ __html: hitDebugCss }} />
+      <Switch
+        id="hit-debug"
+        size="$2"
+        checked={debug}
+        onChange={setDebug}
+        label="paint the ::after hit region"
+      />
+
+      <YStack
+        className={debug ? hitDebugClass : undefined}
+        gap="$5">
+        {([true, false] as const).map((coarsePointer) => (
+          <YStack
+            key={String(coarsePointer)}
+            gap="$3">
+            <SizableText
+              size="$3"
+              fontWeight="600">
+              {coarsePointer ? 'coarse — 44pt press floor' : 'fine — max(painted, 24)'}
+            </SizableText>
+            <XStack
+              gap="$9"
+              alignItems="center">
+              {(['small', 'medium', 'large'] as const satisfies readonly GraphNodeSizeKnob[]).map((size) => (
+                <Surface
+                  key={size}
+                  size={size}
+                  density="comfortable">
+                  <YStack
+                    gap="$3"
+                    alignItems="center"
+                    width={120}>
+                    {/*
+                        64 square so a 44 px region has room to paint without
+                        being clipped by its own demo cell — a cell that
+                        cropped the region would understate the target and
+                        make the toggle lie.
+                      */}
+                    <YStack
+                      width={64}
+                      height={64}
+                      position="relative"
+                      alignItems="center"
+                      justifyContent="center"
+                      borderWidth={1}
+                      borderColor="$borderColor"
+                      borderStyle="dashed"
+                      borderRadius="$3"
+                      overflow="visible">
+                      <GraphPort
+                        id={`hit-${size}-${String(coarsePointer)}`}
+                        side="right"
+                        direction="out"
+                        coarsePointer={coarsePointer}
+                      />
+                    </YStack>
+                    <SizableText
+                      size="$1"
+                      opacity={0.6}>
+                      {size}
+                    </SizableText>
+                    <SizableText
+                      size="$1"
+                      opacity={0.45}>
+                      {paintedPortSize(size)} painted / {portHitSize({ size, coarsePointer })} hit
+                    </SizableText>
+                  </YStack>
+                </Surface>
+              ))}
+            </XStack>
+          </YStack>
+        ))}
+      </YStack>
+
+      <YStack gap="$2">
+        <SizableText
+          size="$3"
+          fontWeight="600">
+          getHandlePosition, center defaulting to false — both rows print the same point
+        </SizableText>
+        <EndpointRow
+          label="8 px dot, 8 px hit"
+          painted={8}
+          hit={8}
+        />
+        <EndpointRow
+          label="8 px dot, 44 px ::after"
+          painted={8}
+          hit={44}
+        />
+        <EndpointRow
+          label="44 px ELEMENT — the refused mechanism"
+          painted={44}
+          hit={44}
+        />
+        <SizableText
+          size="$2"
+          opacity={0.6}>
+          The third row is what element growth would do: x moves 18 outward, and every edge on an LR graph moves with
+          it.
+        </SizableText>
+      </YStack>
+    </YStack>
+  );
+};
 
 export const HitTarget: Story = {
-  render: () => {
-    const [debug, setDebug] = useState(true);
-    return (
-      <YStack gap="$6">
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: story-local debug paint */}
-        <style dangerouslySetInnerHTML={{ __html: hitDebugCss }} />
-        <Switch
-          id="hit-debug"
-          size="$2"
-          checked={debug}
-          onChange={setDebug}
-          label="paint the ::after hit region"
-        />
-
-        <YStack
-          className={debug ? hitDebugClass : undefined}
-          gap="$5">
-          {([true, false] as const).map((coarsePointer) => (
-            <YStack
-              key={String(coarsePointer)}
-              gap="$3">
-              <SizableText
-                size="$3"
-                fontWeight="600">
-                {coarsePointer ? 'coarse — 44pt press floor' : 'fine — max(painted, 24)'}
-              </SizableText>
-              <XStack
-                gap="$9"
-                alignItems="center">
-                {(['small', 'medium', 'large'] as const satisfies readonly GraphNodeSizeKnob[]).map((size) => (
-                  <Surface
-                    key={size}
-                    size={size}
-                    density="comfortable">
-                    <YStack
-                      gap="$3"
-                      alignItems="center"
-                      width={120}>
-                      {/*
-                          64 square so a 44 px region has room to paint without
-                          being clipped by its own demo cell — a cell that
-                          cropped the region would understate the target and
-                          make the toggle lie.
-                        */}
-                      <YStack
-                        width={64}
-                        height={64}
-                        position="relative"
-                        alignItems="center"
-                        justifyContent="center"
-                        borderWidth={1}
-                        borderColor="$borderColor"
-                        borderStyle="dashed"
-                        borderRadius="$3"
-                        overflow="visible">
-                        <GraphPort
-                          id={`hit-${size}-${String(coarsePointer)}`}
-                          side="right"
-                          direction="out"
-                          coarsePointer={coarsePointer}
-                        />
-                      </YStack>
-                      <SizableText
-                        size="$1"
-                        opacity={0.6}>
-                        {size}
-                      </SizableText>
-                      <SizableText
-                        size="$1"
-                        opacity={0.45}>
-                        {paintedPortSize(size)} painted / {portHitSize({ size, coarsePointer })} hit
-                      </SizableText>
-                    </YStack>
-                  </Surface>
-                ))}
-              </XStack>
-            </YStack>
-          ))}
-        </YStack>
-
-        <YStack gap="$2">
-          <SizableText
-            size="$3"
-            fontWeight="600">
-            getHandlePosition, center defaulting to false — both rows print the same point
-          </SizableText>
-          <EndpointRow
-            label="8 px dot, 8 px hit"
-            painted={8}
-            hit={8}
-          />
-          <EndpointRow
-            label="8 px dot, 44 px ::after"
-            painted={8}
-            hit={44}
-          />
-          <EndpointRow
-            label="44 px ELEMENT — the refused mechanism"
-            painted={44}
-            hit={44}
-          />
-          <SizableText
-            size="$2"
-            opacity={0.6}>
-            The third row is what element growth would do: x moves 18 outward, and every edge on an LR graph moves with
-            it.
-          </SizableText>
-        </YStack>
-      </YStack>
-    );
-  },
+  render: () => <HitTargetStory />,
 };

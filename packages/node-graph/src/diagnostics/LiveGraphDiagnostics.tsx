@@ -27,11 +27,11 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { SizableText, YStack } from 'tamagui';
 
-import { useKnobEnvelope } from '../knobs/useKnobEnvelope';
+import { useKnobEnvelope } from '../knobs/use-knob-envelope';
 import { NodeGraph } from '../NodeGraph';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import { demoDocumentLarge } from '../react-flow/fixtures';
-import { mountedNodeCount, subscribeNodeCensus } from '../react-flow/nodeCensus';
+import { mountedNodeCount, subscribeNodeCensus } from '../react-flow/node-census';
 import { Background } from '../react-flow/xy';
 import { probeRenderedFamily } from '../theme/faces';
 import type { FaceProbe } from '../theme/faces';
@@ -39,7 +39,7 @@ import { GraphFaces } from '../theme/GraphFaces';
 import type { GraphFaceStatus } from '../theme/GraphFaces';
 
 import { GraphDiagnostics } from './GraphDiagnostics';
-import { useGraphDiagnostics } from './useGraphDiagnostics';
+import { useGraphDiagnostics } from './use-graph-diagnostics';
 
 const schema = demoGraphSchema();
 
@@ -61,7 +61,7 @@ const webAssetUris = {
   'inter-700': '/fonts/inter-700.woff2',
 } as const;
 
-export function LiveGraphDiagnostics() {
+export const LiveGraphDiagnostics = () => {
   const nodesMounted = useSyncExternalStore(subscribeNodeCensus, mountedNodeCount, mountedNodeCount);
   const [faces, setFaces] = useState<readonly FaceProbe[]>([]);
   const [faceDelivery, setFaceDelivery] = useState<readonly GraphFaceStatus[]>([]);
@@ -75,11 +75,8 @@ export function LiveGraphDiagnostics() {
   // measured before either is worthless, and `probeFamily` would report it as
   // inconclusive rather than as a miss.
   useEffect(() => {
-    if (nodesMounted === 0) {
-      return;
-    }
     let live = true;
-    void (async () => {
+    const probeTitle = async () => {
       await globalThis.document.fonts.ready;
       if (!live) {
         return;
@@ -92,7 +89,10 @@ export function LiveGraphDiagnostics() {
       if (probe.stack) {
         setFaces([probe]);
       }
-    })();
+    };
+    if (nodesMounted !== 0) {
+      void probeTitle();
+    }
     return () => {
       live = false;
     };
@@ -137,4 +137,4 @@ export function LiveGraphDiagnostics() {
       />
     </YStack>
   );
-}
+};

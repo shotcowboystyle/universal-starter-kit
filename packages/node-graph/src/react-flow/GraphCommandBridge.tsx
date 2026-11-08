@@ -26,12 +26,12 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import type { FrameRun } from '../bench/frameSampler';
-import { createDomTransformProbe, createFrameSampler, gestureWindow, reportRun } from '../bench/frameSampler';
+import type { FrameRun } from '../bench/frame-sampler';
+import { createDomTransformProbe, createFrameSampler, gestureWindow, reportRun } from '../bench/frame-sampler';
 import type { GraphEventWire, PerfReportWire } from '../dom/wire';
 
+import type { GraphCommandSlot } from './graph-handle';
 import { useGraphActions } from './GraphActions';
-import type { GraphCommandSlot } from './graphHandle';
 import { reactFlowNodeSelector, reactFlowPaneSelector, reactFlowViewportSelector, useReactFlow } from './xy';
 
 export interface GraphCommandBridgeProps {
@@ -58,11 +58,11 @@ export interface GraphCommandBridgeProps {
  * reached the canvas look identical, so the rejection is reported as a
  * rejection rather than as silence.
  */
-function toWire(
+const toWire = (
   run: FrameRun,
   label: string,
   context: { host: string; culling: boolean; nodeCount: number; layoutRunner: string },
-): PerfReportWire {
+): PerfReportWire => {
   const result = reportRun(run, { ...context, label });
   if (!result.ok) {
     return {
@@ -95,9 +95,12 @@ function toWire(
     gesture: result.value.gesture,
     reportJson: JSON.stringify(result.value),
   };
-}
+};
 
-export function GraphCommandBridge({ commands, culling, emit, host, onMounted, rootRef }: GraphCommandBridgeProps) {
+const selectOnly = <T extends { readonly id: string }>(nodes: readonly T[], wanted: ReadonlySet<string>): T[] =>
+  nodes.map((node) => ({ ...node, selected: wanted.has(node.id) }));
+
+export const GraphCommandBridge = ({ commands, culling, emit, host, onMounted, rootRef }: GraphCommandBridgeProps) => {
   const flow = useReactFlow();
   const actions = useGraphActions();
 
@@ -105,6 +108,7 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
   // flips `layoutPending` twice, and rebuilding the whole handle on each flip
   // would hand the shell a new object mid-gesture.
   const latest = useRef({ actions, culling, host });
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   latest.current = { actions, culling, host };
 
   const probe = useMemo(
@@ -112,6 +116,7 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
       createDomTransformProbe({
         viewport: reactFlowViewportSelector,
         node: reactFlowNodeSelector,
+        // oxlint-disable-next-line react/refs -- the root element is attached before the canvas mounts this bridge
         root: rootRef.current ?? undefined,
       }),
     [rootRef],
@@ -122,10 +127,12 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
     return root?.querySelectorAll(reactFlowNodeSelector).length ?? 0;
   }, [rootRef]);
 
+  // oxlint-disable-next-line react/refs -- `countNodes` is stored by the sampler and only called from rAF, never during render
   const sampler = useMemo(() => createFrameSampler({ probeTransform: probe, countNodes }), [countNodes, probe]);
 
   useEffect(() => {
     onMounted?.();
+    // oxlint-disable-next-line react/immutability -- `commands` is the imperative slot this bridge exists to fill
     commands.current = {
       fitView: () => {
         void flow.fitView();
@@ -137,9 +144,9 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
        * but because nothing on a phone could ask for a layout.
        */
       relayout: () => {
-        void latest.current.actions
-          .relayout()
-          .then((result) => {
+        void (async () => {
+          try {
+            const result = await latest.current.actions.relayout();
             emit({
               t: 'layoutResult',
               // `none` is honest for an empty graph: no engine ran, so no runner
@@ -148,24 +155,23 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
               ms: result?.ms ?? 0,
               nodeCount: latest.current.actions.nodeCount,
             });
-          })
-          /**
-           * A REJECTION ANSWERS TOO, and this is the second way the m6 Android
-           * Tidy could have gone silent.
-           *
-           * `layout()` rejects when the blob Worker cannot be constructed or
-           * dies mid-flight, and both are realm-local: a Retry-recreated
-           * WebView builds a new blob URL and a new Worker, and either can
-           * fail on its own. With only a `.then` the rejection went to
-           * `unhandledrejection` — reported as a non-fatal `runtime` error,
-           * correctly — and no `layoutResult` ever crossed. The toolbar then
-           * sits on "laying out…" forever, which from the outside is
-           * identical to a Tidy that never reached the canvas at all.
-           *
-           * `runner: "none"` and `ms: 0` because inventing either would read
-           * as a successful tidy; the message is what says otherwise.
-           */
-          .catch((error: unknown) => {
+          } catch (error) {
+            /**
+             * A REJECTION ANSWERS TOO, and this is the second way the m6 Android
+             * Tidy could have gone silent.
+             *
+             * `layout()` rejects when the blob Worker cannot be constructed or
+             * dies mid-flight, and both are realm-local: a Retry-recreated
+             * WebView builds a new blob URL and a new Worker, and either can
+             * fail on its own. With only a `.then` the rejection went to
+             * `unhandledrejection` — reported as a non-fatal `runtime` error,
+             * correctly — and no `layoutResult` ever crossed. The toolbar then
+             * sits on "laying out…" forever, which from the outside is
+             * identical to a Tidy that never reached the canvas at all.
+             *
+             * `runner: "none"` and `ms: 0` because inventing either would read
+             * as a successful tidy; the message is what says otherwise.
+             */
             emit({
               t: 'layoutResult',
               runner: 'none',
@@ -173,7 +179,8 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
               nodeCount: latest.current.actions.nodeCount,
               error: error instanceof Error ? error.message : String(error),
             });
-          });
+          }
+        })();
       },
       zoomTo: (zoom) => {
         void flow.zoomTo(zoom);
@@ -183,7 +190,7 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
       },
       setSelection: (ids) => {
         const wanted = new Set(ids);
-        flow.setNodes((nodes) => nodes.map((node) => ({ ...node, selected: wanted.has(node.id) })));
+        flow.setNodes((nodes) => selectOnly(nodes, wanted));
         emit({ t: 'selection', ids: [...wanted] });
       },
       exportViewport: () => {
@@ -225,6 +232,7 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
         // at all. Returning is honest: "the pinch did nothing" and "the browser
         // has no touch" are different findings and only one is a bug. The
         // caller learns which from the perf run's own `didMove`.
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `Touch` may be an undeclared global; a bare reference would throw
         if (typeof Touch !== 'function' || typeof TouchEvent !== 'function') {
           return;
         }
@@ -280,4 +288,4 @@ export function GraphCommandBridge({ commands, culling, emit, host, onMounted, r
   }, [commands, emit, flow, onMounted, rootRef, sampler]);
 
   return null;
-}
+};

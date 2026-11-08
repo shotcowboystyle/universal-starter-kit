@@ -8,7 +8,7 @@
  * because the thing on the other side is what an app's `'use dom'` entry
  * imports, and a failed resolution there is a blank WebView.
  */
-export { NodeGraphDomShell } from './src/dom/NodeGraphDomShell';
+export { NodeGraphDomShell } from './src/dom/node-graph-dom-shell';
 export type {
   GraphDomCommandSlot,
   GraphDomCommands,
@@ -18,4 +18,4 @@ export type {
   NodeGraphDomProps,
   NodeGraphDomRealmProps,
   NodeGraphDomShellProps,
-} from './src/dom/NodeGraphDomShell';
+} from './src/dom/node-graph-dom-shell';

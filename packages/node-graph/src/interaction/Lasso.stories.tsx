@@ -51,11 +51,11 @@ import type { NodeId } from '../model/index';
 import { hasDomRealm } from '../native/DomOnlyStory';
 import { GraphToolbar } from '../native/GraphToolbar';
 import { NodeGraph } from '../NodeGraph';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import { demoDocumentLarge } from '../react-flow/fixtures';
 import { Background, Controls } from '../react-flow/xy';
 
-import type { GraphInteractionMode } from './useLassoSelect';
+import type { GraphInteractionMode } from './use-lasso-select';
 
 const schema = demoGraphSchema();
 
@@ -79,7 +79,7 @@ export default meta;
 type Story = StoryObj<typeof NodeGraph>;
 
 /** React Flow's own chrome. A legitimate child on web, nothing on native. */
-function Chrome() {
+const Chrome = () => {
   if (!hasDomRealm) {
     return null;
   }
@@ -89,9 +89,9 @@ function Chrome() {
       <Controls />
     </>
   );
-}
+};
 
-function ToolbarModeStory() {
+const ToolbarModeStory = () => {
   const [mode, setMode] = useState<GraphInteractionMode>('pan');
   const [selected, setSelected] = useState<readonly NodeId[]>([]);
 
@@ -139,7 +139,7 @@ function ToolbarModeStory() {
       </YStack>
     </YStack>
   );
-}
+};
 
 export const ToolbarMode: Story = {
   // Cascades on purpose — see the note on `NodeGraph/Overview → Main`. A
@@ -152,7 +152,7 @@ export const ToolbarMode: Story = {
   ),
 };
 
-function LongPressStory() {
+const LongPressStory = () => {
   const [mode, setMode] = useState<GraphInteractionMode>('pan');
   const [selected, setSelected] = useState<readonly NodeId[]>([]);
   const [armed, setArmed] = useState(false);
@@ -236,7 +236,7 @@ function LongPressStory() {
       </YStack>
     </YStack>
   );
-}
+};
 
 export const LongPress: Story = {
   render: () => (

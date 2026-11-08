@@ -32,13 +32,13 @@ import type { CSSProperties, ReactNode, Ref } from 'react';
 
 import type { GraphEventWire } from '../dom/wire';
 import { graphEdgeTypes } from '../edges/GraphEdge';
-import type { SnapGuide } from '../interaction/snapAlignment';
-import { applySnapToChanges, createSnapSession, snapContextOptions } from '../interaction/snapChanges';
-import type { GraphSnappingOptions } from '../interaction/snapChanges';
-import { useLassoSelect } from '../interaction/useLassoSelect';
-import type { GraphInteractionMode, LassoLongPressOptions } from '../interaction/useLassoSelect';
+import type { SnapGuide } from '../interaction/snap-alignment';
+import { applySnapToChanges, createSnapSession, snapContextOptions } from '../interaction/snap-changes';
+import type { GraphSnappingOptions } from '../interaction/snap-changes';
+import { useLassoSelect } from '../interaction/use-lasso-select';
+import type { GraphInteractionMode, LassoLongPressOptions } from '../interaction/use-lasso-select';
 import { KnobEnvelopeProvider } from '../knobs/KnobEnvelopeProvider';
-import { useKnobEnvelope } from '../knobs/useKnobEnvelope';
+import { useKnobEnvelope } from '../knobs/use-knob-envelope';
 import type {
   ConnectionVerdict,
   EdgeKindDefs,
@@ -50,22 +50,22 @@ import type {
   NodeRect,
   Viewport,
 } from '../model/index';
-import { portConnectionRadius } from '../nodes/handleGeometry';
+import { portConnectionRadius } from '../nodes/handle-geometry';
 import { defaultOverviewZoom } from '../nodes/lod';
-import type { GraphNodeSizeKnob } from '../nodes/nodeMeasure';
+import type { GraphNodeSizeKnob } from '../nodes/node-measure';
 import { GraphVars, graphRootClassName } from '../theme/GraphVarsStyle';
 
 import { ConnectionPuck } from './ConnectionPuck';
+import type { GraphCommandSlot, GraphCommands, NodeGraphHandle } from './graph-handle';
 import { GraphActionsProvider } from './GraphActions';
 import type { GraphActions } from './GraphActions';
 import { GraphCommandBridge } from './GraphCommandBridge';
-import type { GraphCommandSlot, GraphCommands, NodeGraphHandle } from './graphHandle';
 import { GraphHostProvider, GraphNodeHost } from './GraphNodeHost';
 import { GraphPaintProbe } from './GraphPaintProbe';
 import { GraphZoomVar } from './GraphZoomVar';
 import { LassoOverlay } from './LassoOverlay';
 import { SnapGuides } from './SnapGuides';
-import { defaultGraphNodeType, useGraphController } from './useGraphController';
+import { defaultGraphNodeType, useGraphController } from './use-graph-controller';
 import { ReactFlow, ReactFlowProvider, useReactFlow, useStore } from './xy';
 import type { NodeChange, NodeTypes } from './xy';
 
@@ -94,7 +94,7 @@ export const graphCanvasDefaults = {
    * code with a passing test suite.
    *
    * `graphCanvasDefaults.minZoom < graphCanvasDefaults.overviewZoom` is
-   * asserted in `lod.spec.tsx`, so the two cannot drift back into that state.
+   * asserted in `lod.test.tsx`, so the two cannot drift back into that state.
    */
   minZoom: 0.05,
   maxZoom: 2,
@@ -114,14 +114,14 @@ export const graphCanvasDefaults = {
  * true there and the effect can only be exercised in a browser. It is what the
  * browser found, and it is checked there.
  */
-function FitOnFirstMeasure({ enabled }: { enabled: boolean }) {
+const FitOnFirstMeasure = ({ enabled }: { enabled: boolean }) => {
   const { fitView } = useReactFlow();
   const allMeasured = useStore((state) => {
     let total = 0;
     let measured = 0;
     for (const node of state.nodeLookup.values()) {
       total += 1;
-      if (node.measured?.height) {
+      if ((node.measured?.height ?? 0) > 0) {
         measured += 1;
       }
     }
@@ -136,7 +136,7 @@ function FitOnFirstMeasure({ enabled }: { enabled: boolean }) {
     void fitView();
   }, [enabled, allMeasured, fitView]);
   return null;
-}
+};
 
 export interface NodeGraphWebProps<N extends NodeKindDefs, E extends EdgeKindDefs> {
   readonly schema: GraphSchema<N, E>;
@@ -262,7 +262,11 @@ export interface NodeGraphWebProps<N extends NodeKindDefs, E extends EdgeKindDef
   readonly children?: ReactNode;
 }
 
-function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphWebProps<N, E>) {
+const selectOnly = <T extends { readonly id: string }>(nodes: readonly T[], wanted: ReadonlySet<string>): T[] =>
+  nodes.map((node) => ({ ...node, selected: wanted.has(node.id) }));
+
+// oxlint-disable-next-line react-doctor/no-giant-component -- the canvas wires one controller into React Flow; splitting it scatters that wiring across props
+const NodeGraphCanvas = <N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphWebProps<N, E>) => {
   const {
     schema,
     document,
@@ -305,11 +309,13 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
    * `emit` would rebuild it mid-gesture.
    */
   const graphEventRef = useRef(props.onGraphEvent);
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   graphEventRef.current = props.onGraphEvent;
   const emit = useCallback((event: GraphEventWire) => graphEventRef.current?.(event), []);
 
   const perfHost = props.renderer ?? 'react-flow-web';
   const readBootMsRef = useRef(props.readBootMs);
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   readBootMsRef.current = props.readBootMs;
   /**
    * The frame after React Flow's first render. It is what the native watchdog
@@ -324,6 +330,8 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
   // `useResolvedKnobs`, not from here; this is the `size` the measure seed
   // reads and the pointer class the var layer needs.
   const { knobProps } = useResolvedKnobs();
+  // SAFETY: `size` is a declared size knob; `useResolvedKnobs` only ever resolves it to a GraphNodeSizeKnob value.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const size = knobProps.size as GraphNodeSizeKnob;
 
   const envelope = useKnobEnvelope({
@@ -351,9 +359,9 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
   const readMeasuredSizes = useCallback(() => {
     const sizes: Record<string, { width: number; height: number }> = {};
     for (const node of reactFlowApi.getNodes()) {
-      const width = node.measured?.width;
-      const height = node.measured?.height;
-      if (width && height) {
+      const width = node.measured?.width ?? 0;
+      const height = node.measured?.height ?? 0;
+      if (width > 0 && height > 0) {
         sizes[node.id] = { width, height };
       }
     }
@@ -371,24 +379,29 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
     coarsePointer,
     readMeasuredSizes,
   });
+  const { onEdgesChange, onConnect } = controller;
 
   const setNodeData = useCallback(
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- matches GraphHost.setNodeData; node data is schema-defined per kind
     (id: string, patch: Record<string, unknown>) => {
       const node = controller.document.nodes.find((candidate) => candidate.id === id);
       if (!node) {
         return;
       }
-      controller.commit({
-        t: 'setNodeData',
-        id,
-        data: { ...(node.data as Record<string, unknown>), ...patch },
-      } as GraphCommand<N, E>);
+      // SAFETY: node data is always a plain object (JSON record) per the document
+      // model; the patch comes from the node's own body for this same kind.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-unsafe-dictionary-type -- see SAFETY above
+      const data = { ...(node.data as Record<string, unknown>), ...patch };
+      // SAFETY: `data` is the node's existing data merged with a patch for the same kind.
+      controller.commit({ t: 'setNodeData', id, data } as GraphCommand<N, E>);
     },
     [controller],
   );
 
   const host = useMemo(
     () => ({
+      // SAFETY: the host only reads kind specs by runtime name; erasing N/E loses no runtime information.
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
       schema: schema as unknown as GraphSchema<NodeKindDefs, EdgeKindDefs>,
       overviewZoom,
       coarsePointer,
@@ -403,10 +416,12 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
   // commits once (design §4.5). The session is a ref, not state — it is the
   // drag's memory (S3) and re-rendering on it would rebuild the index it exists
   // to keep.
-  const snapSession = useRef(createSnapSession());
+  // oxlint-disable-next-line react/hook-use-state -- a mutable session created once; it never needs a setter
+  const [snapSession] = useState(createSnapSession);
   const [guides, setGuides] = useState<readonly SnapGuide[]>([]);
   const snapOptions = snapContextOptions({
     snapping,
+    // SAFETY: `animation` is a string-valued knob when present.
     animation: envelope.knobs.animation as string | undefined,
     reducedMotion: envelope.prefersReducedMotion,
     coarsePointer,
@@ -414,8 +429,10 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
   const { alignment: snapAlignmentOn, grid: snapGrid, thresholdScreenPx } = snapOptions;
   const reactFlow = reactFlowApi;
   const controllerNodesRef = useRef(controller.nodes);
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   controllerNodesRef.current = controller.nodes;
   const controllerChangeRef = useRef(controller.onNodesChange);
+  // oxlint-disable-next-line react/refs -- latest-value ref, written every render by design
   controllerChangeRef.current = controller.onNodesChange;
 
   const onNodesChange = useCallback(
@@ -423,7 +440,7 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
       const snapped = applySnapToChanges(changes, {
         nodes: controllerNodesRef.current,
         zoom: reactFlow.getZoom(),
-        session: snapSession.current,
+        session: snapSession,
         alignment: snapAlignmentOn,
         grid: snapGrid,
         thresholdScreenPx,
@@ -431,9 +448,11 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
       // Same reference when nothing fired, so an ordinary pan does not
       // re-render the guide layer 120 times a second.
       setGuides((previous) => (previous.length === 0 && snapped.guides.length === 0 ? previous : snapped.guides));
+      // SAFETY: `applySnapToChanges` only rewrites positions of the changes it was given.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       controllerChangeRef.current(snapped.changes as NodeChange[]);
     },
-    [reactFlow, snapAlignmentOn, snapGrid, thresholdScreenPx],
+    [reactFlow, snapAlignmentOn, snapGrid, snapSession, thresholdScreenPx],
   );
 
   /**
@@ -467,7 +486,7 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
         })),
       onSelect: (ids: readonly NodeId[]) => {
         const wanted = new Set<string>(ids);
-        reactFlowApi.setNodes((nodes) => nodes.map((node) => ({ ...node, selected: wanted.has(node.id) })));
+        reactFlowApi.setNodes((nodes) => selectOnly(nodes, wanted));
         emit({ t: 'lasso', phase: 'select', ids, haptic: null });
         // The ordinary selection event too, so a consumer that only cares WHAT
         // is selected does not have to know a lasso happened.
@@ -550,7 +569,9 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
   return (
     <div
       ref={rootRef}
-      className={className ? `${graphRootClassName} ${className}` : graphRootClassName}
+      className={
+        className !== undefined && className !== '' ? `${graphRootClassName} ${className}` : graphRootClassName
+      }
       data-graph-scheme={envelope.scheme}
       style={{ width: '100%', height: '100%', ...style }}>
       <GraphVars
@@ -567,8 +588,8 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
               nodeTypes={types}
               edgeTypes={graphEdgeTypes}
               onNodesChange={onNodesChange}
-              onEdgesChange={controller.onEdgesChange}
-              onConnect={controller.onConnect}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
               isValidConnection={controller.isValidConnection}
               connectionRadius={connectionRadius}
               onlyRenderVisibleElements={onlyRenderVisibleElements}
@@ -615,7 +636,7 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
       </KnobEnvelopeProvider>
     </div>
   );
-}
+};
 
 /**
  * `ReactFlowProvider` is mounted by the package, not asked of the consumer.
@@ -624,10 +645,8 @@ function NodeGraphCanvas<N extends NodeKindDefs, E extends EdgeKindDefs>(props: 
  * `useUpdateNodeInternals`; both throw outside a provider. Making the consumer
  * remember it is a failure mode with a confusing message.
  */
-export function NodeGraphWeb<N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphWebProps<N, E>) {
-  return (
-    <ReactFlowProvider>
-      <NodeGraphCanvas {...props} />
-    </ReactFlowProvider>
-  );
-}
+export const NodeGraphWeb = <N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphWebProps<N, E>) => (
+  <ReactFlowProvider>
+    <NodeGraphCanvas {...props} />
+  </ReactFlowProvider>
+);

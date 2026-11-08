@@ -10,8 +10,11 @@
  * and CSS selectors, and a cast at every wire boundary would be noise.
  * `PortRef` already removes the bug branding would have caught.
  */
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- public API name; ids are deliberately unbranded (see above)
 export type NodeId = string;
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- public API name; ids are deliberately unbranded (see above)
 export type EdgeId = string;
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- public API name; ids are deliberately unbranded (see above)
 export type PortId = string;
 
 export interface XY {
@@ -47,7 +50,9 @@ export type JsonValue = JsonPrimitive | readonly JsonValue[] | { readonly [key: 
  */
 export type GraphDocumentVersion = 1;
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public generic constraint: user-defined kind name -> payload map
 export type NodeKindDefs = Record<string, unknown>;
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public generic constraint: user-defined kind name -> payload map
 export type EdgeKindDefs = Record<string, unknown>;
 
 export type GraphNodeOf<N extends NodeKindDefs> = {
@@ -96,7 +101,9 @@ export interface GraphDocument<N extends NodeKindDefs, E extends EdgeKindDefs> {
  * flow from the schema into the parsed document's type.
  */
 export interface DocumentSchema<N extends NodeKindDefs = NodeKindDefs, E extends EdgeKindDefs = EdgeKindDefs> {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public API: kind name -> opaque per-kind validator
   readonly nodes: Readonly<Record<string, unknown>>;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public API: kind name -> opaque per-kind validator
   readonly edges: Readonly<Record<string, unknown>>;
   readonly __types?: { readonly nodes: N; readonly edges: E };
 }

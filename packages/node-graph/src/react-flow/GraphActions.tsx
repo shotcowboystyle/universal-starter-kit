@@ -22,7 +22,7 @@ import type { ReactNode } from 'react';
 import type { LayoutRunnerKind } from '../diagnostics/types';
 import type { LayoutResult } from '../layout/types';
 
-import type { GraphRelayoutOptions } from './useGraphController';
+import type { GraphRelayoutOptions } from './use-graph-controller';
 
 export interface GraphActions {
   /** Tidy. ONE undoable command, design §8. */
@@ -40,25 +40,23 @@ export interface GraphActions {
 
 const GraphActionsContext = createContext<GraphActions | null>(null);
 
-export function GraphActionsProvider({
+export const GraphActionsProvider = ({
   value,
   children,
 }: {
   readonly value: GraphActions;
   readonly children: ReactNode;
-}) {
-  return <GraphActionsContext.Provider value={value}>{children}</GraphActionsContext.Provider>;
-}
+}) => <GraphActionsContext.Provider value={value}>{children}</GraphActionsContext.Provider>;
 
 /**
  * Throws outside the canvas, on purpose. A silent `null` here would surface as
  * a Tidy button that does nothing, which is the hardest kind of bug to see in
  * a story.
  */
-export function useGraphActions(): GraphActions {
+export const useGraphActions = (): GraphActions => {
   const value = useContext(GraphActionsContext);
   if (!value) {
     throw new Error('useGraphActions must be called inside <NodeGraph> — pass the toolbar as its children.');
   }
   return value;
-}
+};

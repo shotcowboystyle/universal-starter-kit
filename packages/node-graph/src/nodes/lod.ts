@@ -9,7 +9,7 @@
  * installs a per-node `ResizeObserver`, so a height-changing LOD would
  * re-measure every node on every zoom tick and move every attached edge
  * endpoint with it. That is why `renderMode` fades children and never unmounts
- * them, and why `overviewNode.tsx` is measured from the same recipe the detail
+ * them, and why `overview-node.tsx` is measured from the same recipe the detail
  * body uses rather than being "a small box".
  */
 
@@ -43,17 +43,15 @@ export const defaultOverviewZoom = 0.35;
  * its full body is a graph a user can still work with — where an overview of
  * unknown zoom is a screen of grey rectangles with no way back.
  */
-export function lodForZoom(zoom: number, overviewZoom: number = defaultOverviewZoom): GraphRenderMode {
+export const lodForZoom = (zoom: number, overviewZoom: number = defaultOverviewZoom): GraphRenderMode => {
   if (!Number.isFinite(zoom)) {
     return 'detail';
   }
   return zoom < overviewZoom ? 'overview' : 'detail';
-}
+};
 
 /** True when children should be faded out. Spelled once so no caller re-derives it. */
-export function isOverview(mode: GraphRenderMode): boolean {
-  return mode === 'overview';
-}
+export const isOverview = (mode: GraphRenderMode): boolean => mode === 'overview';
 
 /**
  * The opacity a node's non-essential children carry in each mode.
@@ -63,6 +61,4 @@ export function isOverview(mode: GraphRenderMode): boolean {
  * measured, and still hold the box open. `display: none` or an unmount would
  * collapse the box and hand React Flow's observer a new height to chase.
  */
-export function detailOpacity(mode: GraphRenderMode): number {
-  return isOverview(mode) ? 0 : 1;
-}
+export const detailOpacity = (mode: GraphRenderMode): number => (isOverview(mode) ? 0 : 1);

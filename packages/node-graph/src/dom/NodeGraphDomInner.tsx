@@ -4,14 +4,14 @@
  * Everything that can throw at module-eval time lives here rather than in the
  * entry, so a throw is a caught `{ t: "error", phase: "module" }` instead of a
  * blank WebView. That is the whole reason this file is separate from
- * `NodeGraphDom.ts`.
+ * `node-graph-dom.ts`.
  *
  * It renders exactly one code path: `KnobEnvelopeProvider` rebuilds the real
  * Preset / Surface / Intent stack out of the envelope the host serialized, and
  * `NodeGraphWeb` — the same component the web Storybook mounts — resolves its
  * own knobs from that rebuilt stack. There is no DOM-specific canvas. Design
  * 6.1's claim is that the rehydrated `ResolvedKnobs` deep-equals the host's,
- * and `envelope.spec.tsx` is what holds it to that.
+ * and `envelope.test.tsx` is what holds it to that.
  *
  * A fresh React root has no `TamaguiProvider` above it, so this file supplies
  * the config. It takes it as a PROP from the app's `'use dom'` entry and falls
@@ -36,10 +36,11 @@ import type {
   GraphSchema,
   NodeKindDefs,
 } from '../model/index';
-import { getGraphSchema, parseDocument } from '../model/index';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { getGraphSchema } from '../model/schema';
+import { parseDocument } from '../model/serialize';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import { demoGraphSchemaId } from '../react-flow/fixtures';
-import { mountedNodeCount, subscribeNodeCensus } from '../react-flow/nodeCensus';
+import { mountedNodeCount, subscribeNodeCensus } from '../react-flow/node-census';
 import { NodeGraphWeb } from '../react-flow/NodeGraphWeb';
 import { xyflowVersion } from '../react-flow/xy';
 import { probeRenderedFamily } from '../theme/faces';
@@ -48,7 +49,7 @@ import type { GraphFaceStatus } from '../theme/GraphFaces';
 
 import { readBootElapsedMs, graphReadySettleMs as settleGraceMs, stampBootStage } from './boot';
 import { GraphDomLayout } from './GraphDomLayout';
-import type { NodeGraphDomInnerProps, NodeGraphDomOptions } from './NodeGraphDomShell';
+import type { NodeGraphDomInnerProps, NodeGraphDomOptions } from './node-graph-dom-shell';
 import { createGraphEventEmitter, createRevEchoGate, isBenignCanvasError } from './wire';
 import type { FaceProbeWire, GraphEventWire, GraphFaceDeliveryWire } from './wire';
 
@@ -61,24 +62,35 @@ stampBootStage('module');
 type AnyDocument = GraphDocument<NodeKindDefs, EdgeKindDefs>;
 type AnySchema = GraphSchema<NodeKindDefs, EdgeKindDefs>;
 
-function parseOptions(json: string): NodeGraphDomOptions {
+const parseOptions = (json: string): NodeGraphDomOptions => {
   try {
     const parsed: unknown = JSON.parse(json);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this IS the I/O-boundary parse of the options blob
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return {};
     }
+    // SAFETY: a non-array object; every option is optional and read defensively by NodeGraphWeb
     return parsed as NodeGraphDomOptions;
   } catch {
     // Options are decoration around a canvas, never the canvas itself. A
     // malformed blob takes the defaults rather than the whole render.
     return {};
   }
-}
+};
 
-export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
+// oxlint-disable-next-line react-doctor/no-giant-component -- one bridge root; splitting it is a refactor, not a lint fix
+export const NodeGraphDomInner = (props: NodeGraphDomInnerProps) => {
   const { commands, documentJson, envelopeJson, onEvent, optionsJson, rev, schemaId } = props;
 
-  const emitter = useMemo(() => createGraphEventEmitter({ send: (json) => void onEvent(json) }), [onEvent]);
+  const emitter = useMemo(
+    () =>
+      createGraphEventEmitter({
+        send: (json) => {
+          void onEvent(json);
+        },
+      }),
+    [onEvent],
+  );
   useEffect(
     () => () => {
       emitter.dispose();
@@ -92,7 +104,8 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
     [emitter],
   );
 
-  const gate = useRef(createRevEchoGate()).current;
+  // oxlint-disable-next-line react/hook-use-state -- a lazily built, render-stable gate; it is never replaced, so there is no setter
+  const [gate] = useState(createRevEchoGate);
 
   /**
    * `flow` — React Flow mounted and is reachable. Stamped from the command
@@ -109,7 +122,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
    *
    * A schema's `render` is a component, so it cannot be JSON and cannot cross
    * the bridge: the only way a canvas gets one is a module the DOM BUNDLE
-   * imports, and a DOM bundle is rooted at `NodeGraphDom.ts`. That is a real
+   * imports, and a DOM bundle is rooted at `node-graph-dom.ts`. That is a real
    * constraint on every consumer — each app writes its own `'use dom'` entry
    * that imports its schema registration — but it left the package's own
    * `NodeGraph/NodeGraph` story with no canvas on device, because a story
@@ -124,7 +137,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
    *
    * A schema's `render` is a component, so it cannot be JSON and cannot cross
    * the bridge: the only way a canvas gets one is a module the DOM BUNDLE
-   * imports, and a DOM bundle is rooted at `NodeGraphDom.ts`. That is a real
+   * imports, and a DOM bundle is rooted at `node-graph-dom.ts`. That is a real
    * constraint on every consumer — each app writes its own `'use dom'` entry
    * that imports its schema registration — but it left the package's own
    * `NodeGraph/NodeGraph` story with no canvas on device, because a story
@@ -141,7 +154,9 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
    * The embed build showed the chunk this bought: `demoNodeBody-<hash>.js` at
    * 5.6 KB. Five kilobytes is not worth a broken export.
    */
+  // SAFETY: the demo schema's N/E are a subset of the open NodeKindDefs/EdgeKindDefs this view erases to
   const demoSchema = useMemo(
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- deliberate type erasure at the id-keyed boundary
     () => (schemaId === demoGraphSchemaId ? (demoGraphSchema() as unknown as AnySchema) : undefined),
     [schemaId],
   );
@@ -172,11 +187,15 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
     // The single-schema prop is written LAST so it wins a tie: an app that
     // passes both has said the singular one is the answer for its id.
     for (const candidate of [...(props.schemas ?? []), ...(props.schema ? [props.schema] : [])]) {
+      // SAFETY: the shell already erased N/E; the map is keyed by id and the canvas re-validates documents against it
+      // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- deliberate type erasure at the id-keyed boundary
       byId.set(candidate.id, candidate as unknown as AnySchema);
     }
     return byId.get(schemaId);
   }, [props.schema, props.schemas, schemaId]);
+  // SAFETY: the registry stores erased schemas keyed by id; this restores the open view the canvas works in
   const schema = useMemo(
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- deliberate type erasure at the id-keyed boundary
     () => (getGraphSchema(schemaId) as unknown as AnySchema | undefined) ?? supplied ?? demoSchema,
     [demoSchema, schemaId, supplied],
   );
@@ -205,6 +224,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       dropUnknownKinds: options.dropUnknownKinds,
     });
     if (parsed.ok) {
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-chain-state-updates -- the inbound document must pass the echo gate, which mutates; it cannot be derived during render
       setDocument(parsed.value);
       return;
     }
@@ -255,7 +275,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       });
     };
     const onRejection = (event: PromiseRejectionEvent) => {
-      const { reason } = event;
+      const reason: unknown = event.reason;
       const message = reason instanceof Error ? reason.message : String(reason);
       if (isBenignCanvasError(message)) {
         return;
@@ -292,7 +312,10 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
     try {
       return getConfig();
     } catch {
-      return;
+      // Safe to continue: getConfig throws when createTamagui never ran, and
+      // `problem` below reports the missing config instead.
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- typescript/consistent-return needs the explicit value
+      return undefined;
     }
   }, [props.config]);
 
@@ -329,9 +352,10 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
     }
     return null;
   }, [config, envelope, schema, schemaId]);
+  const hasProblem = problem !== null && problem !== '';
 
   useEffect(() => {
-    if (!problem) {
+    if (problem === null || problem === '') {
       return;
     }
     emit({ t: 'error', phase: 'render', message: problem });
@@ -364,6 +388,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       return [];
     }
     const el = globalThis.document.querySelector('[data-graph-node-title]') ?? globalThis.document.body;
+    // oxlint-disable-next-line typescript/strict-boolean-expressions -- `document.body` is typed non-null but IS null before <body> parses
     if (!el) {
       return [];
     }
@@ -409,7 +434,8 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
   // root on every cull and uncull, which is every frame of a pan.
   useEffect(() => {
     if (isReady) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- typescript/consistent-return needs the explicit value
+      return undefined;
     }
     return subscribeNodeCensus(() => {
       setCensusTick((tick) => tick + 1);
@@ -418,7 +444,8 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
 
   useEffect(() => {
     if (isReady) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- typescript/consistent-return needs the explicit value
+      return undefined;
     }
     const timer = setTimeout(() => {
       setSettleExpired(true);
@@ -430,7 +457,7 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
 
   const ready = useRef(false);
   useEffect(() => {
-    if (ready.current || problem || !document || !('value' in envelope)) {
+    if (ready.current || hasProblem || !document || !('value' in envelope)) {
       return;
     }
     // `censusTick` is read so this effect re-runs when a node mounts; the count
@@ -444,8 +471,10 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       return;
     }
     ready.current = true;
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- readiness depends on imperative reads (node census, fonts) only an effect can make
     setIsReady(true);
     const stage = stampBootStage('ready');
+    // oxlint-disable-next-line react-doctor/no-pass-live-state-to-parent -- the `ready` bridge event IS this effect's purpose; the host is another realm, not a parent
     emit({
       t: 'ready',
       diagnostics: {
@@ -487,18 +516,19 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       },
     });
   }, [
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the tick is the deliberate wake-up when a node mounts (see above)
     censusTick,
     document,
     emit,
     envelope,
     faceDelivery,
     options.onlyRenderVisibleElements,
+    hasProblem,
     probeFaces,
-    problem,
     settleExpired,
   ]);
 
-  if (problem || !('value' in envelope) || !schema || !document) {
+  if (hasProblem || !('value' in envelope) || !schema || !document) {
     return null;
   }
 
@@ -566,4 +596,4 @@ export function NodeGraphDomInner(props: NodeGraphDomInnerProps) {
       />
     </KnobEnvelopeProvider>
   );
-}
+};

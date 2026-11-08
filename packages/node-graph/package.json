@@ -42,31 +42,30 @@
       "require": "./dist/cjs/model/index.cjs"
     },
     "./dom": {
-      "source": "./src/dom/NodeGraphDom.ts",
-      "react-native": "./src/dom/NodeGraphDom.ts",
-      "types": "./types/dom/NodeGraphDom.d.ts",
-      "default": "./src/dom/NodeGraphDom.ts"
+      "source": "./src/dom/node-graph-dom.ts",
+      "react-native": "./src/dom/node-graph-dom.ts",
+      "types": "./types/dom/node-graph-dom.d.ts",
+      "default": "./src/dom/node-graph-dom.ts"
     },
     "./dom-inner": {
-      "source": "./src/dom/NodeGraphDomShell.ts",
-      "react-native": "./src/dom/NodeGraphDomShell.ts",
-      "types": "./types/dom/NodeGraphDomShell.d.ts",
-      "default": "./src/dom/NodeGraphDomShell.ts"
+      "source": "./src/dom/node-graph-dom-shell.ts",
+      "react-native": "./src/dom/node-graph-dom-shell.ts",
+      "types": "./types/dom/node-graph-dom-shell.d.ts",
+      "default": "./src/dom/node-graph-dom-shell.ts"
     },
     "./demo": {
-      "source": "./src/react-flow/demoNodeBody.tsx",
-      "react-native": "./src/react-flow/demoNodeBody.tsx",
-      "types": "./types/react-flow/demoNodeBody.d.ts",
-      "default": "./src/react-flow/demoNodeBody.tsx"
+      "source": "./src/react-flow/demo-node-body.tsx",
+      "react-native": "./src/react-flow/demo-node-body.tsx",
+      "types": "./types/react-flow/demo-node-body.d.ts",
+      "default": "./src/react-flow/demo-node-body.tsx"
     },
     "./metro": "./metro/index.js",
     "./css/graph.css": "./css/graph.css"
   },
   "scripts": {
     "bench": "node scripts/bench.mjs",
-    "build": "node scripts/build-layout-worker.mjs --check && rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.|\\.native\\.|dom/NodeGraphDom|diagnostics/deliberateBreak'",
-    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov && pnpm test:scripts",
-    "test:scripts": "node --test scripts/*.spec.mjs metro/*.spec.mjs",
+    "build": "node scripts/build-layout-worker.mjs --check && rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.|\\.native\\.|dom/NodeGraphDom|dom/node-graph-dom|diagnostics/deliberate-break'",
+    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

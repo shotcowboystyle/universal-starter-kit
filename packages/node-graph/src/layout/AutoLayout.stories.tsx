@@ -41,15 +41,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
 import type { GraphEventWire } from '../dom/wire';
-import type { BuiltinEdgeData } from '../edges/edgeKinds';
-import type { GraphInteractionMode } from '../interaction/useLassoSelect';
+import type { BuiltinEdgeData } from '../edges/edge-kinds';
+import type { GraphInteractionMode } from '../interaction/use-lasso-select';
 import type { GraphDocument } from '../model/index';
 import { hasDomRealm } from '../native/DomOnlyStory';
 import { GraphToolbar } from '../native/GraphToolbar';
 import { NodeGraph } from '../NodeGraph';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import type { DemoNodeData } from '../react-flow/fixtures';
-import type { NodeGraphHandle } from '../react-flow/graphHandle';
+import type { NodeGraphHandle } from '../react-flow/graph-handle';
 import { Background, Controls, reactFlowNodeSelector } from '../react-flow/xy';
 
 type Doc = GraphDocument<DemoNodeData, BuiltinEdgeData>;
@@ -79,16 +79,28 @@ type Story = StoryObj<typeof NodeGraph>;
  * A graph nobody would keep. Every node is on a diagonal with the edges
  * crossing, so a tidy that did nothing would be obvious at a glance.
  */
-function scrambled(count: number): Doc {
+const scrambledData = (kind: 'source' | 'transform' | 'sink', index: number) => {
+  if (kind === 'source') {
+    return { table: `orders_${index}` };
+  }
+  if (kind === 'transform') {
+    return { expression: `row => row.${index}` };
+  }
+  return { target: `warehouse_${index}` };
+};
+
+const sourcePortOf = (kind: string): string | null => {
+  if (kind === 'source') {
+    return 'rows';
+  }
+  return kind === 'transform' ? 'ok' : null;
+};
+
+const scrambled = (count: number): Doc => {
   const kinds = ['source', 'transform', 'sink'] as const;
   const nodes = Array.from({ length: count }, (_, index) => {
     const kind = kinds[index % kinds.length];
-    const data =
-      kind === 'source'
-        ? { table: `orders_${index}` }
-        : kind === 'transform'
-          ? { expression: `row => row.${index}` }
-          : { target: `warehouse_${index}` };
+    const data = scrambledData(kind, index);
     return {
       id: `n${index}`,
       kind,
@@ -102,8 +114,8 @@ function scrambled(count: number): Doc {
   for (let index = 0; index + 1 < count; index += 1) {
     const from = nodes[index];
     const to = nodes[index + 1];
-    const sourcePort = from.kind === 'source' ? 'rows' : from.kind === 'transform' ? 'ok' : null;
-    if (!sourcePort) {
+    const sourcePort = sourcePortOf(from.kind);
+    if (sourcePort === null) {
       continue;
     }
     edges.push({
@@ -115,7 +127,7 @@ function scrambled(count: number): Doc {
     } as Doc['edges'][number]);
   }
   return { version: 1, nodes, edges };
-}
+};
 
 /** What the last `{ t: "layoutResult" }` said. */
 interface LayoutReading {
@@ -148,7 +160,8 @@ interface LayoutReading {
  * its job; the failing case §13.2 guards against is `inline` WITH a `Worker`,
  * which did not occur.
  */
-function AutoLayoutPage({
+// oxlint-disable-next-line eslint/complexity -- a story page: the branches are independent readout rows, not intertwined logic
+const AutoLayoutPage = ({
   count,
   showChecksum = false,
   parkHandle = false,
@@ -158,7 +171,7 @@ function AutoLayoutPage({
   readonly showChecksum?: boolean;
   readonly parkHandle?: boolean;
   readonly fitView?: boolean;
-}) {
+}) => {
   const graph = useRef<NodeGraphHandle>(null);
   const [mode, setMode] = useState<GraphInteractionMode>('pan');
   const [reading, setReading] = useState<LayoutReading | null>(null);
@@ -179,7 +192,7 @@ function AutoLayoutPage({
     });
     // A rejected relayout laid nothing out, so there is nothing to fit and the
     // fit would only hide the failure by moving the graph.
-    if (event.error) {
+    if (event.error !== undefined && event.error !== '') {
       return;
     }
     /*
@@ -218,11 +231,11 @@ function AutoLayoutPage({
     const nodes = globalThis.document.querySelectorAll<HTMLElement>(reactFlowNodeSelector);
     let total = 0;
     for (const node of nodes) {
-      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform ?? '');
-      if (!match) {
+      const match = /translate\((?<x>[-\d.]+)px,\s*(?<y>[-\d.]+)px\)/u.exec(node.style.transform ?? '');
+      if (!match?.groups) {
         continue;
       }
-      total += Number(match[1]) + Number(match[2]) * 3;
+      total += Number(match.groups.x) + Number(match.groups.y) * 3;
     }
     setChecksum(`${nodes.length} nodes / ${Math.round(total)}`);
   }, []);
@@ -243,12 +256,14 @@ function AutoLayoutPage({
       fitView: () => graph.current?.fitView(),
       reading: () => reading,
     };
+    // oxlint-disable-next-line typescript/consistent-return -- an effect returns a cleanup only when it installed something
     return () => {
       delete (globalThis as unknown as { __mpoAutoLayout?: unknown }).__mpoAutoLayout;
     };
   }, [parkHandle, reading]);
 
   // `inline` where a `Worker` exists is a failed measurement, not a slow one.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `Worker` may be an undeclared global on this realm
   const wrongRunner = reading?.runner === 'inline' && typeof globalThis.Worker === 'function';
 
   return (
@@ -314,7 +329,7 @@ function AutoLayoutPage({
           nothing at all: the readout sat on "laying out…" forever and that was
           indistinguishable from a Tidy that never reached the canvas.
         */}
-        {reading?.error ? (
+        {reading?.error !== undefined && reading.error !== '' ? (
           <SizableText
             size="$2"
             theme="red">
@@ -369,7 +384,7 @@ function AutoLayoutPage({
       </YStack>
     </YStack>
   );
-}
+};
 
 export const Main: Story = {
   render: () => <AutoLayoutPage count={12} />,

@@ -13,10 +13,10 @@
  *
  * Design's emission table is the `graphEventEmission` const below, not a
  * comment. `createGraphEventEmitter` reads it, so the throttle column is
- * executable and `wire.spec.ts` asserts the numbers verbatim.
+ * executable and `wire.test.ts` asserts the numbers verbatim.
  */
 
-import type { FrameStats, GestureWindow } from '../bench/frameSampler';
+import type { FrameStats, GestureWindow } from '../bench/frame-sampler';
 import type { GraphFontRef } from '../knobs/envelope';
 import type { NodeId, Viewport } from '../model/index';
 
@@ -62,12 +62,15 @@ export interface FaceProbeWire {
  * revised every time an engine is added would make the bridge the bottleneck
  * for a change that has nothing to do with it.
  */
+/** Design 6.3's two mechanisms, plus the two states that are neither. */
+export type GraphFaceSourceWire = 'asset' | 'inline' | 'pending' | 'failed';
+
 export interface GraphFaceDeliveryWire {
   readonly id: string;
   readonly family: string;
   readonly weight: number;
   /** Design 6.3's two mechanisms, plus the two states that are neither. */
-  readonly source: 'asset' | 'inline' | 'pending' | 'failed';
+  readonly source: GraphFaceSourceWire;
 }
 
 export interface GraphDiagnosticsWire {
@@ -213,11 +216,14 @@ export type GraphEventWire =
       t: 'lasso';
       phase: LassoPhaseWire;
       ids: readonly NodeId[];
-      haptic: 'selection' | 'impact' | 'warning' | null;
+      haptic: LassoHapticWire;
     }
   | { t: 'error'; phase: GraphErrorPhase; message: string; stack?: string };
 
 export type GraphEventKind = GraphEventWire['t'];
+
+/** The buzz a `lasso` event hints at; `null` on every phase but `arm`. */
+export type LassoHapticWire = 'selection' | 'impact' | 'warning' | null;
 
 /**
  * The runtime list, maintained BESIDE the union rather than derived from the
@@ -281,7 +287,7 @@ export interface GraphEventEmission {
  * Never emitted at all, at any throttle: node positions, viewport DURING a
  * gesture, hover.
  */
-export const graphEventEmission: { readonly [K in GraphEventKind]: GraphEventEmission } = {
+export const graphEventEmission = {
   ready: { firesOn: 'the canvas mounted and painted once', throttle: { mode: 'none' } },
   commit: {
     firesOn: 'drag stop, connect, delete, paste, layout commit',
@@ -319,15 +325,14 @@ export const graphEventEmission: { readonly [K in GraphEventKind]: GraphEventEmi
     firesOn: 'a caught throw in boot, module eval, render or runtime',
     throttle: { mode: 'none' },
   },
-};
+} satisfies { readonly [K in GraphEventKind]: GraphEventEmission };
 
-export function isGraphEventKind(value: unknown): value is GraphEventKind {
-  return typeof value === 'string' && (graphEventKinds as readonly string[]).includes(value);
-}
+export const isGraphEventKind = (value: unknown): value is GraphEventKind =>
+  typeof value === 'string' &&
+  // SAFETY: widening the literal tuple to readonly string[] only to call includes on a string
+  (graphEventKinds as readonly string[]).includes(value);
 
-export function encodeGraphEvent(event: GraphEventWire): string {
-  return JSON.stringify(event);
-}
+export const encodeGraphEvent = (event: GraphEventWire): string => JSON.stringify(event);
 
 /**
  * Throws on a tag it does not know, rather than returning it.
@@ -337,20 +342,23 @@ export function encodeGraphEvent(event: GraphEventWire): string {
  * `parseKnobEnvelope`'s version check applies: failing loudly beats handling
  * something plausible and wrong.
  */
-export function decodeGraphEvent(json: string): GraphEventWire {
+export const decodeGraphEvent = (json: string): GraphEventWire => {
   const parsed: unknown = JSON.parse(json);
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this IS the I/O-boundary parse of the bridge payload
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error(`graph event payload is not an object: ${json.slice(0, 120)}`);
   }
-  const tag = (parsed as { t?: unknown }).t;
+  const tag = 't' in parsed ? parsed.t : undefined;
   if (!isGraphEventKind(tag)) {
     throw new Error(
       `graph event tag ${JSON.stringify(tag)} is not one of ${graphEventKinds.join(', ')} — ` +
         'the DOM bundle and its native host are out of step; rebuild the app.',
     );
   }
+  // SAFETY: `parsed` is a non-array object whose `t` is a known GraphEventKind; both ends ship in one bundle
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the tag check above is the contract; fields are trusted per the comment above
   return parsed as GraphEventWire;
-}
+};
 
 /**
  * The two `ResizeObserver loop` notices, and NOTHING else.
@@ -362,11 +370,12 @@ export function decodeGraphEvent(json: string): GraphEventWire {
  * over — so an error that merely MENTIONS `ResizeObserver`, or one that quotes
  * the notice inside a longer sentence, still reaches the boundary.
  */
-const resizeObserverLoopNotice = /^(?:uncaught\s+)?(?:[a-z]*error:\s*)?resizeobserver loop\b/i;
+const resizeObserverLoopNotice = /^(?:uncaught\s+)?(?:[a-z]*error:\s*)?resizeobserver loop\b/iu;
 
-export function isBenignCanvasError(message: unknown): boolean {
-  return typeof message === 'string' && resizeObserverLoopNotice.test(message);
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever window.onerror / a catch handed over; narrowed right here
+export const isBenignCanvasError = (message: unknown): boolean =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the narrowing of the untyped error message
+  typeof message === 'string' && resizeObserverLoopNotice.test(message);
 
 /**
  * Echo suppression, design 9.1.
@@ -389,7 +398,7 @@ export interface RevEchoGate {
   readonly highWater: () => number;
 }
 
-export function createRevEchoGate(): RevEchoGate {
+export const createRevEchoGate = (): RevEchoGate => {
   let highWater = Number.NEGATIVE_INFINITY;
   return {
     markEmitted(rev) {
@@ -406,7 +415,7 @@ export function createRevEchoGate(): RevEchoGate {
     },
     highWater: () => highWater,
   };
-}
+};
 
 export interface GraphEventEmitterOptions {
   /** The single bridge crossing. `onEvent` on the DOM side; a test collector in a spec. */
@@ -414,8 +423,10 @@ export interface GraphEventEmitterOptions {
   /** Test seam. Defaults to `Date.now`. */
   readonly now?: () => number;
   /** Test seam. Defaults to `globalThis.setTimeout`. */
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- opaque timer handle; only ever passed back to `cancel`
   readonly schedule?: (fn: () => void, ms: number) => unknown;
   /** Test seam. Defaults to `globalThis.clearTimeout`. */
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- opaque timer handle produced by `schedule`
   readonly cancel?: (handle: unknown) => void;
 }
 
@@ -434,12 +445,15 @@ export interface GraphEventEmitter {
  * and this is where that is true: 30 `viewport` events inside one 125 ms window
  * schedule one timer and send the last value.
  */
-export function createGraphEventEmitter(options: GraphEventEmitterOptions): GraphEventEmitter {
+export const createGraphEventEmitter = (options: GraphEventEmitterOptions): GraphEventEmitter => {
   const now = options.now ?? (() => Date.now());
   const schedule = options.schedule ?? ((fn: () => void, ms: number) => globalThis.setTimeout(fn, ms));
   const cancel =
     options.cancel ??
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- opaque timer handle produced by `schedule`
     ((handle: unknown) => {
+      // SAFETY: without a custom `schedule`, the handle came from globalThis.setTimeout
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above; the handle type differs per host
       globalThis.clearTimeout(handle as number);
     });
 
@@ -448,12 +462,12 @@ export function createGraphEventEmitter(options: GraphEventEmitterOptions): Grap
   const lastSentAt = new Map<GraphEventKind, number>();
   let disposed = false;
 
-  function send(event: GraphEventWire) {
+  const send = (event: GraphEventWire) => {
     lastSentAt.set(event.t, now());
     options.send(encodeGraphEvent(event));
-  }
+  };
 
-  function fire(kind: GraphEventKind) {
+  const fire = (kind: GraphEventKind) => {
     timers.delete(kind);
     const event = pending.get(kind);
     if (!event) {
@@ -461,7 +475,7 @@ export function createGraphEventEmitter(options: GraphEventEmitterOptions): Grap
     }
     pending.delete(kind);
     send(event);
-  }
+  };
 
   return {
     emit(event) {
@@ -495,6 +509,7 @@ export function createGraphEventEmitter(options: GraphEventEmitterOptions): Grap
     },
     flush() {
       // A snapshot, because `fire` deletes from `pending` as it goes.
+      // oxlint-disable-next-line unicorn/no-useless-spread -- deliberate snapshot: `fire` deletes from `pending` while iterating
       for (const kind of [...pending.keys()]) {
         const handle = timers.get(kind);
         if (handle !== undefined) {
@@ -512,4 +527,4 @@ export function createGraphEventEmitter(options: GraphEventEmitterOptions): Grap
       pending.clear();
     },
   };
-}
+};

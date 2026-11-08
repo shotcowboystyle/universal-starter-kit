@@ -25,7 +25,7 @@ export const baseIgnorePatterns = [
   // 'packages/frappe-ui/**',
   'packages/i18n/**',
   'packages/markdown/**',
-  'packages/node-graph/**',
+  // 'packages/node-graph/**',
   'packages/platform/**',
   'packages/rich-text/**',
   'packages/router/**',

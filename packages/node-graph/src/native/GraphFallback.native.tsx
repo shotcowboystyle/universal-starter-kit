@@ -53,19 +53,19 @@ const reasonTitles: Record<GraphFallbackReason, string> = {
  * parse error looks like from out here — a different problem from stopping AT
  * `script`, and the two must not read the same.
  */
-export function graphFallbackDetail(
+export const graphFallbackDetail = (
   stage: BootStage | null | undefined,
-  started?: boolean,
+  started = false,
   reason?: GraphFallbackReason,
   waitedMs?: number,
-): string {
+): string => {
   // This one is not about how far boot got, because boot never began: no
   // WebView was created at all. Saying "it never started" here would be true
   // and useless, and would send the reader looking for a parse error.
   if (reason === 'no-dom-entry') {
     return "No `'use dom'` entry was supplied, so no WebView was created.";
   }
-  const waited = waitedMs ? ` after ${waitedMs} ms` : '';
+  const waited = waitedMs !== undefined && waitedMs > 0 ? ` after ${waitedMs} ms` : '';
   if (stage) {
     return `It reached "${stage}" and stopped there${waited}.`;
   }
@@ -90,9 +90,9 @@ export function graphFallbackDetail(
     'A bundle that fails to parse looks identical from out here, and would ' +
     'still be silent on a retry.'
   );
-}
+};
 
-export function GraphFallback({ message, onRetry, reason, stage, started, waitedMs }: GraphFallbackProps) {
+export const GraphFallback = ({ message, onRetry, reason, stage, started, waitedMs }: GraphFallbackProps) => {
   const { knobProps } = useResolvedKnobs();
 
   return (
@@ -114,7 +114,7 @@ export function GraphFallback({ message, onRetry, reason, stage, started, waited
         textAlign="center">
         {graphFallbackDetail(stage, started, reason, waitedMs)}
       </SizableText>
-      {message ? (
+      {message !== undefined && message !== '' ? (
         <SizableText
           {...knobProps.body}
           {...knobProps.label}
@@ -126,4 +126,4 @@ export function GraphFallback({ message, onRetry, reason, stage, started, waited
       {onRetry ? <Button onPress={onRetry}>Retry</Button> : null}
     </YStack>
   );
-}
+};

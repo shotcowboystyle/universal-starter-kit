@@ -11,7 +11,7 @@
  * Design: docs/design/node-graph-editor.md section 6.1.
  */
 
-import type { Animation, Knobs, SurfaceDensity, SurfaceSize } from '@repo/theme';
+import type { Knobs, SurfaceDensity, SurfaceSize } from '@repo/theme';
 
 /**
  * `unset` is part of the surface vocabulary, and dropping it changes what
@@ -85,28 +85,36 @@ export type KnobEnvelopeBody = Omit<KnobEnvelope, 'revision'>;
  * object. A revision that bumps on key order alone would re-emit the whole var
  * sheet on every unrelated render.
  */
-export function stableStringify(value: unknown): string {
+const byKey = ([a]: readonly [string, unknown], [b]: readonly [string, unknown]): number => {
+  if (a < b) {
+    return -1;
+  }
+  if (a > b) {
+    return 1;
+  }
+  return 0;
+};
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- generic serializer: any JSON-able value is valid input by design
+export const stableStringify = (value: unknown): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- structural dispatch over arbitrary JSON values, not contract narrowing
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value) ?? 'null';
   }
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(',')}]`;
   }
-  const entries = Object.entries(value as Record<string, unknown>)
+  const entries = Object.entries(value)
     .filter(([, item]) => item !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .toSorted(byKey)
     .map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`);
   return `{${entries.join(',')}}`;
-}
+};
 
 /** Stable identity of an envelope's inputs, ignoring `revision`. */
-export function knobEnvelopeIdentity(body: KnobEnvelopeBody): string {
-  return stableStringify(body);
-}
+export const knobEnvelopeIdentity = (body: KnobEnvelopeBody): string => stableStringify(body);
 
-export function serializeKnobEnvelope(envelope: KnobEnvelope): string {
-  return JSON.stringify(envelope);
-}
+export const serializeKnobEnvelope = (envelope: KnobEnvelope): string => JSON.stringify(envelope);
 
 /**
  * Parse an envelope that crossed the bridge.
@@ -116,21 +124,23 @@ export function serializeKnobEnvelope(envelope: KnobEnvelope): string {
  * paint something plausible but wrong, which is the failure that takes longest
  * to find.
  */
-export function parseKnobEnvelope(text: string): KnobEnvelope {
+export const parseKnobEnvelope = (text: string): KnobEnvelope => {
+  // SAFETY: the schemaVersion guard below is the parse boundary; a body with the right version is the shape this module serialized.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns any; the version check is the contract gate
   const parsed = JSON.parse(text) as KnobEnvelope;
   if (parsed?.schemaVersion !== knobEnvelopeSchemaVersion) {
     throw new Error(
-      `knob envelope schemaVersion ${String(parsed?.schemaVersion)} is not ${knobEnvelopeSchemaVersion} — ` +
+      `knob envelope schemaVersion ${String(parsed?.schemaVersion)} is not ${String(knobEnvelopeSchemaVersion)} — ` +
         'the DOM bundle and its native host are out of step; rebuild the app rather than rendering against a knob set it cannot read.',
     );
   }
   return parsed;
-}
+};
 
 /** `animation: "none"` forced in, idempotent against the resolver's own reduced-motion branch. */
-export function knobsForEnvelope(envelope: KnobEnvelope): Knobs {
+export const knobsForEnvelope = (envelope: KnobEnvelope): Knobs => {
   if (!envelope.prefersReducedMotion) {
     return envelope.knobs;
   }
-  return { ...envelope.knobs, animation: 'none' as Animation };
-}
+  return { ...envelope.knobs, animation: 'none' };
+};

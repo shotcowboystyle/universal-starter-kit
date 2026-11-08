@@ -7,7 +7,7 @@
  * somewhere was merged into.
  *
  * `react` appears here as a TYPE-ONLY import. It is erased, so the model still
- * carries no React at runtime, which is what `dom/importGraph.spec.ts` checks
+ * carries no React at runtime, which is what `dom/import-graph.test.ts` checks
  * and what lets a server or the CI bench import `@repo/node-graph/model`.
  */
 
@@ -18,6 +18,7 @@ import type { DocumentSchema, EdgeKindDefs, GraphNodeOf, NodeId, NodeKindDefs, P
 
 export interface PortSpec {
   readonly id: PortId;
+  // oxlint-disable-next-line sonarjs/max-union-size -- public API: the four sides of a node box
   readonly side: 'left' | 'right' | 'top' | 'bottom';
   readonly direction: 'in' | 'out';
   readonly index?: number;
@@ -29,9 +30,7 @@ export interface PortSpec {
 }
 
 /** Default arity, spelled once so the rules and the docs cannot drift apart. */
-export function portArity(port: PortSpec): 'one' | 'many' {
-  return port.arity ?? (port.direction === 'out' ? 'many' : 'one');
-}
+export const portArity = (port: PortSpec): 'one' | 'many' => port.arity ?? (port.direction === 'out' ? 'many' : 'one');
 
 export interface GraphNodeRenderProps<TData> {
   readonly id: NodeId;
@@ -67,6 +66,7 @@ export interface GraphNodeRenderProps<TData> {
 export interface GraphNodeField {
   readonly key: string;
   readonly label?: string;
+  // oxlint-disable-next-line sonarjs/max-union-size -- public API: the inspector's widget set
   readonly type: 'text' | 'number' | 'boolean' | 'select';
   readonly options?: readonly { readonly value: string; readonly label: string }[];
 }
@@ -89,7 +89,7 @@ export interface EdgeKindSpec<TData> {
   readonly defaultData: TData;
   /**
    * Which painted appearance this kind draws as — one of the four in
-   * `src/edges/edgeKinds.ts`. A NAME, not a style: the model stays free of
+   * `src/edges/edge-kinds.ts`. A NAME, not a style: the model stays free of
    * rendering, and one registered React Flow edge type switches on it.
    * Absent falls back to the kind's own name.
    */
@@ -114,17 +114,15 @@ export interface GraphSchemaSpec<N extends NodeKindDefs, E extends EdgeKindDefs>
   readonly dropRules?: readonly DropOnlyRule<N, E>[];
 }
 
-export function createGraphSchema<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const createGraphSchema = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   spec: GraphSchemaSpec<N, E>,
-): GraphSchema<N, E> {
-  return {
-    id: spec.id,
-    nodes: spec.nodes,
-    edges: spec.edges,
-    rules: spec.rules ?? [],
-    dropRules: spec.dropRules ?? [],
-  };
-}
+): GraphSchema<N, E> => ({
+  id: spec.id,
+  nodes: spec.nodes,
+  edges: spec.edges,
+  rules: spec.rules ?? [],
+  dropRules: spec.dropRules ?? [],
+});
 
 const registry = new Map<string, GraphSchema<never, never>>();
 
@@ -135,34 +133,38 @@ const registry = new Map<string, GraphSchema<never, never>>();
  * body is written once, in the consumer's package, and renders inside the
  * WebView against the real config, theme and hook.
  */
-export function registerGraphSchema<N extends NodeKindDefs, E extends EdgeKindDefs>(schema: GraphSchema<N, E>): void {
+export const registerGraphSchema = <N extends NodeKindDefs, E extends EdgeKindDefs>(
+  schema: GraphSchema<N, E>,
+): void => {
+  // SAFETY: the registry is heterogeneous by design; callers only read it back through `never`-typed generics, which they cannot misuse.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- erasing N/E generics for a heterogeneous registry has no non-chained spelling
   registry.set(schema.id, schema as unknown as GraphSchema<never, never>);
-}
+};
 
-export function getGraphSchema(id: string): GraphSchema<never, never> | undefined {
-  return registry.get(id);
-}
+export const getGraphSchema = (id: string): GraphSchema<never, never> | undefined => registry.get(id);
 
 /** Test seam. Registering the same id twice is legal; leaking between specs is not. */
-export function clearGraphSchemas(): void {
+export const clearGraphSchemas = (): void => {
   registry.clear();
-}
+};
 
-export function nodeKindSpec<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const nodeKindSpec = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   schema: GraphSchema<N, E>,
   kind: string,
-): NodeKindSpec<unknown> | undefined {
-  return (schema.nodes as Record<string, NodeKindSpec<unknown> | undefined>)[kind];
-}
+): NodeKindSpec<unknown> | undefined =>
+  // SAFETY: `schema.nodes` is a kind -> NodeKindSpec map; indexing by an arbitrary string may miss, hence `| undefined`.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- widening the mapped type to a string index for a lookup by runtime kind name
+  (schema.nodes as Record<string, NodeKindSpec<unknown> | undefined>)[kind];
 
 /** Resolves a node's ports, calling the `ports` function when the kind uses one. */
-export function resolvePorts<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const resolvePorts = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   schema: GraphSchema<N, E>,
   node: GraphNodeOf<N>,
-): readonly PortSpec[] {
+): readonly PortSpec[] => {
   const spec = nodeKindSpec(schema, node.kind);
   if (!spec) {
     return [];
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the declared `ports` union (array or function of data); Array.isArray does not narrow readonly arrays
   return typeof spec.ports === 'function' ? spec.ports(node.data) : spec.ports;
-}
+};

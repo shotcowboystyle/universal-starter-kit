@@ -19,8 +19,8 @@ import { SizableText, useTheme, View } from 'tamagui';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, getStraightPath } from '../react-flow/xy';
 import type { EdgeProps } from '../react-flow/xy';
 
-import { resolveEdgeStyle, themeTokenName } from './edgeStyle';
-import type { EdgePathKind, EdgeStyle } from './edgeStyle';
+import { resolveEdgeStyle, themeTokenName } from './edge-style';
+import type { EdgePathKind, EdgeStyle } from './edge-style';
 
 export const graphEdgeType = 'mpGraphEdge';
 
@@ -46,7 +46,10 @@ interface PathGeometry {
  * separate step builder, and the design's table names four path SHAPES, not
  * four functions.
  */
-export function buildEdgePath(path: EdgePathKind, geometry: PathGeometry): [d: string, labelX: number, labelY: number] {
+export const buildEdgePath = (
+  path: EdgePathKind,
+  geometry: PathGeometry,
+): [d: string, labelX: number, labelY: number] => {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition } = geometry;
   switch (path) {
     case 'bezier': {
@@ -77,8 +80,12 @@ export function buildEdgePath(path: EdgePathKind, geometry: PathGeometry): [d: s
       });
       return [d, labelX, labelY];
     }
+    default: {
+      const unknownPath: never = path;
+      throw new Error(`buildEdgePath: unknown path kind ${String(unknownPath)}`);
+    }
   }
-}
+};
 
 /**
  * The raw knob values an edge paints from.
@@ -90,11 +97,16 @@ export function buildEdgePath(path: EdgePathKind, geometry: PathGeometry): [d: s
  * which rebuilds that context inside the WebView, feeds this hook with no
  * change here.
  */
-export function useEdgeKnobs(): { borderWidth: BorderWidth; animation: Animation } {
+export interface EdgeKnobs {
+  readonly borderWidth: BorderWidth;
+  readonly animation: Animation;
+}
+
+export const useEdgeKnobs = (): EdgeKnobs => {
   const preset = usePresetContext();
   const knobs = preset ? { ...preset.preset.knobs, ...preset.overrides } : defaultKnobs;
   return { borderWidth: knobs.borderWidth, animation: knobs.animation };
-}
+};
 
 /**
  * A token is not a CSS value. `stroke: "$color9"` is an invalid declaration, so
@@ -108,17 +120,51 @@ export function useEdgeKnobs(): { borderWidth: BorderWidth; animation: Animation
  * `--mp-graph-edge-stroke` still wins when it lands, because it is the first
  * arm of the `var()` fallback below.
  */
-function useStrokeValue(stroke: string): string {
+const useStrokeValue = (stroke: string): string => {
   const theme = useTheme();
+  // SAFETY: Tamagui's theme proxy maps every token name to an optional `{ get }`
+  // gettable; a missing name yields undefined, which `entry?.get?.()` handles.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion, anti-slop/no-unknown-returns -- the theme's static type has no string index; the value is narrowed by the typeof check below
   const entry = (theme as unknown as Record<string, { get?: () => unknown } | undefined>)[themeTokenName(stroke)];
   const value = entry?.get?.();
   // `currentColor` rather than a hex fallback: a hex literal in this package is
-  // exactly what `edgeStyle.spec.ts` bans, and an edge that inherits the canvas
+  // exactly what `edge-style.test.ts` bans, and an edge that inherits the canvas
   // ink is still visible.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- a theme value may be a string or a number; only a string is a paintable colour
   return typeof value === 'string' ? value : 'currentColor';
-}
+};
 
-export function GraphEdgeComponent(props: EdgeProps) {
+/**
+ * §11 radius: a chip inside the canvas frame steps down, so it remaps to
+ * `borderRadiusNested`. Whole `knobProps.*` fragments only, per AGENTS.md — a
+ * cherry-picked token is how a chip ends up half-themed.
+ *
+ * Padding is `panelPadding`, the only complete padding fragment the recipes
+ * expose (`public/theme/src/theme/recipes.ts`). §11 rules the chip's RADIUS and
+ * says nothing about its padding, so this is the nearest whole fragment rather
+ * than an invented one.
+ */
+const EdgeLabel = ({ label, x, y }: { label: string; x: number; y: number }) => {
+  const { knobProps } = useResolvedKnobs({ component: 'GraphEdge' });
+  return (
+    <EdgeLabelRenderer>
+      <View
+        className="mp-graph-edge-label"
+        position="absolute"
+        transform={`translate(-50%, -50%) translate(${x}px, ${y}px)`}
+        pointerEvents="none"
+        {...knobProps.surface}
+        {...knobProps.borderRadiusNested}
+        {...knobProps.panelPadding}>
+        <SizableText {...knobProps.body}>{label}</SizableText>
+      </View>
+    </EdgeLabelRenderer>
+  );
+};
+
+export const GraphEdgeComponent = (props: EdgeProps) => {
+  // SAFETY: every edge registered under `graphEdgeType` is built with
+  // GraphEdgeData (or no data at all), and every field of it is optional.
   const data = (props.data ?? {}) as GraphEdgeData;
   const { borderWidth, animation } = useEdgeKnobs();
   const style: EdgeStyle = resolveEdgeStyle({
@@ -129,6 +175,7 @@ export function GraphEdgeComponent(props: EdgeProps) {
   });
   const strokeValue = useStrokeValue(style.stroke);
   const [d, labelX, labelY] = buildEdgePath(style.path, props);
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- React Flow's `label` is a ReactNode; only a string fits the text chip
   const label = data.label ?? (typeof props.label === 'string' ? props.label : undefined);
 
   return (
@@ -148,7 +195,7 @@ export function GraphEdgeComponent(props: EdgeProps) {
           ...props.style,
         }}
       />
-      {label ? (
+      {label !== undefined && label !== '' ? (
         <EdgeLabel
           label={label}
           x={labelX}
@@ -157,35 +204,7 @@ export function GraphEdgeComponent(props: EdgeProps) {
       ) : null}
     </>
   );
-}
-
-/**
- * §11 radius: a chip inside the canvas frame steps down, so it remaps to
- * `borderRadiusNested`. Whole `knobProps.*` fragments only, per AGENTS.md — a
- * cherry-picked token is how a chip ends up half-themed.
- *
- * Padding is `panelPadding`, the only complete padding fragment the recipes
- * expose (`public/theme/src/theme/recipes.ts`). §11 rules the chip's RADIUS and
- * says nothing about its padding, so this is the nearest whole fragment rather
- * than an invented one.
- */
-function EdgeLabel({ label, x, y }: { label: string; x: number; y: number }) {
-  const { knobProps } = useResolvedKnobs({ component: 'GraphEdge' });
-  return (
-    <EdgeLabelRenderer>
-      <View
-        className="mp-graph-edge-label"
-        position="absolute"
-        transform={`translate(-50%, -50%) translate(${x}px, ${y}px)`}
-        pointerEvents="none"
-        {...knobProps.surface}
-        {...knobProps.borderRadiusNested}
-        {...knobProps.panelPadding}>
-        <SizableText {...knobProps.body}>{label}</SizableText>
-      </View>
-    </EdgeLabelRenderer>
-  );
-}
+};
 
 export const GraphEdge = memo(GraphEdgeComponent);
 

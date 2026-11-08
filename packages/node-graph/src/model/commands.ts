@@ -39,19 +39,19 @@ const noop = <N extends NodeKindDefs, E extends EdgeKindDefs>(): GraphCommand<N,
   commands: [],
 });
 
-function insert<T>(list: readonly T[], items: readonly T[], at: number | undefined): T[] {
+const insert = <T>(list: readonly T[], items: readonly T[], at: number | undefined): T[] => {
   if (at === undefined || at >= list.length) {
     return [...list, ...items];
   }
   const copy = [...list];
   copy.splice(Math.max(0, at), 0, ...items);
   return copy;
-}
+};
 
-export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const applyCommand = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   doc: GraphDocument<N, E>,
   command: GraphCommand<N, E>,
-): GraphDocument<N, E> {
+): GraphDocument<N, E> => {
   switch (command.t) {
     case 'addNodes': {
       return { ...doc, nodes: insert(doc.nodes, command.nodes, command.at) };
@@ -75,7 +75,9 @@ export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
         ...doc,
         nodes: doc.nodes.map((node) => {
           const delta = deltas[node.id];
-          return delta ? { ...node, position: { x: node.position.x + delta.x, y: node.position.y + delta.y } } : node;
+          return delta === undefined
+            ? node
+            : { ...node, position: { x: node.position.x + delta.x, y: node.position.y + delta.y } };
         }),
       };
     }
@@ -86,7 +88,7 @@ export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
         ...doc,
         nodes: doc.nodes.map((node) => {
           const position = positions[node.id];
-          return position ? { ...node, position } : node;
+          return position === undefined ? node : { ...node, position };
         }),
       };
     }
@@ -95,6 +97,7 @@ export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
       return {
         ...doc,
         nodes: doc.nodes.map((node) =>
+          // SAFETY: the command was built for this node's kind, so `data` matches that kind's payload type.
           node.id === command.id ? ({ ...node, data: command.data } as GraphNodeOf<N>) : node,
         ),
       };
@@ -113,16 +116,26 @@ export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
       return {
         ...doc,
         edges: doc.edges.map((edge) =>
+          // SAFETY: the command was built for this edge's kind, so `data` matches that kind's payload type.
           edge.id === command.id ? ({ ...edge, data: command.data } as GraphEdgeOf<E>) : edge,
         ),
       };
     }
 
     case 'batch': {
-      return command.commands.reduce<GraphDocument<N, E>>(applyCommand, doc);
+      let current = doc;
+      for (const step of command.commands) {
+        current = applyCommand(current, step);
+      }
+      return current;
+    }
+
+    default: {
+      const exhausted: never = command;
+      return exhausted;
     }
   }
-}
+};
 
 /**
  * `0 - v`, not `-v`. Negating a zero component gives -0, and `Object.is(-0, 0)`
@@ -130,41 +143,62 @@ export function applyCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
  * to the same command written by hand, and two structurally identical journal
  * entries would diff. `0 - 0` is 0 and every other value negates as usual.
  */
-function negate(deltas: Readonly<Record<NodeId, XY>>): Record<NodeId, XY> {
+const negate = (deltas: Readonly<Record<NodeId, XY>>): Record<NodeId, XY> => {
   const out: Record<NodeId, XY> = {};
   for (const [id, delta] of Object.entries(deltas)) {
     out[id] = { x: 0 - delta.x, y: 0 - delta.y };
   }
   return out;
-}
+};
 
-export function invertCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
+/**
+ * One insert per item, at its ORIGINAL index, ascending. Applied in that
+ * order each insert shifts the ones after it into place, so the arrays
+ * come back identical — not merely with the same members. React Flow
+ * paints later nodes on top, so order is a visible property.
+ */
+const restoreRemovedNodes = <N extends NodeKindDefs, E extends EdgeKindDefs>(
+  doc: GraphDocument<N, E>,
+  gone: ReadonlySet<NodeId>,
+): GraphCommand<N, E> => {
+  const restores: GraphCommand<N, E>[] = [];
+  for (const [at, node] of doc.nodes.entries()) {
+    if (gone.has(node.id)) {
+      restores.push({ t: 'addNodes', nodes: [node], at });
+    }
+  }
+  for (const [at, edge] of doc.edges.entries()) {
+    if (gone.has(edge.source.node) || gone.has(edge.target.node)) {
+      restores.push({ t: 'addEdges', edges: [edge], at });
+    }
+  }
+  return { t: 'batch', commands: restores };
+};
+
+const restoreRemovedEdges = <N extends NodeKindDefs, E extends EdgeKindDefs>(
+  doc: GraphDocument<N, E>,
+  gone: ReadonlySet<EdgeId>,
+): GraphCommand<N, E> => {
+  const restores: GraphCommand<N, E>[] = [];
+  for (const [at, edge] of doc.edges.entries()) {
+    if (gone.has(edge.id)) {
+      restores.push({ t: 'addEdges', edges: [edge], at });
+    }
+  }
+  return { t: 'batch', commands: restores };
+};
+
+export const invertCommand = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   doc: GraphDocument<N, E>,
   command: GraphCommand<N, E>,
-): GraphCommand<N, E> {
+): GraphCommand<N, E> => {
   switch (command.t) {
     case 'addNodes': {
       return { t: 'removeNodes', ids: command.nodes.map((node) => node.id) };
     }
 
     case 'removeNodes': {
-      const gone = new Set(command.ids);
-      // One insert per item, at its ORIGINAL index, ascending. Applied in that
-      // order each insert shifts the ones after it into place, so the arrays
-      // come back identical — not merely with the same members. React Flow
-      // paints later nodes on top, so order is a visible property.
-      const restores: GraphCommand<N, E>[] = [];
-      doc.nodes.forEach((node, at) => {
-        if (gone.has(node.id)) {
-          restores.push({ t: 'addNodes', nodes: [node], at });
-        }
-      });
-      doc.edges.forEach((edge, at) => {
-        if (gone.has(edge.source.node) || gone.has(edge.target.node)) {
-          restores.push({ t: 'addEdges', edges: [edge], at });
-        }
-      });
-      return { t: 'batch', commands: restores };
+      return restoreRemovedNodes(doc, new Set(command.ids));
     }
 
     case 'moveNodes': {
@@ -192,14 +226,7 @@ export function invertCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
     }
 
     case 'removeEdges': {
-      const gone = new Set(command.ids);
-      const restores: GraphCommand<N, E>[] = [];
-      doc.edges.forEach((edge, at) => {
-        if (gone.has(edge.id)) {
-          restores.push({ t: 'addEdges', edges: [edge], at });
-        }
-      });
-      return { t: 'batch', commands: restores };
+      return restoreRemovedEdges(doc, new Set(command.ids));
     }
 
     case 'setEdgeData': {
@@ -217,7 +244,12 @@ export function invertCommand<N extends NodeKindDefs, E extends EdgeKindDefs>(
         inverses.push(invertCommand(current, step));
         current = applyCommand(current, step);
       }
-      return { t: 'batch', commands: inverses.reverse() };
+      return { t: 'batch', commands: inverses.toReversed() };
+    }
+
+    default: {
+      const exhausted: never = command;
+      return exhausted;
     }
   }
-}
+};

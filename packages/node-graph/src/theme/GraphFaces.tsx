@@ -60,11 +60,9 @@ export interface GraphFacesProps {
 }
 
 /** `${weight} 16px "${family}"` — the shorthand `document.fonts` wants. */
-function faceQuery(face: GraphFaceAsset): string {
-  return `${face.weight} 16px "${face.family}"`;
-}
+const faceQuery = (face: GraphFaceAsset): string => `${face.weight} 16px "${face.family}"`;
 
-async function loadWithin(query: string, timeoutMs: number): Promise<boolean> {
+const loadWithin = async (query: string, timeoutMs: number): Promise<boolean> => {
   const fonts = typeof document === 'undefined' ? undefined : document.fonts;
   if (!fonts) {
     return false;
@@ -72,17 +70,23 @@ async function loadWithin(query: string, timeoutMs: number): Promise<boolean> {
   // Promise.race rather than an abort: FontFaceSet.load has no cancellation, so
   // a hung fetch would otherwise hold the canvas at the fallback family for as
   // long as the network takes.
+  // oxlint-disable-next-line promise/avoid-new -- setTimeout has no promise form in the browser; this is the race's timeout arm
   const timed = new Promise<boolean>((resolve) => {
     setTimeout(() => {
       resolve(false);
     }, timeoutMs);
   });
-  const loaded = fonts
-    .load(query)
-    .then((matched) => matched.length > 0 && fonts.check(query))
-    .catch(() => false);
-  return await Promise.race([loaded, timed]);
-}
+  const confirm = async (): Promise<boolean> => {
+    try {
+      const matched = await fonts.load(query);
+      return matched.length > 0 && fonts.check(query);
+    } catch {
+      // Safe to continue: a load that rejects is a face that did not land, which is exactly what `false` reports.
+      return false;
+    }
+  };
+  return await Promise.race([confirm(), timed]);
+};
 
 /**
  * Resolves each face to the mechanism that actually delivered it.
@@ -90,14 +94,16 @@ async function loadWithin(query: string, timeoutMs: number): Promise<boolean> {
  * Returns the URIs still worth honouring, so the sheet re-renders with base64
  * for the ones that did not answer.
  */
-export function useGraphFaces(
+export interface GraphFacesResult {
+  readonly uris: Readonly<Record<string, string>>;
+  readonly statuses: readonly GraphFaceStatus[];
+}
+
+export const useGraphFaces = (
   faces: readonly GraphFaceAsset[],
   assetUris: Readonly<Record<string, string>> | undefined,
   timeoutMs: number,
-): {
-  readonly uris: Readonly<Record<string, string>>;
-  readonly statuses: readonly GraphFaceStatus[];
-} {
+): GraphFacesResult => {
   const requested = useMemo(() => assetUris ?? {}, [assetUris]);
   const [resolved, setResolved] = useState<Readonly<Record<string, GraphFaceSource>>>({});
 
@@ -108,44 +114,41 @@ export function useGraphFaces(
     let live = true;
     const run = async () => {
       const next: Record<string, GraphFaceSource> = {};
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `facesKey` stands in for `faces`; see the dependency list
       for (const face of faces) {
         const query = faceQuery(face);
         if (requested[face.id]) {
-          // eslint-disable-next-line no-await-in-loop
+          // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- faces are probed one at a time so each gets its own timeout budget
           const ok = await loadWithin(query, timeoutMs);
-          if (ok) {
-            next[face.id] = 'asset';
-            continue;
-          }
-          // The URL did not answer. The sheet has not re-rendered with the
+          // When the URL did not answer: the sheet has not re-rendered with the
           // bytes yet — that happens on the render this `setResolved` causes —
           // so there is nothing to confirm in this pass. Reported as `inline`
           // optimistically, which is the one case where the value means
           // "falling back" rather than "landed".
-          next[face.id] = 'inline';
-          continue;
+          next[face.id] = ok ? 'asset' : 'inline';
+        } else {
+          /**
+           * No URL was offered, so the sheet ALREADY carries this face's bytes
+           * and the load is confirmable right now — so confirm it.
+           *
+           * It did not, until MPO-211. The branch's own comment said it would
+           * ("confirm THOSE land") and the code marked `inline` without asking,
+           * which made `source: "inline"` mean "we gave up on the URL" rather
+           * than "the bytes are available". Measured on the iPhone 16e: the
+           * canvas reported every face `inline` and design 6.3's probe, which
+           * runs on the way to `ready`, then measured the FALLBACK family and
+           * reported `MISS · 205.28px vs 205.28px` on a canvas whose labels were
+           * about to paint in Inter. A verdict that arrives before the thing it
+           * judges is worse than no verdict.
+           *
+           * This is the path the DOM bundle takes for every face: a `require()`d
+           * asset URL is the host's to produce and cannot cross the bridge, so
+           * the canvas mounts `GraphFaces` with no `assetUris` at all.
+           */
+          // oxlint-disable-next-line eslint/no-await-in-loop -- faces are probed one at a time so each gets its own timeout budget
+          const landed = await loadWithin(query, timeoutMs);
+          next[face.id] = landed ? 'inline' : 'failed';
         }
-        /**
-         * No URL was offered, so the sheet ALREADY carries this face's bytes
-         * and the load is confirmable right now — so confirm it.
-         *
-         * It did not, until MPO-211. The branch's own comment said it would
-         * ("confirm THOSE land") and the code marked `inline` without asking,
-         * which made `source: "inline"` mean "we gave up on the URL" rather
-         * than "the bytes are available". Measured on the iPhone 16e: the
-         * canvas reported every face `inline` and design 6.3's probe, which
-         * runs on the way to `ready`, then measured the FALLBACK family and
-         * reported `MISS · 205.28px vs 205.28px` on a canvas whose labels were
-         * about to paint in Inter. A verdict that arrives before the thing it
-         * judges is worse than no verdict.
-         *
-         * This is the path the DOM bundle takes for every face: a `require()`d
-         * asset URL is the host's to produce and cannot cross the bridge, so
-         * the canvas mounts `GraphFaces` with no `assetUris` at all.
-         */
-        // eslint-disable-next-line no-await-in-loop
-        const landed = await loadWithin(query, timeoutMs);
-        next[face.id] = landed ? 'inline' : 'failed';
       }
       if (live) {
         setResolved(next);
@@ -180,13 +183,13 @@ export function useGraphFaces(
         id: face.id,
         family: face.family,
         weight: face.weight,
-        source: resolved[face.id] ?? ('pending' as GraphFaceSource),
+        source: resolved[face.id] ?? 'pending',
       })),
     [faces, resolved],
   );
 
   return { uris, statuses };
-}
+};
 
 /**
  * The `@font-face` sheet, plus the asset-URL-first resolution behind it.
@@ -206,16 +209,17 @@ export function useGraphFaces(
  * should read `GraphDiagnostics`, where the probe that ran INSIDE the WebView
  * arrives over the `ready` event.
  */
-export function GraphFaces({
+export const GraphFaces = ({
   faces = generatedGraphFaces,
   assetUris,
   timeoutMs = 1500,
   onStatus,
-}: GraphFacesProps): ReactNode {
+}: GraphFacesProps): ReactNode => {
   const { uris, statuses } = useGraphFaces(faces, assetUris, timeoutMs);
   const sheet = useMemo(() => graphFaceCss(faces, uris), [faces, uris]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-prop-callback-in-effect, react-doctor/no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent -- `onStatus` is the public reporting contract; statuses settle asynchronously after the font probe
     onStatus?.(statuses);
   }, [onStatus, statuses]);
 
@@ -230,4 +234,4 @@ export function GraphFaces({
       {sheet}
     </style>
   );
-}
+};

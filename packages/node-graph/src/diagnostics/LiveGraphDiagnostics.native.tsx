@@ -27,10 +27,10 @@ import { SizableText, YStack } from 'tamagui';
 
 import type { GraphDiagnosticsWire } from '../dom/wire';
 import { NodeGraph } from '../NodeGraph.native';
-import { demoGraphSchema } from '../react-flow/demoNodeBody';
+import { demoGraphSchema } from '../react-flow/demo-node-body';
 import { demoDocumentLarge } from '../react-flow/fixtures';
 
-import { graphDiagnosticsFromWire } from './fromWire';
+import { graphDiagnosticsFromWire } from './from-wire';
 import { GraphDiagnostics } from './GraphDiagnostics';
 
 const schema = demoGraphSchema();
@@ -38,7 +38,7 @@ const schema = demoGraphSchema();
 /** The same twelve `NodeGraph/NodeGraph` → `Main` mounts. */
 const document12 = demoDocumentLarge(12);
 
-export function LiveGraphDiagnostics() {
+export const LiveGraphDiagnostics = () => {
   const [wire, setWire] = useState<GraphDiagnosticsWire | null>(null);
 
   return (
@@ -71,9 +71,9 @@ export function LiveGraphDiagnostics() {
         <SizableText
           size="$2"
           fontFamily="$mono">
-          waiting for the canvas's ready event…
+          waiting for the canvas&apos;s ready event…
         </SizableText>
       )}
     </YStack>
   );
-}
+};

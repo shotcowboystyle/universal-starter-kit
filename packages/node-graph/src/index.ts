@@ -15,8 +15,12 @@ export { NodeGraph } from './NodeGraph';
 export type { NodeGraphProps } from './NodeGraph';
 export { graphCanvasDefaults, NodeGraphWeb } from './react-flow/NodeGraphWeb';
 export type { NodeGraphWebProps } from './react-flow/NodeGraphWeb';
-export { defaultGraphNodeType, useGraphController } from './react-flow/useGraphController';
-export type { GraphController, GraphRelayoutOptions, UseGraphControllerOptions } from './react-flow/useGraphController';
+export { defaultGraphNodeType, useGraphController } from './react-flow/use-graph-controller';
+export type {
+  GraphController,
+  GraphRelayoutOptions,
+  UseGraphControllerOptions,
+} from './react-flow/use-graph-controller';
 export { GraphActionsProvider, useGraphActions } from './react-flow/GraphActions';
 /**
  * The imperative handle (design §9.1), on the WEB barrel as well as the native
@@ -24,8 +28,8 @@ export { GraphActionsProvider, useGraphActions } from './react-flow/GraphActions
  * serializable option, and a web story that could not rehearse the native shape
  * would be a story that proves nothing about the phone.
  */
-export { graphCommandNames } from './react-flow/graphHandle';
-export type { GraphCommands, GraphCommandSlot, NodeGraphHandle } from './react-flow/graphHandle';
+export { graphCommandNames } from './react-flow/graph-handle';
+export type { GraphCommands, GraphCommandSlot, NodeGraphHandle } from './react-flow/graph-handle';
 export { GraphCommandBridge } from './react-flow/GraphCommandBridge';
 export type { GraphCommandBridgeProps } from './react-flow/GraphCommandBridge';
 export { GraphPaintProbe } from './react-flow/GraphPaintProbe';
@@ -40,21 +44,21 @@ export type { DomOnlyStoryProps } from './native/DomOnlyStory';
  */
 export type { GraphEventWire, LassoPhaseWire, PerfReportWire } from './dom/wire';
 export type { GraphActions } from './react-flow/GraphActions';
-export type { GraphFlowNodeData } from './react-flow/flowAdapter';
-export { toFlowEdges, toFlowNodes } from './react-flow/flowAdapter';
+export type { GraphFlowNodeData } from './react-flow/flow-adapter';
+export { toFlowEdges, toFlowNodes } from './react-flow/flow-adapter';
 export { GraphNodeHost, useGraphHost } from './react-flow/GraphNodeHost';
 export { ConnectionPuck, connectionPuckLabel } from './react-flow/ConnectionPuck';
 export type { ConnectionPuckLabel, ConnectionPuckProps } from './react-flow/ConnectionPuck';
-export { filterLegalCandidates, isLegalTarget, legalTargets } from './interaction/legalTargets';
-export type { LegalTargetQuery } from './interaction/legalTargets';
-export { mountedNodeCount, registerMountedNode, resetNodeCensus, subscribeNodeCensus } from './react-flow/nodeCensus';
+export { filterLegalCandidates, isLegalTarget, legalTargets } from './interaction/legal-targets';
+export type { LegalTargetQuery } from './interaction/legal-targets';
+export { mountedNodeCount, registerMountedNode, resetNodeCensus, subscribeNodeCensus } from './react-flow/node-census';
 export { demoControlSchemaId, demoGraphSchemaId } from './react-flow/fixtures';
 export type { GraphHostValue } from './react-flow/GraphNodeHost';
 
 export { GraphEdge, graphEdgeType, graphEdgeTypes } from './edges/GraphEdge';
 export type { GraphEdgeData } from './edges/GraphEdge';
-export { builtinEdgeKindNames, builtinEdgeKinds } from './edges/edgeKinds';
-export type { BuiltinEdgeData, BuiltinEdgeKind } from './edges/edgeKinds';
+export { builtinEdgeKindNames, builtinEdgeKinds } from './edges/edge-kinds';
+export type { BuiltinEdgeData, BuiltinEdgeKind } from './edges/edge-kinds';
 export {
   dashAnimation,
   edgeAppearances,
@@ -62,15 +66,15 @@ export {
   edgeStrokeWidth,
   edgeStrokeWidths,
   resolveEdgeStyle,
-} from './edges/edgeStyle';
-export type { EdgeAppearance, EdgeMarker, EdgePathKind, EdgeStyle } from './edges/edgeStyle';
+} from './edges/edge-style';
+export type { EdgeAppearance, EdgeMarker, EdgePathKind, EdgeStyle } from './edges/edge-style';
 
 export { GraphBootFailure, GraphDiagnostics } from './diagnostics/GraphDiagnostics';
-export { graphDiagnosticsFromWire } from './diagnostics/fromWire';
+export { graphDiagnosticsFromWire } from './diagnostics/from-wire';
 export type { GraphDiagnosticsProps } from './diagnostics/GraphDiagnostics';
-export { useGraphDiagnostics } from './diagnostics/useGraphDiagnostics';
-export { graphErrorGlobalKey, readGraphError, recordGraphError, resetGraphError } from './diagnostics/lastError';
-export type { GraphErrorRecord } from './diagnostics/lastError';
+export { useGraphDiagnostics } from './diagnostics/use-graph-diagnostics';
+export { graphErrorGlobalKey, readGraphError, recordGraphError, resetGraphError } from './diagnostics/last-error';
+export type { GraphErrorRecord } from './diagnostics/last-error';
 export type {
   GraphDiagnostics as GraphDiagnosticsRecord,
   GraphDiagnosticsInput,
@@ -99,12 +103,12 @@ export { resolveEnvelopeThemeName } from './knobs/KnobEnvelopeProvider';
 export type { KnobEnvelopeProviderProps } from './knobs/KnobEnvelopeProvider';
 export { knobEnvelopeIdentity, knobEnvelopeSchemaVersion, knobsForEnvelope } from './knobs/envelope';
 export type { GraphFontRef, KnobEnvelope } from './knobs/envelope';
-export { useKnobEnvelope } from './knobs/useKnobEnvelope';
-export type { UseKnobEnvelopeOptions } from './knobs/useKnobEnvelope';
-export { useGraphNodeKnobs } from './knobs/graphKnobs';
-export type { GraphNodeKnobs, UseGraphNodeKnobsOptions } from './knobs/graphKnobs';
+export { useKnobEnvelope } from './knobs/use-knob-envelope';
+export type { UseKnobEnvelopeOptions } from './knobs/use-knob-envelope';
+export { useGraphNodeKnobs } from './knobs/graph-knobs';
+export type { GraphNodeKnobs, UseGraphNodeKnobsOptions } from './knobs/graph-knobs';
 
-export { lassoFlowProps, lassoHoldMs, lassoSlopPx, useLassoSelect } from './interaction/useLassoSelect';
+export { lassoFlowProps, lassoHoldMs, lassoSlopPx, useLassoSelect } from './interaction/use-lasso-select';
 export type {
   GraphInteractionMode,
   LassoFlowProps,
@@ -112,9 +116,9 @@ export type {
   LassoSelect,
   LassoViewportPort,
   UseLassoSelectOptions,
-} from './interaction/useLassoSelect';
-export { installLassoIntercept } from './interaction/lassoIntercept';
-export type { LassoIntercept, LassoInterceptOptions } from './interaction/lassoIntercept';
+} from './interaction/use-lasso-select';
+export { installLassoIntercept } from './interaction/lasso-intercept';
+export type { LassoIntercept, LassoInterceptOptions } from './interaction/lasso-intercept';
 export { LassoOverlay } from './react-flow/LassoOverlay';
 export type { LassoOverlayProps } from './react-flow/LassoOverlay';
 export { GraphToolbar } from './native/GraphToolbar';
@@ -125,8 +129,8 @@ export type { GraphNodeProps } from './nodes/GraphNode';
 export { GraphPort } from './nodes/GraphPort';
 export { defaultOverviewZoom, detailOpacity, isOverview, lodForZoom } from './nodes/lod';
 export type { GraphRenderMode } from './nodes/lod';
-export { OverviewNode } from './nodes/overviewNode';
-export type { OverviewNodeProps } from './nodes/overviewNode';
+export { OverviewNode } from './nodes/overview-node';
+export type { OverviewNodeProps } from './nodes/overview-node';
 export type { GraphPortProps } from './nodes/GraphPort';
 export {
   FINE_PORT_HIT_MIN,
@@ -136,8 +140,8 @@ export {
   portGeometry,
   portHitSize,
   portRegionInset,
-} from './nodes/handleGeometry';
-export type { PortGeometry, PortRect } from './nodes/handleGeometry';
+} from './nodes/handle-geometry';
+export type { PortGeometry, PortRect } from './nodes/handle-geometry';
 export {
   containerRadiusPx,
   defaultNodeMeasure,
@@ -151,7 +155,7 @@ export {
   nodeRadiusTokenPx,
   portSpacing,
   verticalPortCrowd,
-} from './nodes/nodeMeasure';
+} from './nodes/node-measure';
 export type {
   GraphNodeMeasure,
   GraphNodePort,
@@ -159,12 +163,12 @@ export type {
   GraphNodeSizeKnob,
   GraphNodeSpaceKnob,
   GraphPortSide,
-} from './nodes/nodeMeasure';
+} from './nodes/node-measure';
 
 export { GraphVars, graphRootClassName, graphVarsSheet, useGraphCssVars } from './theme/GraphVarsStyle';
 export type { GraphVarsProps } from './theme/GraphVarsStyle';
-export { graphCssVars } from './theme/graphVars';
-export type { GraphCssVarsOptions, GraphThemeAccess } from './theme/graphVars';
+export { graphCssVars } from './theme/graph-vars';
+export type { GraphCssVarsOptions, GraphThemeAccess } from './theme/graph-vars';
 
 /**
  * The DOM-entry registry, on the WEB barrel too, and that is deliberate.
@@ -176,8 +180,8 @@ export type { GraphCssVarsOptions, GraphThemeAccess } from './theme/graphVars';
  * import — and on web nothing reads it, because `NodeGraphWeb` mounts React
  * Flow directly and there is no bridge to cross.
  */
-export { clearNodeGraphDomEntry, getNodeGraphDomEntry, setNodeGraphDomEntry } from './native/domEntryRegistry';
-export type { NodeGraphDomEntry } from './native/domEntryRegistry';
+export { clearNodeGraphDomEntry, getNodeGraphDomEntry, setNodeGraphDomEntry } from './native/dom-entry-registry';
+export type { NodeGraphDomEntry } from './native/dom-entry-registry';
 
 export { layoutWithDagre, defaultLayoutSpacing } from './layout/dagre';
 export { buildLayoutRequest, layout, reconcilePositions } from './layout/layout';
@@ -202,5 +206,5 @@ export type {
   LayoutWorkerRequest,
   LayoutWorkerResponse,
 } from './layout/types';
-export { cloneStructured, ensureStructuredClone } from './layout/structuredCloneShim';
+export { cloneStructured, ensureStructuredClone } from './layout/structured-clone-shim';
 export { layoutWorkerBytes, layoutWorkerSha256 } from './layout/worker.generated';

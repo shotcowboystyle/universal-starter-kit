@@ -58,6 +58,7 @@ export interface LayoutRunnerFallback {
  * type leaks into a package that also builds for native.
  */
 interface WorkerLike {
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- mirrors Worker#postMessage, which accepts any structured-cloneable value
   postMessage: (message: unknown) => void;
   addEventListener: (type: string, listener: (event: { data?: unknown }) => void) => void;
   removeEventListener?: (type: string, listener: (event: { data?: unknown }) => void) => void;
@@ -67,69 +68,80 @@ interface WorkerLike {
 type WorkerCtor = new (url: string) => WorkerLike;
 
 let fallback: LayoutRunnerFallback | null = null;
-let cached: Promise<LayoutRunner> | undefined;
+let cached: Promise<LayoutRunner> | null = null;
 let warned = false;
 
 /** Null when the resolved runner is the right one for the platform. */
-export function readLayoutRunnerFallback(): LayoutRunnerFallback | null {
-  return fallback;
-}
+export const readLayoutRunnerFallback = (): LayoutRunnerFallback | null => fallback;
+
+const disposeWhenSettled = async (pending: Promise<LayoutRunner>): Promise<void> => {
+  try {
+    const runner = await pending;
+    runner.dispose();
+  } catch {
+    // Safe to ignore: a runner that never resolved holds nothing to dispose.
+  }
+};
 
 /** Test seam, and the hook a host uses to re-probe after a realm change. */
-export function resetLayoutRunner(): void {
+export const resetLayoutRunner = (): void => {
   const pending = cached;
-  cached = undefined;
+  cached = null;
   fallback = null;
   warned = false;
   if (pending) {
-    void pending
-      .then((runner) => {
-        runner.dispose();
-      })
-      .catch(() => {});
+    void disposeWhenSettled(pending);
   }
-}
+};
 
-function reportFallback(kind: LayoutRunnerKind, reason: string): void {
+const reportFallback = (kind: LayoutRunnerKind, reason: string): void => {
   fallback = { kind, reason };
   if (warned || process.env.NODE_ENV === 'production') {
     return;
   }
   warned = true;
-  // oxlint-disable-next-line no-console -- the sink design §8 asks for by name
   console.warn(
     `[@repo/node-graph] auto-layout fell back to \`${kind}\`: ${reason}. ` +
       'A relayout will run on the main thread and can drop frames. A device perf run ' +
       'that resolved this way is not a valid measurement (design §13.2).',
   );
-}
+};
 
-function hermesPresent(): boolean {
+const hermesPresent = (): boolean => {
+  // SAFETY: only reads an optional property; absence yields undefined.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- `HermesInternal` is an engine global absent from lib typings
   const marker = (globalThis as { HermesInternal?: unknown }).HermesInternal;
   return marker !== undefined && marker !== null;
-}
+};
 
-function workerConstructor(): WorkerCtor | undefined {
+const workerConstructor = (): WorkerCtor | undefined => {
+  // SAFETY: only reads an optional property; it is checked with typeof below.
   const ctor = (globalThis as { Worker?: unknown }).Worker;
+  // SAFETY: a global `Worker` function is the DOM Worker constructor, whose
+  // instances satisfy the minimal WorkerLike shape this module uses.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof, typescript/no-unsafe-type-assertion -- the global may be absent or shadowed; only a function is a constructor candidate
   return typeof ctor === 'function' ? (ctor as WorkerCtor) : undefined;
-}
+};
 
-function inlineRunner(kind: 'inline' | 'hermes-inline'): LayoutRunner {
-  return {
-    kind,
-    // Still a Promise. `layout()`'s contract does not bend for the runner, and
-    // a caller that awaits on web must not have to branch on native.
-    run: async (request) => ({ ...layoutWithDagre(request), runner: kind }),
-    dispose: () => {},
-  };
-}
+const inlineRunner = (kind: 'inline' | 'hermes-inline'): LayoutRunner => ({
+  kind,
+  // Still a Promise. `layout()`'s contract does not bend for the runner, and
+  // a caller that awaits on web must not have to branch on native.
+  run: async (request) => ({ ...layoutWithDagre(request), runner: kind }),
+  dispose: () => {
+    // Nothing to release: the inline runner holds no worker or URL.
+  },
+});
 
 /** `hermes-inline` where Hermes is real, plain `inline` otherwise. */
-function nativeOrPlainInline(): LayoutRunner {
-  return inlineRunner(hermesPresent() ? 'hermes-inline' : 'inline');
+const nativeOrPlainInline = (): LayoutRunner => inlineRunner(hermesPresent() ? 'hermes-inline' : 'inline');
+
+interface SpawnedWorker {
+  readonly worker: WorkerLike;
+  readonly revoke: () => void;
 }
 
-function spawnBlobWorker(Ctor: WorkerCtor): { worker: WorkerLike; revoke: () => void } {
+const spawnBlobWorker = (Ctor: WorkerCtor): SpawnedWorker => {
   const blob = new Blob([layoutWorkerSource], { type: 'text/javascript' });
   const url = URL.createObjectURL(blob);
   try {
@@ -146,23 +158,32 @@ function spawnBlobWorker(Ctor: WorkerCtor): { worker: WorkerLike; revoke: () => 
     URL.revokeObjectURL(url);
     throw error;
   }
-}
+};
 
 /** `{ t: "ping" }` out, `pong` in, or the timeout wins. Never throws. */
-async function probe(worker: WorkerLike, timeoutMs: number): Promise<string | null> {
-  return await new Promise((resolve) => {
+const probe = async (worker: WorkerLike, timeoutMs: number): Promise<string | null> =>
+  // oxlint-disable-next-line promise/avoid-new -- adapts the worker's event API (message/error/timeout) to a Promise
+  await new Promise((resolve) => {
     let settled = false;
     const finish = (reason: string | null) => {
       if (settled) {
         return;
       }
       settled = true;
+      // The handlers below and `finish` reference each other; `finish` only
+      // runs after all three bindings are initialised.
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
       clearTimeout(timer);
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
       worker.removeEventListener?.('message', onMessage);
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
       worker.removeEventListener?.('error', onError);
       resolve(reason);
     };
     const onMessage = (event: { data?: unknown }) => {
+      // SAFETY: this worker runs only `worker.entry.ts`, which posts nothing
+      // but LayoutWorkerResponse messages; only the `t` tag is read here.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- message data is untyped at the worker boundary
       if ((event.data as LayoutWorkerResponse | undefined)?.t === 'pong') {
         finish(null);
       }
@@ -176,18 +197,21 @@ async function probe(worker: WorkerLike, timeoutMs: number): Promise<string | nu
     worker.addEventListener('message', onMessage);
     worker.addEventListener('error', onError);
     try {
+      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Worker#postMessage has no targetOrigin parameter
       worker.postMessage({ t: 'ping' });
     } catch (error) {
       finish(error instanceof Error ? error.message : String(error));
     }
   });
-}
 
-function workerRunner(worker: WorkerLike, revoke: () => void): LayoutRunner {
+const workerRunner = (worker: WorkerLike, revoke: () => void): LayoutRunner => {
   let nextId = 1;
   const pending = new Map<number, { resolve: (result: LayoutResult) => void; reject: (error: Error) => void }>();
 
   worker.addEventListener('message', (event) => {
+    // SAFETY: this worker runs only `worker.entry.ts`, which posts nothing but
+    // LayoutWorkerResponse messages.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- message data is untyped at the worker boundary
     const response = event.data as LayoutWorkerResponse | undefined;
     if (!response || response.t === 'pong') {
       return;
@@ -219,11 +243,14 @@ function workerRunner(worker: WorkerLike, revoke: () => void): LayoutRunner {
   return {
     kind: 'worker-blob',
     run: async (request) =>
+      // oxlint-disable-next-line promise/avoid-new -- the answer arrives as a worker message matched by id
       await new Promise<LayoutResult>((resolve, reject) => {
         // Ids, not arrival order: two relayouts can be in flight at once and
         // the second may well answer first.
-        const id = nextId++;
+        const id = nextId;
+        nextId += 1;
         pending.set(id, { resolve, reject });
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Worker#postMessage has no targetOrigin parameter
         worker.postMessage({ t: 'layout', id, request });
       }),
     dispose: () => {
@@ -232,9 +259,9 @@ function workerRunner(worker: WorkerLike, revoke: () => void): LayoutRunner {
       worker.terminate();
     },
   };
-}
+};
 
-export async function createLayoutRunner(options: LayoutRunnerOptions = {}): Promise<LayoutRunner> {
+export const createLayoutRunner = async (options: LayoutRunnerOptions = {}): Promise<LayoutRunner> => {
   const Ctor = workerConstructor();
   if (!Ctor) {
     // No `Worker` at all. On native that is the DESIGNED path, not a failure,
@@ -242,7 +269,7 @@ export async function createLayoutRunner(options: LayoutRunnerOptions = {}): Pro
     return nativeOrPlainInline();
   }
 
-  let spawned: { worker: WorkerLike; revoke: () => void };
+  let spawned: SpawnedWorker;
   try {
     spawned = spawnBlobWorker(Ctor);
   } catch (error) {
@@ -262,18 +289,19 @@ export async function createLayoutRunner(options: LayoutRunnerOptions = {}): Pro
   const runner = nativeOrPlainInline();
   reportFallback(runner.kind, refusal);
   return runner;
-}
+};
 
 /**
  * The process-wide runner. Probing costs a worker spawn and a round trip, and
  * doing it per relayout would put that on the interaction it is meant to make
  * cheap.
  */
-export async function getLayoutRunner(options?: LayoutRunnerOptions): Promise<LayoutRunner> {
+export const getLayoutRunner = async (options?: LayoutRunnerOptions): Promise<LayoutRunner> => {
   cached ??= createLayoutRunner(options);
   return await cached;
-}
+};
 
-export async function resolveRunner(options?: LayoutRunnerOptions): Promise<LayoutRunnerKind> {
-  return (await getLayoutRunner(options)).kind;
-}
+export const resolveRunner = async (options?: LayoutRunnerOptions): Promise<LayoutRunnerKind> => {
+  const runner = await getLayoutRunner(options);
+  return runner.kind;
+};

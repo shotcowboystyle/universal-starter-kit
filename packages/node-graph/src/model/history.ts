@@ -14,7 +14,7 @@
 
 import { applyCommand, invertCommand } from './commands';
 import type { GraphCommand } from './commands';
-import type { EdgeKindDefs, GraphDocument, NodeKindDefs } from './document';
+import type { EdgeKindDefs, GraphDocument, NodeId, NodeKindDefs, XY } from './document';
 
 export interface HistoryEntry<N extends NodeKindDefs, E extends EdgeKindDefs> {
   readonly redo: GraphCommand<N, E>;
@@ -49,32 +49,26 @@ export interface GraphHistory<N extends NodeKindDefs, E extends EdgeKindDefs> {
   readonly clear: () => void;
 }
 
-function movedIds(deltas: Readonly<Record<string, unknown>>): string[] {
-  return Object.keys(deltas).sort();
-}
+const movedIds = (deltas: Readonly<Record<NodeId, XY>>): NodeId[] => Object.keys(deltas).toSorted();
 
-function sameIds(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((id, i) => id === b[i]);
-}
+const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
 
-function addDeltas(
-  a: Readonly<Record<string, { x: number; y: number }>>,
-  b: Readonly<Record<string, { x: number; y: number }>>,
-): Record<string, { x: number; y: number }> {
-  const out: Record<string, { x: number; y: number }> = {};
+const addDeltas = (a: Readonly<Record<NodeId, XY>>, b: Readonly<Record<NodeId, XY>>): Record<NodeId, XY> => {
+  const out: Record<NodeId, XY> = {};
   for (const [id, delta] of Object.entries(a)) {
     out[id] = { ...delta };
   }
   for (const [id, delta] of Object.entries(b)) {
     const prior = out[id];
-    out[id] = prior ? { x: prior.x + delta.x, y: prior.y + delta.y } : { ...delta };
+    out[id] = prior === undefined ? { ...delta } : { x: prior.x + delta.x, y: prior.y + delta.y };
   }
   return out;
-}
+};
 
-export function createHistory<N extends NodeKindDefs, E extends EdgeKindDefs>(
+export const createHistory = <N extends NodeKindDefs, E extends EdgeKindDefs>(
   options: HistoryOptions = {},
-): GraphHistory<N, E> {
+): GraphHistory<N, E> => {
   const limit = options.limit ?? 100;
   const coalesceMs = options.coalesceMs ?? 400;
   const now = options.now ?? (() => Date.now());
@@ -90,7 +84,11 @@ export function createHistory<N extends NodeKindDefs, E extends EdgeKindDefs>(
    * quietly covers for it, which is exactly what a mutation run found when this
    * was split in two.
    */
-  function coalesce(command: GraphCommand<N, E>, undo: GraphCommand<N, E>, at: number): HistoryEntry<N, E> | undefined {
+  const coalesce = (
+    command: GraphCommand<N, E>,
+    undo: GraphCommand<N, E>,
+    at: number,
+  ): HistoryEntry<N, E> | undefined => {
     const top = past.at(-1);
     if (!top) {
       return undefined;
@@ -124,7 +122,7 @@ export function createHistory<N extends NodeKindDefs, E extends EdgeKindDefs>(
       undo: { t: 'moveNodes', deltas: addDeltas(top.undo.deltas, undo.deltas) },
       at,
     };
-  }
+  };
 
   return {
     commit(doc, command) {
@@ -175,4 +173,4 @@ export function createHistory<N extends NodeKindDefs, E extends EdgeKindDefs>(
       future = [];
     },
   };
-}
+};

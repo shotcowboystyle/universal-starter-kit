@@ -12,7 +12,7 @@
  *  - elevation: `ignore`. Ports never cast a shadow.
  *
  * The 44pt region is a `::after` pseudo-element in `css/graph.css`, never
- * element growth — see §7.1 H2 and `handleGeometry.ts`. This component's only
+ * element growth — see §7.1 H2 and `handle-geometry.ts`. This component's only
  * job in that mechanism is to publish the two custom properties the sheet
  * reads, so the geometry has exactly one source.
  */
@@ -22,8 +22,8 @@ import type { CSSProperties } from 'react';
 
 import { Handle, Position } from '../react-flow/xy';
 
-import { paintedPortSize, portHitSize, portRegionInset } from './handleGeometry';
-import type { GraphNodeSizeKnob, GraphPortSide } from './nodeMeasure';
+import { paintedPortSize, portHitSize, portRegionInset } from './handle-geometry';
+import type { GraphNodeSizeKnob, GraphPortSide } from './node-measure';
 
 const positionForSide: Record<GraphPortSide, Position> = {
   left: Position.Left,
@@ -53,7 +53,7 @@ export interface GraphPortProps {
   readonly isConnectable?: boolean;
 }
 
-export function GraphPort({
+export const GraphPort = ({
   id,
   side,
   direction,
@@ -61,15 +61,19 @@ export function GraphPort({
   coarsePointer = isTouchSurface(),
   portSpacingPx,
   isConnectable = true,
-}: GraphPortProps) {
+}: GraphPortProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'GraphPort', intent });
+  // SAFETY: the knob resolver only ever hands a graph component one of the
+  // three size stops its kind declares (small / medium / large), which is
+  // exactly `GraphNodeSizeKnob`; the resolver's own type is the wider union.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const size = knobProps.size as GraphNodeSizeKnob;
 
   const painted = paintedPortSize(size);
   const hit = portHitSize({ size, coarsePointer, portSpacingPx });
   const borderWidthPx = knobProps.surface.borderWidth;
   // The zoom-1 inset. Not a style any more (see below) — it is REPORTED, on
-  // `data-graph-port-inset`, so the `HitTarget` story and `GraphPort.spec.tsx`
+  // `data-graph-port-inset`, so the `HitTarget` story and `GraphPort.test.tsx`
   // can read the number the sheet reduces to when nothing is zoomed.
   const inset = portRegionInset({ size, coarsePointer, portSpacingPx, borderWidthPx });
 
@@ -90,8 +94,12 @@ export function GraphPort({
     // `--mpo-graph-handle-inset` used to be published here as the answer. It is
     // gone rather than kept beside the calc: a var nothing reads is the kind of
     // drift that survives three refactors and then gets believed.
+    // SAFETY: widening a custom-property key to `string` only opts it out of
+    // CSSProperties' excess-property check; React writes any key as a style.
     ['--mpo-graph-handle-size' as string]: `${painted}px`,
+    // SAFETY: as above — a custom property, widened past the excess-property check.
     ['--mpo-graph-handle-hit' as string]: `${hit}px`,
+    // SAFETY: as above — a custom property, widened past the excess-property check.
     ['--mpo-graph-handle-border' as string]: `${borderWidthPx}px`,
     // §11: the circle is identity. Declared here as well as in the sheet so a
     // consumer who forgets to import the CSS still gets a round port rather
@@ -116,4 +124,4 @@ export function GraphPort({
       data-graph-port-inset={String(inset)}
     />
   );
-}
+};

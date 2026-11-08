@@ -16,12 +16,12 @@
 
 import { createContext, memo, useContext, useEffect, useMemo } from 'react';
 
-import type { EdgeKindDefs, GraphSchema, NodeKindDefs, PortSpec } from '../model/index';
-import { nodeKindSpec } from '../model/index';
+import type { EdgeKindDefs, GraphSchema, NodeKindDefs } from '../model/index';
+import { nodeKindSpec } from '../model/schema';
 import { lodForZoom } from '../nodes/lod';
 
-import type { GraphFlowNodeData } from './flowAdapter';
-import { registerMountedNode } from './nodeCensus';
+import type { GraphFlowNodeData } from './flow-adapter';
+import { registerMountedNode } from './node-census';
 import { useStore } from './xy';
 import type { NodeProps } from './xy';
 
@@ -32,6 +32,7 @@ export interface GraphHostValue {
   /** Touch surface: fields are display-only and taps route to the sheet. */
   readonly coarsePointer: boolean;
   readonly readOnly: boolean;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- node data is schema-defined per kind; the host cannot name it
   readonly setNodeData: (id: string, patch: Record<string, unknown>) => void;
 }
 
@@ -39,7 +40,7 @@ const GraphHostContext = createContext<GraphHostValue | null>(null);
 
 export const GraphHostProvider = GraphHostContext.Provider;
 
-export function useGraphHost(): GraphHostValue {
+export const useGraphHost = (): GraphHostValue => {
   const value = useContext(GraphHostContext);
   if (!value) {
     throw new Error(
@@ -48,10 +49,12 @@ export function useGraphHost(): GraphHostValue {
     );
   }
   return value;
-}
+};
 
-function GraphNodeHostComponent({ id, data, selected, dragging }: NodeProps) {
+const GraphNodeHostComponent = ({ id, data, selected, dragging }: NodeProps) => {
   const host = useGraphHost();
+  // SAFETY: every node React Flow mounts with this type was built by `toFlowNodes`, which writes GraphFlowNodeData.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
   const nodeData = data as unknown as GraphFlowNodeData;
   const zoom = useStore((state) => state.transform[2]);
   const spec = nodeKindSpec(host.schema, nodeData.kind);
@@ -70,6 +73,7 @@ function GraphNodeHostComponent({ id, data, selected, dragging }: NodeProps) {
   useEffect(() => registerMountedNode(id), [id]);
 
   const setData = useMemo(
+    // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- forwards GraphHostValue.setNodeData's patch unchanged
     () => (patch: Record<string, unknown>) => {
       host.setNodeData(id, patch);
     },
@@ -99,9 +103,11 @@ function GraphNodeHostComponent({ id, data, selected, dragging }: NodeProps) {
       readOnlyFields={host.readOnly || host.coarsePointer}
       ports={nodeData.ports}
       measure={spec.measure}
+      // SAFETY: `setData` forwards a patch for this node's own kind; `never` erases the per-kind data type the host cannot name.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       setData={setData as never}
     />
   );
-}
+};
 
 export const GraphNodeHost = memo(GraphNodeHostComponent);

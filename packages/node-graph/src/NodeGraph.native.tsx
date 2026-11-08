@@ -41,21 +41,22 @@
  * in the emitted bundle. Nothing threw. The canvas painted. So a canvas given
  * children now warns ONCE in dev, naming the two places a control may legally
  * go: a native SIBLING on `graphRef`, or a serializable option the DOM bundle
- * renders from. `native/graphChildren.ts` holds the message.
+ * renders from. `native/graph-children.ts` holds the message.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode, Ref } from 'react';
 
-import type { NodeGraphDomOptions } from './dom/NodeGraphDomShell';
+import type { NodeGraphDomOptions } from './dom/node-graph-dom-shell';
 import type { GraphEventWire, PerfReportWire, GraphDiagnosticsWire } from './dom/wire';
-import { useKnobEnvelope } from './knobs/useKnobEnvelope';
+import { useKnobEnvelope } from './knobs/use-knob-envelope';
+import { applyCommand } from './model/commands';
 import type { EdgeKindDefs, GraphCommand, GraphDocument, NodeKindDefs } from './model/index';
-import { applyCommand, serializeDocument } from './model/index';
-import type { NodeGraphDomEntry } from './native/domEntryRegistry';
-import { warnOnGraphChildren } from './native/graphChildren';
+import { serializeDocument } from './model/serialize';
+import type { NodeGraphDomEntry } from './native/dom-entry-registry';
+import { warnOnGraphChildren } from './native/graph-children';
 import { NodeGraphNative } from './native/NodeGraph.native';
-import type { NodeGraphHandle } from './react-flow/graphHandle';
+import type { NodeGraphHandle } from './react-flow/graph-handle';
 import type { NodeGraphWebProps } from './react-flow/NodeGraphWeb';
 
 /**
@@ -143,7 +144,7 @@ export type NodeGraphProps<N extends NodeKindDefs = NodeKindDefs, E extends Edge
   readonly onGraphEvent?: (event: GraphEventWire) => void;
 };
 
-export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphProps<N, E>) {
+export const NodeGraph = <N extends NodeKindDefs, E extends EdgeKindDefs>(props: NodeGraphProps<N, E>) => {
   const {
     coarsePointer,
     defaultDocument,
@@ -170,15 +171,16 @@ export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props:
     schema,
   } = props;
 
-  // Once per process, in dev. See `native/graphChildren.ts` for why a contract
+  // Once per process, in dev. See `native/graph-children.ts` for why a contract
   // that was already written down needed to start speaking.
   warnOnGraphChildren(props.children);
 
   // The host's own copy. Controlled beats uncontrolled, exactly as on web; the
   // seed is read once because a `defaultDocument` that changes identity every
   // render is a story writing an object literal, not a new document.
-  const seed = useRef(props.document ?? defaultDocument ?? null);
-  const [held, setHeld] = useState<GraphDocument<N, E> | null>(seed.current);
+  // oxlint-disable-next-line react/hook-use-state -- read-once seed: there is deliberately no setter, a ref read during render is what this replaces.
+  const [seed] = useState(() => props.document ?? defaultDocument ?? null);
+  const [held, setHeld] = useState<GraphDocument<N, E> | null>(seed);
   const document = props.document ?? held;
 
   // `rev` is the host's, and it only ever climbs. Every commit the canvas
@@ -216,6 +218,8 @@ export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props:
       setRev(nextRev);
       let commands: GraphCommand<N, E>[];
       try {
+        // SAFETY: commandsJson is the serialized command array the DOM canvas built from this same schema; a parse failure is caught below.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns any; the wire contract above fixes the shape.
         commands = JSON.parse(commandsJson) as GraphCommand<N, E>[];
       } catch {
         // A commit this build cannot parse means the DOM bundle and this host
@@ -224,7 +228,7 @@ export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props:
         return;
       }
       setHeld((current) => {
-        let next = current ?? seed.current;
+        let next = current ?? seed;
         if (!next) {
           return current;
         }
@@ -237,7 +241,7 @@ export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props:
         return next;
       });
     },
-    [onDocumentChange],
+    [onDocumentChange, seed],
   );
 
   return (
@@ -260,4 +264,4 @@ export function NodeGraph<N extends NodeKindDefs, E extends EdgeKindDefs>(props:
       schemaId={schema.id}
     />
   );
-}
+};

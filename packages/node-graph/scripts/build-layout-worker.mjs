@@ -7,14 +7,14 @@
 //   node scripts/build-layout-worker.mjs --sha     print the bundle's sha256
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import path from 'node:path';
 import process from 'node:process';
 
 import { build, version } from 'esbuild';
 
-const root = resolve(import.meta.dirname, '..');
-const entry = join(root, 'src/layout/worker.entry.ts');
-const target = join(root, 'src/layout/worker.generated.ts');
+const root = path.resolve(import.meta.dirname, '..');
+const entry = path.join(root, 'src/layout/worker.entry.ts');
+const target = path.join(root, 'src/layout/worker.generated.ts');
 
 // es2019 lowers `?.`/`??`, which older WebView engines lack. Inline legal
 // comments keep dagre's license notice inside the shipped string.
@@ -29,7 +29,7 @@ const result = await build({
   logLevel: 'silent',
 });
 const source = result.outputFiles[0].text;
-const bytes = Buffer.byteLength(source, 'utf8');
+const bytes = Buffer.byteLength(source, 'utf-8');
 const sha256 = createHash('sha256').update(source).digest('hex');
 
 if (process.argv.includes('--sha')) {
@@ -46,7 +46,7 @@ const moduleText = `/**
  * Run \`node scripts/build-layout-worker.mjs\` to rebuild and
  * \`node scripts/build-layout-worker.mjs --check\` to prove it is current. The
  * package's own \`build\` script runs the check as its prefix and
- * \`worker.generated.spec.ts\` re-runs the bundler in process, so a stale
+ * \`worker.generated.test.ts\` re-runs the bundler in process, so a stale
  * string cannot ship.
  *
  * Measured at generation time:
@@ -72,7 +72,7 @@ export const layoutWorkerBytes = ${bytes};
 `;
 
 if (process.argv.includes('--check')) {
-  if (readFileSync(target, 'utf8') !== moduleText) {
+  if (readFileSync(target, 'utf-8') !== moduleText) {
     process.stderr.write(
       'src/layout/worker.generated.ts is stale. Run `node scripts/build-layout-worker.mjs` and commit the result.\n',
     );

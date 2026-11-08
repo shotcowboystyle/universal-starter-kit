@@ -19,7 +19,7 @@
  * These ARE latin subsets, cut by `subset-font` (harfbuzz) at generate time:
  * design §6.3's requirement, which milestone 2 shipped without and MPO-211
  * closed. The ceiling they are measured against is `graphFaceCeilingBytes` in
- * `faces.ts`, and `faces.spec.ts` refuses a ceiling more than twice the
+ * `faces.ts`, and `faces.test.ts` refuses a ceiling more than twice the
  * payload, so the budget cannot quietly become a rubber stamp.
  */
 

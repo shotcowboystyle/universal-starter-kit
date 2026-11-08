@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 /**
  * The metro preset, specced against the real installed tree (MPO-211, plan 2.1).
  *
- * Run with `node --test public/node-graph/metro/index.spec.mjs`. This is a
- * node:test file, not a vitest one, on purpose: the preset is plain CJS with no
- * build step, and vitest's include glob here is `src/**` so it never sees it.
+ * vitest picks this file up through its default include glob. The preset is
+ * plain CJS with no build step, so it is imported as Node's CJS interop gives it.
  *
  * The zustand assertions read the tree that is actually installed rather than a
  * fixture. That is the point — the defect this preset exists to stop is a
@@ -14,36 +13,52 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { describe, it } from 'node:test';
-import { fileURLToPath } from 'node:url';
 
 import { describe, it } from 'vitest';
 
-const require_ = createRequire(import.meta.url);
-const preset = require_('./index.js');
+import preset from './index.js';
+
+const requireFromHere = createRequire(import.meta.url);
 const { nodeGraphResolveRequest, withNodeGraph, nodeGraphMetroMarker } = preset;
 
 const here = import.meta.dirname;
 const packageRoot = path.resolve(here, '..');
-const xyflowRoot = path.dirname(require_.resolve('@xyflow/react/package.json'));
+const xyflowRoot = path.dirname(requireFromHere.resolve('@xyflow/react/package.json'));
 /** A plausible origin INSIDE @xyflow/react, which is what asks for zustand. */
 const xyflowOrigin = path.join(xyflowRoot, 'dist/esm/index.mjs');
 
-/** @returns {object} a context shaped like metro's, with a default resolver that records. */
-function makeContext(originModulePath, seen) {
-  return {
-    originModulePath,
-    resolveRequest(_context, moduleName, platform) {
-      seen.push(['context.resolveRequest', moduleName, platform]);
-      return { type: 'sourceFile', filePath: `default:${moduleName}` };
-    },
-  };
-}
+/**
+ * @param {string} originModulePath the importer
+ * @param {unknown[][]} seen records every call that reaches the default resolver
+ * @returns {import('./index.js').ResolutionContext} a context shaped like metro's, with a default resolver that records.
+ */
+const makeContext = (originModulePath, seen) => ({
+  originModulePath,
+  resolveRequest(_context, moduleName, platform) {
+    seen.push(['context.resolveRequest', moduleName, platform]);
+    return { type: 'sourceFile', filePath: `default:${moduleName}` };
+  },
+});
+
+/**
+ * @param {string} dir a directory holding an installed package
+ * @returns {{ dependencies: Record<string, string>, version: string }} its package.json
+ */
+const readPackageJson = (dir) =>
+  // oxlint-disable-next-line typescript/no-unsafe-return -- JSON.parse of an installed package.json; npm guarantees these fields.
+  JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
+
+/** @type {import('./index.js').ResolveRequest} */
+const originalByName = (_context, moduleName) => ({
+  type: 'sourceFile',
+  filePath: `original:${moduleName}`,
+});
 
 describe('withNodeGraph', () => {
   it('chains an existing resolveRequest instead of replacing it', () => {
+    /** @type {unknown[][]} */
     const seen = [];
-    const original = (context, moduleName, platform) => {
+    const original = (_context, moduleName, platform) => {
       seen.push(['original', moduleName, platform]);
       return { type: 'sourceFile', filePath: `original:${moduleName}` };
     };
@@ -56,6 +71,7 @@ describe('withNodeGraph', () => {
   });
 
   it('falls through to context.resolveRequest when the config had none', () => {
+    /** @type {unknown[][]} */
     const seen = [];
     const config = withNodeGraph({});
     const result = config.resolver.resolveRequest(makeContext(xyflowOrigin, seen), 'classcat', 'web');
@@ -64,6 +80,7 @@ describe('withNodeGraph', () => {
   });
 
   it('resolves zustand and zustand/middleware to .js, never .mjs', () => {
+    /** @type {unknown[][]} */
     const seen = [];
     const config = withNodeGraph({});
     const context = makeContext(xyflowOrigin, seen);
@@ -85,9 +102,10 @@ describe('withNodeGraph', () => {
 
   it('resolves zustand from the ORIGIN module, so @xyflow/react keeps its nested copy', () => {
     const nested = path.join(xyflowRoot, 'node_modules/zustand');
+    // a hoisted tree has nothing to prove here
     if (!fs.existsSync(nested)) {
       return;
-    } // a hoisted tree has nothing to prove here
+    }
 
     const config = withNodeGraph({});
     const result = config.resolver.resolveRequest(makeContext(xyflowOrigin, []), 'zustand', 'web');
@@ -95,8 +113,8 @@ describe('withNodeGraph', () => {
       result.filePath.startsWith(nested + path.sep),
       `zustand resolved to ${result.filePath}, not @xyflow/react's own nested copy`,
     );
-    const declared = require_(path.join(xyflowRoot, 'package.json')).dependencies.zustand;
-    const resolved = require_(path.join(nested, 'package.json')).version;
+    const declared = readPackageJson(xyflowRoot).dependencies.zustand;
+    const resolved = readPackageJson(nested).version;
     assert.ok(
       declared.includes(resolved.split('.')[0]),
       `nested zustand ${resolved} does not satisfy @xyflow/react's ${declared}`,
@@ -104,6 +122,7 @@ describe('withNodeGraph', () => {
   });
 
   it('leaves an explicit ESM request alone rather than lying about what was asked for', () => {
+    /** @type {unknown[][]} */
     const seen = [];
     const config = withNodeGraph({});
     const result = config.resolver.resolveRequest(makeContext(xyflowOrigin, seen), 'zustand/esm/index.mjs', 'web');
@@ -111,12 +130,9 @@ describe('withNodeGraph', () => {
   });
 
   it('does not double-wrap when applied twice', () => {
+    /** @type {unknown[][]} */
     const seen = [];
-    const original = (_context, moduleName) => ({
-      type: 'sourceFile',
-      filePath: `original:${moduleName}`,
-    });
-    const once = withNodeGraph({ resolver: { resolveRequest: original } });
+    const once = withNodeGraph({ resolver: { resolveRequest: originalByName } });
     const wrapped = once.resolver.resolveRequest;
     const twice = withNodeGraph(once);
 
@@ -133,9 +149,12 @@ describe('withNodeGraph', () => {
   });
 
   it('warns when unstable_enablePackageExports is false, and warns once', () => {
+    /** @type {string[]} */
     const warnings = [];
     const realWarn = console.warn;
-    console.warn = (...args) => warnings.push(args.join(' '));
+    console.warn = (...args) => {
+      warnings.push(args.join(' '));
+    };
     try {
       const config = withNodeGraph({ resolver: { unstable_enablePackageExports: false } });
       withNodeGraph(config);
@@ -143,14 +162,17 @@ describe('withNodeGraph', () => {
       console.warn = realWarn;
     }
     assert.equal(warnings.length, 1, `expected one warning, got ${warnings.length}`);
-    assert.match(warnings[0], /unstable_enablePackageExports/);
-    assert.match(warnings[0], /node-graph/);
+    assert.match(warnings[0], /unstable_enablePackageExports/u);
+    assert.match(warnings[0], /node-graph/u);
   });
 
   it('says nothing when unstable_enablePackageExports is true', () => {
+    /** @type {string[]} */
     const warnings = [];
     const realWarn = console.warn;
-    console.warn = (...args) => warnings.push(args.join(' '));
+    console.warn = (...args) => {
+      warnings.push(args.join(' '));
+    };
     try {
       withNodeGraph({ resolver: { unstable_enablePackageExports: true } });
     } finally {
@@ -180,7 +202,9 @@ describe('withNodeGraph', () => {
 
 describe('nodeGraphResolveRequest', () => {
   it('is exported alone for an app that already owns resolveRequest', () => {
+    /** @type {string[]} */
     const seen = [];
+    /** @type {import('./index.js').ResolveRequest} */
     const next = (_context, moduleName) => {
       seen.push(moduleName);
       return { type: 'sourceFile', filePath: `next:${moduleName}` };
@@ -200,7 +224,7 @@ describe('apps/storybook-expo wiring', () => {
 
   it('applies withNodeGraph before withStorybook', () => {
     const src = fs.readFileSync(configPath, 'utf-8');
-    assert.match(src, /require\("@multiplatform\.one\/node-graph\/metro"\)/);
+    assert.match(src, /require\("@multiplatform\.one\/node-graph\/metro"\)/u);
     const graphAt = src.indexOf('withNodeGraph(');
     const storybookAt = src.lastIndexOf('withStorybook(');
     assert.ok(graphAt !== -1, 'metro.config.js never calls withNodeGraph');
