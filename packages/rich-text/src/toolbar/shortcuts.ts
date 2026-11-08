@@ -7,18 +7,18 @@
 
 import { t } from '../shared/t';
 
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform ?? '');
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/u.test(navigator.platform ?? '');
 
 const MOD = isMac ? '⌘' : 'Ctrl+';
 const SHIFT = isMac ? '⇧' : 'Shift+';
 const ALT = isMac ? '⌥' : 'Alt+';
 
-export function shortcut(label: string, keys?: string): string {
-  if (!keys) {
+export const shortcut = (label: string, keys?: string): string => {
+  if (keys === undefined || keys === '') {
     return label;
   }
   return `${label} (${keys})`;
-}
+};
 
 export const SHORTCUTS = {
   get bold() {

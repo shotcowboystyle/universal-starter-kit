@@ -42,33 +42,31 @@ export interface FixedToolbarStoryArgs {
   hasError: boolean;
 }
 
-function stateFor(args: FixedToolbarStoryArgs): EditorState {
-  return {
-    ...defaultEditorState,
-    isBold: args.isBold,
-    isItalic: args.isItalic,
-    canUndo: args.canUndo,
-    canRedo: args.canRedo,
-  };
-}
+const stateFor = (args: FixedToolbarStoryArgs): EditorState => ({
+  ...defaultEditorState,
+  isBold: args.isBold,
+  isItalic: args.isItalic,
+  canUndo: args.canUndo,
+  canRedo: args.canRedo,
+});
 
 /**
  * A toolbar with no editor under it. `editorRef` stays null, so commands are
  * reported to the actions panel instead of running — which is the point:
  * the bar's job is to name the command, not to perform it.
  */
-function ToolbarSpecimen(args: FixedToolbarStoryArgs) {
+const ToolbarSpecimen = (args: FixedToolbarStoryArgs) => {
   const editorRef = useRef<RichEditorRef>({
     executeCommand: (command, payload) => action('executeCommand')(command, payload),
     getState: () => stateFor(args),
     getHTML: () => '',
     getJSON: () => null,
     getMarkdown: () => '',
-    setHTML: () => {},
-    setJSON: () => {},
-    setMarkdown: () => {},
-    focus: () => {},
-    blur: () => {},
+    setHTML: action('setHTML'),
+    setJSON: action('setJSON'),
+    setMarkdown: action('setMarkdown'),
+    focus: action('focus'),
+    blur: action('blur'),
   });
   return (
     <EditorFrame
@@ -93,7 +91,7 @@ function ToolbarSpecimen(args: FixedToolbarStoryArgs) {
       </YStack>
     </EditorFrame>
   );
-}
+};
 
 const meta: Meta<FixedToolbarStoryArgs> = {
   title: 'Forms/RichTextEditor/FixedToolbar',
@@ -219,29 +217,29 @@ export const FullscreenToggle: Story = {
 // `RichEditor.Editor` export; typing updates the marks
 // ---------------------------------------------------------------------------
 
+/** A bar and an editor wired through one ref, as an app would mount them. */
+const LiveSpecimen = () => {
+  const editorRef = useRef<RichEditorRef>(null);
+  const [state, setState] = useState<EditorState>(defaultEditorState);
+  return (
+    <EditorFrame
+      maxWidth={720}
+      borderRadius="$3">
+      <FixedToolbar
+        editorRef={editorRef}
+        state={state}
+      />
+      <RichEditor.Editor
+        ref={editorRef}
+        initialContent="<p>Select this text and press <strong>B</strong> in the bar above — the button marks itself from the editor's own state.</p>"
+        onStateChange={setState}
+        minHeight={160}
+      />
+    </EditorFrame>
+  );
+};
+
 export const LiveEditor: Story = {
   name: 'Live editor',
-  render: () => {
-    const LiveSpecimen = () => {
-      const editorRef = useRef<RichEditorRef>(null);
-      const [state, setState] = useState<EditorState>(defaultEditorState);
-      return (
-        <EditorFrame
-          maxWidth={720}
-          borderRadius="$3">
-          <FixedToolbar
-            editorRef={editorRef}
-            state={state}
-          />
-          <RichEditor.Editor
-            ref={editorRef}
-            initialContent="<p>Select this text and press <strong>B</strong> in the bar above — the button marks itself from the editor's own state.</p>"
-            onStateChange={setState}
-            minHeight={160}
-          />
-        </EditorFrame>
-      );
-    };
-    return <LiveSpecimen />;
-  },
+  render: () => <LiveSpecimen />,
 };

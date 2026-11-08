@@ -6,19 +6,19 @@
 /**
  * Ensures URL has a protocol prefix, auto-prepending https:// if missing.
  */
-export function normalizeUrl(url: string): string {
+export const normalizeUrl = (url: string): string => {
   const trimmed = url.trim();
   if (!trimmed) {
     return trimmed;
   }
-  if (/^https?:\/\//i.test(trimmed)) {
+  if (/^https?:\/\//iu.test(trimmed)) {
     return trimmed;
   }
-  if (/^mailto:/i.test(trimmed)) {
+  if (/^mailto:/iu.test(trimmed)) {
     return trimmed;
   }
-  if (/^tel:/i.test(trimmed)) {
+  if (/^tel:/iu.test(trimmed)) {
     return trimmed;
   }
   return `https://${trimmed}`;
-}
+};

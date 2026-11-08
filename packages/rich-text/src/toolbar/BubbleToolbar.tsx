@@ -53,12 +53,12 @@ export interface BubbleToolbarProps {
 // BubbleToolbar
 // ===========================================================================
 
-export function BubbleToolbar({
+export const BubbleToolbar = ({
   editor,
   editorRef,
   state = defaultEditorState,
   capabilities = 'full',
-}: BubbleToolbarProps) {
+}: BubbleToolbarProps) => {
   const { knobProps } = useResolvedKnobs();
   const has = (command: Parameters<typeof isCommandInCapabilities>[0]) =>
     isCommandInCapabilities(command, capabilities);
@@ -177,4 +177,4 @@ export function BubbleToolbar({
       </XStack>
     </BubbleMenu>
   );
-}
+};

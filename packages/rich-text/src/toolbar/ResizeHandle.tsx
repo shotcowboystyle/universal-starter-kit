@@ -12,37 +12,36 @@ export interface ResizeHandleProps {
   maxHeight?: number;
 }
 
-function GripIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 12 12"
-      fill="currentColor"
-      opacity={0.4}>
-      <path
-        d="M10 2L2 10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <path
-        d="M10 6L6 10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <path
-        d="M10 10L10 10"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        fill="none"
-      />
-    </svg>
-  );
-}
+const GripIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 12 12"
+    fill="currentColor"
+    opacity={0.4}
+    aria-hidden="true">
+    <path
+      d="M10 2L2 10"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      fill="none"
+    />
+    <path
+      d="M10 6L6 10"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      fill="none"
+    />
+    <path
+      d="M10 10L10 10"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      fill="none"
+    />
+  </svg>
+);
 
-export function ResizeHandle({ containerRef, minHeight = 150, maxHeight }: ResizeHandleProps) {
+export const ResizeHandle = ({ containerRef, minHeight = 150, maxHeight }: ResizeHandleProps) => {
   const startY = useRef(0);
   const startHeight = useRef(0);
 
@@ -63,7 +62,7 @@ export function ResizeHandle({ containerRef, minHeight = 150, maxHeight }: Resiz
         if (newHeight < minHeight) {
           newHeight = minHeight;
         }
-        if (maxHeight && newHeight > maxHeight) {
+        if (maxHeight !== undefined && maxHeight !== 0 && newHeight > maxHeight) {
           newHeight = maxHeight;
         }
         el.style.height = `${newHeight}px`;
@@ -96,10 +95,11 @@ export function ResizeHandle({ containerRef, minHeight = 150, maxHeight }: Resiz
       justifyContent="center"
       opacity={0.6}
       hoverStyle={{ opacity: 1 }}
-      onMouseDown={onMouseDown as any}
+      onMouseDown={onMouseDown}
       aria-label="Resize editor"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a draggable splitter rendered by a tamagui View; an <hr> cannot host the drag handler or grip icon
       role="separator">
       <GripIcon />
     </View>
   );
-}
+};

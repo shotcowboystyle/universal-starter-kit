@@ -11,7 +11,7 @@ import { action } from '@repo/storybook';
  * marking swaps the way it does inside RichEditor.
  */
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Paragraph, View, YStack } from 'tamagui';
 
 import { RichEditorContext } from '../context';
@@ -30,20 +30,15 @@ export interface StatusBarStoryArgs {
   mode: EditorMode;
 }
 
-function stateFor(args: StatusBarStoryArgs): EditorState {
-  return {
-    ...defaultEditorState,
-    wordCount: args.wordCount,
-    characterCount: args.characterCount,
-  };
-}
+const stateFor = (args: StatusBarStoryArgs): EditorState => ({
+  ...defaultEditorState,
+  wordCount: args.wordCount,
+  characterCount: args.characterCount,
+});
 
-/** Mode is local so the toggle is live; the `mode` control seeds and resets it. */
-function StatusBarSpecimen(args: StatusBarStoryArgs) {
+/** Mode is local so the toggle is live; the `mode` control seeds it, and the render keys on it to reset. */
+const StatusBarSpecimen = (args: StatusBarStoryArgs) => {
   const [mode, setMode] = useState<EditorMode>(args.mode);
-  useEffect(() => {
-    setMode(args.mode);
-  }, [args.mode]);
   return (
     <StatusBar
       state={stateFor(args)}
@@ -54,7 +49,7 @@ function StatusBarSpecimen(args: StatusBarStoryArgs) {
       }}
     />
   );
-}
+};
 
 const meta: Meta<StatusBarStoryArgs> = {
   title: 'Forms/RichTextEditor/StatusBar',
@@ -88,7 +83,10 @@ const meta: Meta<StatusBarStoryArgs> = {
       borderWidth={1}
       borderColor="$color6"
       borderRadius="$3">
-      <StatusBarSpecimen {...args} />
+      <StatusBarSpecimen
+        key={args.mode}
+        {...args}
+      />
     </View>
   ),
 };

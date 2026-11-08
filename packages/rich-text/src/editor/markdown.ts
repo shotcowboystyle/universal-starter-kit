@@ -25,13 +25,34 @@ import TurndownService from 'turndown';
 // HTML -> Markdown (turndown + GFM rules)
 // ===========================================================================
 
-function cellMarkdown(cell: HTMLElement, inline: TurndownService): string {
-  const md = inline.turndown(cell.innerHTML || '');
+const cellMarkdown = (cell: HTMLElement, inline: TurndownService): string => {
+  // turndown converts a node's children, same as passing its inner HTML
+  const md = inline.turndown(cell);
   // GFM cells are single-line: collapse block breaks and escape pipes
-  return md.replaceAll(/\n+/g, ' ').replaceAll('|', '\\|').trim();
-}
+  return md.replaceAll(/\n+/gu, ' ').replaceAll('|', '\\|').trim();
+};
 
-function createTurndown(): TurndownService {
+/** Inline-only converter for table cells (tables cannot nest in GFM cells) */
+const createInlineTurndown = (): TurndownService => {
+  const service = new TurndownService({ codeBlockStyle: 'fenced' });
+  service.keep((node) => {
+    const name = node.nodeName;
+    if (name === 'U' || name === 'SUB' || name === 'SUP' || name === 'MARK') {
+      return true;
+    }
+    if (name === 'SPAN') {
+      return (node.getAttribute('style') ?? '').includes('color');
+    }
+    return false;
+  });
+  service.addRule('strikethrough', {
+    filter: ['del', 's'],
+    replacement: (content) => `~~${content}~~`,
+  });
+  return service;
+};
+
+const createTurndown = (): TurndownService => {
   const service = new TurndownService({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
@@ -72,11 +93,12 @@ function createTurndown(): TurndownService {
   service.addRule('mathBlock', {
     filter: (node) =>
       node.nodeName === 'PRE' &&
-      (node.firstChild as HTMLElement | null)?.nodeName === 'CODE' &&
-      ((node.firstChild as HTMLElement).getAttribute('class') ?? '').includes('language-math'),
+      node.firstChild?.nodeName === 'CODE' &&
+      // a CODE first child is an element, so it is also the first element child
+      (node.firstElementChild?.getAttribute('class') ?? '').includes('language-math'),
     replacement: (_content, node) => {
-      const code = (node.firstChild as HTMLElement).textContent ?? '';
-      return `\n\n$$\n${code.replace(/\n$/, '')}\n$$\n\n`;
+      const code = node.firstChild?.textContent ?? '';
+      return `\n\n$$\n${code.replace(/\n$/u, '')}\n$$\n\n`;
     },
   });
 
@@ -86,7 +108,7 @@ function createTurndown(): TurndownService {
     filter: (node) => node.nodeName === 'LI' && node.dataset.type === 'taskItem',
     replacement: (content, node) => {
       const checked = node.dataset.checked === 'true';
-      const text = content.replaceAll(/^\s+|\s+$/g, '').replaceAll(/\n{2,}/g, '\n');
+      const text = content.trim().replaceAll(/\n{2,}/gu, '\n');
       return `- [${checked ? 'x' : ' '}] ${text}\n`;
     },
   });
@@ -94,7 +116,7 @@ function createTurndown(): TurndownService {
   // The checkbox control inside the task item label contributes no text
   service.addRule('taskListCheckbox', {
     filter: (node) =>
-      (node.nodeName === 'INPUT' && (node as HTMLInputElement).type === 'checkbox') ||
+      (node.nodeName === 'INPUT' && node.getAttribute('type')?.toLowerCase() === 'checkbox') ||
       (node.nodeName === 'LABEL' && node.parentElement?.dataset.type === 'taskItem'),
     replacement: () => '',
   });
@@ -103,14 +125,13 @@ function createTurndown(): TurndownService {
   service.addRule('table', {
     filter: 'table',
     replacement: (_content, node) => {
-      const table = node as HTMLTableElement;
-      const rows = [...table.querySelectorAll('tr')];
+      const rows = [...node.querySelectorAll('tr')];
       if (rows.length === 0) {
         return '';
       }
       const inline = createInlineTurndown();
       const grid = rows.map((row) =>
-        [...row.querySelectorAll('th, td')].map((cell) => cellMarkdown(cell as HTMLElement, inline)),
+        [...row.querySelectorAll<HTMLElement>('th, td')].map((cell) => cellMarkdown(cell, inline)),
       );
       const cols = Math.max(...grid.map((r) => r.length));
       const pad = (r: string[]) => {
@@ -129,43 +150,22 @@ function createTurndown(): TurndownService {
   });
 
   return service;
-}
-
-/** Inline-only converter for table cells (tables cannot nest in GFM cells) */
-function createInlineTurndown(): TurndownService {
-  const service = new TurndownService({ codeBlockStyle: 'fenced' });
-  service.keep((node) => {
-    const name = node.nodeName;
-    if (name === 'U' || name === 'SUB' || name === 'SUP' || name === 'MARK') {
-      return true;
-    }
-    if (name === 'SPAN') {
-      return (node.getAttribute('style') ?? '').includes('color');
-    }
-    return false;
-  });
-  service.addRule('strikethrough', {
-    filter: ['del', 's'],
-    replacement: (content) => `~~${content}~~`,
-  });
-  return service;
-}
+};
 
 let turndownSingleton: TurndownService | null = null;
 
 /** Convert editor HTML to GFM markdown */
-export function htmlToMarkdown(html: string): string {
+export const htmlToMarkdown = (html: string): string => {
   turndownSingleton ??= createTurndown();
   return turndownSingleton.turndown(html);
-}
+};
 
 // ===========================================================================
 // Markdown -> HTML (marked + math extensions + Tiptap task list upgrade)
 // ===========================================================================
 
-function escapeHtml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
-}
+const escapeHtml = (value: string): string =>
+  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 
 /**
  * `$$ ... $$` display math -> math code block. Accepts the delimiters on
@@ -175,14 +175,12 @@ function escapeHtml(value: string): string {
 const blockMathExtension = {
   name: 'blockMath',
   level: 'block' as const,
-  start: (src: string) => /^\$\$/m.exec(src)?.index,
+  start: (src: string) => /^\$\$/mu.exec(src)?.index,
   tokenizer(src: string) {
     const match =
-      /^\$\$[ \t]*\n([\s\S]*?)\n[ \t]*\$\$[ \t]*(?:\n+|$)/.exec(src) ?? /^\$\$([^\n$]+?)\$\$[ \t]*(?:\n+|$)/.exec(src);
-    if (!match) {
-      return;
-    }
-    return { type: 'blockMath', raw: match[0], latex: (match[1] ?? '').trim() };
+      /^\$\$[ \t]*\n(?<latex>[\s\S]*?)\n[ \t]*\$\$[ \t]*(?:\n+|$)/u.exec(src) ??
+      /^\$\$(?<latex>[^\n$]+?)\$\$[ \t]*(?:\n+|$)/u.exec(src);
+    return match ? { type: 'blockMath', raw: match[0], latex: (match.groups?.latex ?? '').trim() } : undefined;
   },
   renderer(token: { latex: string }) {
     return `<pre><code class="language-math">${escapeHtml(token.latex)}</code></pre>\n`;
@@ -199,11 +197,8 @@ const inlineMathExtension = {
   level: 'inline' as const,
   start: (src: string) => src.indexOf('$'),
   tokenizer(src: string) {
-    const match = /^\$([^$\n])\$/.exec(src) ?? /^\$([^$\n \t][^$\n]*?[^$\n \t])\$/.exec(src);
-    if (!match) {
-      return;
-    }
-    return { type: 'inlineMath', raw: match[0], latex: match[1] ?? '' };
+    const match = /^\$(?<latex>[^$\n])\$/u.exec(src) ?? /^\$(?<latex>[^$\n \t][^$\n]*?[^$\n \t])\$/u.exec(src);
+    return match ? { type: 'inlineMath', raw: match[0], latex: match.groups?.latex ?? '' } : undefined;
   },
   renderer(token: { latex: string }) {
     const escaped = escapeHtml(token.latex);
@@ -214,13 +209,13 @@ const inlineMathExtension = {
 let markedSingleton: Marked | null = null;
 
 /** Local marked instance so math extensions never leak into the global */
-function getMarked(): Marked {
+const getMarked = (): Marked => {
   if (!markedSingleton) {
     markedSingleton = new Marked({ gfm: true });
     markedSingleton.use({ extensions: [blockMathExtension, inlineMathExtension] });
   }
   return markedSingleton;
-}
+};
 
 /**
  * marked emits GFM task items as `<li><input type="checkbox" checked>`;
@@ -228,12 +223,12 @@ function getMarked(): Marked {
  * li[data-type="taskItem"][data-checked]`. Upgrade in the DOM so the
  * round-trip re-enters the editor as real task items.
  */
-function upgradeTaskLists(html: string): string {
+const upgradeTaskLists = (html: string): string => {
   if (typeof document === 'undefined' || !html.includes('checkbox')) {
     return html;
   }
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  for (const input of [...doc.querySelectorAll<HTMLInputElement>('li input[type="checkbox"]')]) {
+  for (const input of doc.querySelectorAll<HTMLInputElement>('li input[type="checkbox"]')) {
     const li = input.closest('li');
     if (!li) {
       continue;
@@ -246,11 +241,12 @@ function upgradeTaskLists(html: string): string {
       list.dataset.type = 'taskList';
     }
   }
+  // oxlint-disable-next-line github/no-inner-html -- serializes the parsed document back to a string; nothing is assigned
   return doc.body.innerHTML;
-}
+};
 
 /** Convert GFM markdown to HTML the Tiptap schema can ingest */
-export function markdownToHtml(markdown: string): string {
+export const markdownToHtml = (markdown: string): string => {
   const html = getMarked().parse(markdown, { async: false });
   return upgradeTaskLists(html);
-}
+};

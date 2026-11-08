@@ -16,6 +16,16 @@ import type { RichEditorRef } from '../types';
 import { ImageIcon } from './icons';
 import { ToolbarButton } from './ToolbarButton';
 
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {},
+});
+
 export interface ImageDialogProps {
   /** Reference to the editor */
   editorRef: React.RefObject<RichEditorRef | null>;
@@ -23,7 +33,7 @@ export interface ImageDialogProps {
   disabled?: boolean;
 }
 
-export function ImageDialog({ editorRef, disabled }: ImageDialogProps) {
+export const ImageDialog = ({ editorRef, disabled }: ImageDialogProps) => {
   const [open, setOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
 
@@ -106,14 +116,4 @@ export function ImageDialog({ editorRef, disabled }: ImageDialogProps) {
       </Modal>
     </>
   );
-}
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheet: {},
-});
+};

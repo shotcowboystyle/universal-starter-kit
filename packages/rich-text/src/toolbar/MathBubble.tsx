@@ -4,15 +4,15 @@
  * the editing surface GitLab gives dollar math in its content editor.
  */
 
+import { PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useCallback, useEffect, useState } from 'react';
 import { Input, Text, XStack, YStack } from 'tamagui';
 
-import { renderKatexHtml } from '../editor/lazyKatex';
+import { renderKatexHtml } from '../editor/lazy-katex';
 import { t } from '../shared/t';
 
 import { ToolbarButton } from './ToolbarButton';
@@ -21,38 +21,46 @@ export interface MathBubbleProps {
   editor: Editor | null;
 }
 
-export function MathBubble({ editor }: MathBubbleProps) {
+export const MathBubble = ({ editor }: MathBubbleProps) => {
   const { knobProps } = useResolvedKnobs();
   const [editing, setEditing] = useState(false);
   const [latex, setLatex] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Live TeX validation while editing (KaTeX is already loaded by the
-  // rendered node; the first call lazy-loads it)
+  // rendered node; the first call lazy-loads it). An empty expression has no
+  // error; `handleLatexChange` clears it so the effect never sets state
+  // synchronously.
   useEffect(() => {
-    if (!editing) {
-      return;
-    }
-    if (!latex.trim()) {
-      setError(null);
-      return;
-    }
     let cancelled = false;
-    void renderKatexHtml(latex).then((result) => {
+    const validate = async () => {
+      const result = await renderKatexHtml(latex);
       if (!cancelled) {
         setError(result.ok ? null : result.error);
       }
-    });
+    };
+    if (editing && latex.trim() !== '') {
+      void validate();
+    }
     return () => {
       cancelled = true;
     };
   }, [latex, editing]);
 
+  const handleLatexChange = useCallback((next: string) => {
+    setLatex(next);
+    if (next.trim() === '') {
+      setError(null);
+    }
+  }, []);
+
   const handleEdit = useCallback(() => {
     if (!editor) {
       return;
     }
-    setLatex(editor.getAttributes('inlineMath').latex ?? '');
+    // SAFETY: the inlineMath node schema declares `latex` as a string.
+    const { latex: source } = editor.getAttributes('inlineMath') as { latex?: string | null };
+    setLatex(source ?? '');
     setError(null);
     setEditing(true);
   }, [editor]);
@@ -98,14 +106,14 @@ export function MathBubble({ editor }: MathBubbleProps) {
               size="$2"
               placeholder="x^2 + y^2"
               value={latex}
-              onChangeText={setLatex}
+              onChangeText={handleLatexChange}
               onSubmitEditing={handleSave}
               aria-label={t('TeX expression')}
               autoFocus
               minWidth={220}
               fontFamily="$mono"
             />
-            {error ? (
+            {error !== null && error !== '' ? (
               <Text
                 color="$red11"
                 fontSize={11}
@@ -161,4 +169,4 @@ export function MathBubble({ editor }: MathBubbleProps) {
       </XStack>
     </BubbleMenu>
   );
-}
+};

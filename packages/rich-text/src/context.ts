@@ -10,6 +10,7 @@ export const RichEditorContext = createStyledContext<{
   compact: boolean;
   disabled: boolean;
 }>({
+  // SAFETY: '$true' is the default key of every Tamagui font-size scale.
   size: '$true' as FontSizeTokens,
   compact: false,
   disabled: false,

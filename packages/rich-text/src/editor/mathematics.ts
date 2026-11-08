@@ -10,21 +10,23 @@
  * - Invalid TeX shows the raw source in an error style with the KaTeX
  *   parse message (Axiom 6: show the error, never blank).
  * - Block math (`$$ ... $$`) is a code block with language "math" — see
- *   codeBlockPreview.ts — matching GitLab's ```math fence model.
+ *   code-block-preview.ts — matching GitLab's ```math fence model.
  *
  * Serialization: `<span data-type="inline-math" data-latex="...">` <->
  * `$...$` (editor/markdown.ts), so the source toggle is lossless.
  */
 
 import { Node, mergeAttributes, nodeInputRule } from '@tiptap/core';
+import type { Attrs } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
 
 import { t } from '../shared/t';
 
-import { mountKatexHtml, renderKatexHtml } from './lazyKatex';
+import { mountKatexHtml, renderKatexHtml } from './lazy-katex';
 
 export interface InlineMathOptions {
-  HTMLAttributes: Record<string, any>;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Tiptap's HTMLAttributes option contract, passed to mergeAttributes
+  HTMLAttributes: Record<string, unknown>;
 }
 
 declare module '@tiptap/core' {
@@ -39,12 +41,18 @@ declare module '@tiptap/core' {
 }
 
 /**
- * Matches `$...$` as the last thing typed. match[1] is the dollar span
- * (what the node replaces), match[2] the TeX. The character before the
+ * Matches `$...$` as the last thing typed. match[1] (`dollar`) is the dollar
+ * span (what the node replaces; nodeInputRule reads it by index), match[2]
+ * (`latex`) the TeX. The character before the
  * opening `$` must not be another `$` (that is block math), and content
  * cannot start/end with whitespace or contain `$`/newlines.
  */
-export const INLINE_MATH_INPUT_RULE = /(?:^|[^$])(\$([^$\n \t](?:[^$\n]*[^$\n \t])?)\$)$/;
+export const INLINE_MATH_INPUT_RULE = /(?:^|[^$])(?<dollar>\$(?<latex>[^$\n \t](?:[^$\n]*[^$\n \t])?)\$)$/u;
+
+const MATH_ERROR_CLASS = 'rt-math-error';
+
+/** The node's TeX source ('' when the attribute is missing) */
+const latexOf = (attrs: Attrs): string => String(attrs.latex ?? '');
 
 export const InlineMath = Node.create<InlineMathOptions>({
   name: 'inlineMath',
@@ -62,7 +70,7 @@ export const InlineMath = Node.create<InlineMathOptions>({
       latex: {
         default: '',
         parseHTML: (element) => element.dataset.latex ?? element.textContent ?? '',
-        renderHTML: (attributes) => ({ 'data-latex': attributes.latex }),
+        renderHTML: (attributes) => ({ 'data-latex': latexOf(attributes) }),
       },
     };
   },
@@ -116,7 +124,7 @@ export const InlineMath = Node.create<InlineMathOptions>({
       nodeInputRule({
         find: INLINE_MATH_INPUT_RULE,
         type: this.type,
-        getAttributes: (match) => ({ latex: match[2] ?? '' }),
+        getAttributes: (match) => ({ latex: match.groups?.latex ?? '' }),
       }),
     ];
   },
@@ -131,6 +139,25 @@ export const InlineMath = Node.create<InlineMathOptions>({
       let currentLatex: string | null = null;
       let destroyed = false;
 
+      const mountKatex = async (latex: string) => {
+        const result = await renderKatexHtml(latex);
+        if (destroyed || currentLatex !== latex) {
+          return;
+        }
+        if (result.ok) {
+          mountKatexHtml(dom, result.html);
+          dom.classList.remove(MATH_ERROR_CLASS);
+          dom.removeAttribute('title');
+          dom.setAttribute('role', 'img');
+          dom.setAttribute('aria-label', latex);
+        } else {
+          // Axiom 6: raw source + parse message, never a blank chip
+          dom.textContent = latex;
+          dom.classList.add(MATH_ERROR_CLASS);
+          dom.title = result.error;
+        }
+      };
+
       const render = (latex: string) => {
         if (destroyed || latex === currentLatex) {
           return;
@@ -139,7 +166,7 @@ export const InlineMath = Node.create<InlineMathOptions>({
         dom.dataset.latex = latex;
         if (!latex.trim()) {
           dom.classList.add('rt-math-empty');
-          dom.classList.remove('rt-math-error');
+          dom.classList.remove(MATH_ERROR_CLASS);
           dom.removeAttribute('title');
           dom.textContent = t('math');
           return;
@@ -147,26 +174,10 @@ export const InlineMath = Node.create<InlineMathOptions>({
         dom.classList.remove('rt-math-empty');
         // raw TeX stays visible while KaTeX loads (first render only)
         dom.textContent = latex;
-        void renderKatexHtml(latex).then((result) => {
-          if (destroyed || currentLatex !== latex) {
-            return;
-          }
-          if (result.ok) {
-            mountKatexHtml(dom, result.html);
-            dom.classList.remove('rt-math-error');
-            dom.removeAttribute('title');
-            dom.setAttribute('role', 'img');
-            dom.setAttribute('aria-label', latex);
-          } else {
-            // Axiom 6: raw source + parse message, never a blank chip
-            dom.textContent = latex;
-            dom.classList.add('rt-math-error');
-            dom.title = result.error;
-          }
-        });
+        void mountKatex(latex);
       };
 
-      render((node.attrs.latex as string) ?? '');
+      render(latexOf(node.attrs));
 
       return {
         dom,
@@ -174,7 +185,7 @@ export const InlineMath = Node.create<InlineMathOptions>({
           if (updatedNode.type.name !== 'inlineMath') {
             return false;
           }
-          render((updatedNode.attrs.latex as string) ?? '');
+          render(latexOf(updatedNode.attrs));
           return true;
         },
         ignoreMutation: () => true,

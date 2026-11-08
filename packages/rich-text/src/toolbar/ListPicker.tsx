@@ -32,7 +32,7 @@ interface ListOption {
   /** Lazy so t() resolves at render time, not module import */
   label: () => string;
   command: EditorCommand;
-  stateKey: keyof EditorState;
+  stateKey: 'isBulletList' | 'isOrderedList' | 'isTaskList';
   icon: React.FC;
 }
 
@@ -61,24 +61,21 @@ const LIST_OPTIONS: ListOption[] = [
 // ListPicker
 // ===========================================================================
 
-function getActiveListIcon(state: EditorState) {
+const renderActiveListIcon = (state: EditorState) => {
   if (state.isOrderedList) {
-    return OrderedListIcon;
+    return <OrderedListIcon />;
   }
   if (state.isTaskList) {
-    return TaskListIcon;
+    return <TaskListIcon />;
   }
-  return BulletListIcon;
-}
+  return <BulletListIcon />;
+};
 
-function isAnyListActive(state: EditorState): boolean {
-  return state.isBulletList || state.isOrderedList || state.isTaskList;
-}
+const isAnyListActive = (state: EditorState): boolean => state.isBulletList || state.isOrderedList || state.isTaskList;
 
-export function ListPicker({ editorRef, state, disabled }: ListPickerProps) {
+export const ListPicker = ({ editorRef, state, disabled }: ListPickerProps) => {
   const [open, setOpen] = useState(false);
   const selectedRef = useRef(false);
-  const ActiveIcon = getActiveListIcon(state);
 
   return (
     <DropdownMenu
@@ -93,7 +90,7 @@ export function ListPicker({ editorRef, state, disabled }: ListPickerProps) {
             setOpen(true);
           }}
           aria-label={t('Lists')}>
-          <ActiveIcon />
+          {renderActiveListIcon(state)}
         </ToolbarDropdownButton>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content
@@ -130,4 +127,4 @@ export function ListPicker({ editorRef, state, disabled }: ListPickerProps) {
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};

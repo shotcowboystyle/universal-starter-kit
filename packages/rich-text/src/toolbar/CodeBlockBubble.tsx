@@ -3,22 +3,24 @@
  * Provides language selection, copy-to-clipboard, and remove actions.
  */
 
-import { PopoverContent } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 import { CheckIcon, CopyIcon, TrashIcon } from '@phosphor-icons/react';
+import { useResolvedKnobs } from '@repo/theme';
+import { PopoverContent } from '@repo/ui';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Popover, Text, XStack, YStack } from 'tamagui';
 
-import { getBlockVirtualElement } from '../editor/blockAnchor';
+import { getBlockVirtualElement } from '../editor/block-anchor';
 import { t } from '../shared/t';
 import { DropdownMenuItemFrame } from '../styled';
 
 import { ToolbarButton, ToolbarDropdownButton } from './ToolbarButton';
 
+const PLAIN_TEXT = 'Plain text';
+
 const LANGUAGES = [
-  { value: null, label: 'Plain text' },
+  { value: null, label: PLAIN_TEXT },
   { value: 'bash', label: 'Bash' },
   { value: 'c', label: 'C' },
   { value: 'cpp', label: 'C++' },
@@ -50,18 +52,18 @@ export interface CodeBlockBubbleProps {
 }
 
 /** Reads the text of the code block the selection sits in */
-function getActiveCodeBlockText(editor: Editor): string {
+const getActiveCodeBlockText = (editor: Editor): string => {
   const { $from } = editor.state.selection;
-  for (let { depth } = $from; depth >= 0; depth--) {
+  for (let { depth } = $from; depth >= 0; depth -= 1) {
     const node = $from.node(depth);
     if (node.type.name === 'codeBlock') {
       return node.textContent;
     }
   }
   return '';
-}
+};
 
-export function CodeBlockBubble({ editor }: CodeBlockBubbleProps) {
+export const CodeBlockBubble = ({ editor }: CodeBlockBubbleProps) => {
   const { knobProps } = useResolvedKnobs();
   const [langOpen, setLangOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,9 +78,11 @@ export function CodeBlockBubble({ editor }: CodeBlockBubbleProps) {
     [],
   );
 
-  const currentLang = editor?.getAttributes('codeBlock')?.language ?? null;
+  // SAFETY: the codeBlock node schema (CodeBlockLowlight) declares `language` as a string or null.
+  const { language } = (editor?.getAttributes('codeBlock') ?? {}) as { language?: string | null };
+  const currentLang = language ?? null;
   const rawLabel = LANGUAGES.find((l) => l.value === currentLang)?.label ?? currentLang;
-  const currentLabel = currentLang === null ? t('Plain text') : (rawLabel ?? t('Plain text'));
+  const currentLabel = currentLang === null ? t(PLAIN_TEXT) : (rawLabel ?? t(PLAIN_TEXT));
 
   const setLanguage = useCallback(
     (lang: string | null) => {
@@ -168,8 +172,8 @@ export function CodeBlockBubble({ editor }: CodeBlockBubbleProps) {
                   onPress={() => {
                     setLanguage(lang.value);
                   }}
-                  aria-label={lang.value === null ? t('Plain text') : lang.label}>
-                  <Text fontSize={13}>{lang.value === null ? t('Plain text') : lang.label}</Text>
+                  aria-label={lang.value === null ? t(PLAIN_TEXT) : lang.label}>
+                  <Text fontSize={13}>{lang.value === null ? t(PLAIN_TEXT) : lang.label}</Text>
                 </DropdownMenuItemFrame>
               ))}
             </YStack>
@@ -177,7 +181,9 @@ export function CodeBlockBubble({ editor }: CodeBlockBubbleProps) {
         </Popover>
 
         <ToolbarButton
-          onPress={copyCode}
+          onPress={() => {
+            void copyCode();
+          }}
           aria-label={copied ? t('Copied') : t('Copy code')}
           tooltip={copied ? t('Copied') : t('Copy code')}>
           {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
@@ -192,4 +198,4 @@ export function CodeBlockBubble({ editor }: CodeBlockBubbleProps) {
       </XStack>
     </BubbleMenu>
   );
-}
+};

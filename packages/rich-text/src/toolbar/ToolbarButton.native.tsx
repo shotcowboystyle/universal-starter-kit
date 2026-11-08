@@ -41,7 +41,7 @@ export interface ToolbarDropdownButtonProps {
 // ToolbarButton
 // ===========================================================================
 
-export function ToolbarButton({
+export const ToolbarButton = ({
   active,
   disabled,
   onPress,
@@ -50,12 +50,13 @@ export function ToolbarButton({
   compact: compactProp,
   'aria-pressed': ariaPressed,
   ...props
-}: ToolbarButtonProps) {
+}: ToolbarButtonProps) => {
   const ctx = RichEditorContext.useStyledContext();
+  // SAFETY: the context size is a FontSizeTokens key; Tamagui font and size scales share their keys.
   const size = sizeProp ?? (ctx.size as SizeTokens);
   const compact = compactProp ?? ctx.compact;
   const isDisabled = disabled ?? ctx.disabled;
-  const pressed = ariaPressed ?? (active === undefined ? undefined : !!active);
+  const pressed = ariaPressed ?? active;
 
   return (
     <Button
@@ -74,13 +75,13 @@ export function ToolbarButton({
       {children}
     </Button>
   );
-}
+};
 
 // ===========================================================================
 // ToolbarDropdownButton
 // ===========================================================================
 
-export function ToolbarDropdownButton({
+export const ToolbarDropdownButton = ({
   active,
   disabled,
   onPress,
@@ -88,8 +89,9 @@ export function ToolbarDropdownButton({
   size: sizeProp,
   compact: compactProp,
   ...props
-}: ToolbarDropdownButtonProps) {
+}: ToolbarDropdownButtonProps) => {
   const ctx = RichEditorContext.useStyledContext();
+  // SAFETY: the context size is a FontSizeTokens key; Tamagui font and size scales share their keys.
   const size = sizeProp ?? (ctx.size as SizeTokens);
   const compact = compactProp ?? ctx.compact;
   const isDisabled = disabled ?? ctx.disabled;
@@ -113,4 +115,4 @@ export function ToolbarDropdownButton({
       </XStack>
     </Button>
   );
-}
+};

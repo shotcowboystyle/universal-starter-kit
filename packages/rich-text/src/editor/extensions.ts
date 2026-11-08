@@ -11,11 +11,14 @@
 
 import { Extension } from '@tiptap/core';
 import type { Extensions } from '@tiptap/core';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import CharacterCount from '@tiptap/extension-character-count';
 import { Color } from '@tiptap/extension-color';
 import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
 import { Highlight } from '@tiptap/extension-highlight';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import Image from '@tiptap/extension-image';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import Placeholder from '@tiptap/extension-placeholder';
 import { Subscript } from '@tiptap/extension-subscript';
 import { Superscript } from '@tiptap/extension-superscript';
@@ -23,26 +26,31 @@ import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import { TableRow } from '@tiptap/extension-table-row';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import TaskItem from '@tiptap/extension-task-item';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import TaskList from '@tiptap/extension-task-list';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import Typography from '@tiptap/extension-typography';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 
 import { t } from '../shared/t';
 import type { EditorCapabilities } from '../types';
 
-import { BlockDragHandle } from './BlockDragHandle';
+import { BlockDragHandle } from './block-drag-handle';
 import { MARKDOWN_EXCLUDED_SLASH_IDS } from './capabilities';
-import { CodeBlockWithPreview, PreviewChromeStore } from './codeBlockPreview';
+import { CodeBlockWithPreview, PreviewChromeStore } from './code-block-preview';
 import { EmojiSuggestion } from './emoji';
-import { MarkdownPaste } from './MarkdownPaste';
+import { MarkdownPaste } from './markdown-paste';
 import { InlineMath } from './mathematics';
 import { MediaUpload } from './media';
 import { SlashCommands } from './SlashCommands';
-import { SuggestionChromeStore } from './suggestionPopup';
+import { SuggestionChromeStore } from './suggestion-popup';
 
 const lowlight = createLowlight(common);
 
@@ -54,6 +62,7 @@ export const CodeBlockTabIndent = Extension.create({
   name: 'codeBlockTabIndent',
   addKeyboardShortcuts() {
     return {
+      // oxlint-disable-next-line sonarjs/function-name -- ProseMirror keymap key, not a function name
       Tab: ({ editor }) => {
         if (!editor.isActive('codeBlock')) {
           return false;
@@ -98,8 +107,8 @@ export const CodeBlockTabIndent = Extension.create({
         if (from === to) {
           const lineStart = from - $from.parentOffset;
           const text = state.doc.textBetween(lineStart, from);
-          const leadingSpaces = /^ {1,2}/.exec(text)?.[0];
-          if (leadingSpaces) {
+          const leadingSpaces = /^ {1,2}/u.exec(text)?.[0];
+          if (leadingSpaces !== undefined) {
             dispatch(state.tr.delete(lineStart, lineStart + leadingSpaces.length));
           }
           return true;
@@ -112,8 +121,8 @@ export const CodeBlockTabIndent = Extension.create({
           if (node.isTextblock) {
             const lineStart = pos + 1 + offset;
             const text = tr.doc.textBetween(lineStart, Math.min(lineStart + node.content.size, tr.doc.content.size));
-            const leadingSpaces = /^ {1,2}/.exec(text)?.[0];
-            if (leadingSpaces) {
+            const leadingSpaces = /^ {1,2}/u.exec(text)?.[0];
+            if (leadingSpaces !== undefined) {
               tr = tr.delete(lineStart, lineStart + leadingSpaces.length);
               offset -= leadingSpaces.length;
             }
@@ -165,6 +174,7 @@ export const ListItemKeys = Extension.create({
   name: 'listItemKeys',
   addKeyboardShortcuts() {
     return {
+      // oxlint-disable-next-line sonarjs/function-name -- ProseMirror keymap key, not a function name
       Tab: ({ editor }) => {
         if (editor.isActive('codeBlock')) {
           return false;
@@ -201,11 +211,11 @@ export interface BuildEditorExtensionsOptions {
 }
 
 /** Build the production extension list for the given capability surface */
-export function buildEditorExtensions({
+export const buildEditorExtensions = ({
   capabilities = 'full',
   placeholder,
   mentionExtension = null,
-}: BuildEditorExtensionsOptions = {}): Extensions {
+}: BuildEditorExtensionsOptions = {}): Extensions => {
   const markdown = capabilities === 'markdown';
 
   return [
@@ -308,4 +318,4 @@ export function buildEditorExtensions({
       allowBase64: true,
     }),
   ];
-}
+};

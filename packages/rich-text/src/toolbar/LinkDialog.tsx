@@ -2,9 +2,9 @@
  * Link dialog popover for inserting and editing links
  */
 
-import { PopoverContent } from '@repo/ui';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
+import { PopoverContent } from '@repo/ui';
 import { useCallback, useState } from 'react';
 import { Input, Popover, Text, XStack, YStack } from 'tamagui';
 
@@ -15,6 +15,8 @@ import type { EditorState, RichEditorRef } from '../types';
 import { LinkIcon } from './icons';
 import { SHORTCUTS } from './shortcuts';
 import { ToolbarButton } from './ToolbarButton';
+
+export { normalizeUrl } from '../shared/url';
 
 // ===========================================================================
 // Types
@@ -37,7 +39,7 @@ export interface LinkDialogProps {
 // LinkDialog
 // ===========================================================================
 
-export function LinkDialog({ editorRef, state, disabled, open: openProp, onOpenChange }: LinkDialogProps) {
+export const LinkDialog = ({ editorRef, state, disabled, open: openProp, onOpenChange }: LinkDialogProps) => {
   const { knobProps } = useResolvedKnobs();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = openProp ?? internalOpen;
@@ -57,12 +59,12 @@ export function LinkDialog({ editorRef, state, disabled, open: openProp, onOpenC
     }
     setLinkUrl('');
     setOpen(false);
-  }, [linkUrl, editorRef]);
+  }, [linkUrl, editorRef, setOpen]);
 
   const handleRemove = useCallback(() => {
     editorRef.current?.executeCommand('link', { href: null });
     setOpen(false);
-  }, [editorRef]);
+  }, [editorRef, setOpen]);
 
   return (
     <Popover
@@ -127,6 +129,4 @@ export function LinkDialog({ editorRef, state, disabled, open: openProp, onOpenC
       </PopoverContent>
     </Popover>
   );
-}
-
-export { normalizeUrl };
+};

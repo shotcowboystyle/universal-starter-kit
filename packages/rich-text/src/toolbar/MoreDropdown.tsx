@@ -3,8 +3,8 @@
  * Groups: Subscript, Superscript | Alignment | Horizontal Rule, Clear Formatting
  */
 
-import { DropdownMenu } from '@repo/ui';
 import { DotsThreeIcon } from '@phosphor-icons/react';
+import { DropdownMenu } from '@repo/ui';
 import type React from 'react';
 import { useRef, useState } from 'react';
 
@@ -33,11 +33,14 @@ export interface MoreDropdownProps {
   disabled?: boolean;
 }
 
+/** Whatever `executeCommand` accepts as its payload */
+type CommandPayload = Parameters<RichEditorRef['executeCommand']>[1];
+
 interface MoreItem {
   /** Lazy so t() resolves at render time, not module import */
   label: () => string;
   command: EditorCommand;
-  payload?: any;
+  payload?: CommandPayload;
   icon: React.FC;
   isActive?: (state: EditorState) => boolean;
 }
@@ -97,55 +100,51 @@ const BLOCK_ITEMS: MoreItem[] = [
   },
 ];
 
-function MoreIcon() {
+const MoreIcon = () => (
   // LC-16: shared phosphor glyph (same as every other overflow trigger).
-  return (
-    <DotsThreeIcon
-      size={16}
-      weight="bold"
-    />
-  );
-}
+  <DotsThreeIcon
+    size={16}
+    weight="bold"
+  />
+);
 
-function ItemSection({
+const ItemSection = ({
   items,
   state,
   onSelect,
 }: {
   items: MoreItem[];
   state: EditorState;
-  onSelect: (command: EditorCommand, payload?: any) => void;
-}) {
-  return (
-    <>
-      {items.map((item) => {
-        const Icon = item.icon;
-        const label = item.label();
-        return (
-          <DropdownMenu.Item
-            key={item.command}
-            icon={<Icon />}
-            // Toggle-style rows keep the menu open (only hr/clear close it,
-            // handled by the parent's onSelect).
-            closeOnSelect={false}
-            backgroundColor={item.isActive?.(state) ? '$color4' : undefined}
-            aria-label={label}
-            onSelect={() => {
-              onSelect(item.command, item.payload);
-            }}>
-            {label}
-          </DropdownMenu.Item>
-        );
-      })}
-    </>
-  );
-}
+  onSelect: (command: EditorCommand, payload?: CommandPayload) => void;
+}) => (
+  <>
+    {items.map((item) => {
+      const Icon = item.icon;
+      const label = item.label();
+      return (
+        <DropdownMenu.Item
+          key={item.command}
+          icon={<Icon />}
+          // Toggle-style rows keep the menu open (only hr/clear close it,
+          // handled by the parent's onSelect).
+          closeOnSelect={false}
+          backgroundColor={item.isActive?.(state) ? '$color4' : undefined}
+          aria-label={label}
+          onSelect={() => {
+            onSelect(item.command, item.payload);
+          }}>
+          {label}
+        </DropdownMenu.Item>
+      );
+    })}
+  </>
+);
 
-export function MoreDropdown({ editorRef, state, capabilities = 'full', disabled }: MoreDropdownProps) {
+export const MoreDropdown = ({ editorRef, state, capabilities = 'full', disabled }: MoreDropdownProps) => {
   const [open, setOpen] = useState(false);
   const selectedRef = useRef(false);
 
-  const handleSelect = (command: EditorCommand, payload?: any) => {
+  const handleSelect = (command: EditorCommand, payload?: CommandPayload) => {
     editorRef.current?.executeCommand(command, payload);
     if (command === 'horizontalRule' || command === 'clearFormatting') {
       selectedRef.current = true;
@@ -213,4 +212,4 @@ export function MoreDropdown({ editorRef, state, capabilities = 'full', disabled
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};

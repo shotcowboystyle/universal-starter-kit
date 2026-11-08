@@ -3,9 +3,9 @@
  * Provides options to update alt text or remove the image.
  */
 
+import { PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useCallback, useState } from 'react';
@@ -19,7 +19,7 @@ export interface ImageBubbleProps {
   editor: Editor | null;
 }
 
-export function ImageBubble({ editor }: ImageBubbleProps) {
+export const ImageBubble = ({ editor }: ImageBubbleProps) => {
   const { knobProps } = useResolvedKnobs();
   const [editing, setEditing] = useState(false);
   const [altText, setAltText] = useState('');
@@ -28,8 +28,9 @@ export function ImageBubble({ editor }: ImageBubbleProps) {
     if (!editor) {
       return;
     }
-    const attrs = editor.getAttributes('image');
-    setAltText(attrs.alt ?? '');
+    // SAFETY: the image node schema declares `alt` as a string or null.
+    const { alt } = editor.getAttributes('image') as { alt?: string | null };
+    setAltText(alt ?? '');
     setEditing(true);
   }, [editor]);
 
@@ -128,4 +129,4 @@ export function ImageBubble({ editor }: ImageBubbleProps) {
       </XStack>
     </BubbleMenu>
   );
-}
+};

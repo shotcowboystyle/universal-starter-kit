@@ -1,5 +1,5 @@
 /**
- * @repo/rich-text
+ * `@repo/rich-text`
  *
  * Cross-platform rich text editor built on Tiptap (web) and 10Tap (native)
  */

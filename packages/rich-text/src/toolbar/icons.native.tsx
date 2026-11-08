@@ -35,78 +35,40 @@ const IconText = styled(Text, {
   color: '$color11',
 });
 
-export function UndoIcon() {
-  return <IconText>↩</IconText>;
-}
+export const UndoIcon = () => <IconText>↩</IconText>;
 
-export function RedoIcon() {
-  return <IconText>↪</IconText>;
-}
+export const RedoIcon = () => <IconText>↪</IconText>;
 
-export function AlignLeftIcon() {
-  return <IconText>☰</IconText>;
-}
+export const AlignLeftIcon = () => <IconText>☰</IconText>;
 
-export function AlignCenterIcon() {
-  return <IconText>☰</IconText>;
-}
+export const AlignCenterIcon = () => <IconText>☰</IconText>;
 
-export function AlignRightIcon() {
-  return <IconText>☰</IconText>;
-}
+export const AlignRightIcon = () => <IconText>☰</IconText>;
 
-export function AlignJustifyIcon() {
-  return <IconText>☰</IconText>;
-}
+export const AlignJustifyIcon = () => <IconText>☰</IconText>;
 
-export function LinkIcon() {
-  return <IconText>🔗</IconText>;
-}
+export const LinkIcon = () => <IconText>🔗</IconText>;
 
-export function TextColorIcon(_props: { color?: string | null }) {
-  return <IconText>A</IconText>;
-}
+export const TextColorIcon = (_props: { color?: string | null }) => <IconText>A</IconText>;
 
-export function HighlightIcon(_props: { color?: string | null }) {
-  return <IconText>🖊</IconText>;
-}
+export const HighlightIcon = (_props: { color?: string | null }) => <IconText>🖊</IconText>;
 
-export function HorizontalRuleIcon() {
-  return <IconText>―</IconText>;
-}
+export const HorizontalRuleIcon = () => <IconText>―</IconText>;
 
-export function ClearFormattingIcon() {
-  return <IconText>✕</IconText>;
-}
+export const ClearFormattingIcon = () => <IconText>✕</IconText>;
 
-export function SubscriptIcon() {
-  return <IconText>X₂</IconText>;
-}
+export const SubscriptIcon = () => <IconText>X₂</IconText>;
 
-export function SuperscriptIcon() {
-  return <IconText>X²</IconText>;
-}
+export const SuperscriptIcon = () => <IconText>X²</IconText>;
 
-export function BulletListIcon() {
-  return <IconText>•≡</IconText>;
-}
+export const BulletListIcon = () => <IconText>•≡</IconText>;
 
-export function OrderedListIcon() {
-  return <IconText>1.</IconText>;
-}
+export const OrderedListIcon = () => <IconText>1.</IconText>;
 
-export function TaskListIcon() {
-  return <IconText>☑</IconText>;
-}
+export const TaskListIcon = () => <IconText>☑</IconText>;
 
-export function ImageIcon() {
-  return <IconText>🖼</IconText>;
-}
+export const ImageIcon = () => <IconText>🖼</IconText>;
 
-export function BlockquoteIcon() {
-  return <IconText>❝</IconText>;
-}
+export const BlockquoteIcon = () => <IconText>❝</IconText>;
 
-export function CodeBlockIcon() {
-  return <IconText>{'</>'}</IconText>;
-}
+export const CodeBlockIcon = () => <IconText>{'</>'}</IconText>;

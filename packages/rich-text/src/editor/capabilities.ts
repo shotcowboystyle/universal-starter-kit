@@ -54,12 +54,12 @@ export const MARKDOWN_COMMANDS: ReadonlySet<EditorCommand> = new Set<EditorComma
 ]);
 
 /** True when the command exists in the given capability surface */
-export function isCommandInCapabilities(command: EditorCommand, capabilities: EditorCapabilities = 'full'): boolean {
+export const isCommandInCapabilities = (command: EditorCommand, capabilities: EditorCapabilities = 'full'): boolean => {
   if (capabilities === 'full') {
     return true;
   }
   return MARKDOWN_COMMANDS.has(command);
-}
+};
 
 /**
  * Slash-menu items excluded in markdown capabilities. Mermaid stays out of

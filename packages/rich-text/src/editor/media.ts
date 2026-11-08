@@ -32,29 +32,30 @@ declare module '@tiptap/core' {
   }
 }
 
-async function readFileAsDataUrl(file: File): Promise<string> {
-  return await new Promise((resolve, reject) => {
+const readFileAsDataUrl = async (file: File): Promise<string> =>
+  // oxlint-disable-next-line promise/avoid-new -- FileReader is event-based; this wraps it once
+  await new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      resolve(String(reader.result));
-    };
-    reader.onerror = () => {
-      reject(reader.error);
-    };
+    reader.addEventListener('load', () => {
+      // readAsDataURL always produces a string result
+      resolve(reader.result instanceof ArrayBuffer ? '' : (reader.result ?? ''));
+    });
+    reader.addEventListener('error', () => {
+      reject(reader.error ?? new Error('FileReader failed'));
+    });
     reader.readAsDataURL(file);
   });
-}
 
-function insertImage(editor: Editor, src: string, alt: string, pos?: number) {
+const insertImage = (editor: Editor, src: string, alt: string, pos?: number) => {
   const chain = editor.chain().focus();
   if (pos === undefined) {
     chain.setImage({ src, alt }).run();
   } else {
     chain.insertContentAt(pos, { type: 'image', attrs: { src, alt } }).run();
   }
-}
+};
 
-function insertAttachment(editor: Editor, url: string, name: string, pos?: number) {
+const insertAttachment = (editor: Editor, url: string, name: string, pos?: number) => {
   const content = {
     type: 'text',
     text: name,
@@ -73,16 +74,19 @@ function insertAttachment(editor: Editor, url: string, name: string, pos?: numbe
   } else {
     chain.insertContentAt(pos, content).run();
   }
-}
+};
 
-async function handleFiles(editor: Editor, files: File[], pos?: number): Promise<void> {
+const handleFiles = async (editor: Editor, files: File[], pos?: number): Promise<void> => {
   const { handlers } = editor.storage.mediaUpload;
   for (const file of files) {
     try {
       if (file.type.startsWith('image/')) {
+        // Sequential on purpose: files insert in clipboard/drop order at one position
+        // oxlint-disable-next-line no-await-in-loop, react-doctor/async-await-in-loop -- see above
         const src = handlers.onImageUpload ? await handlers.onImageUpload(file) : await readFileAsDataUrl(file);
-        insertImage(editor, src, file.name.replace(/\.[a-z0-9]+$/i, ''), pos);
+        insertImage(editor, src, file.name.replace(/\.[a-z0-9]+$/iu, ''), pos);
       } else if (handlers.onFileUpload) {
+        // oxlint-disable-next-line no-await-in-loop -- sequential on purpose (insertion order)
         const { url, name } = await handlers.onFileUpload(file);
         insertAttachment(editor, url, name ?? file.name, pos);
       }
@@ -90,7 +94,7 @@ async function handleFiles(editor: Editor, files: File[], pos?: number): Promise
       console.warn('[rich-text] media upload failed:', error);
     }
   }
-}
+};
 
 export const MediaUpload = Extension.create({
   name: 'mediaUpload',
@@ -112,7 +116,7 @@ export const MediaUpload = Extension.create({
               return false;
             }
             const { handlers } = editor.storage.mediaUpload;
-            const actionable = files.some((f) => f.type.startsWith('image/') || handlers.onFileUpload);
+            const actionable = files.some((f) => f.type.startsWith('image/') || handlers.onFileUpload !== undefined);
             if (!actionable) {
               return false;
             }
@@ -126,7 +130,7 @@ export const MediaUpload = Extension.create({
               return false;
             }
             const { handlers } = editor.storage.mediaUpload;
-            const actionable = files.some((f) => f.type.startsWith('image/') || handlers.onFileUpload);
+            const actionable = files.some((f) => f.type.startsWith('image/') || handlers.onFileUpload !== undefined);
             if (!actionable) {
               return false;
             }

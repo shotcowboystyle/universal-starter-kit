@@ -3,9 +3,9 @@
  * Displays the URL with options to visit, edit, or unlink.
  */
 
+import { ArrowSquareOutIcon, LinkBreakIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { ArrowSquareOutIcon, LinkBreakIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useCallback, useState } from 'react';
@@ -19,7 +19,21 @@ export interface LinkBubbleProps {
   editor: Editor | null;
 }
 
-export function LinkBubble({ editor }: LinkBubbleProps) {
+/** The current link mark's href, or null when it has none */
+const linkHref = (editor: Editor): string | null => {
+  // SAFETY: the link mark schema declares `href` as a string or null.
+  const { href } = editor.getAttributes('link') as { href?: string | null };
+  return href ?? null;
+};
+
+const openLink = (editor: Editor) => {
+  const href = linkHref(editor);
+  if (href !== null && href !== '') {
+    window.open(href, '_blank', 'noopener,noreferrer');
+  }
+};
+
+export const LinkBubble = ({ editor }: LinkBubbleProps) => {
   const { knobProps } = useResolvedKnobs();
   const [editing, setEditing] = useState(false);
   const [editUrl, setEditUrl] = useState('');
@@ -28,8 +42,7 @@ export function LinkBubble({ editor }: LinkBubbleProps) {
     if (!editor) {
       return;
     }
-    const attrs = editor.getAttributes('link');
-    setEditUrl(attrs.href ?? '');
+    setEditUrl(linkHref(editor) ?? '');
     setEditing(true);
   }, [editor]);
 
@@ -110,19 +123,13 @@ export function LinkBubble({ editor }: LinkBubbleProps) {
               numberOfLines={1}
               cursor="pointer"
               onPress={() => {
-                const { href } = editor.getAttributes('link');
-                if (href) {
-                  window.open(href, '_blank', 'noopener,noreferrer');
-                }
+                openLink(editor);
               }}>
-              {editor.getAttributes('link').href ?? t('No URL')}
+              {linkHref(editor) ?? t('No URL')}
             </Text>
             <ToolbarButton
               onPress={() => {
-                const { href } = editor.getAttributes('link');
-                if (href) {
-                  window.open(href, '_blank', 'noopener,noreferrer');
-                }
+                openLink(editor);
               }}
               aria-label={t('Open link')}
               tooltip={t('Open link')}>
@@ -145,4 +152,4 @@ export function LinkBubble({ editor }: LinkBubbleProps) {
       </XStack>
     </BubbleMenu>
   );
-}
+};

@@ -18,6 +18,16 @@ import type { EditorState, RichEditorRef } from '../types';
 import { LinkIcon } from './icons';
 import { ToolbarButton } from './ToolbarButton';
 
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {},
+});
+
 export interface LinkDialogProps {
   /** Reference to the editor */
   editorRef: React.RefObject<RichEditorRef | null>;
@@ -27,7 +37,7 @@ export interface LinkDialogProps {
   disabled?: boolean;
 }
 
-export function LinkDialog({ editorRef, state, disabled }: LinkDialogProps) {
+export const LinkDialog = ({ editorRef, state, disabled }: LinkDialogProps) => {
   const [open, setOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
 
@@ -125,14 +135,4 @@ export function LinkDialog({ editorRef, state, disabled }: LinkDialogProps) {
       </Modal>
     </>
   );
-}
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheet: {},
-});
+};

@@ -24,17 +24,18 @@ import { ToolbarButton } from './ToolbarButton';
  * theme (Axiom 5 ONE SOURCE): RN and the 10Tap webview cannot resolve CSS
  * custom properties, so the native picker applies resolved values.
  */
-function useResolvedPalette(entries: ColorTokenEntry[]): ColorEntry[] {
+const useResolvedPalette = (entries: ColorTokenEntry[]): ColorEntry[] => {
   const theme = useTheme();
   return useMemo(
     () =>
-      entries.map(({ name, token }) => ({
-        name,
-        value: token ? ((theme as any)[token]?.val ?? null) : null,
-      })),
+      entries.map(({ name, token }) => {
+        // SAFETY: palette tokens are theme keys whose variables carry a string `val`; a missing key is undefined.
+        const variable = token === null ? undefined : (theme[token] as { val?: string } | undefined);
+        return { name, value: variable?.val ?? null };
+      }),
     [entries, theme],
   );
-}
+};
 
 // ===========================================================================
 // Types
@@ -49,7 +50,7 @@ export interface ColorPickerProps {
   disabled?: boolean;
 }
 
-function pickColor(title: string, colors: ColorEntry[], onSelect: (color: string | null) => void) {
+const pickColor = (title: string, colors: ColorEntry[], onSelect: (color: string | null) => void) => {
   const labels = colors.map((c) => t(c.name));
   if (Platform.OS === 'ios') {
     ActionSheetIOS.showActionSheetWithOptions(
@@ -59,7 +60,7 @@ function pickColor(title: string, colors: ColorEntry[], onSelect: (color: string
         cancelButtonIndex: labels.length,
       },
       (index) => {
-        if (typeof index !== 'number' || index >= labels.length) {
+        if (index >= labels.length) {
           return;
         }
         onSelect(colors[index]?.value ?? null);
@@ -76,18 +77,16 @@ function pickColor(title: string, colors: ColorEntry[], onSelect: (color: string
     })),
     { text: t('Cancel'), style: 'cancel' as const },
   ]);
-}
+};
 
 // ===========================================================================
 // TextColorPicker
 // ===========================================================================
 
-export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps) {
+export const TextColorPicker = ({ editorRef, state, disabled }: ColorPickerProps) => {
   const themeName = useThemeName();
   // Same tokens both schemes; only the neutral ink's honest label flips
-  const textColors = useResolvedPalette(
-    String(themeName).startsWith('dark') ? TEXT_COLOR_TOKENS_DARK : TEXT_COLOR_TOKENS,
-  );
+  const textColors = useResolvedPalette(themeName.startsWith('dark') ? TEXT_COLOR_TOKENS_DARK : TEXT_COLOR_TOKENS);
 
   const handlePress = useCallback(() => {
     pickColor(t('Text Color'), textColors, (color) => {
@@ -97,20 +96,20 @@ export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps
 
   return (
     <ToolbarButton
-      active={!!state.textColor}
+      active={Boolean(state.textColor)}
       disabled={disabled}
       onPress={handlePress}
       aria-label={t('Text Color')}>
       <TextColorIcon color={state.textColor} />
     </ToolbarButton>
   );
-}
+};
 
 // ===========================================================================
 // HighlightColorPicker
 // ===========================================================================
 
-export function HighlightColorPicker({ editorRef, state, disabled }: ColorPickerProps) {
+export const HighlightColorPicker = ({ editorRef, state, disabled }: ColorPickerProps) => {
   const highlightColors = useResolvedPalette(HIGHLIGHT_COLOR_TOKENS);
   const handlePress = useCallback(() => {
     pickColor(t('Highlight'), highlightColors, (color) => {
@@ -120,11 +119,11 @@ export function HighlightColorPicker({ editorRef, state, disabled }: ColorPicker
 
   return (
     <ToolbarButton
-      active={!!state.highlightColor}
+      active={Boolean(state.highlightColor)}
       disabled={disabled}
       onPress={handlePress}
       aria-label={t('Highlight Color')}>
       <HighlightIcon color={state.highlightColor} />
     </ToolbarButton>
   );
-}
+};

@@ -14,7 +14,7 @@ import { XStack } from 'tamagui';
 import { isCommandInCapabilities } from '../editor/capabilities';
 import { t } from '../shared/t';
 import { ToolbarFrame } from '../styled';
-import type { EditorCapabilities, EditorState, RichEditorRef, ToolbarSection } from '../types';
+import type { EditorCapabilities, EditorCommand, EditorState, RichEditorRef, ToolbarSection } from '../types';
 import { defaultEditorState } from '../types';
 
 import { TextColorPicker, HighlightColorPicker } from './ColorPicker';
@@ -38,8 +38,8 @@ import { MoreDropdown } from './MoreDropdown';
 import { SHORTCUTS } from './shortcuts';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarGroup } from './ToolbarGroup';
-import { useHorizontalScroll, useHorizontalScrollArrows, HorizontalScrollArrow } from './useHorizontalScroll';
-import { useRovingFocus } from './useRovingFocus';
+import { useHorizontalScroll, useHorizontalScrollArrows, HorizontalScrollArrow } from './use-horizontal-scroll';
+import { useRovingFocus } from './use-roving-focus';
 
 // ===========================================================================
 // Types
@@ -72,18 +72,18 @@ export interface FixedToolbarProps {
 // Helpers
 // ===========================================================================
 
-function isSectionVisible(section: ToolbarSection, sections?: ToolbarSection[]): boolean {
+const isSectionVisible = (section: ToolbarSection, sections?: ToolbarSection[]): boolean => {
   if (!sections) {
     return true;
   }
   return sections.includes(section);
-}
+};
 
 // ===========================================================================
 // FixedToolbar
 // ===========================================================================
 
-export function FixedToolbar({
+export const FixedToolbar = ({
   editorRef,
   state = defaultEditorState,
   sections,
@@ -93,7 +93,7 @@ export function FixedToolbar({
   onFullscreenToggle,
   linkDialogOpen,
   onLinkDialogOpenChange,
-}: FixedToolbarProps) {
+}: FixedToolbarProps) => {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const { arrowLeft, arrowRight, arrowScrollDirRef, updateArrows } = useHorizontalScrollArrows();
 
@@ -104,7 +104,8 @@ export function FixedToolbar({
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     const handleUpdate = () => {
@@ -112,6 +113,7 @@ export function FixedToolbar({
     };
     handleUpdate();
 
+    // oxlint-disable-next-line github/prefer-observers -- arrow visibility tracks scroll offset, which IntersectionObserver does not report
     el.addEventListener('scroll', handleUpdate);
     const resizeObserver = new ResizeObserver(handleUpdate);
     resizeObserver.observe(el);
@@ -123,8 +125,8 @@ export function FixedToolbar({
   }, [updateArrows]);
 
   const executeCommand = useCallback(
-    (command: string, payload?: any) => {
-      editorRef.current?.executeCommand(command as any, payload);
+    (command: EditorCommand) => {
+      editorRef.current?.executeCommand(command);
     },
     [editorRef],
   );
@@ -326,4 +328,4 @@ export function FixedToolbar({
       )}
     </ToolbarFrame>
   );
-}
+};

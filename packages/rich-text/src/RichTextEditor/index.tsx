@@ -38,11 +38,10 @@ import type { EditorCapabilities, RichEditorRef, RichTextMentionOptions, Toolbar
  * Rich text empty check: treats null, undefined, empty string, and
  * Tiptap's default empty paragraph as empty values.
  */
-export function richTextIsEmpty(v: unknown): boolean {
-  return !v || v === '<p></p>' || v === '';
-}
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, typescript/strict-boolean-expressions -- matches useResolvedValidators' isEmpty contract: any falsy field value is empty
+export const richTextIsEmpty = (v: unknown): boolean => !v || v === '<p></p>' || v === '';
 
-function applyExternalContent(editor: RichEditorRef | null, next: string, capabilities?: EditorCapabilities) {
+const applyExternalContent = (editor: RichEditorRef | null, next: string, capabilities?: EditorCapabilities) => {
   if (!editor) {
     return;
   }
@@ -57,13 +56,13 @@ function applyExternalContent(editor: RichEditorRef | null, next: string, capabi
     return;
   }
   editor.setHTML(next);
-}
+};
 
 /**
  * Mirrors a host value (controlled `value` or TanStack field state) into the
  * editor after mount. Display-only: never emits onChange (LC-14).
  */
-function RichTextExternalValueSync({
+const RichTextExternalValueSync = ({
   value,
   editorRef,
   capabilities,
@@ -71,7 +70,7 @@ function RichTextExternalValueSync({
   value: string;
   editorRef: RefObject<RichEditorRef | null>;
   capabilities?: EditorCapabilities;
-}) {
+}) => {
   const isFirst = useRef(true);
   const lastPushed = useRef(value);
   useEffect(() => {
@@ -87,9 +86,20 @@ function RichTextExternalValueSync({
     applyExternalContent(editorRef.current, value, capabilities);
   }, [value, editorRef, capabilities]);
   return null;
-}
+};
 
-function EditorFocusTarget({ id, editorRef }: { id: string; editorRef: RefObject<RichEditorRef | null> }) {
+const focusTargetStyle: React.CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: 0,
+  border: 0,
+  opacity: 0,
+  overflow: 'hidden',
+};
+
+const EditorFocusTarget = ({ id, editorRef }: { id: string; editorRef: RefObject<RichEditorRef | null> }) => {
   if (!isWeb) {
     return null;
   }
@@ -101,29 +111,23 @@ function EditorFocusTarget({ id, editorRef }: { id: string; editorRef: RefObject
       readOnly
       value=""
       onFocus={(event) => {
+        // oxlint-disable-next-line github/no-blur -- this hidden label target only forwards focus; the editor takes it on the next line
         event.currentTarget.blur();
         editorRef.current?.focus();
       }}
-      style={{
-        position: 'absolute',
-        width: 1,
-        height: 1,
-        padding: 0,
-        margin: 0,
-        border: 0,
-        opacity: 0,
-        overflow: 'hidden',
-      }}
+      style={focusTargetStyle}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type RichTextEditorProps<
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API default, mirrors @repo/forms field props (unknown would collapse DeepKeys to never)
   TParentData = any,
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API default, mirrors @repo/forms field props
   TName extends DeepKeys<TParentData> = any,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
@@ -138,6 +142,7 @@ export type RichTextEditorProps<
     value?: string;
     defaultValue?: string;
     onChange?: (value: string) => void;
+    // oxlint-disable-next-line typescript/no-explicit-any -- public API: callers pass typed event handlers, which unknown[] would reject
     onBlur?: (...args: any[]) => void;
     placeholder?: string;
     disabled?: boolean;
@@ -196,13 +201,15 @@ export type RichTextEditorProps<
 // RichTextEditor Component
 // ---------------------------------------------------------------------------
 
-export function RichTextEditor<
+export const RichTextEditor = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: RichTextEditorProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: RichTextEditorProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue = '',
     form,
@@ -231,6 +238,7 @@ export function RichTextEditor<
     sections,
     capabilities,
     skeleton,
+    // oxlint-disable-next-line typescript/no-deprecated -- our own controlled-fullscreen prop; the deprecation belongs to tamagui's style shorthand merged into the props type
     fullscreen,
     defaultFullscreen,
     onFullscreenChange,
@@ -291,7 +299,7 @@ export function RichTextEditor<
     currentValue: string,
     onValueChange: (v: string) => void,
     handleBlur?: () => void,
-    hasError?: boolean,
+    hasError = false,
   ) => (
     <>
       <RichTextExternalValueSync
@@ -333,13 +341,13 @@ export function RichTextEditor<
   );
 
   // ── Branch 2: Standalone (no form context) ──────────────────────
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         {...layoutBind}
         error={errorProp}
         onBlur={onBlur}>
-        {renderEditor(value, handleChange, onBlur as any, !!errorProp)}
+        {renderEditor(value, handleChange, onBlur, Boolean(errorProp))}
       </FieldLayout>
     );
   }
@@ -355,6 +363,7 @@ export function RichTextEditor<
       validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, errorProp);
+        // SAFETY: a RichTextEditor field only ever holds the editor's HTML/markdown string (or nothing yet).
         const fieldValue = (field.state.value as string) ?? '';
 
         return (
@@ -365,16 +374,16 @@ export function RichTextEditor<
             {renderEditor(
               fieldValue,
               (v) => {
-                field.handleChange(v as any);
+                field.handleChange(v);
               },
               () => {
                 field.handleBlur();
               },
-              !!resolvedError,
+              Boolean(resolvedError),
             )}
           </FieldLayout>
         );
       }}
     </Field>
   );
-}
+};

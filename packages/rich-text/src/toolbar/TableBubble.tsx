@@ -3,15 +3,15 @@
  * Provides row/column add/delete and table management actions.
  */
 
-import { PopoverContent } from '@repo/ui';
-import { OVERLAY_ATTACH_GAP, useResolvedKnobs } from '@repo/theme';
 import { ColumnsPlusRightIcon, RowsPlusBottomIcon, TrashIcon } from '@phosphor-icons/react';
+import { OVERLAY_ATTACH_GAP, useResolvedKnobs } from '@repo/theme';
+import { PopoverContent } from '@repo/ui';
 import type { Editor } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { useState } from 'react';
 import { Popover, Text, XStack, YStack } from 'tamagui';
 
-import { getBlockVirtualElement } from '../editor/blockAnchor';
+import { getBlockVirtualElement } from '../editor/block-anchor';
 import { t } from '../shared/t';
 import { DropdownMenuItemFrame, ToolbarSeparatorFrame } from '../styled';
 import type { EditorCapabilities } from '../types';
@@ -25,21 +25,29 @@ interface TableAction {
   action: (editor: Editor) => void;
 }
 
+const DELETE_TABLE = 'Delete table';
+
 const ROW_ACTIONS: TableAction[] = [
   {
     id: 'addRowBefore',
     label: () => t('Add row above'),
-    action: (e) => e.chain().focus().addRowBefore().run(),
+    action: (e) => {
+      e.chain().focus().addRowBefore().run();
+    },
   },
   {
     id: 'addRowAfter',
     label: () => t('Add row below'),
-    action: (e) => e.chain().focus().addRowAfter().run(),
+    action: (e) => {
+      e.chain().focus().addRowAfter().run();
+    },
   },
   {
     id: 'deleteRow',
     label: () => t('Delete row'),
-    action: (e) => e.chain().focus().deleteRow().run(),
+    action: (e) => {
+      e.chain().focus().deleteRow().run();
+    },
   },
 ];
 
@@ -47,17 +55,23 @@ const COL_ACTIONS: TableAction[] = [
   {
     id: 'addColumnBefore',
     label: () => t('Add column before'),
-    action: (e) => e.chain().focus().addColumnBefore().run(),
+    action: (e) => {
+      e.chain().focus().addColumnBefore().run();
+    },
   },
   {
     id: 'addColumnAfter',
     label: () => t('Add column after'),
-    action: (e) => e.chain().focus().addColumnAfter().run(),
+    action: (e) => {
+      e.chain().focus().addColumnAfter().run();
+    },
   },
   {
     id: 'deleteColumn',
     label: () => t('Delete column'),
-    action: (e) => e.chain().focus().deleteColumn().run(),
+    action: (e) => {
+      e.chain().focus().deleteColumn().run();
+    },
   },
 ];
 
@@ -65,22 +79,30 @@ const TABLE_ACTIONS: TableAction[] = [
   {
     id: 'toggleHeaderRow',
     label: () => t('Toggle header row'),
-    action: (e) => e.chain().focus().toggleHeaderRow().run(),
+    action: (e) => {
+      e.chain().focus().toggleHeaderRow().run();
+    },
   },
   {
     id: 'mergeCells',
     label: () => t('Merge cells'),
-    action: (e) => e.chain().focus().mergeCells().run(),
+    action: (e) => {
+      e.chain().focus().mergeCells().run();
+    },
   },
   {
     id: 'splitCell',
     label: () => t('Split cell'),
-    action: (e) => e.chain().focus().splitCell().run(),
+    action: (e) => {
+      e.chain().focus().splitCell().run();
+    },
   },
   {
     id: 'deleteTable',
-    label: () => t('Delete table'),
-    action: (e) => e.chain().focus().deleteTable().run(),
+    label: () => t(DELETE_TABLE),
+    action: (e) => {
+      e.chain().focus().deleteTable().run();
+    },
   },
 ];
 
@@ -93,7 +115,7 @@ export interface TableBubbleProps {
   capabilities?: EditorCapabilities;
 }
 
-export function TableBubble({ editor, capabilities = 'full' }: TableBubbleProps) {
+export const TableBubble = ({ editor, capabilities = 'full' }: TableBubbleProps) => {
   const { knobProps } = useResolvedKnobs();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -126,14 +148,18 @@ export function TableBubble({ editor, capabilities = 'full' }: TableBubbleProps)
         alignItems="center"
         elevation={knobProps.elevation}>
         <ToolbarButton
-          onPress={() => editor.chain().focus().addRowAfter().run()}
+          onPress={() => {
+            editor.chain().focus().addRowAfter().run();
+          }}
           aria-label={t('Add row')}
           tooltip={t('Add row below')}>
           <RowsPlusBottomIcon size={14} />
         </ToolbarButton>
 
         <ToolbarButton
-          onPress={() => editor.chain().focus().addColumnAfter().run()}
+          onPress={() => {
+            editor.chain().focus().addColumnAfter().run();
+          }}
           aria-label={t('Add column')}
           tooltip={t('Add column after')}>
           <ColumnsPlusRightIcon size={14} />
@@ -222,12 +248,14 @@ export function TableBubble({ editor, capabilities = 'full' }: TableBubbleProps)
         </Popover>
 
         <ToolbarButton
-          onPress={() => editor.chain().focus().deleteTable().run()}
-          aria-label={t('Delete table')}
-          tooltip={t('Delete table')}>
+          onPress={() => {
+            editor.chain().focus().deleteTable().run();
+          }}
+          aria-label={t(DELETE_TABLE)}
+          tooltip={t(DELETE_TABLE)}>
           <TrashIcon size={14} />
         </ToolbarButton>
       </XStack>
     </BubbleMenu>
   );
-}
+};

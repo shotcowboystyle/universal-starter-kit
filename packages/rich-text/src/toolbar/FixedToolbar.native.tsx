@@ -65,43 +65,40 @@ export interface FixedToolbarProps {
 // Helpers
 // ===========================================================================
 
-function isSectionVisible(section: ToolbarSection, sections?: ToolbarSection[]): boolean {
+const isSectionVisible = (section: ToolbarSection, sections?: ToolbarSection[]): boolean => {
   if (!sections) {
     return true;
   }
   return sections.includes(section);
-}
+};
 
 /**
  * Checks if a command is supported on native (10Tap).
  * Unsupported commands are hidden entirely rather than shown disabled.
  */
-function isNativeSupported(command: EditorCommand): boolean {
-  return NATIVE_SUPPORTED_COMMANDS[command];
-}
+const isNativeSupported = (command: EditorCommand): boolean => NATIVE_SUPPORTED_COMMANDS[command];
 
 /**
  * Checks if any command in a group is supported on native.
  * If no commands in a section are supported, the entire section is hidden.
  */
-function hasAnySupportedCommand(commands: EditorCommand[]): boolean {
-  return commands.some(isNativeSupported);
-}
+const hasAnySupportedCommand = (commands: EditorCommand[]): boolean => commands.some(isNativeSupported);
 
 // ===========================================================================
 // FixedToolbar (Native)
 // ===========================================================================
 
-export function FixedToolbar({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one flat visibility flag per toolbar section; splitting it scatters the section table
+export const FixedToolbar = ({
   editorRef,
   state = defaultEditorState,
   sections,
   hasError,
   docked = 'top',
-}: FixedToolbarProps) {
+}: FixedToolbarProps) => {
   const executeCommand = useCallback(
-    (command: EditorCommand, payload?: any) => {
-      editorRef.current?.executeCommand(command, payload);
+    (command: EditorCommand) => {
+      editorRef.current?.executeCommand(command);
     },
     [editorRef],
   );
@@ -147,7 +144,7 @@ export function FixedToolbar({
       {...(docked === 'bottom' && {
         borderBottomWidth: 0,
         borderTopWidth: 1,
-        borderTopColor: hasError ? '$red10' : ('$color6' as any),
+        borderTopColor: hasError ? '$red10' : '$color6',
       })}>
       <ScrollView
         horizontal
@@ -411,4 +408,4 @@ export function FixedToolbar({
       </ScrollView>
     </ToolbarFrame>
   );
-}
+};

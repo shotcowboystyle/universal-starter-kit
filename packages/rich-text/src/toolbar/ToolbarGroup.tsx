@@ -23,7 +23,7 @@ export interface ToolbarGroupProps {
 // ToolbarGroup
 // ===========================================================================
 
-export function ToolbarGroup({ children, visible = true, showSeparator = true }: ToolbarGroupProps) {
+export const ToolbarGroup = ({ children, visible = true, showSeparator = true }: ToolbarGroupProps) => {
   if (!visible) {
     return null;
   }
@@ -34,4 +34,4 @@ export function ToolbarGroup({ children, visible = true, showSeparator = true }:
       {showSeparator && <ToolbarSeparatorFrame />}
     </>
   );
-}
+};

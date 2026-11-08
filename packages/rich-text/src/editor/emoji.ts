@@ -15,11 +15,12 @@
 import { Extension } from '@tiptap/core';
 import type { Editor, Range } from '@tiptap/core';
 import { PluginKey } from '@tiptap/pm/state';
+// oxlint-disable-next-line import/no-named-as-default -- several suites vi.mock this module with only a `default` export
 import Suggestion from '@tiptap/suggestion';
 
 import { t } from '../shared/t';
 
-import { createSuggestionRenderer, getSuggestionChrome } from './suggestionPopup';
+import { createSuggestionRenderer, getSuggestionChrome } from './suggestion-popup';
 
 // ===========================================================================
 // Dataset (lazy)
@@ -34,11 +35,6 @@ export interface EmojiEntry {
   keywords: string[];
 }
 
-interface EmojilibRecord {
-  char?: string;
-  keywords?: string[];
-}
-
 let emojiIndexPromise: Promise<EmojiEntry[]> | null = null;
 
 /**
@@ -46,25 +42,30 @@ let emojiIndexPromise: Promise<EmojiEntry[]> | null = null;
  * keeps the JSON out of the editor chunk (zero eager bytes); the promise is
  * cached so the fetch happens at most once per session.
  */
-export async function loadEmojiIndex(): Promise<EmojiEntry[]> {
-  emojiIndexPromise ??= import('emojilib/emojis.json').then((mod: any) => {
-    const lib = (mod?.default ?? mod) as Record<string, EmojilibRecord>;
-    const entries: EmojiEntry[] = [];
-    for (const [name, value] of Object.entries(lib)) {
-      if (!value?.char) {
-        continue;
-      }
-      entries.push({ name, char: value.char, keywords: value.keywords ?? [] });
+const buildEmojiIndex = async (): Promise<EmojiEntry[]> => {
+  const { default: lib } = await import('emojilib/emojis.json');
+  const entries: EmojiEntry[] = [];
+  for (const [name, value] of Object.entries(lib)) {
+    if (value.char === undefined || value.char === '') {
+      continue;
     }
-    return entries;
-  });
-  return await emojiIndexPromise;
-}
+    entries.push({ name, char: value.char, keywords: value.keywords ?? [] });
+  }
+  return entries;
+};
+
+// Not `async`: an async wrapper would hand out a fresh promise per call, and
+// callers rely on getting the one cached promise back.
+// oxlint-disable-next-line typescript/promise-function-async -- returns the cached promise by identity
+export const loadEmojiIndex = (): Promise<EmojiEntry[]> => {
+  emojiIndexPromise ??= buildEmojiIndex();
+  return emojiIndexPromise;
+};
 
 /** Test seam: reset the cached dataset promise */
-export function resetEmojiIndexForTesting(): void {
+export const resetEmojiIndexForTesting = (): void => {
   emojiIndexPromise = null;
-}
+};
 
 // ===========================================================================
 // Search
@@ -75,7 +76,7 @@ export function resetEmojiIndexForTesting(): void {
  * keyword prefix/substring. Ties keep dataset order (faces first), matching
  * the GitLab popup's feel. An empty query lists the head of the dataset.
  */
-export function searchEmoji(entries: EmojiEntry[], query: string, limit = 20): EmojiEntry[] {
+export const searchEmoji = (entries: EmojiEntry[], query: string, limit = 20): EmojiEntry[] => {
   const q = query.trim().toLowerCase();
   if (!q) {
     return entries.slice(0, limit);
@@ -98,16 +99,16 @@ export function searchEmoji(entries: EmojiEntry[], query: string, limit = 20): E
     }
   }
   return tiers.flat().slice(0, limit);
-}
+};
 
 // ===========================================================================
 // Extension
 // ===========================================================================
 
 /** Inserts the unicode character, replacing the `:query` trigger text */
-export function insertEmoji(editor: Editor, range: Range, char: string): void {
+export const insertEmoji = (editor: Editor, range: Range, char: string): void => {
   editor.chain().focus().insertContentAt(range, char).run();
-}
+};
 
 const EmojiSuggestionPluginKey = new PluginKey('emojiSuggestion');
 

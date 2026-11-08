@@ -1,5 +1,5 @@
 /**
- * @ mention support for the rich text editor (web).
+ * `@` mention support for the rich text editor (web).
  *
  * Reuses the forms `MentionItem` contract (LC-16: same suggestion data
  * shape as `MentionInput`) and the shared suggestion popup (same rows,
@@ -10,14 +10,14 @@
  * `<span data-type="mention" data-id="...">@label</span>` chips.
  */
 
-import Mention from '@tiptap/extension-mention';
+import { Mention } from '@tiptap/extension-mention';
 
 import { t } from '../shared/t';
 import type { RichTextMentionOptions } from '../types';
 
-import { createSuggestionRenderer, getSuggestionChrome } from './suggestionPopup';
+import { createSuggestionRenderer, getSuggestionChrome } from './suggestion-popup';
 
-export type { RichTextMentionOptions };
+export type { RichTextMentionOptions } from '../types';
 
 /** Internal suggestion payload: Mention's default command reads id + label */
 interface MentionSuggestionItem {
@@ -27,8 +27,8 @@ interface MentionSuggestionItem {
   avatar?: string;
 }
 
-export function createMentionExtension(options: RichTextMentionOptions) {
-  return Mention.configure({
+export const createMentionExtension = (options: RichTextMentionOptions) =>
+  Mention.configure({
     HTMLAttributes: { class: 'rt-mention' },
     deleteTriggerWithBackspace: true,
     suggestion: {
@@ -54,4 +54,3 @@ export function createMentionExtension(options: RichTextMentionOptions) {
       }),
     },
   });
-}

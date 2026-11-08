@@ -2,9 +2,9 @@
  * Image dialog popover for inserting images via URL
  */
 
-import { PopoverContent } from '@repo/ui';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
+import { PopoverContent } from '@repo/ui';
 import { useCallback, useState } from 'react';
 import { Input, Popover, Text, XStack, YStack } from 'tamagui';
 
@@ -30,7 +30,7 @@ export interface ImageDialogProps {
 // ImageDialog
 // ===========================================================================
 
-export function ImageDialog({ editorRef, disabled }: ImageDialogProps) {
+export const ImageDialog = ({ editorRef, disabled }: ImageDialogProps) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
@@ -97,4 +97,4 @@ export function ImageDialog({ editorRef, disabled }: ImageDialogProps) {
       </PopoverContent>
     </Popover>
   );
-}
+};

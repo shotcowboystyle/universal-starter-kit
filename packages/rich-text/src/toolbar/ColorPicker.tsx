@@ -2,9 +2,9 @@
  * Color picker popover for text color and highlight color
  */
 
-import { PopoverContent } from '@repo/ui';
 import { PresetSwatches } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
+import { PopoverContent } from '@repo/ui';
 import { useCallback, useState } from 'react';
 import { Popover, Text, YStack, useThemeName } from 'tamagui';
 
@@ -33,7 +33,7 @@ export interface ColorPickerProps {
 // ColorGrid — titled wrapper around the forms PresetSwatches grid
 // ===========================================================================
 
-function ColorGrid({
+const ColorGrid = ({
   title,
   colors,
   selectedColor,
@@ -45,7 +45,7 @@ function ColorGrid({
   selectedColor: string | null;
   onSelect: (color: string | null) => void;
   maxWidth: number;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack {...knobProps.gap}>
@@ -62,16 +62,18 @@ function ColorGrid({
       />
     </YStack>
   );
-}
+};
+
+const TEXT_COLOR = 'Text Color';
 
 // ===========================================================================
 // TextColorPicker
 // ===========================================================================
 
-export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps) {
+export const TextColorPicker = ({ editorRef, state, disabled }: ColorPickerProps) => {
   const { knobProps } = useResolvedKnobs();
   const themeName = useThemeName();
-  const textColors = String(themeName).startsWith('dark') ? TEXT_COLORS_DARK : TEXT_COLORS;
+  const textColors = themeName.startsWith('dark') ? TEXT_COLORS_DARK : TEXT_COLORS;
   const [open, setOpen] = useState(false);
 
   // DISMISS-BY-INTENT (LC-19): swatch click applies the color live; the popup
@@ -90,13 +92,13 @@ export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps
       placement="bottom-start">
       <Popover.Trigger asChild>
         <ToolbarButton
-          active={!!state.textColor}
+          active={Boolean(state.textColor)}
           disabled={disabled}
           onPress={() => {
             setOpen(true);
           }}
-          aria-label={t('Text Color')}
-          tooltip={t('Text Color')}>
+          aria-label={t(TEXT_COLOR)}
+          tooltip={t(TEXT_COLOR)}>
           <TextColorIcon color={state.textColor} />
         </ToolbarButton>
       </Popover.Trigger>
@@ -106,7 +108,7 @@ export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps
           backgroundColor="$background"
         />
         <ColorGrid
-          title={t('Text Color')}
+          title={t(TEXT_COLOR)}
           colors={textColors}
           selectedColor={state.textColor}
           onSelect={handleSelect}
@@ -115,13 +117,13 @@ export function TextColorPicker({ editorRef, state, disabled }: ColorPickerProps
       </PopoverContent>
     </Popover>
   );
-}
+};
 
 // ===========================================================================
 // HighlightColorPicker
 // ===========================================================================
 
-export function HighlightColorPicker({ editorRef, state, disabled }: ColorPickerProps) {
+export const HighlightColorPicker = ({ editorRef, state, disabled }: ColorPickerProps) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
 
@@ -140,7 +142,7 @@ export function HighlightColorPicker({ editorRef, state, disabled }: ColorPicker
       placement="bottom-start">
       <Popover.Trigger asChild>
         <ToolbarButton
-          active={!!state.highlightColor}
+          active={Boolean(state.highlightColor)}
           disabled={disabled}
           onPress={() => {
             setOpen(true);
@@ -165,4 +167,4 @@ export function HighlightColorPicker({ editorRef, state, disabled }: ColorPicker
       </PopoverContent>
     </Popover>
   );
-}
+};

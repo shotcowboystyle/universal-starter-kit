@@ -13,10 +13,10 @@
  * `aria-pressed` so assistive tech reads format state.
  */
 
-import { Tooltip } from '@repo/ui';
+import { CaretDownIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { CaretDownIcon } from '@phosphor-icons/react';
+import { Tooltip } from '@repo/ui';
 import type { ReactNode } from 'react';
 import { XStack, View, styled } from 'tamagui';
 
@@ -91,7 +91,7 @@ const ChromeBox = styled(View, {
 // ToolbarButton (square)
 // ===========================================================================
 
-export function ToolbarButton({
+export const ToolbarButton = ({
   active,
   disabled,
   onPress,
@@ -99,11 +99,11 @@ export function ToolbarButton({
   tooltip,
   'aria-pressed': ariaPressed,
   ...props
-}: ToolbarButtonProps) {
+}: ToolbarButtonProps) => {
   const ctx = RichEditorContext.useStyledContext();
   const { knobProps } = useResolvedKnobs();
   const isDisabled = disabled ?? ctx.disabled;
-  const pressed = ariaPressed ?? (active === undefined ? undefined : !!active);
+  const pressed = ariaPressed ?? active;
 
   const button = (
     <Button
@@ -133,7 +133,7 @@ export function ToolbarButton({
         {...knobProps.borderRadius}
         borderWidth={0}
         active={!!active}
-        unavailable={!!isDisabled}>
+        unavailable={isDisabled}>
         {children}
       </ChromeBox>
     </Button>
@@ -141,7 +141,7 @@ export function ToolbarButton({
 
   // DG-OVL-05: no hover tooltip on a disabled control — the shortcut hint
   // returns with availability.
-  if (tooltip && !isDisabled) {
+  if (tooltip !== undefined && tooltip !== '' && !isDisabled) {
     return (
       <Tooltip
         content={tooltip}
@@ -153,13 +153,19 @@ export function ToolbarButton({
   }
 
   return button;
-}
+};
 
 // ===========================================================================
 // ToolbarDropdownButton (fixed height, variable width)
 // ===========================================================================
 
-export function ToolbarDropdownButton({ active, disabled, onPress, children, ...props }: ToolbarDropdownButtonProps) {
+export const ToolbarDropdownButton = ({
+  active,
+  disabled,
+  onPress,
+  children,
+  ...props
+}: ToolbarDropdownButtonProps) => {
   const ctx = RichEditorContext.useStyledContext();
   const { knobProps } = useResolvedKnobs();
   const isDisabled = disabled ?? ctx.disabled;
@@ -187,7 +193,7 @@ export function ToolbarDropdownButton({ active, disabled, onPress, children, ...
         borderWidth={0}
         active={!!active}
         stretch
-        unavailable={!!isDisabled}>
+        unavailable={isDisabled}>
         <XStack
           alignItems="center"
           gap="$1">
@@ -197,4 +203,4 @@ export function ToolbarDropdownButton({ active, disabled, onPress, children, ...
       </ChromeBox>
     </Button>
   );
-}
+};

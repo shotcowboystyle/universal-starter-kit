@@ -27,7 +27,7 @@ export const baseIgnorePatterns = [
   'packages/markdown/**',
   // 'packages/node-graph/**',
   'packages/platform/**',
-  'packages/rich-text/**',
+  // 'packages/rich-text/**',
   'packages/router/**',
   'packages/store/**',
   'packages/storybook/**',

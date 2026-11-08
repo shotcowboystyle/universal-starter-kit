@@ -159,6 +159,8 @@ export const DropdownMenuItemFrame = styled(XStack, {
   // menuRowFrame suppresses the outline by design.
   focusVisibleStyle: {
     backgroundColor: '$color4',
+    // SAFETY: 'none' is a valid CSS outline-style; Tamagui's style type omits it.
+    // oxlint-disable-next-line typescript/no-explicit-any, typescript/no-unsafe-assignment, typescript/no-unsafe-type-assertion -- see SAFETY above
     outlineStyle: 'none' as any,
   },
 

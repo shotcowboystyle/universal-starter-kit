@@ -5,6 +5,7 @@
 import { DropdownMenu } from '@repo/ui';
 import { useRef, useState } from 'react';
 import { Text } from 'tamagui';
+import type { TextProps } from 'tamagui';
 
 import { t } from '../shared/t';
 import type { EditorCommand, EditorState, RichEditorRef } from '../types';
@@ -33,9 +34,9 @@ interface HeadingOption {
   /** Lazy so t() resolves at render time, not module import */
   description: () => string;
   command: EditorCommand;
-  stateKey: keyof EditorState;
-  fontSize: string;
-  fontWeight: string;
+  stateKey: Extract<keyof EditorState, `isHeading${number}` | 'isParagraph'>;
+  fontSize: TextProps['fontSize'];
+  fontWeight: TextProps['fontWeight'];
 }
 
 const HEADING_OPTIONS: HeadingOption[] = [
@@ -101,7 +102,7 @@ const HEADING_OPTIONS: HeadingOption[] = [
 // HeadingPicker
 // ===========================================================================
 
-function getActiveHeadingLabel(state: EditorState): string {
+const getActiveHeadingLabel = (state: EditorState): string => {
   if (state.isHeading1) {
     return 'H1';
   }
@@ -121,15 +122,20 @@ function getActiveHeadingLabel(state: EditorState): string {
     return 'H6';
   }
   return 'H';
-}
+};
 
-function isAnyHeadingActive(state: EditorState): boolean {
-  return (
-    state.isHeading1 || state.isHeading2 || state.isHeading3 || state.isHeading4 || state.isHeading5 || state.isHeading6
-  );
-}
+const HEADING_STATE_KEYS = [
+  'isHeading1',
+  'isHeading2',
+  'isHeading3',
+  'isHeading4',
+  'isHeading5',
+  'isHeading6',
+] as const;
 
-export function HeadingPicker({ editorRef, state, disabled }: HeadingPickerProps) {
+const isAnyHeadingActive = (state: EditorState): boolean => HEADING_STATE_KEYS.some((key) => state[key]);
+
+export const HeadingPicker = ({ editorRef, state, disabled }: HeadingPickerProps) => {
   const [open, setOpen] = useState(false);
   const selectedRef = useRef(false);
 
@@ -176,8 +182,8 @@ export function HeadingPicker({ editorRef, state, disabled }: HeadingPickerProps
                 setOpen(false);
               }}>
               <Text
-                fontWeight={option.fontWeight as any}
-                fontSize={option.fontSize as any}>
+                fontWeight={option.fontWeight}
+                fontSize={option.fontSize}>
                 {option.label}
               </Text>
               <Text color="$color11"> {description}</Text>
@@ -187,4 +193,4 @@ export function HeadingPicker({ editorRef, state, disabled }: HeadingPickerProps
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};

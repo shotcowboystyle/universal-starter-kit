@@ -84,7 +84,7 @@ export const HIGHLIGHT_COLOR_TOKENS: ColorTokenEntry[] = [
  */
 const toCssVarEntry = ({ name, token }: ColorTokenEntry): ColorEntry => ({
   name,
-  value: token ? `var(--${token})` : null,
+  value: token === null ? null : `var(--${token})`,
 });
 
 export const TEXT_COLORS: ColorEntry[] = TEXT_COLOR_TOKENS.map(toCssVarEntry);

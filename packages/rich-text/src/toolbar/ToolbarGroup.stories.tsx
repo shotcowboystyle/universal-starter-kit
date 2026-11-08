@@ -9,6 +9,7 @@
  * `visible` decides whether anything renders at all, `showSeparator` decides
  * whether the trailing rule does.
  */
+import { action } from '@repo/storybook';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { XStack } from 'tamagui';
 
@@ -27,46 +28,42 @@ export interface ToolbarGroupStoryArgs {
 }
 
 /** A history cluster: the pair the real toolbar opens with. */
-function HistoryButtons() {
-  return (
-    <>
-      <ToolbarButton
-        onPress={() => {}}
-        aria-label="Undo">
-        <UndoIcon />
-      </ToolbarButton>
-      <ToolbarButton
-        onPress={() => {}}
-        aria-label="Redo">
-        <RedoIcon />
-      </ToolbarButton>
-    </>
-  );
-}
+const HistoryButtons = () => (
+  <>
+    <ToolbarButton
+      onPress={() => action('onPress')('Undo')}
+      aria-label="Undo">
+      <UndoIcon />
+    </ToolbarButton>
+    <ToolbarButton
+      onPress={() => action('onPress')('Redo')}
+      aria-label="Redo">
+      <RedoIcon />
+    </ToolbarButton>
+  </>
+);
 
 /** A formatting cluster: the group that follows history in the real toolbar. */
-function FormattingButtons() {
-  return (
-    <>
-      <ToolbarButton
-        active
-        onPress={() => {}}
-        aria-label="Bold">
-        <BoldIcon>B</BoldIcon>
-      </ToolbarButton>
-      <ToolbarButton
-        onPress={() => {}}
-        aria-label="Italic">
-        <ItalicIcon>I</ItalicIcon>
-      </ToolbarButton>
-      <ToolbarButton
-        onPress={() => {}}
-        aria-label="Strikethrough">
-        <StrikeIcon>S</StrikeIcon>
-      </ToolbarButton>
-    </>
-  );
-}
+const FormattingButtons = () => (
+  <>
+    <ToolbarButton
+      active
+      onPress={() => action('onPress')('Bold')}
+      aria-label="Bold">
+      <BoldIcon>B</BoldIcon>
+    </ToolbarButton>
+    <ToolbarButton
+      onPress={() => action('onPress')('Italic')}
+      aria-label="Italic">
+      <ItalicIcon>I</ItalicIcon>
+    </ToolbarButton>
+    <ToolbarButton
+      onPress={() => action('onPress')('Strikethrough')}
+      aria-label="Strikethrough">
+      <StrikeIcon>S</StrikeIcon>
+    </ToolbarButton>
+  </>
+);
 
 const meta: Meta<ToolbarGroupStoryArgs> = {
   title: 'Forms/RichTextEditor/ToolbarGroup',
@@ -163,7 +160,7 @@ export const TwoGroups: Story = {
         </ToolbarGroup>
         <ToolbarGroup showSeparator={false}>
           <ToolbarButton
-            onPress={() => {}}
+            onPress={() => action('onPress')('Blockquote')}
             aria-label="Blockquote">
             <BoldIcon>Q</BoldIcon>
           </ToolbarButton>

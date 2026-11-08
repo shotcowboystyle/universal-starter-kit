@@ -198,6 +198,7 @@ export const WithError: Story = {
 export const WithMaxHeight: Story = {
   args: {
     label: 'Scrollable Content',
+    // cspell:disable -- lorem ipsum filler
     defaultValue: `
       <h1>Scrollable Content</h1>
       <p>This editor has a maximum height and will scroll when content exceeds it.</p>
@@ -211,6 +212,7 @@ export const WithMaxHeight: Story = {
       <p>And even more content...</p>
       <p>Keep scrolling...</p>
     `,
+    // cspell:enable
     minHeight: 150,
     maxHeight: 250,
   },
@@ -220,127 +222,131 @@ export const WithMaxHeight: Story = {
 // Interactive
 // ---------------------------------------------------------------------------
 
+const InteractiveStory = () => {
+  const editorRef = useRef<RichEditorRef>(null);
+  const [html, setHtml] = useState('');
+  const [charCount, setCharCount] = useState(0);
+
+  const handleChange = (newHtml: string) => {
+    setHtml(newHtml);
+    const text = newHtml.replaceAll(/<[^<>]*>/gu, '');
+    setCharCount(text.length);
+  };
+
+  return (
+    <YStack gap="$4">
+      <RichEditor
+        ref={editorRef}
+        placeholder="Type here to see live updates..."
+        onChange={handleChange}
+        minHeight={200}
+        showBubbleToolbar
+      />
+      <XStack
+        gap="$4"
+        alignItems="center">
+        <Text
+          color="$color10"
+          fontSize="$2">
+          Characters: {charCount}
+        </Text>
+        <Button
+          size="$3"
+          onPress={() => {
+            const content = editorRef.current?.getHTML();
+            console.log('HTML Content:', content);
+          }}>
+          Log HTML
+        </Button>
+        <Button
+          size="$3"
+          onPress={() => {
+            editorRef.current?.setHTML('<p>Content set programmatically!</p>');
+          }}>
+          Set Content
+        </Button>
+        <Button
+          size="$3"
+          onPress={() => editorRef.current?.focus()}>
+          Focus
+        </Button>
+      </XStack>
+      {html && (
+        <YStack
+          backgroundColor="$color3"
+          padding="$3"
+          borderRadius="$3"
+          maxHeight={200}
+          overflow="scroll">
+          <Paragraph
+            size="$1"
+            fontFamily="$mono"
+            whiteSpace="pre-wrap">
+            {html}
+          </Paragraph>
+        </YStack>
+      )}
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const editorRef = useRef<RichEditorRef>(null);
-    const [html, setHtml] = useState('');
-    const [charCount, setCharCount] = useState(0);
-
-    const handleChange = (newHtml: string) => {
-      setHtml(newHtml);
-      const text = newHtml.replaceAll(/<[^>]*>/g, '');
-      setCharCount(text.length);
-    };
-
-    return (
-      <YStack gap="$4">
-        <RichEditor
-          ref={editorRef}
-          placeholder="Type here to see live updates..."
-          onChange={handleChange}
-          minHeight={200}
-          showBubbleToolbar
-        />
-        <XStack
-          gap="$4"
-          alignItems="center">
-          <Text
-            color="$color10"
-            fontSize="$2">
-            Characters: {charCount}
-          </Text>
-          <Button
-            size="$3"
-            onPress={() => {
-              const content = editorRef.current?.getHTML();
-              console.log('HTML Content:', content);
-            }}>
-            Log HTML
-          </Button>
-          <Button
-            size="$3"
-            onPress={() => {
-              editorRef.current?.setHTML('<p>Content set programmatically!</p>');
-            }}>
-            Set Content
-          </Button>
-          <Button
-            size="$3"
-            onPress={() => editorRef.current?.focus()}>
-            Focus
-          </Button>
-        </XStack>
-        {html && (
-          <YStack
-            backgroundColor="$color3"
-            padding="$3"
-            borderRadius="$3"
-            maxHeight={200}
-            overflow="scroll">
-            <Paragraph
-              size="$1"
-              fontFamily="$mono"
-              whiteSpace="pre-wrap">
-              {html}
-            </Paragraph>
-          </YStack>
-        )}
-      </YStack>
-    );
-  },
+  render: () => <InteractiveStory />,
 };
 
 // ---------------------------------------------------------------------------
 // FormIntegrated
 // ---------------------------------------------------------------------------
 
+const FormIntegratedExample = () => {
+  const [submitted, setSubmitted] = useState<string | null>(null);
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      content: '',
+    },
+    onSubmit: ({ value }) => {
+      setSubmitted(JSON.stringify(value, null, 2));
+    },
+  });
+
+  return (
+    <YStack gap="$4">
+      <RichTextEditor
+        form={form as any}
+        name="content"
+        label="Article Content"
+        helperText="Write your article content here"
+        required
+        placeholder="Start writing..."
+        minHeight={250}
+        showBubbleToolbar
+      />
+      <XStack gap="$2">
+        <Button
+          size="$3"
+          // oxlint-disable-next-line typescript/no-misused-promises -- Button ignores the returned promise; submit errors surface through form state
+          onPress={async () => {
+            await form.handleSubmit();
+          }}>
+          Submit
+        </Button>
+        <Button
+          size="$3"
+          theme="gray"
+          onPress={() => {
+            form.reset();
+          }}>
+          Reset
+        </Button>
+      </XStack>
+      {submitted !== null && <Paragraph fontFamily="$mono">{submitted}</Paragraph>}
+    </YStack>
+  );
+};
+
 export const FormIntegrated: Story = {
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          title: '',
-          content: '',
-        },
-        onSubmit: async ({ value }) => {
-          console.log('Form submitted:', value);
-          alert(JSON.stringify(value, null, 2));
-        },
-      });
-
-      return (
-        <YStack gap="$4">
-          <RichTextEditor
-            form={form as any}
-            name="content"
-            label="Article Content"
-            helperText="Write your article content here"
-            required
-            placeholder="Start writing..."
-            minHeight={250}
-            showBubbleToolbar
-          />
-          <XStack gap="$2">
-            <Button
-              size="$3"
-              onPress={async () => await form.handleSubmit()}>
-              Submit
-            </Button>
-            <Button
-              size="$3"
-              theme="gray"
-              onPress={() => {
-                form.reset();
-              }}>
-              Reset
-            </Button>
-          </XStack>
-        </YStack>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormIntegratedExample />,
 };
 
 // ---------------------------------------------------------------------------
@@ -483,43 +489,45 @@ export const WithDetails: Story = {
 // MarkdownMode (capabilities="markdown" — GFM-expressible surface only)
 // ---------------------------------------------------------------------------
 
-export const MarkdownMode: Story = {
-  render: () => {
-    const [markdown, setMarkdown] = useState(
-      '# Markdown mode\n\nWYSIWYG editing constrained to **GFM**: no highlight, underline, color, or alignment.\n\n- [ ] Task lists work\n- Bullet lists too\n\n> Blockquotes and `inline code` round-trip.',
-    );
+const MarkdownModeStory = () => {
+  const [markdown, setMarkdown] = useState(
+    '# Markdown mode\n\nWYSIWYG editing constrained to **GFM**: no highlight, underline, color, or alignment.\n\n- [ ] Task lists work\n- Bullet lists too\n\n> Blockquotes and `inline code` round-trip.',
+  );
 
-    return (
-      <YStack gap="$4">
-        <RichEditor
-          capabilities="markdown"
-          initialContent={markdown}
-          onChange={(md) => {
-            setMarkdown(md);
-          }}
-          minHeight={240}
-          showBubbleToolbar
-        />
-        <YStack
-          backgroundColor="$color3"
-          padding="$3"
-          borderRadius="$3"
-          maxHeight={200}>
-          <Text
-            color="$color11"
-            fontSize="$2">
-            Serialized markdown (onChange):
-          </Text>
-          <Paragraph
-            size="$1"
-            fontFamily="$mono"
-            whiteSpace="pre-wrap">
-            {markdown}
-          </Paragraph>
-        </YStack>
+  return (
+    <YStack gap="$4">
+      <RichEditor
+        capabilities="markdown"
+        initialContent={markdown}
+        onChange={(md) => {
+          setMarkdown(md);
+        }}
+        minHeight={240}
+        showBubbleToolbar
+      />
+      <YStack
+        backgroundColor="$color3"
+        padding="$3"
+        borderRadius="$3"
+        maxHeight={200}>
+        <Text
+          color="$color11"
+          fontSize="$2">
+          Serialized markdown (onChange):
+        </Text>
+        <Paragraph
+          size="$1"
+          fontFamily="$mono"
+          whiteSpace="pre-wrap">
+          {markdown}
+        </Paragraph>
       </YStack>
-    );
-  },
+    </YStack>
+  );
+};
+
+export const MarkdownMode: Story = {
+  render: () => <MarkdownModeStory />,
 };
 
 // ---------------------------------------------------------------------------
@@ -533,20 +541,22 @@ export const WithUploadHooks: Story = {
     minHeight: 200,
     helperText: 'onImageUpload / onFileUpload resolve fake URLs after a short delay',
     onImageUpload: async (file: File) =>
-      await new Promise<string>((resolve) =>
+      // oxlint-disable-next-line promise/avoid-new -- story stub: a timer-backed fake upload has no promise API to reuse
+      await new Promise<string>((resolve) => {
         setTimeout(() => {
           resolve(`https://example.com/uploads/${encodeURIComponent(file.name)}`);
-        }, 150),
-      ),
+        }, 150);
+      }),
     onFileUpload: async (file: File) =>
-      await new Promise<{ url: string; name?: string }>((resolve) =>
+      // oxlint-disable-next-line promise/avoid-new -- story stub: a timer-backed fake upload has no promise API to reuse
+      await new Promise<{ url: string; name?: string }>((resolve) => {
         setTimeout(() => {
           resolve({
             url: `https://example.com/files/${encodeURIComponent(file.name)}`,
             name: file.name,
           });
-        }, 150),
-      ),
+        }, 150);
+      }),
   },
 };
 
@@ -560,37 +570,39 @@ interface InTableRow {
   value: string;
 }
 
+const InTableStory = () => {
+  const [data, setData] = useState<InTableRow[]>([
+    { id: '1', label: 'Alpha', value: '<p>Hello <strong>world</strong></p>' },
+    { id: '2', label: 'Beta', value: '' },
+    {
+      id: '3',
+      label: 'Gamma',
+      value: '<ul><li>Draft</li><li>Review</li><li>Ship</li></ul>',
+    },
+  ]);
+  const columns: DataTableColumn<InTableRow>[] = [
+    { accessorKey: 'label', header: 'Row' },
+    {
+      accessorKey: 'value',
+      header: 'Rich text',
+      field: 'richtexteditor',
+    },
+  ];
+  return (
+    <YStack
+      width="100%"
+      height={360}>
+      <DataTable
+        data={data}
+        columns={columns}
+        enablePagination={false}
+        onDataChange={setData}
+      />
+    </YStack>
+  );
+};
+
 export const InTable: Story = {
   name: 'In table',
-  render: () => {
-    const [data, setData] = useState<InTableRow[]>([
-      { id: '1', label: 'Alpha', value: '<p>Hello <strong>world</strong></p>' },
-      { id: '2', label: 'Beta', value: '' },
-      {
-        id: '3',
-        label: 'Gamma',
-        value: '<ul><li>Draft</li><li>Review</li><li>Ship</li></ul>',
-      },
-    ]);
-    const columns: DataTableColumn<InTableRow>[] = [
-      { accessorKey: 'label', header: 'Row' },
-      {
-        accessorKey: 'value',
-        header: 'Rich text',
-        field: 'richtexteditor',
-      },
-    ];
-    return (
-      <YStack
-        width="100%"
-        height={360}>
-        <DataTable
-          data={data}
-          columns={columns}
-          enablePagination={false}
-          onDataChange={setData}
-        />
-      </YStack>
-    );
-  },
+  render: () => <InTableStory />,
 };

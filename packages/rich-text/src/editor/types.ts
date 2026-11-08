@@ -69,16 +69,19 @@ export interface EditorState {
 
 export interface RichEditorRef {
   /** Execute an editor command */
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API shared by web and native editors; narrowing breaks consumers
   executeCommand: (command: EditorCommand, payload?: any) => void;
   /** Get the current editor state */
   getState: () => EditorState;
   /** Get the content as HTML */
   getHTML: () => string;
   /** Get the content as JSON (ProseMirror format) */
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API shared by web and native editors; narrowing breaks consumers
   getJSON: () => any;
   /** Set content from HTML */
   setHTML: (html: string) => void;
   /** Set content from JSON */
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API shared by web and native editors; narrowing breaks consumers
   setJSON: (json: any) => void;
   /** Focus the editor */
   focus: () => void;
@@ -90,6 +93,7 @@ export interface RichEditorProps {
   /** Initial content as HTML */
   initialContent?: string;
   /** Initial content as JSON (takes precedence over initialContent) */
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API shared by web and native editors; narrowing breaks consumers
   initialJSON?: any;
   /** Placeholder text when editor is empty */
   placeholder?: string;
@@ -98,6 +102,7 @@ export interface RichEditorProps {
   /** Auto focus on mount */
   autoFocus?: boolean;
   /** Called when content changes */
+  // oxlint-disable-next-line typescript/no-explicit-any -- public API shared by web and native editors; narrowing breaks consumers
   onChange?: (html: string, json: any) => void;
   /** Called when editor state changes (bold, italic, etc.) */
   onStateChange?: (state: EditorState) => void;

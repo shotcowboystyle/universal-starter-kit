@@ -193,7 +193,7 @@ export const Row: Story = {
         <ToolbarGroup>
           <ToolbarButton
             disabled
-            onPress={() => {}}
+            onPress={() => action('onPress')('Undo')}
             aria-label="Undo"
             tooltip="Undo (⌘Z)">
             <UndoIcon />
