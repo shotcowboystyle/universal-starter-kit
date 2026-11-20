@@ -7,11 +7,11 @@ export const PROVENANCE_FILE = '.mpo.json';
  * Pieces: additive fragment trees under templates/pieces/<piece>/ that an
  * ADOPTED project (`mpo adopt`) hand-copied and wants `mpo update` to keep
  * reconciling. A project from `mpo init` never needs them: apps/one already
- * ships gnome/, tauri/, vscode/ and webext/, and frappe / keycloak are
+ * ships tauri/ and webext/, and frappe / keycloak are
  * `--service` selections of the real apps. Keep sorted: pieces are recorded
  * sorted in provenance and overlaid in this order.
  */
-export const INIT_APP_PIECES = ['frappe', 'frappe-bench', 'gnome', 'keycloak', 'tauri', 'vscode', 'webext'] as const;
+export const INIT_APP_PIECES = ['frappe-bench', 'keycloak', 'tauri', 'webext'] as const;
 export type InitAppPiece = (typeof INIT_APP_PIECES)[number];
 
 export const isInitAppPiece = (piece: string): piece is InitAppPiece =>

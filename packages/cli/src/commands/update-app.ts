@@ -25,7 +25,7 @@ import { isGitUrl, monorepoCheckout, monorepoUrl, resolveSource } from '../sourc
 import type { SourceSpec } from '../source';
 
 import { finishMerge, git, gitOut, landTree, mergeScaffolds, projectRootOf, requireCleanTree } from './merge';
-import { scaffoldPieces, withSplitPieces } from './pieces';
+import { scaffoldPieces } from './pieces';
 import { PROVENANCE_FILE, cliVersion, mpoRange, packageJsonName, readProvenance, writeProvenance } from './provenance';
 import type { MpoProvenance } from './provenance';
 import { archiveSubtree, scaffoldToTemp } from './scaffold';
@@ -158,7 +158,7 @@ const updateAdopted = async (
   const base = tempDir();
   const theirs = tempDir();
   let oldPieces = currentPieces();
-  let { pieces } = provenance;
+  const { pieces } = provenance;
   try {
     if (!firstReconcile) {
       oldPieces = await piecesRootAt(provenance.cliVersion, options);
@@ -168,10 +168,6 @@ const updateAdopted = async (
         pieces: provenance.pieces,
         root: oldPieces.root,
       });
-      pieces = withSplitPieces(provenance.pieces, oldPieces.root);
-      if (pieces !== provenance.pieces) {
-        console.log('  frappe-bench added: the frappe piece no longer carries the dev bench\n');
-      }
     }
     scaffoldPieces(theirs.dir, { name, mpoVersion: targetRange, pieces });
 
@@ -186,12 +182,7 @@ const updateAdopted = async (
     const next: MpoProvenance = { ...provenance, cliVersion: currentVersion, mpoVersion: targetRange, pieces };
     delete next.reconciled;
     if (!outcome.changed && !outcome.conflicts.length) {
-      if (
-        provenance.cliVersion !== currentVersion ||
-        provenance.mpoVersion !== targetRange ||
-        pieces !== provenance.pieces ||
-        firstReconcile
-      ) {
+      if (provenance.cliVersion !== currentVersion || provenance.mpoVersion !== targetRange || firstReconcile) {
         writeProvenance(projectDir, next);
         console.log(`${ALREADY_UP_TO_DATE}; ${PROVENANCE_FILE} refreshed — commit it`);
       } else {

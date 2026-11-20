@@ -1,6 +1,0 @@
-{
-  "scripts": {
-    "vscode": "pnpm --filter @app/__NAME__ dev:vscode",
-    "build:vscode": "pnpm --filter @app/__NAME__ build:vscode"
-  }
-}

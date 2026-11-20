@@ -60,7 +60,7 @@ describe(adoptApp, () => {
     });
     process.chdir(dir);
     // Intentionally unsorted — provenance must sort.
-    await adoptApp({ pieces: ['webext', 'gnome'], yes: true });
+    await adoptApp({ pieces: ['webext', 'tauri'], yes: true });
 
     const provenance = readJson(path.join(dir, '.mpo.json'));
     expect(provenance).toStrictEqual({
@@ -69,7 +69,7 @@ describe(adoptApp, () => {
       // scope stripped from package.json name
       name: 'repo',
       mpoVersion: `^${cliVersion()}`,
-      pieces: ['gnome', 'webext'],
+      pieces: ['tauri', 'webext'],
       reconciled: false,
     });
     expect(readProvenance(dir)?.reconciled).toBe(false);

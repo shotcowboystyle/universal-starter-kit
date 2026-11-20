@@ -56,16 +56,6 @@ const PACKAGE_JSON = 'package.json';
  * enough: both `tamagui` records import `@tamagui/core` by bare specifier, so
  * they funnel into one web record and one theme context.
  *
- * `@tanstack/db` is the same shape one layer down, and it is the one
- * that reaches generated apps. The frappe data client's collections are
- * TanStack DB, and TanStack reaches React through `use-sync-external-store`,
- * so a second module record subscribes against a store nothing armed and the
- * hook reads `useSyncExternalStore` off null. Measured on a fresh
- * `mpo init --universal --frappe --tauri` at cli 7.7.1: the first page
- * mounting a data-bound panel threw `Cannot read properties of null (reading
- * 'useSyncExternalStore')` on every load, and so did every data-bound page
- * after it.
- *
  * THE CRITERION, so the next addition is a decision against a rule
  * rather than a guess. A package belongs here when a second module record
  * would break it: it holds state at module scope, it subscribes an external
@@ -73,8 +63,7 @@ const PACKAGE_JSON = 'package.json';
  * Grepping the installed package for `useSyncExternalStore` is a cheap test
  * for the second clause, and `singleton-dep-aliases.test.ts` re-runs it against
  * the tree so a tanstack upgrade is checked rather than assumed. It is one
- * clause and not the whole rule: `@tanstack/db` references the hook nowhere
- * and is pinned anyway, for the collection registry it holds at module scope.
+ * clause and not the whole rule: module-scope state no grep can see counts too.
  *
  * `@tanstack/react-query` references the hook in 25 shipped files
  * and is deliberately NOT listed. It passes the grep, but a pin only earns its
@@ -99,16 +88,6 @@ const CONTEXT_SINGLETONS: readonly string[] = [
   'react-cookie',
   '@tamagui/core',
   '@tamagui/web',
-  '@tanstack/db',
-  // The half that actually reaches React. Measured in the installed tree:
-  // @tanstack/db contains ZERO references to useSyncExternalStore and
-  // @tanstack/react-db contains three, useLiveQuery.js among them, which is
-  // the call in the reported crash. packages/frappe depends on both and imports
-  // react-db from src/useLiveQuery.ts, so pinning only @tanstack/db would
-  // leave "Cannot read properties of null (reading 'useSyncExternalStore')"
-  // exactly where it was. The report named @tanstack/db; the measurement says
-  // the pair has to travel together.
-  '@tanstack/react-db',
   // Measured at 0.11.0: @tanstack/store references useSyncExternalStore in
   // nothing it ships and @tanstack/react-store in three, all useSelector,
   // which is the call behind useStore. packages/store and packages/forms both

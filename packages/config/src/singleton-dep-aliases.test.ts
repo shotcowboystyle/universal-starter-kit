@@ -15,16 +15,8 @@ const pinnedPackages = [
     reason: `react-cookie runs React.createContext(null) at module scope. Two realpaths for it means two contexts: @repo/storybook's framework decorator renders <CookiesProvider> from one and @repo/theme's useTheme reads useCookies from the other, which throws "Missing <CookiesProvider>" with the provider sitting two lines above it in the same tree.`,
   },
   {
-    pkg: '@tanstack/db',
-    reason: `The frappe data client's collections are TanStack DB, and TanStack reaches React through use-sync-external-store. Two realpaths means the second record subscribes against a store nothing armed, and every data-bound page dies on load with "Cannot read properties of null (reading 'useSyncExternalStore')".`,
-  },
-  {
-    pkg: '@tanstack/react-db',
-    reason: `Measured in the installed tree: @tanstack/db has zero references to useSyncExternalStore and @tanstack/react-db has three, useLiveQuery.js among them. public/frappe depends on both and imports react-db from src/useLiveQuery.ts, so pinning the base package alone leaves the reported crash in place. The pair travels together or neither works.`,
-  },
-  {
     pkg: '@tanstack/react-store',
-    reason: `The same split as react-db, measured the same way: @tanstack/store has zero references to useSyncExternalStore and @tanstack/react-store has three, all of them useSelector, which is what useStore calls. public/store and public/forms both reach React through it, so a second record subscribes a store nothing armed.`,
+    reason: `Measured in the installed tree: @tanstack/store has zero references to useSyncExternalStore and @tanstack/react-store has three, all of them useSelector, which is what useStore calls. public/store and public/forms both reach React through it, so a second record subscribes a store nothing armed.`,
   },
 ];
 
@@ -172,7 +164,7 @@ const referencesHook = (dir: string): boolean =>
  * Whether an installed package references `useSyncExternalStore` in the code
  * it ships. The cheap half of the membership rule, re-run against the tree so
  * the next tanstack upgrade is checked rather than assumed. Comments do not
- * count: @tanstack/db 0.8 names the hook in doc comments and calls it nowhere.
+ * count.
  */
 const subscribesExternalStore = (pkgName: string): boolean => {
   const dir = path.join(workspaceRoot, 'node_modules', ...pkgName.split('/'));
@@ -183,7 +175,7 @@ describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
   const aliases = singletonDepAliases(workspaceRoot);
 
   it('pins every tanstack half that subscribes an external store', () => {
-    for (const pkg of ['@tanstack/react-store', '@tanstack/react-db']) {
+    for (const pkg of ['@tanstack/react-store']) {
       expect(subscribesExternalStore(pkg), `${pkg} must reference the hook`).toBe(true);
       expect(aliases[pkg], `${pkg} subscribes and must be pinned`).toBeTruthy();
     }
@@ -194,16 +186,6 @@ describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
       expect(subscribesExternalStore(pkg), `${pkg} must not reference the hook`).toBe(false);
       expect(aliases[pkg], `${pkg} has no measured reason to be pinned`).toBeUndefined();
     }
-  });
-
-  it('does not treat the grep as the whole rule', () => {
-    // @tanstack/db is pinned and references the hook nowhere: it holds the
-    // collection registry at module scope, which is a different clause of the
-    // criterion and one no grep can see. @tanstack/store carries no such
-    // registry, so silence there means what it says.
-    expect(subscribesExternalStore('@tanstack/db')).toBe(false);
-    expect(aliases['@tanstack/db']).toBeTruthy();
-    expect(subscribesExternalStore('@tanstack/store')).toBe(false);
   });
 
   it('leaves react-query off while it subscribes the hook', () => {

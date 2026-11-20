@@ -1,4 +1,3 @@
-import type { __getActiveSyncModule } from '@repo/frappe';
 import { config } from '@repo/platform';
 import {
   BodyFont,
@@ -41,7 +40,6 @@ export const baseOppositeChannelEvent = 'theme-addon/base-colors-opposite';
 export const accentColorsChannelEvent = 'theme-addon/accent-colors';
 export const accentOppositeChannelEvent = 'theme-addon/accent-colors-opposite';
 export const animationNamesChannelEvent = 'theme-addon/animation-names';
-export const frappeDebugChannelEvent = 'frappe-addon/debug-state';
 
 /**
  * Storybook 10 changed the `Preview` type to an opaque wrapper.
@@ -308,11 +306,7 @@ const CanvasBackground = ({ children }: { children: ReactNode }) => {
 // without cross-iframe DOM scraping.
 // ---------------------------------------------------------------------------
 
-type SyncModule = NonNullable<ReturnType<typeof __getActiveSyncModule>>;
-
-type ChannelPayload = string[] | ReturnType<SyncModule['__debug']>;
-
-type ChannelEmit = (event: string, data: ChannelPayload) => void;
+type ChannelEmit = (event: string, data: string[]) => void;
 
 let channelEmit: ChannelEmit | null = null;
 const getChannelEmit = (): ChannelEmit | null => {
@@ -342,93 +336,6 @@ const AnimationNamesEmitter = () => {
     emittedRef.current = true;
     getChannelEmit()?.(animationNamesChannelEvent, [...animationNames]);
   }, []);
-  return null;
-};
-
-const loadActiveSyncModule = async () => {
-  const { __getActiveSyncModule: getActiveSyncModule } = await import('@repo/frappe');
-  return getActiveSyncModule();
-};
-
-/**
- * Emits SyncModule.__debug() snapshots to the manager-side Frappe addon panel.
- * Lazily resolves the frappe package — no-op if not installed or no SyncModule exists.
- */
-const FrappeDebugEmitter = () => {
-  const prevRef = useRef<string>('');
-  const syncRef = useRef<SyncModule | null>(null);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    const bump = () => {
-      setTick((t) => t + 1);
-    };
-    const resolve = async (): Promise<(() => void) | undefined> => {
-      let unsubscribe: (() => void) | undefined;
-      try {
-        const sync = await loadActiveSyncModule();
-        if (sync !== undefined && !cancelled) {
-          syncRef.current = sync;
-          bump();
-          unsubscribe = sync.subscribeStore(() => {
-            if (!cancelled) {
-              bump();
-            }
-          });
-        }
-      } catch {
-        // frappe not available
-      }
-      return unsubscribe;
-    };
-
-    const cleanupPromise = resolve();
-    // Retry a few times since SyncModule is created lazily
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts += 1;
-      if (syncRef.current !== null || cancelled || attempts >= 10) {
-        clearInterval(interval);
-        return;
-      }
-      void resolve();
-    }, 2000);
-
-    const dispose = async () => {
-      const unsubscribe = await cleanupPromise;
-      unsubscribe?.();
-    };
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-      void dispose();
-    };
-  }, []);
-
-  // `tick` is bumped by the SyncModule subscription; it is the re-run trigger, not a value read here.
-  useEffect(() => {
-    if (syncRef.current === null) {
-      return;
-    }
-    const emit = getChannelEmit();
-    if (emit === null) {
-      return;
-    }
-    try {
-      const state = syncRef.current.__debug();
-      const key = JSON.stringify(state);
-      if (key === prevRef.current) {
-        return;
-      }
-      prevRef.current = key;
-      emit(frappeDebugChannelEvent, state);
-    } catch {
-      // debug not available
-    }
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- tick only re-runs the snapshot
-  }, [tick]);
-
   return null;
 };
 
@@ -749,7 +656,6 @@ const FrameworkDecoratorInner = ({
               Storybook and shipped apps share one mount. A second copy
               here would race the style-tag cleanup. */}
         <AnimationNamesEmitter />
-        <FrappeDebugEmitter />
         <ColorChannelEmitter
           event={baseThemeColorsChannelEvent}
           requireValue={false}

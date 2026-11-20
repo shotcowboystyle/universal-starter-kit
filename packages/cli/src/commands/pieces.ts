@@ -8,12 +8,9 @@ export { INIT_APP_PIECES } from './provenance';
 export type { InitAppPiece } from './provenance';
 
 const PIECE_DESCRIPTIONS: Record<InitAppPiece, string> = {
-  frappe: 'Frappe client wiring (env keys, provider)',
   'frappe-bench': 'Frappe dev bench (docker compose: bench, MariaDB, Redis)',
-  gnome: 'GNOME desktop target (GTK4/GJS via react-gnome — native widgets, no webview)',
   keycloak: 'Keycloak auth wiring (env keys, provider, docker compose + realm)',
   tauri: 'Tauri desktop target (src-tauri skeleton — webview shell, Rust toolchain)',
-  vscode: 'VS Code extension target (extension host + Tamagui webview)',
   webext: 'Browser extension target (MV3 popup + background)',
 };
 
@@ -220,28 +217,6 @@ export const normalizePieces = (pieces: string[], root = piecesRoot()): InitAppP
   return normalized;
 };
 
-/**
- * The frappe piece carried the dev bench until the bench became its own piece
- * (MPO-241). An adoption recorded against pieces that still bundle it keeps
- * the bench, now as frappe-bench, so an update does not delete it.
- */
-const FRAPPE_BENCH: InitAppPiece = 'frappe-bench';
-
-export const withSplitPieces = (pieces: InitAppPiece[], recordedRoot?: string): InitAppPiece[] => {
-  if (
-    recordedRoot === undefined ||
-    recordedRoot === '' ||
-    !pieces.includes('frappe') ||
-    pieces.includes(FRAPPE_BENCH)
-  ) {
-    return pieces;
-  }
-  if (!existsSync(path.join(recordedRoot, 'frappe/universal/docker/compose.frappe.yaml'))) {
-    return pieces;
-  }
-  return [...pieces, FRAPPE_BENCH].toSorted();
-};
-
 export const availablePieces = (root = piecesRoot()): InitAppPiece[] =>
   INIT_APP_PIECES.filter((piece) => pieceFragmentDirs(piece, root).length > 0);
 
@@ -252,10 +227,9 @@ export const pieceDescription = (piece: InitAppPiece): string => PIECE_DESCRIPTI
  * adds one createApp key. Only written when a provider piece is selected.
  */
 export const composeAppTs = (pieces: InitAppPiece[]): string => {
-  const frappe = pieces.includes('frappe');
-  const keycloak = pieces.includes('keycloak');
   const lines: string[] = ['import { createApp } from "@repo/core";'];
-  if (frappe || keycloak) {
+  const keycloak = pieces.includes('keycloak');
+  if (keycloak) {
     lines.push('import { config } from "@repo/platform";');
   }
   lines.push(
@@ -270,18 +244,6 @@ export const composeAppTs = (pieces: InitAppPiece[]): string => {
     'export const { AppProvider, useAppConfig, withApp } = createApp({',
     '  theme: themeConfig,',
   );
-  if (frappe) {
-    lines.push(
-      '  // Frappe client: FrappeProvider mounts when FRAPPE_ENABLED=1 (a',
-      '  // packages/config public env key, loaded from .env — see',
-      '  // .env.example). FRAPPE_URL names the Frappe server (default:',
-      '  // BASE_URL, then http://localhost:8000).',
-    );
-    if (pieces.includes('frappe-bench')) {
-      lines.push('  // docker/compose.frappe.yaml runs a dev bench.');
-    }
-    lines.push('  frappe: { baseURL: config.get("FRAPPE_URL") },');
-  }
   if (keycloak) {
     lines.push(
       '  // Keycloak auth: KeycloakProvider mounts when KEYCLOAK_ENABLED=1.',
@@ -328,7 +290,7 @@ export const scaffoldPieces = (targetDir: string, request: PiecesScaffold): void
       overlayTree(fragmentDir, targetDir, vars);
     }
   }
-  if (pieces.includes('frappe') || pieces.includes('keycloak')) {
+  if (pieces.includes('keycloak')) {
     mkdirSync(path.join(targetDir, 'apps', request.name, 'src'), { recursive: true });
     writeFileSync(path.join(targetDir, 'apps', request.name, 'src/app.ts'), composeAppTs(pieces));
   }

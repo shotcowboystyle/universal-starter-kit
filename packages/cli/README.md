@@ -44,7 +44,7 @@ A project is the universal-starter-kit monorepo at one commit, pruned:
   `@app/my-app`, app.config slug and scheme, bundle id, tauri identifier, the
   `Makefile` `my-app/%` rules, `.vscode`, `.gitignore`), with
   `features/my-app` beside it. Every `--app` is another copy. The
-  delivery targets (`gnome/`, `tauri/`, `vscode/`, `webext/`, the Frappe SPA)
+  delivery targets (`tauri/`, `webext/`, the Frappe SPA)
   ride inside each product app; there is nothing to add for them.
 - `packages/themes` is the app's one theme config, and the app ships its
   declared theme subset (`subset.ts`, `subset.tamagui.config.ts`): 340 of the
@@ -118,8 +118,8 @@ commit and merges only that in, uncommitted like `mpo update`.
 ## Adopt hand-copied pieces
 
 A project that was never scaffolded and hand-copied a delivery target from
-`templates/pieces` (webext, gnome, tauri, vscode, keycloak wiring, the Frappe
-client as `frappe` and its dev bench as `frappe-bench`) has no provenance:
+`templates/pieces` (webext, tauri, keycloak wiring, the Frappe dev bench as
+`frappe-bench`) has no provenance:
 
 ```bash
 mpo adopt --webext --name my-app   # clean git tree; at least one piece

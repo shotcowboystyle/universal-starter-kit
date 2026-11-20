@@ -64,7 +64,7 @@ describe('provenance', () => {
         cliVersion: '7.9.0',
         name: 'easel',
         mpoVersion: '^7.9.0',
-        pieces: ['webext', 'gnome'],
+        pieces: ['webext', 'tauri'],
         reconciled: false,
       }),
     );
@@ -72,7 +72,7 @@ describe('provenance', () => {
       cliVersion: '7.9.0',
       apps: [],
       services: [],
-      pieces: ['gnome', 'webext'],
+      pieces: ['tauri', 'webext'],
       template: 'none',
       name: 'easel',
       mpoVersion: '^7.9.0',

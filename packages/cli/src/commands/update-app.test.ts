@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { addApp } from './add-app';
 import { adoptApp } from './adopt-app';
 import { init } from './init';
-import { piecesRoot, scaffoldPieces } from './pieces';
+import { scaffoldPieces } from './pieces';
 import type { JsonValue } from './pieces';
 import { cliVersion, readProvenance } from './provenance';
 import { updateApp } from './update-app';
@@ -500,81 +500,6 @@ describe('adopted project (pieces)', () => {
 
       await adoptApp({ pieces: ['webext'], yes: true });
       await expect(updateApp({ skipInstall: true })).rejects.toThrow(/looks like a glob/u);
-    },
-    heavy,
-  );
-
-  it(
-    'a Frappe client adoption updates cleanly and never gains a bench (MPO-241)',
-    async () => {
-      const dir = path.join(sandbox, 'adopted-frappe-client', 'shop');
-      writeFiles(dir, { 'package.json': json({ name: 'shop', private: true }) });
-      await initRepo(dir);
-      process.chdir(dir);
-
-      await adoptApp({ pieces: ['frappe'], yes: true });
-      await updateApp({ skipInstall: true });
-      expect(readFileSync(path.join(dir, 'apps/shop/src/app.ts'), 'utf-8')).toContain('FRAPPE_URL');
-      expect(existsSync(path.join(dir, 'docker'))).toBe(false);
-
-      const committed = await commitAll(dir, 'chore: mpo update');
-      await updateApp({ skipInstall: true });
-      await expect(gitOut(dir, ['rev-parse', 'HEAD'])).resolves.toBe(committed);
-      await expect(gitOut(dir, ['status', '--porcelain'])).resolves.toBe('');
-      expect(readProvenance(dir)?.pieces).toStrictEqual(['frappe']);
-    },
-    heavy,
-  );
-
-  it(
-    'an adoption recorded when frappe carried the bench keeps the bench (MPO-241)',
-    async () => {
-      // v0.0.1 of a stand-in monorepo, whose frappe piece still bundles the bench.
-      const oldSource = path.join(sandbox, 'pre-split-source');
-      const oldPieces = path.join(oldSource, 'packages/cli/templates/pieces');
-      cpSync(path.join(piecesRoot(), 'frappe'), path.join(oldPieces, 'frappe'), { recursive: true });
-      cpSync(
-        path.join(piecesRoot(), 'frappe-bench/universal/docker'),
-        path.join(oldPieces, 'frappe/universal/docker'),
-        {
-          recursive: true,
-        },
-      );
-      await initRepo(oldSource);
-      await spawn('git', ['tag', 'v0.0.1'], { cwd: oldSource });
-
-      const dir = path.join(sandbox, 'adopted-pre-split', 'shop');
-      scaffoldPieces(dir, {
-        name: 'shop',
-        mpoVersion: '^0.0.1',
-        pieces: ['frappe'],
-        root: oldPieces,
-      });
-      writeFiles(dir, {
-        'package.json': json({ name: 'shop', private: true }),
-        '.mpo.json': json({
-          template: 'none',
-          cliVersion: '0.0.1',
-          name: 'shop',
-          mpoVersion: '^0.0.1',
-          apps: [],
-          services: [],
-          pieces: ['frappe'],
-        }),
-      });
-      const compose = readFileSync(path.join(dir, 'docker/compose.frappe.yaml'), 'utf-8');
-      await initRepo(dir);
-      process.chdir(dir);
-
-      await updateApp({ source: oldSource, skipInstall: true });
-      expect(readFileSync(path.join(dir, 'docker/compose.frappe.yaml'), 'utf-8')).toBe(compose);
-      expect(readFileSync(path.join(dir, 'README.md'), 'utf-8')).toContain('bench start');
-      expect(readProvenance(dir)?.pieces).toStrictEqual(['frappe', 'frappe-bench']);
-
-      const committed = await commitAll(dir, 'chore: mpo update');
-      await updateApp({ skipInstall: true });
-      await expect(gitOut(dir, ['rev-parse', 'HEAD'])).resolves.toBe(committed);
-      await expect(gitOut(dir, ['status', '--porcelain'])).resolves.toBe('');
     },
     heavy,
   );

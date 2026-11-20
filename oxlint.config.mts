@@ -104,15 +104,6 @@ export default defineConfig({
       rules: { 'unicorn/filename-case': 'off' },
     },
     {
-      // Re-export shims whose `@repo/backoffice/src/...` deep-import paths must keep resolving.
-      files: [
-        'packages/backoffice/src/report/{queryReportColumns,reportShapes,reportViewModel,savedReports,useQueryReport}.{ts,tsx}',
-        'packages/backoffice/src/list/{listColumns,listFields,listFormat,statusColors}.{ts,tsx}',
-        'packages/backoffice/src/form/{createPrefill,dependsOn,dirtyTracking,fetchFrom,fieldPermissions,formActions,formLayout,useFormEngine}.ts',
-      ],
-      rules: { 'unicorn/filename-case': 'off' },
-    },
-    {
       // TypeScript reports real redeclarations itself; the core rule misfires on the
       // `const X = {...} as const` + `type X = ...` value/type pairing.
       files: ['**/*.{ts,tsx,mts,cts}'],

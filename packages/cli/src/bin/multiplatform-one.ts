@@ -382,12 +382,9 @@ const camelCase = (kebab: string): string =>
 
 program
   .command('adopt')
-  .option('--frappe', 'the project adopted the Frappe client piece (env keys, provider)')
   .option('--frappe-bench', 'the project adopted the Frappe dev bench piece (docker compose)')
   .option('--keycloak', 'the project adopted the Keycloak auth piece')
-  .option('--gnome', 'the project adopted the GNOME desktop target piece')
   .option('--tauri', 'the project adopted the Tauri desktop target piece')
-  .option('--vscode', 'the project adopted the VS Code extension target piece')
   .option('--webext', 'the project adopted the browser extension target piece')
   .option(
     '--name <name>',

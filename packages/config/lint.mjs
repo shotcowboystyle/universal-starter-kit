@@ -1968,15 +1968,6 @@ const STORY_FOREIGN_CONTROL_PRIMITIVES = new Set([
  */
 const STORY_HONESTY_MARKER_RE = /\bforeignContrastSpecimen\s*:\s*true\b/u;
 
-/**
- * The frappe package is the data client, not a catalog package: its
- * stories demo hooks, and the buttons in them
- * drive the hook, not a knob probe. It also cannot import a house control:
- * forms reaches frappe through its @repo/storybook devDependency,
- * so the import would close a workspace cycle.
- */
-const STORY_HONESTY_EXEMPT_PREFIXES = ['packages/frappe/'];
-
 // oxlint-disable-next-line sonarjs/super-linear-regex -- the lazy clause must skip a `from` inside a specifier name (`{ fromX }`); its input is one import statement, which cannot contain `;` or a quote
 const TAMAGUI_IMPORT_RE = /import\s+(?<clause>[^;'"]*?)from\s*["']tamagui["']/gu;
 
@@ -2000,9 +1991,6 @@ const checkStoryForeignControls = () => {
       return;
     }
     const rel = path.relative(ROOT, filePath).replaceAll('\\', '/');
-    if (STORY_HONESTY_EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) {
-      return;
-    }
     const src = readFileSync(filePath, 'utf-8');
     if (!src.includes('tamagui')) {
       return;

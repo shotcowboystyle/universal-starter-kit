@@ -1,7 +1,7 @@
 /**
  * `mpo adopt` — bring an EXISTING, never-scaffolded project under `mpo
  * update` management. Projects like this hand-copied one or more delivery
- * targets (webext, gnome, …) from templates/pieces and consume
+ * targets (webext, tauri, …) from templates/pieces and consume
  * `@repo/*` from npm, but have no .mpo.json provenance, so
  * `mpo update` refuses to run. A project that wants the whole monorepo
  * scaffold instead runs `mpo init --into`.

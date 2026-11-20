@@ -41,14 +41,13 @@ web dev server same-origin. The apps reach it through `createApp` in
 <!-- /service:frappe -->
 <!-- no-service:frappe -->
 
+<!-- markdownlint-disable-next-line MD024 -- alternative to the service:frappe section; only one renders -->
 ## Frappe
 
 This project runs no Frappe server of its own. The apps keep the Frappe
 client: `createApp` in `packages/app/app.tsx` mounts the `FrappeProvider`
 while `FRAPPE_ENABLED=1` and talks to `BASE_URL`, or to the `baseURL` passed
-in `frappe: { baseURL }`. Point it at a Frappe server, or hand it a fixture
-corpus (`frappe: { fixtures }`, an `InMemoryFixtureProvider` from
-`@repo/frappe`) and run with no server at all.
+in `frappe: { baseURL }`. Point it at a Frappe server.
 
 <!-- /no-service:frappe -->
 

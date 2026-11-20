@@ -25,7 +25,6 @@
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
-    "@repo/frappe": "workspace:*",
     "@repo/platform": "workspace:*",
     "@repo/test-utils": "workspace:*",
     "@repo/theme": "workspace:*",
@@ -43,7 +42,6 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@repo/frappe": "workspace:*",
     "@repo/platform": "workspace:*",
     "@repo/theme": "workspace:*",
     "@storybook-community/storybook-dark-mode": "^7.1.1",
@@ -53,9 +51,6 @@
     "tamagui": "^2.0.0-rc"
   },
   "peerDependenciesMeta": {
-    "@repo/frappe": {
-      "optional": true
-    },
     "@repo/platform": {
       "optional": true
     },

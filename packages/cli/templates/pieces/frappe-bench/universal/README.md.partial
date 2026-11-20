@@ -22,7 +22,5 @@ bench --site __NAME__.localhost set-config developer_mode 1
 bench start
 ```
 
-It serves `http://localhost:8000`. With the `frappe` piece, set
-`FRAPPE_URL=http://__NAME__.localhost:8000` (or keep `http://localhost:8000`
-and make the site the default with `bench use __NAME__.localhost`) and restart
-`pnpm dev`.
+It serves `http://localhost:8000`; `bench use __NAME__.localhost` makes the
+site the default.

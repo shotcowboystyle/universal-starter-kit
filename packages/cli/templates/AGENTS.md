@@ -29,10 +29,8 @@ are not. Prefer feature code in `features/`, thin wiring in `apps/`.
 
 **Delivery targets live INSIDE the product app**, not as sibling shells:
 `apps/<name>/routes/` (One web + native), `apps/<name>/tauri/` (webview
-desktop shell), `apps/<name>/gnome/` (GTK4/GJS native-widget desktop),
-`apps/<name>/webext/` (browser extension) and `apps/<name>/vscode/` (VS Code
-extension), each with a sibling `vite.config.<target>.ts`. Tauri and GNOME are
-peer desktop targets; pick per product. All targets mount the same `features/`
+desktop shell) and `apps/<name>/webext/` (browser extension), each with a
+sibling `vite.config.<target>.ts`. All targets mount the same `features/`
 code behind ONE routing layer: One's router API, backed on non-One hosts by the
 stack-navigation seam (`@repo/router/seam`).
 
@@ -47,14 +45,8 @@ stack-navigation seam (`@repo/router/seam`).
 | `@repo/ui`         | Catalog UI (layouts, surfaces, feedback, …)                                              |
 | `@repo/forms`      | Fields, Form, InputParts, field contracts, form color ramps                              |
 | `@repo/table`      | DataTable, cells, filters, URL table state                                               |
-| `@repo/frappe-ui`  | Frappe adapters (`FrappeTable`, field registry, the query-report and report-view models) |
-| `@repo/frappe`     | Frappe client / live query                                                               |
-| `@repo/backoffice` | Embeddable desk recreation (BackofficeProvider, shell/list/form surfaces)                |
 
-`table` and `forms` know nothing of Frappe; Frappe integration belongs in
-`frappe-ui`. `features/backoffice` is a thin wrapper over
-`@repo/backoffice` (host wiring: one-router adapter, env-derived
-frappe config, scheme adapter).
+`table` and `forms` know nothing of Frappe.
 
 ### Import rules (enforced)
 
@@ -120,8 +112,7 @@ Rules:
 - `@repo/table` is framework-agnostic display/filter/sort/paginate.
 - Cell editors larger than the anchor use popover (web) / sheet (native); never
   grow the row. Editor popups dismiss only on dismissal intent.
-- Frappe integration belongs in `@repo/frappe-ui` (`FrappeTable`,
-  registry adapters), not in `table`.
+- Frappe integration does not belong in `table`.
 - Child-table / TableInput follow the same field `onChange` contract as forms.
 
 ## Screen data states
@@ -148,7 +139,7 @@ Use **oxlint / oxfmt**, not ESLint / Prettier. Per-app targets are
 `make <name>/<target>` from the root `Makefile`.
 
 Install layout settings live in `pnpm-workspace.yaml`, including
-`nodeLinker: hoisted`. `@react-gnome/*` and `@repo/*` both resolve
+`nodeLinker: hoisted`. `@repo/*` resolves
 from npmjs, the default registry, so an install needs no token.
 `pnpm doctor:npmrc` reports missing or empty auth
 as advisory and fails if the installed tree records a different linker from the
