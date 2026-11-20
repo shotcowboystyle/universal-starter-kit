@@ -384,7 +384,6 @@ if [ -f "$TREE/Makefile" ]; then
         napps = split(apps, app, " ")
         nremoved = split(removed, gone, " ")
         for (i = 1; i <= nremoved; i++) dead[gone[i]] = 1
-        dead["vscode"] = 1
         dead["webext"] = 1
     }
     # "name/%: configure FORCE" followed by its one recipe line.
@@ -407,7 +406,6 @@ if [ -f "$TREE/Makefile" ]; then
         print recipe
         next
     }
-    /^# vscode \+ webext are targets OF the One platform app/ { getline; next }
     /^\.PHONY: / && /one\/%/ {
         out = ".PHONY:"
         for (i = 2; i <= NF; i++) {

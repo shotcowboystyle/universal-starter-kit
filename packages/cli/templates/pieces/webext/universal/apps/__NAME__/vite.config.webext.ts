@@ -32,8 +32,7 @@ export default defineConfig(
       port,
       aliases: [
         // One routing layer: extension pages have no One server runtime — the
-        // `one` import surface rides the stack-navigation seam instead (the
-        // same DOM page stack the VS Code webview target uses).
+        // `one` import surface rides the stack-navigation seam instead.
         { find: /^one$/, replacement: '@repo/router/seam' },
       ],
     }),

@@ -1,7 +1,7 @@
 # universal-starter-kit project
 
-Web, iOS and Android from one React + Tamagui tree, with desktop, browser
-extension and VS Code targets inside each product app. This repository is the
+Web, iOS and Android from one React + Tamagui tree, with desktop and browser
+extension targets inside each product app. This repository is the
 [universal-starter-kit](https://github.com/shotcowboystyle/universal-starter-kit/mpo)
 monorepo at one commit, pruned to the product apps and services picked at
 `mpo init`. `.mpo.json` records the commit and the selection, and `AGENTS.md`
