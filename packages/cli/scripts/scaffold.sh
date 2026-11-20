@@ -16,7 +16,7 @@
 # Options:
 #   --app <name>          product app derived from apps/one (repeatable)
 #   --service <name>      singleton app under apps/ to keep (repeatable):
-#                         ethereum frappe keycloak solana storybook
+#                         ethereum keycloak solana storybook
 #                         storybook-expo sui uxpin vocs
 #   --mpo-version <range> range written for @repo/* deps
 #                         (default: ^<version of packages/cli in the source tree>)
@@ -324,9 +324,9 @@ fs.writeFileSync(lockfile, lock);
 NODE
 fi
 
-# Whatever names the One app outside it (the frappe Makefile's SPA copy,
-# docker-bake.hcl, comments in features/) points at the first product app;
-# the root files that need more than a rename are handled below.
+# Whatever names the One app outside it (docker-bake.hcl, comments in
+# features/) points at the first product app; the root files that need more
+# than a rename are handled below.
 if [ -n "$FIRST_APP" ]; then
     for _file in $(grep_files "$TREE" -e '@platform/one' -e 'apps/one' -e 'features/one'); do
         case "$_file" in
@@ -457,13 +457,9 @@ if [ -f "$TREE/.gitignore" ]; then
 fi
 
 # .env.example sections are headed "# <app>"; a removed app takes its section
-# (header through the next blank line) with it. frappe also owns mariadb,
-# and keycloak postgres.
+# (header through the next blank line) with it. keycloak also owns postgres.
 ENV_SECTIONS="$REMOVED_APPS"
 [ -z "$APPS" ] && [ -d "$TREE/apps" ] && ENV_SECTIONS="$ENV_SECTIONS one"
-case " $REMOVED_APPS " in
-*" frappe "*) ENV_SECTIONS="$ENV_SECTIONS mariadb" ;;
-esac
 case " $REMOVED_APPS " in
 *" keycloak "*) ENV_SECTIONS="$ENV_SECTIONS postgres" ;;
 esac
@@ -482,14 +478,13 @@ if [ -f "$TREE/.env.example" ] && [ ! -f "$TREE/.env" ]; then
 fi
 
 # Docker wiring that backs a pruned app goes with it. A compose service goes
-# when one of its profiles is named after the app (frappe: the bench's mariadb,
-# redis and mailpit; keycloak: its postgres), when it bind-mounts from under
-# apps/<app>, or when it depends on a service that went, and so do the named
-# volumes only those services used. With no service left the file is
-# `services: {}`, which compose still reads, and `pnpm backend` goes with the
-# services it started. A bake target building from apps/<app> and a
-# `# <app>-block` of docker/Makefile go too. Nothing is rewritten while every
-# app they name is kept.
+# when one of its profiles is named after the app (keycloak: its postgres),
+# when it bind-mounts from under apps/<app>, or when it depends on a service
+# that went, and so do the named volumes only those services used. With no
+# service left the file is `services: {}`, which compose still reads, and
+# `pnpm backend` goes with the services it started. A bake target building
+# from apps/<app> and a `# <app>-block` of docker/Makefile go too. Nothing is
+# rewritten while every app they name is kept.
 if [ -n "$REMOVED_APPS" ] && [ -f "$TREE/docker/compose.yaml" ]; then
     awk -v removed="$REMOVED_APPS" '
     function record(svc, section, value, name) {

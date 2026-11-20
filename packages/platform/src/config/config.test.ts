@@ -157,11 +157,11 @@ describe(Config, () => {
       expect(c.get('MARKETPLACE_API_URL')).toBe('https://api.marketplace.example.org');
     });
 
-    it('resolves FRAPPE_ENABLED from the runtime payload so the frappe provider can mount', () => {
-      // CreateApp.tsx gates FrappeProvider on config.get("FRAPPE_ENABLED") === "1".
-      setRuntimePayload({ FRAPPE_ENABLED: '1' });
+    it('resolves ANALYTICS_ENABLED from the runtime payload so a gated provider can mount', () => {
+      // Providers gate on config.get("<KEY>_ENABLED") === "1" at mount time.
+      setRuntimePayload({ ANALYTICS_ENABLED: '1' });
       const c = new Config();
-      expect(c.get('FRAPPE_ENABLED')).toBe('1');
+      expect(c.get('ANALYTICS_ENABLED')).toBe('1');
     });
 
     // These use MARKETPLACE_API_URL rather than BASE_URL on purpose: vite (and

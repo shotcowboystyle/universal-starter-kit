@@ -14,14 +14,12 @@ Peers: `react`, `react-dom`, `vitest` (pairs with `@testing-library/react`).
 ## What it owns
 
 - **`renderWithProviders(ui, options?)`** — renders inside `TamaguiProvider` +
-  `QueryClientProvider` (both on by default), optional theme / Frappe / Keycloak
+  `QueryClientProvider` (both on by default), optional theme / Keycloak
   wrappers; returns an enhanced result with RNW-aware queries (`getInput`,
   `getButton`, `getCheckbox`, `getSelect`, `getSlider`, `getSwitch`,
   `getLabel`, `getError`, …)
 - **`TestProviders`**, `createFixture`, `findTextInContainer`
-- **`/mocks`** — `createMockFrappeApp`, `mockDocList`, `mockGetDoc`,
-  `mockCreateDoc`, `mockUpdateDoc`, `mockDeleteDoc`,
-  `createMockKeycloakContext`
+- **`/mocks`** — `createMockKeycloakContext`
 - **`/setup`** — vitest setup entry (jsdom shims) for `setupFiles`
 
 ## What it must not do

@@ -22,7 +22,6 @@ import type { ScaffoldProvenance, ScaffoldRequest } from './scaffold';
 /** The apps that exist once per project; everything else under apps/ is a product app. */
 export const SINGLETON_APPS = [
   'ethereum',
-  'frappe',
   'keycloak',
   'solana',
   'storybook',
@@ -35,7 +34,6 @@ export type SingletonApp = (typeof SINGLETON_APPS)[number];
 
 const SINGLETON_DESCRIPTIONS: Record<SingletonApp, string> = {
   ethereum: 'Hardhat chain + contracts',
-  frappe: 'Frappe bench (backend, docker compose)',
   keycloak: 'Keycloak theme + realm (auth, docker compose)',
   solana: 'Anchor programs + localnet',
   storybook: 'Storybook (web)',
@@ -181,7 +179,7 @@ const installDependencies = async (targetDir: string, scaffoldCommitted: boolean
   }
 };
 
-const printNextSteps = (targetDir: string, options: InitOptions, services: SingletonApp[]): void => {
+const printNextSteps = (targetDir: string, options: InitOptions): void => {
   console.log(`\n✅ Project created at ${targetDir}`);
   console.log('\nNext steps:');
   if (!options.into) {
@@ -194,9 +192,6 @@ const printNextSteps = (targetDir: string, options: InitOptions, services: Singl
     console.log('  git add -A && git commit -m "feat: scaffold from universal-starter-kit (mpo init)"');
   }
   console.log('  pnpm dev        # web + native dev server');
-  if (services.includes('frappe')) {
-    console.log('  make frappe/dev # Frappe bench (see apps/frappe)');
-  }
   console.log('\nLater: `mpo update` merges monorepo changes into the project without committing;');
   console.log('`mpo add-app <name>` adds another product app.');
 };
@@ -249,5 +244,5 @@ export const init = async (nameArg: string | undefined, options: InitOptions = {
     await installDependencies(targetDir, scaffoldCommitted);
   }
 
-  printNextSteps(targetDir, options, services);
+  printNextSteps(targetDir, options);
 };

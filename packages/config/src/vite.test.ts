@@ -121,8 +121,8 @@ describe(createViteConfig, () => {
       // Values stay out of the image (an environment-agnostic build); the names
       // travel instead, and double as the allowlist that keeps a private key out
       // of the served document (@repo/platform runtimeConfig).
-      createViteConfig({ publicConfigKeys: ['MARKETPLACE_API_URL', 'FRAPPE_ENABLED'] });
-      expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MARKETPLACE_API_URL', 'FRAPPE_ENABLED']);
+      createViteConfig({ publicConfigKeys: ['MARKETPLACE_API_URL', 'ANALYTICS_ENABLED'] });
+      expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MARKETPLACE_API_URL', 'ANALYTICS_ENABLED']);
     });
 
     it('still bakes the build-environment VALUES so apps that bake keep working', () => {
@@ -141,10 +141,10 @@ describe(createViteConfig, () => {
     it('reads the names from publicConfigFile and adds the dev watcher plugin', () => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mpo-vite-spec-'));
       const file = path.join(dir, 'config.json');
-      fs.writeFileSync(file, JSON.stringify({ private: ['SECRET'], public: ['FRAPPE_ENABLED'] }));
+      fs.writeFileSync(file, JSON.stringify({ private: ['SECRET'], public: ['ANALYTICS_ENABLED'] }));
       try {
         const config = createViteConfig({ publicConfigFile: file, publicConfigKeys: ['INLINE'] });
-        expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['INLINE', 'FRAPPE_ENABLED']);
+        expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['INLINE', 'ANALYTICS_ENABLED']);
         expect(findPlugin(config, 'multiplatform-public-config')?.apply).toBe('serve');
       } finally {
         fs.rmSync(dir, { recursive: true, force: true });

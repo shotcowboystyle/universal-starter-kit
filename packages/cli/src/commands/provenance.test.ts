@@ -21,21 +21,21 @@ describe('provenance', () => {
       cliVersion: '7.11.0',
       source: { sha: 'a'.repeat(40), url: 'https://example.com/mpo.git' },
       apps: ['shop', 'admin'],
-      services: ['keycloak', 'frappe'],
+      services: ['keycloak', 'ethereum'],
       pieces: [],
     });
     expect(JSON.parse(readFileSync(path.join(dir, '.mpo.json'), 'utf-8'))).toStrictEqual({
       cliVersion: '7.11.0',
       source: { sha: 'a'.repeat(40), url: 'https://example.com/mpo.git' },
       apps: ['shop', 'admin'],
-      services: ['frappe', 'keycloak'],
+      services: ['ethereum', 'keycloak'],
       pieces: [],
     });
     expect(readProvenance(dir)).toStrictEqual({
       cliVersion: '7.11.0',
       source: { sha: 'a'.repeat(40), url: 'https://example.com/mpo.git' },
       apps: ['shop', 'admin'],
-      services: ['frappe', 'keycloak'],
+      services: ['ethereum', 'keycloak'],
       pieces: [],
     });
   });

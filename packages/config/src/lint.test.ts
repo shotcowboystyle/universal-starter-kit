@@ -659,17 +659,6 @@ ${csfTail}`,
     expect(runChecks(root).code).toBe(0);
   });
 
-  it("leaves the frappe data client's hook demos alone, since it is not a catalog package", () => {
-    const root = makeTree();
-    story(
-      root,
-      'public/frappe/src/useFrappeCollection.stories.tsx',
-      `import { Button, Text, YStack } from "tamagui";
-${csfTail}`,
-    );
-    expect(runChecks(root).code).toBe(0);
-  });
-
   it("does not let an earlier import's names leak into the tamagui clause", () => {
     const root = makeTree();
     story(

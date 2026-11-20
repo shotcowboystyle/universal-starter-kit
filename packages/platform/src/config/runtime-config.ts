@@ -50,7 +50,7 @@ export const bakedConfigEnvKey = 'VITE_MP_CONFIG';
 /**
  * The two baked keys, read as STATIC `process.env.<KEY>` member expressions.
  * That exact spelling is what every bundler on the way to a browser inlines:
- * `createViteConfig` defines both keys (like `process.env.VITE_FRAPPE_ENABLED`),
+ * `createViteConfig` defines both keys through its `define` block,
  * vxrn's loadEnv under One defines every public key the same way, and Metro's
  * babel does the same for `EXPO_PUBLIC_*`. A dynamic `env[key]` read is never
  * inlined, and One's client build folds `typeof process` to "undefined", so

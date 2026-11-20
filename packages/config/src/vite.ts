@@ -1162,11 +1162,7 @@ export const createViteConfig = (options: CreateViteConfigOptions = {}): UserCon
     build: {
       chunkSizeWarningLimit: 600,
     },
-    define: {
-      // Build-time flag for Frappe translation backend tree-shaking
-      'process.env.VITE_FRAPPE_ENABLED': JSON.stringify(process.env.VITE_FRAPPE_ENABLED === 'true' ? 'true' : 'false'),
-      ...publicConfigDefine(publicConfigKeys),
-    },
+    define: publicConfigDefine(publicConfigKeys),
     ssr: ssr ?? defaultSsr,
     resolve: {
       // The context-singleton pins are merged in HERE too, not only

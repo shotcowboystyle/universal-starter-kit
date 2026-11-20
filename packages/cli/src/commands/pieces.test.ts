@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -18,25 +18,14 @@ describe('pieces scaffold', () => {
   });
 
   it('ships exactly the supported pieces', () => {
-    expect(availablePieces()).toStrictEqual(['frappe-bench', 'keycloak', 'tauri', 'webext']);
+    expect(availablePieces()).toStrictEqual(['keycloak', 'tauri', 'webext']);
   });
 
-  it.each(['frappe', 'gnome', 'vscode'])('rejects the removed %s piece', (piece) => {
+  it.each(['frappe', 'frappe-bench', 'gnome', 'vscode'])('rejects the removed %s piece', (piece) => {
     expect(() => {
       // SAFETY: deliberately passing a piece name the type no longer allows
       scaffoldPieces(path.join(sandbox, piece), { name: 'shop', mpoVersion: '^7.0.0', pieces: [piece as never] });
     }).toThrow(`Unknown piece "${piece}"`);
-  });
-
-  it('frappe-bench alone ships the compose bench and its README, but no app.ts', () => {
-    const dir = path.join(sandbox, 'bench');
-    scaffoldPieces(dir, { name: 'shop', mpoVersion: '^7.0.0', pieces: ['frappe-bench'] });
-
-    expect(existsSync(path.join(dir, 'docker/compose.frappe.yaml'))).toBe(true);
-    expect(readFileSync(path.join(dir, 'README.md'), 'utf-8')).toContain(
-      'docker compose -f docker/compose.frappe.yaml up -d',
-    );
-    expect(existsSync(path.join(dir, 'apps/shop/src/app.ts'))).toBe(false);
   });
 
   it('keycloak writes an app.ts with only the keycloak provider', () => {

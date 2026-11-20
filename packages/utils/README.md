@@ -17,7 +17,7 @@ empty):
 - **Bundler discovery** — `lookupTranspileModules()`, `lookupTamaguiModules()`
   (aggregate `transpileModules` / `tamaguiModules` fields from workspace
   `package.json` files), `lookupProjectRoot()`, `resolveConfig(keys)`
-- **Wait helpers** — `waitForFrappe`, `waitForPostgres`, `waitForMariaDB`,
+- **Wait helpers** — `waitForPostgres`,
   `waitForKeycloak` (optional integrations; poll until a service answers),
   `waitServices`, `formatServiceList`
 
@@ -36,10 +36,10 @@ const tamaguiModules = lookupTamaguiModules();
 ```
 
 ```ts
-// wait for the backend before running tests
-import { waitForFrappe } from '@repo/utils/dev';
+// wait for the database before running tests
+import { waitForPostgres } from '@repo/utils/dev';
 
-await waitForFrappe(1000); // poll every 1s until BASE_URL/api/method/ping answers
+await waitForPostgres(1000); // poll every 1s until Postgres accepts a query
 ```
 
 ## License

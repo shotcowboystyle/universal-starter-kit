@@ -5,7 +5,7 @@
  * component's WebView runs, so the script never executes, so no error boundary
  * is reachable, so the canvas is a blank rectangle. The static ban in
  * `scripts/verify-no-import-meta.mjs` catches the token; this catches the
- * REACH — the canvas must not be able to arrive at `frappe-ui`, `frappe`,
+ * REACH — the canvas must not be able to arrive at `ui`, `forms`,
  * `utils`, `components` or anything else outside the allowed nine in the first
  * place. Native chrome lives on the Hermes side and may use `components`
  * freely; only the canvas is constrained.
@@ -228,19 +228,11 @@ describe("the DOM subtree's import boundary", () => {
     ).toStrictEqual([]);
   });
 
-  it('refuses a reach into @repo/frappe-ui', () => {
-    // The falsification, run as a spec instead of by hand, so it cannot rot:
-    // the walker is pointed at a real module that reaches frappe-ui.
-    expect(isAllowed('@repo/frappe-ui')).toBe(false);
-    expect(isAllowed('@repo/frappe-ui/dist/x')).toBe(false);
-    for (const refused of [
-      '@repo/ui',
-      '@repo/forms',
-      '@repo/frappe',
-      '@repo/backoffice',
-      '@repo/rich-text',
-      '@repo/utils',
-    ]) {
+  it('refuses a reach into @repo/ui', () => {
+    // The falsification, run as a spec instead of by hand, so it cannot rot.
+    expect(isAllowed('@repo/ui')).toBe(false);
+    expect(isAllowed('@repo/ui/dist/x')).toBe(false);
+    for (const refused of ['@repo/forms', '@repo/rich-text', '@repo/utils']) {
       expect(isAllowed(refused), `${refused} must be refused`).toBe(false);
     }
   });

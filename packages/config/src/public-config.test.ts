@@ -105,8 +105,8 @@ describe('public config', () => {
 
   describe(readPublicConfigKeys, () => {
     it('returns the public key names', () => {
-      writeConfig(['FRAPPE_ENABLED', 'FRAPPE_URL']);
-      expect(readPublicConfigKeys(file)).toStrictEqual(['FRAPPE_ENABLED', 'FRAPPE_URL']);
+      writeConfig(['ANALYTICS_ENABLED', 'ANALYTICS_URL']);
+      expect(readPublicConfigKeys(file)).toStrictEqual(['ANALYTICS_ENABLED', 'ANALYTICS_URL']);
     });
 
     it('drops anything that is not a key name and tolerates a missing list', () => {

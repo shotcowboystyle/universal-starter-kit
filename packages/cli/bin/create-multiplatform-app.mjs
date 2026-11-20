@@ -5,7 +5,7 @@
  * `mpo init` (the monorepo at one commit, pruned into a project).
  *
  *   npx --package=@repo/cli create-multiplatform-app my-app
- *   npx --package=@repo/cli create-multiplatform-app my-app --service frappe
+ *   npx --package=@repo/cli create-multiplatform-app my-app --service keycloak
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

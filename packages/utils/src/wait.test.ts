@@ -22,13 +22,11 @@ describe(formatServiceList, () => {
 
 describe('waitServices constant', () => {
   it('contains the expected service names', () => {
-    expect(waitServices).toContain('frappe');
     expect(waitServices).toContain('postgres');
-    expect(waitServices).toContain('mariadb');
     expect(waitServices).toContain('keycloak');
   });
 
-  it('has exactly 4 services', () => {
-    expect(waitServices).toHaveLength(4);
+  it('has exactly 2 services', () => {
+    expect(waitServices).toHaveLength(2);
   });
 });

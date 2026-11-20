@@ -4,11 +4,7 @@ import axios from 'axios';
 import type { ClientConfig } from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { waitForFrappe, waitForKeycloak, waitForPostgres } from './wait';
-
-// NOTE: waitForMariaDB is intentionally not covered here — it loads its
-// driver through a bare `require("mysql2/promise")`, which bypasses vitest
-// module mocks, so it cannot be exercised without touching the network.
+import { waitForKeycloak, waitForPostgres } from './wait';
 
 const pgState = vi.hoisted(() => ({
   connect: vi.fn<() => Promise<void>>(),
@@ -67,45 +63,6 @@ describe('wait loops', () => {
         process.env[key] = savedEnv[key];
       }
     }
-  });
-
-  describe(waitForFrappe, () => {
-    it('resolves immediately when the ping endpoint answers with a 2xx', async () => {
-      mockedGet.mockResolvedValue({ status: 200 });
-      await expect(waitForFrappe(1000)).resolves.toBeUndefined();
-      expect(mockedGet).toHaveBeenCalledExactlyOnceWith('http://frappe.localhost/api/method/ping');
-    });
-
-    it('pings BASE_URL when set', async () => {
-      process.env.BASE_URL = 'https://erp.example.com';
-      mockedGet.mockResolvedValue({ status: 200 });
-      await waitForFrappe(1000);
-      expect(mockedGet).toHaveBeenCalledWith('https://erp.example.com/api/method/ping');
-    });
-
-    it('retries after the interval when the request throws, then resolves', async () => {
-      mockedGet.mockRejectedValueOnce(new Error('ECONNREFUSED')).mockResolvedValue({ status: 200 });
-      const done = vi.fn<() => void>();
-      const promise = (async () => {
-        await waitForFrappe(250);
-        done();
-      })();
-      await vi.advanceTimersByTimeAsync(249);
-      expect(done).not.toHaveBeenCalled();
-      expect(mockedGet).toHaveBeenCalledOnce();
-      await vi.advanceTimersByTimeAsync(1);
-      await promise;
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-      expect(done).toHaveBeenCalledWith();
-    });
-
-    it('treats a non-2xx response as not ready and keeps polling', async () => {
-      mockedGet.mockResolvedValueOnce({ status: 503 }).mockResolvedValue({ status: 200 });
-      const promise = waitForFrappe(100);
-      await vi.advanceTimersByTimeAsync(100);
-      await promise;
-      expect(mockedGet).toHaveBeenCalledTimes(2);
-    });
   });
 
   describe(waitForKeycloak, () => {

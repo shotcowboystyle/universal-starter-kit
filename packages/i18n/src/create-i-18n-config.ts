@@ -1,4 +1,4 @@
-import type { BackendModule, InitOptions } from 'i18next';
+import type { InitOptions } from 'i18next';
 
 /**
  * Options for creating i18n initialization configuration.
@@ -16,62 +16,44 @@ export interface I18nConfigOptions {
   defaultNamespace: string;
   /** Translation resources - can be bundled or loaded dynamically */
   resources?: InitOptions['resources'];
-  /** Frappe backend plugin instance (from createFrappeBackend) */
-  frappeBackend?: BackendModule | null;
 }
 
 /**
  * Creates i18n initialization options with consistent settings.
  * Use this to ensure all platforms have the same i18n behavior.
  *
- * When `VITE_FRAPPE_ENABLED` is true and a `frappeBackend` is provided,
- * i18next is configured with `partialBundledLanguages` so the Frappe
- * backend supplements (and overrides) bundled local resources.
- *
  * @example
- * import { createI18nConfig, createFrappeBackend } from "@repo/i18n";
+ * import { createI18nConfig } from "@repo/i18n";
  *
  * i18n.use(initReactI18next).init(createI18nConfig({
  *   languages, namespaces, defaultLanguage, defaultNamespace, resources,
- *   frappeBackend: createFrappeBackend(),
  * }));
  */
-export const createI18nConfig = (options: I18nConfigOptions): InitOptions => {
-  const config: InitOptions = {
-    // JSON compatibility for React Native
-    compatibilityJSON: 'v4',
+export const createI18nConfig = (options: I18nConfigOptions): InitOptions => ({
+  // JSON compatibility for React Native
+  compatibilityJSON: 'v4',
 
-    // Namespace configuration
-    defaultNS: options.defaultNamespace,
-    ns: [...options.namespaces],
+  // Namespace configuration
+  defaultNS: options.defaultNamespace,
+  ns: [...options.namespaces],
 
-    // Language configuration
-    supportedLngs: [...options.languages],
-    fallbackLng: options.defaultLanguage,
+  // Language configuration
+  supportedLngs: [...options.languages],
+  fallbackLng: options.defaultLanguage,
 
-    // Resources (provided by caller)
-    resources: options.resources,
+  // Resources (provided by caller)
+  resources: options.resources,
 
-    // Interpolation settings
-    interpolation: {
-      // React handles XSS escaping, so we disable i18next escaping
-      escapeValue: false,
-    },
+  // Interpolation settings
+  interpolation: {
+    // React handles XSS escaping, so we disable i18next escaping
+    escapeValue: false,
+  },
 
-    // Missing key handling
-    returnNull: false,
-    returnEmptyString: false,
+  // Missing key handling
+  returnNull: false,
+  returnEmptyString: false,
 
-    // Debug mode (can be enabled via environment)
-    debug: false,
-  };
-
-  // When Frappe is enabled, attach the backend plugin so translations
-  // are fetched from Frappe and merged over bundled local resources.
-  if (process.env.VITE_FRAPPE_ENABLED === 'true' && options.frappeBackend) {
-    config.partialBundledLanguages = true;
-    config.backend = options.frappeBackend;
-  }
-
-  return config;
-};
+  // Debug mode (can be enabled via environment)
+  debug: false,
+});

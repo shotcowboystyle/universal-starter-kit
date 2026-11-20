@@ -19,7 +19,7 @@ one of them is made upstream, in the monorepo, and arrives with the next
 
 | Path               | Role                                                                |
 | ------------------ | ------------------------------------------------------------------- |
-| `apps/<name>/`     | Product apps and the services kept at init (frappe, keycloak, …)    |
+| `apps/<name>/`     | Product apps and the services kept at init (keycloak, …)            |
 | `features/<name>/` | Feature modules for the matching app (screens, stories, playground) |
 | `packages/`        | Private app-integration packages (`@package/*`)                     |
 

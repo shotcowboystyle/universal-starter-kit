@@ -125,11 +125,9 @@ export const resolveRoots = (roots = {}) => {
 };
 
 /** Shared platform / docs / chain shells — not product apps from
- *  mpo init --app. Extension targets (vscode, webext) are no longer shells:
- *  they live INSIDE the product app (apps/<name>/vscode, apps/<name>/webext)
- *  alongside the gnome/tauri targets. */
+ *  mpo init --app. The webext target is not a shell: it lives INSIDE the
+ *  product app (apps/<name>/webext) alongside the tauri target. */
 const FEATURES_TWIN_EXEMPT = new Set([
-  'frappe',
   'keycloak',
   'storybook',
   'storybook-expo',
@@ -147,10 +145,6 @@ const CSS_IGNORE_DIR_NAMES = new Set([
   '.tamagui',
   'build',
   'coverage',
-  // frappe bench python env
-  'env',
-  'sites',
-  'logs',
   // storybook build output
   'storybook-static',
   // playwright html report (regenerated per e2e run)
@@ -164,10 +158,6 @@ const CSS_IGNORE_DIR_PREFIXES = ['dist-', 'dist_'];
 
 /** Path prefixes under apps/ that are never scanned for .css */
 const CSS_IGNORE_PREFIXES = [
-  // upstream frappe apps tree
-  path.join('frappe', 'apps'),
-  path.join('frappe', 'env'),
-  path.join('frappe', 'sites'),
   // Keycloakify vendored theme resources (not app-authored styles)
   path.join('keycloak', 'public', 'keycloakify-dev-resources'),
 ];

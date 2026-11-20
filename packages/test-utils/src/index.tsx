@@ -30,8 +30,6 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper
   queryClient?: boolean | QueryClient;
   /** Wrap in ThemeProvider. Defaults to false. */
   theme?: boolean;
-  /** Wrap in FrappeProvider with mock. Defaults to false. */
-  frappe?: false | { baseURL?: string };
   /** Wrap in KeycloakProvider with mock. Defaults to false. */
   keycloak?: false | { authenticated?: boolean; roles?: string[]; token?: string };
 }
@@ -259,7 +257,7 @@ export const TestProviders = ({ children }: { children: ReactNode }) => (
  * Render a React element wrapped with configurable providers.
  *
  * By default wraps with TamaguiProvider and QueryClientProvider.
- * Additional providers (theme, frappe, keycloak) can be enabled via options.
+ * Additional providers (theme, keycloak) can be enabled via options.
  *
  * Returns an enhanced render result with extra DOM query helpers for
  * React Native Web / Tamagui components (getInput, getButton, getSubmitButton, etc.).
@@ -269,10 +267,9 @@ export const renderWithProviders = (
   options: RenderWithProvidersOptions = {},
 ): EnhancedRenderResult => {
   const { tamagui = true, queryClient = true, ...rest } = options;
-  // theme / frappe / keycloak are reserved for future providers; keep them out of RTL's render options.
+  // theme / keycloak are reserved for future providers; keep them out of RTL's render options.
   const renderOptions = { ...rest };
   delete renderOptions.theme;
-  delete renderOptions.frappe;
   delete renderOptions.keycloak;
 
   const wrapper = ({ children }: { children: ReactNode }) => {

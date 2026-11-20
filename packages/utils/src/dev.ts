@@ -306,12 +306,5 @@ export const stubExpoTypeDeclarations = (): Plugin => ({
   },
 });
 
-export {
-  formatServiceList,
-  waitForFrappe,
-  waitForKeycloak,
-  waitForMariaDB,
-  waitForPostgres,
-  waitServices,
-} from './wait.ts';
+export { formatServiceList, waitForKeycloak, waitForPostgres, waitServices } from './wait.ts';
 export type { WaitService } from './wait.ts';

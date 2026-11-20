@@ -135,8 +135,6 @@ export interface DataTableFieldProps {
   currencyField?: string;
   /** BCP-47 locale for money formatting. Defaults to the runtime's. */
   locale?: string;
-  /** Doctype for link fields (Frappe) */
-  doctype?: string;
   /** Default country for phone input (ISO 3166-1 alpha-2) */
   defaultCountry?: string;
   /** Number of OTP digits */

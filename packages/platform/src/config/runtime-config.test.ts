@@ -73,16 +73,16 @@ describe('runtime public config', () => {
     });
 
     it('never serializes a private key into the document payload', () => {
-      stubAllowlist(['MARKETPLACE_API_URL', 'FRAPPE_ENABLED']);
+      stubAllowlist(['MARKETPLACE_API_URL', 'ANALYTICS_ENABLED']);
       const payload = serializeRuntimePublicConfig(
         resolvePublicConfig({
           MARKETPLACE_API_URL: 'https://api.example.org',
-          FRAPPE_ENABLED: '1',
+          ANALYTICS_ENABLED: '1',
           SECRET: 'hunter2',
         }),
       );
       expect(payload).toContain('MARKETPLACE_API_URL');
-      expect(payload).toContain('FRAPPE_ENABLED');
+      expect(payload).toContain('ANALYTICS_ENABLED');
       expect(payload).not.toContain('SECRET');
       expect(payload).not.toContain('hunter2');
     });
@@ -90,9 +90,9 @@ describe('runtime public config', () => {
 
   describe(serializeRuntimePublicConfig, () => {
     it('assigns the payload to the runtime global key', () => {
-      stubAllowlist(['FRAPPE_ENABLED']);
-      expect(serializeRuntimePublicConfig(resolvePublicConfig({ FRAPPE_ENABLED: '1' }))).toBe(
-        `globalThis["${runtimePublicConfigKey}"]={"FRAPPE_ENABLED":"1"};`,
+      stubAllowlist(['ANALYTICS_ENABLED']);
+      expect(serializeRuntimePublicConfig(resolvePublicConfig({ ANALYTICS_ENABLED: '1' }))).toBe(
+        `globalThis["${runtimePublicConfigKey}"]={"ANALYTICS_ENABLED":"1"};`,
       );
     });
 

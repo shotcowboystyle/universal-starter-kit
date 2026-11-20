@@ -58,9 +58,6 @@ interface ServiceUrl {
 }
 
 const RESTART_POLICY = 'unless-stopped';
-const REDIS_CACHE = 'redis-cache';
-const REDIS_QUEUE = 'redis-queue';
-const REDIS_IMAGE = 'docker.io/redis:alpine';
 
 const sessionFileName = (portOffset: number): string => `.e2e-session-${portOffset}.json`;
 
@@ -73,21 +70,8 @@ const defaultPorts = new Map([
     ],
   ],
   ['keycloak', [{ host: 8080, container: 8080 }]],
-  [REDIS_CACHE, [{ host: 6379, container: 6379 }]],
-  [REDIS_QUEUE, [{ host: 6380, container: 6379 }]],
   ['postgres', [{ host: 5432, container: 5432 }]],
-  ['mariadb', [{ host: 3306, container: 3306 }]],
 ]);
-
-const dirExists = async (p: string): Promise<boolean> => {
-  try {
-    const stat = await fs.stat(p);
-    return stat.isDirectory();
-  } catch {
-    // Missing or unreadable: not a directory we can use.
-    return false;
-  }
-};
 
 const fileExists = async (p: string): Promise<boolean> => {
   try {
@@ -137,11 +121,6 @@ export const discoverE2EApp = async (projectRoot: string): Promise<string | null
 export const detectServices = async (projectRoot: string): Promise<string[]> => {
   // Always include base infrastructure
   const services: string[] = ['mailpit'];
-
-  // Frappe needs MariaDB + Redis
-  if (await dirExists(path.join(projectRoot, 'apps', 'frappe'))) {
-    services.push('mariadb', REDIS_CACHE, REDIS_QUEUE);
-  }
 
   // Keycloak needs Postgres (discover from present apps)
   const presentApps = await getPresentAppNames(projectRoot);
@@ -216,33 +195,6 @@ const buildServiceConfig = (service: string, portOffset: number): ServiceSpec | 
       };
     }
 
-    case REDIS_CACHE:
-    case REDIS_QUEUE: {
-      return { service: { image: REDIS_IMAGE, restart: RESTART_POLICY, ports } };
-    }
-
-    case 'mariadb': {
-      return {
-        service: {
-          image: 'mariadb:10.6',
-          restart: RESTART_POLICY,
-          ports,
-          environment: {
-            MARIADB_DATABASE: 'frappe',
-            MARIADB_ROOT_PASSWORD: 'root',
-            MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 'no',
-          },
-          healthcheck: {
-            test: ['CMD', 'mariadb-admin', 'ping', '-h', '127.0.0.1', '-uroot', '-proot'],
-            interval: '5s',
-            timeout: '5s',
-            retries: 10,
-          },
-        },
-        volumes: ['mariadb'],
-      };
-    }
-
     default: {
       return null;
     }
@@ -294,12 +246,6 @@ const getServiceUrls = (services: string[], portOffset: number): ServiceUrl[] =>
   }
   if (services.includes('mailpit')) {
     urls.push({ name: 'Mailpit', url: `http://localhost:${8025 + portOffset}` });
-  }
-  if (services.includes('mariadb')) {
-    urls.push({ name: 'Frappe (MariaDB)', url: `localhost:${3306 + portOffset}` });
-  }
-  if (services.includes(REDIS_CACHE)) {
-    urls.push({ name: 'Redis Cache', url: `localhost:${6379 + portOffset}` });
   }
   if (services.includes('postgres')) {
     urls.push({ name: 'Postgres', url: `localhost:${5432 + portOffset}` });
@@ -370,7 +316,7 @@ const pollUntilReady = async (check: () => Promise<boolean>, attemptsLeft: numbe
 
 /**
  * Poll services for readiness instead of relying on a fixed sleep.
- * Checks TCP connectivity for MariaDB, Redis, Postgres, and HTTP for Mailpit/Keycloak.
+ * Checks TCP connectivity for Postgres, and HTTP for Mailpit/Keycloak.
  */
 const waitForServices = async (services: string[], portOffset: number): Promise<void> => {
   const checks = readinessChecks(services, portOffset);
@@ -472,7 +418,6 @@ export const runE2ESession = async (projectRoot: string, options: E2EOptions): P
     }
 
     const baseUrl = `http://localhost:${3000 + portOffset}`;
-    const frappeUrl = `http://localhost:${8000 + portOffset}`;
     const e2eCwd = path.join(projectRoot, 'apps', e2eApp);
 
     await spawn('pnpm', playwrightArgs, {
@@ -481,11 +426,6 @@ export const runE2ESession = async (projectRoot: string, options: E2EOptions): P
       env: {
         ...process.env,
         BASE_URL: baseUrl,
-        FRAPPE_URL: frappeUrl,
-        FRAPPE_SOCKETIO_PORT: String(9000 + portOffset),
-        MARIADB_PORT: String(3306 + portOffset),
-        REDIS_CACHE_PORT: String(6379 + portOffset),
-        REDIS_QUEUE_PORT: String(6380 + portOffset),
         E2E_PORT_OFFSET: String(portOffset),
       },
     });

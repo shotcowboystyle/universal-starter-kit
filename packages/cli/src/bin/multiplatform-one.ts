@@ -3,24 +3,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import {
-  formatServiceList,
-  lookupProjectRoot,
-  waitForFrappe,
-  waitForKeycloak,
-  waitForMariaDB,
-  waitForPostgres,
-  waitServices,
-} from '@repo/utils/dev';
+import { formatServiceList, lookupProjectRoot, waitForKeycloak, waitForPostgres, waitServices } from '@repo/utils/dev';
 import { Command } from 'commander';
 import dotenv from 'dotenv';
 import spawn from 'nano-spawn';
-import YAML from 'yaml';
 import yoctoSpinner from 'yocto-spinner';
 
 import { addApp } from '../commands/add-app';
 import { adoptApp } from '../commands/adopt-app';
-import { generateDoctypeTypes, typesDrift } from '../commands/doctype-types';
 import { discoverE2EApp, runE2ESession } from '../commands/e2e';
 import { SINGLETON_APPS, init } from '../commands/init';
 import { INIT_APP_PIECES } from '../commands/pieces';
@@ -34,8 +24,7 @@ const MPO_VERSION_HELP = 'semver range for @repo/* (default: ^<cli version at th
 const DECIMAL = 10;
 
 const projectRoot = lookupProjectRoot();
-const availableServices = ['api', 'frappe', 'solana', 'ethereum', 'sui'];
-const frappeScript = path.resolve(import.meta.dirname, '../../scripts/frappe.sh');
+const availableServices = ['api', 'solana', 'ethereum', 'sui'];
 const defaultDotenvPath = path.resolve(projectRoot, '.env');
 
 interface PackageJson {
@@ -179,46 +168,7 @@ const getStorybookVisualWorkspaces = async (root: string): Promise<StorybookVisu
   return found.flat().filter((workspace) => workspace !== undefined);
 };
 
-type FrappeYamlApp = string | { name?: string; source?: string };
-
-interface FrappeApp {
-  name: string;
-  absolutePath: string;
-}
-
-const FILE_URL_PREFIX = 'file://';
-
-const frappeAppFrom = (app: FrappeYamlApp, frappeDir: string): FrappeApp | undefined => {
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- frappe.yaml entries are the I/O boundary: a path string or a {name, source} object
-  const entry = typeof app === 'string' ? { name: path.basename(app), source: app } : app;
-  const { name = '', source = '' } = entry;
-  const src = source.startsWith(FILE_URL_PREFIX) ? source.slice(FILE_URL_PREFIX.length) : source;
-  const isLocal = src.startsWith('./') || src.startsWith('../') || src.startsWith('/');
-  if (name === '' || !isLocal) {
-    return undefined;
-  }
-  const absolutePath = path.isAbsolute(src) ? src : path.resolve(frappeDir, src);
-  return fsSync.existsSync(absolutePath) ? { name, absolutePath } : undefined;
-};
-
-/** Discover frappe apps from frappe.yaml that have local source paths.
- *  Supports both string entries (`- ./apps/core`) and object entries (`- name: core\n  source: ./apps/core`). */
-const getFrappeApps = async (root: string): Promise<FrappeApp[]> => {
-  const frappeDir = path.join(root, 'apps', 'frappe');
-  const frappeYamlPath = path.join(frappeDir, 'frappe.yaml');
-  if (!fsSync.existsSync(frappeYamlPath)) {
-    return [];
-  }
-  // SAFETY: frappe.yaml's `apps` is a list of path strings or {name, source} maps; frappeAppFrom
-  // tolerates missing fields in either shape.
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- YAML.parse returns any; see SAFETY above
-  const config = YAML.parse(await fs.readFile(frappeYamlPath, 'utf-8')) as { apps?: FrappeYamlApp[] } | null;
-  return (config?.apps ?? []).map((app) => frappeAppFrom(app, frappeDir)).filter((app) => app !== undefined);
-};
-
 const waitFunctions = new Map<string, (interval: number) => Promise<void>>([
-  ['frappe', waitForFrappe],
-  ['mariadb', waitForMariaDB],
   ['postgres', waitForPostgres],
   ['keycloak', waitForKeycloak],
 ]);
@@ -274,12 +224,8 @@ const runPnpmTurbo = async (args: string[]): Promise<void> => {
   await spawn('pnpm', ['turbo', 'run', ...args], { stdio: 'inherit', shell: true, cwd: projectRoot });
 };
 
-const runFrappeScript = async (args: string[]): Promise<void> => {
-  await spawn('sh', [frappeScript, ...args], { stdio: 'inherit', shell: true, cwd: projectRoot });
-};
-
-const loadFrappeDotenv = (dotenvPath: string | undefined, quiet = false): void => {
-  dotenv.config({ path: dotenvPath ?? defaultDotenvPath, quiet });
+const loadDotenv = (dotenvPath: string | undefined): void => {
+  dotenv.config({ path: dotenvPath ?? defaultDotenvPath });
 };
 
 const cliPackage = parsePackageJson(
@@ -295,7 +241,6 @@ const collect = (value: string, previous: string[]) => [...previous, value];
 interface InitCliOptions {
   app: string[];
   service: string[];
-  frappe?: boolean;
   keycloak?: boolean;
   into?: boolean;
   source?: string;
@@ -312,7 +257,6 @@ program
   .argument('[name]', 'the project (and product app) name; with --into, the directory')
   .option('--app <name>', 'one more product app derived from apps/one (repeatable)', collect, [])
   .option('--service <name>', `singleton app to keep (repeatable): ${SINGLETON_APPS.join(', ')}`, collect, [])
-  .option('--frappe', 'same as --service frappe')
   .option('--keycloak', 'same as --service keycloak')
   .option(
     '--into',
@@ -330,9 +274,6 @@ program
   )
   .action(async (name: string | undefined, options: InitCliOptions) => {
     const services = [...options.service];
-    if (options.frappe) {
-      services.push('frappe');
-    }
     if (options.keycloak) {
       services.push('keycloak');
     }
@@ -382,7 +323,6 @@ const camelCase = (kebab: string): string =>
 
 program
   .command('adopt')
-  .option('--frappe-bench', 'the project adopted the Frappe dev bench piece (docker compose)')
   .option('--keycloak', 'the project adopted the Keycloak auth piece')
   .option('--tauri', 'the project adopted the Tauri desktop target piece')
   .option('--webext', 'the project adopted the browser extension target piece')
@@ -445,96 +385,13 @@ program
   .option('-e, --dotenv <dotenv>', 'dotenv file path', '.env')
   .argument('<services>', `the services to wait for (${waitServices.join(', ')})`)
   .action(async (servicesString: string, options: WaitCliOptions) => {
-    loadFrappeDotenv(options.dotenv);
+    loadDotenv(options.dotenv);
     const interval = Number.parseInt(options.interval, DECIMAL);
     const timeout = Number.parseInt(options.timeout, DECIMAL);
     try {
       await waitWithSpinner(servicesString.split(','), { interval, timeout });
     } catch {
       // waitWithSpinner already reported the failure on the spinner.
-      process.exit(1);
-    }
-  });
-
-interface FrappeCliOptions {
-  dotenv?: string;
-}
-
-const frappe = program
-  .command('frappe')
-  .description('manage frappe development environment')
-  .option('-e, --dotenv <dotenv>', 'dotenv file path', '.env');
-
-frappe
-  .command('bootstrap')
-  .description('bootstrap frappe development environment')
-  .option('-u, --update', 'update dependencies')
-  .action(async (options: { update?: boolean }) => {
-    loadFrappeDotenv(frappe.opts<FrappeCliOptions>().dotenv);
-    await runFrappeScript(['bootstrap', ...(options.update ? ['--update'] : [])]);
-  });
-
-frappe
-  .command('clean')
-  .description('clean frappe bench artifacts')
-  .option('--cache', 'also remove frappe cache')
-  .action(async (options: { cache?: boolean }) => {
-    await runFrappeScript(['clean', ...(options.cache ? ['--cache'] : [])]);
-  });
-
-frappe
-  .command('dev')
-  .description('start frappe development server')
-  .action(async () => {
-    loadFrappeDotenv(frappe.opts<FrappeCliOptions>().dotenv);
-    await runFrappeScript(['dev']);
-  });
-
-frappe
-  .command('bench')
-  .description('run bench command')
-  .action(async () => {
-    loadFrappeDotenv(frappe.opts<FrappeCliOptions>().dotenv);
-    await runFrappeScript(['bench']);
-  });
-
-interface FrappeTypesCliOptions {
-  out?: string;
-  check?: boolean;
-  url?: string;
-}
-
-frappe
-  .command('types')
-  .description('generate TypeScript types for doctypes from getdoctype (auth: $FRAPPE_API_KEY, $FRAPPE_API_SECRET)')
-  .argument('<doctypes...>', 'doctype names; child tables come along')
-  .option('-o, --out <file>', 'write the module here instead of stdout')
-  .option('--check', 'exit 1 and print the diff when --out differs from the server')
-  .option('--url <url>', 'frappe base URL (default $FRAPPE_URL or http://localhost:8000)')
-  .action(async (doctypes: string[], options: FrappeTypesCliOptions) => {
-    loadFrappeDotenv(frappe.opts<FrappeCliOptions>().dotenv, true);
-    if (options.check && options.out === undefined) {
-      console.error('--check needs --out <file>');
-      process.exit(2);
-    }
-    const generated = await generateDoctypeTypes(doctypes, {
-      baseURL: options.url ?? process.env.FRAPPE_URL ?? 'http://localhost:8000',
-      apiKey: process.env.FRAPPE_API_KEY,
-      apiSecret: process.env.FRAPPE_API_SECRET,
-    });
-    if (options.out === undefined) {
-      process.stdout.write(generated);
-      return;
-    }
-    const out = path.resolve(process.cwd(), options.out);
-    if (!options.check) {
-      await fs.writeFile(out, generated);
-      return;
-    }
-    const committed = fsSync.existsSync(out) ? await fs.readFile(out, 'utf-8') : '';
-    const drift = typesDrift(committed, generated);
-    if (drift.length > 0) {
-      console.error(`${options.out} drifted from the server:\n${drift.join('\n')}`);
       process.exit(1);
     }
   });
@@ -590,24 +447,6 @@ const runTurboTests = async (): Promise<void> => {
     ...(e2eApp == null ? [] : ['--filter', `'!./apps/${e2eApp}'`]),
   ];
   await runPnpmTurbo(['test', ...filters]);
-};
-
-/** Frappe app pytest suites, selected by pytest marker expression. */
-const runFrappeAppTests = async (marker: string, label: string): Promise<void> => {
-  const frappeApps = await getFrappeApps(projectRoot);
-  const testable = frappeApps.filter((app) => fsSync.existsSync(path.join(app.absolutePath, 'pyproject.toml')));
-  for (const app of testable) {
-    try {
-      // oxlint-disable-next-line eslint/no-await-in-loop -- bench runs share one site; they cannot overlap
-      await spawn('bench', ['run-tests', '--app', app.name, '--', '-m', marker], {
-        stdio: 'inherit',
-        cwd: path.join(projectRoot, 'apps', 'frappe'),
-      });
-    } catch {
-      // A missing bench is expected outside the frappe dev environment; report and go on.
-      console.warn(`frappe app ${app.name} ${label} tests failed (bench may not be available)`);
-    }
-  }
 };
 
 const runVisualWorkspace = async (workspace: StorybookVisualWorkspace): Promise<void> => {
@@ -683,7 +522,6 @@ program
 
     if (parsed.includes('unit')) {
       await runTurboTests();
-      await runFrappeAppTests('not integration', 'unit');
       if (only) {
         return;
       }
@@ -691,7 +529,6 @@ program
 
     if (parsed.includes('integration')) {
       await runTurboTests();
-      await runFrappeAppTests('integration', 'integration');
       if (only) {
         return;
       }
@@ -707,46 +544,21 @@ program
     }
   });
 
-/**
- * Run ruff format or check on the Frappe Python apps (if present).
- * Returns true if the ruff step failed.
- */
-const ruffStep = async (mode: 'format' | 'check'): Promise<boolean> => {
-  const frappeApps = path.join(projectRoot, 'apps', 'frappe', 'apps');
-  if (!fsSync.existsSync(frappeApps)) {
-    return false;
-  }
-  const label = mode === 'format' ? 'ruff format' : 'ruff check';
-  console.log(`\n── ${label} (Python) ──`);
-  try {
-    await spawn('ruff', [mode, frappeApps], {
-      stdio: 'inherit',
-      cwd: projectRoot,
-    });
-    return false;
-  } catch {
-    // ruff already printed its findings; the caller turns this into the exit code.
-    return true;
-  }
-};
-
 program
   .command('format')
-  .description('format all supported files (TS, Python, etc.) via turbo')
+  .description('format all supported files via turbo')
   .action(async () => {
     await spawn('turbo', ['run', 'format', '--filter=//'], {
       stdio: 'inherit',
       cwd: projectRoot,
     });
-    await ruffStep('format');
   });
 
 program
   .command('lint')
-  .description('lint and typecheck all supported files (TS, Python, etc.) via turbo')
+  .description('lint and typecheck all supported files via turbo')
   .action(async () => {
     const excludeFilters = await getTurboExcludeFiltersForMissing(projectRoot);
-    let turboFailed = false;
     try {
       await spawn(
         'turbo',
@@ -763,11 +575,7 @@ program
         { stdio: 'inherit', cwd: projectRoot },
       );
     } catch {
-      // turbo printed the failures; ruff still runs, then the exit code reflects both.
-      turboFailed = true;
-    }
-    const ruffFailed = await ruffStep('check');
-    if (turboFailed || ruffFailed) {
+      // turbo already printed the failures; exit non-zero without a second error line.
       process.exit(1);
     }
   });

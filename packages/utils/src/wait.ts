@@ -41,13 +41,6 @@ const canExecute = async <T>(execute: () => Promise<T>): Promise<boolean> => {
   }
 };
 
-export const waitForFrappe = async (interval: number): Promise<void> => {
-  await pollUntil(
-    async () => await isPingOk(`${envOr('BASE_URL', 'http://frappe.localhost')}/api/method/ping`),
-    interval,
-  );
-};
-
 export const waitForPostgres = async (interval: number): Promise<void> => {
   const client = new Client({
     database: envOr('POSTGRES_DATABASE', 'postgres'),
@@ -61,22 +54,6 @@ export const waitForPostgres = async (interval: number): Promise<void> => {
     await pollUntil(async () => await canExecute(async () => await client.query('SELECT 1')), interval);
   } finally {
     await client.end();
-  }
-};
-
-export const waitForMariaDB = async (interval: number): Promise<void> => {
-  const { createConnection } = await import('mysql2/promise');
-  const connection = await createConnection({
-    host: envOr('MARIADB_HOSTNAME', 'localhost'),
-    port: Math.trunc(Number(envOr('MARIADB_PORT', '3306'))),
-    user: envOr('MARIADB_USERNAME', 'root'),
-    password: envOr('MARIADB_PASSWORD', 'root'),
-    database: envOr('MARIADB_DATABASE', 'frappe'),
-  });
-  try {
-    await pollUntil(async () => await canExecute(async () => await connection.execute('SELECT 1')), interval);
-  } finally {
-    await connection.end();
   }
 };
 
@@ -100,6 +77,6 @@ export const formatServiceList = (services: readonly string[]): string => {
   return `${services.slice(0, -1).join(', ')} and ${services.at(-1)}`;
 };
 
-export const waitServices = ['frappe', 'postgres', 'mariadb', 'keycloak'] as const;
+export const waitServices = ['postgres', 'keycloak'] as const;
 
 export type WaitService = (typeof waitServices)[number];

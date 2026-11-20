@@ -8,7 +8,6 @@ export { INIT_APP_PIECES } from './provenance';
 export type { InitAppPiece } from './provenance';
 
 const PIECE_DESCRIPTIONS: Record<InitAppPiece, string> = {
-  'frappe-bench': 'Frappe dev bench (docker compose: bench, MariaDB, Redis)',
   keycloak: 'Keycloak auth wiring (env keys, provider, docker compose + realm)',
   tauri: 'Tauri desktop target (src-tauri skeleton — webview shell, Rust toolchain)',
   webext: 'Browser extension target (MV3 popup + background)',

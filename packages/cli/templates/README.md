@@ -28,29 +28,6 @@ pnpm dev            # the first product app (dev:<name> picks one of several)
 
 `.env` starts as a copy of `.env.example`.
 
-<!-- service:frappe -->
-
-## Frappe
-
-`apps/frappe` is the dev bench. `make frappe/bootstrap` creates it once, and
-`make frappe/dev` starts the services it needs from `docker/compose.yaml` and
-serves it on `FRAPPE_PORT` (`http://localhost:8000`), which also proxies the
-web dev server same-origin. The apps reach it through `createApp` in
-`packages/app/app.tsx` while `FRAPPE_ENABLED=1`.
-
-<!-- /service:frappe -->
-<!-- no-service:frappe -->
-
-<!-- markdownlint-disable-next-line MD024 -- alternative to the service:frappe section; only one renders -->
-## Frappe
-
-This project runs no Frappe server of its own. The apps keep the Frappe
-client: `createApp` in `packages/app/app.tsx` mounts the `FrappeProvider`
-while `FRAPPE_ENABLED=1` and talks to `BASE_URL`, or to the `baseURL` passed
-in `frappe: { baseURL }`. Point it at a Frappe server.
-
-<!-- /no-service:frappe -->
-
 ## Updating
 
 ```sh

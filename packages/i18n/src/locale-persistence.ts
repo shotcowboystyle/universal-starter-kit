@@ -1,6 +1,6 @@
 import { getCookie, setCookie } from '@repo/platform';
 
-// Cookie name matches Frappe's convention for language preference
+// Persisted cookie name; renaming it drops every saved language preference
 const cookieName = 'preferred_language';
 
 /** Read the `preferred_language` cookie value (client-side). */

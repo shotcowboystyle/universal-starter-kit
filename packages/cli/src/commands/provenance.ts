@@ -7,11 +7,11 @@ export const PROVENANCE_FILE = '.mpo.json';
  * Pieces: additive fragment trees under templates/pieces/<piece>/ that an
  * ADOPTED project (`mpo adopt`) hand-copied and wants `mpo update` to keep
  * reconciling. A project from `mpo init` never needs them: apps/one already
- * ships tauri/ and webext/, and frappe / keycloak are
- * `--service` selections of the real apps. Keep sorted: pieces are recorded
+ * ships tauri/ and webext/, and keycloak is a
+ * `--service` selection of the real apps. Keep sorted: pieces are recorded
  * sorted in provenance and overlaid in this order.
  */
-export const INIT_APP_PIECES = ['frappe-bench', 'keycloak', 'tauri', 'webext'] as const;
+export const INIT_APP_PIECES = ['keycloak', 'tauri', 'webext'] as const;
 export type InitAppPiece = (typeof INIT_APP_PIECES)[number];
 
 export const isInitAppPiece = (piece: string): piece is InitAppPiece =>
@@ -33,7 +33,7 @@ export interface MpoProvenance {
   source?: { sha: string; url?: string };
   /** Product apps derived from apps/one. */
   apps: string[];
-  /** Singleton apps kept under apps/ (frappe, keycloak, storybook, ...). */
+  /** Singleton apps kept under apps/ (keycloak, storybook, ...). */
   services: string[];
   /** Pieces overlaid for adopted projects (sorted). */
   pieces: InitAppPiece[];

@@ -2,7 +2,7 @@
 
 The universal-starter-kit command line: scaffold a project from the monorepo
 (`mpo init` / `create-universal-starter-kit-app`), merge the monorepo's changes back
-in (`mpo update`), and drive the dev environment, Frappe and E2E workflows.
+in (`mpo update`), and drive the dev environment and E2E workflows.
 
 ## Install
 
@@ -19,7 +19,7 @@ Two binaries: **`mpo`** (full CLI) and **`create-multiplatform-app`**
 
 ```bash
 mpo init my-app                          # prompts for the singleton apps to keep
-mpo init my-app --service frappe --yes   # non-interactive
+mpo init my-app --service keycloak --yes # non-interactive
 mpo init my-app --app admin              # two product apps: my-app and admin
 cd my-app
 pnpm dev
@@ -29,22 +29,18 @@ A project is the universal-starter-kit monorepo at one commit, pruned:
 
 - `public/` is gone; `@repo/*` come from npmjs, the default
   registry, at `^<cli version>` (`--mpo-version` overrides the range).
-- The singleton apps are ethereum, frappe, keycloak, solana, storybook,
+- The singleton apps are ethereum, keycloak, solana, storybook,
   storybook-expo, sui, uxpin and vocs; only the ones asked for stay.
-  `--frappe` and `--keycloak` are shorthands for `--service`.
-- Without `--service frappe` the project keeps the Frappe client
-  (`createApp`'s wiring, the `# frappe client` keys in `.env.example`) and
-  drops the bench: `apps/frappe`, its `.env` keys, and the `docker/compose.yaml`
-  services in the `frappe` profile with the volumes only they used.
+  `--keycloak` is shorthand for `--service keycloak`.
 - Without `--service keycloak` the keycloak compose service, `postgres` and
   its `.env` keys, the `docker-bake.hcl` target and the `docker/Makefile`
-  cert block go. With neither service, `docker/compose.yaml` is
+  cert block go. Without it, `docker/compose.yaml` is
   `services: {}` and there is no `pnpm backend`.
 - `apps/one`, the One platform app, becomes `apps/my-app` (package
   `@app/my-app`, app.config slug and scheme, bundle id, tauri identifier, the
   `Makefile` `my-app/%` rules, `.vscode`, `.gitignore`), with
   `features/my-app` beside it. Every `--app` is another copy. The
-  delivery targets (`tauri/`, `webext/`, the Frappe SPA)
+  delivery targets (`tauri/`, `webext/`)
   ride inside each product app; there is nothing to add for them.
 - `packages/themes` is the app's one theme config, and the app ships its
   declared theme subset (`subset.ts`, `subset.tamagui.config.ts`): 340 of the
@@ -81,7 +77,7 @@ directory is yours to commit. `mpo adopt` is not the way in for this: it only
 registers hand-copied piece files (see below).
 
 Options: `--app <name>` (repeatable), `--service <name>` (repeatable),
-`--frappe`, `--keycloak`, `--into`, `--source`, `--checkout`, `--mpo-version`,
+`--keycloak`, `--into`, `--source`, `--checkout`, `--mpo-version`,
 `--skip-install`, `--skip-git`, `--yes`, `--verbose`.
 
 ## Update a project
@@ -118,8 +114,7 @@ commit and merges only that in, uncommitted like `mpo update`.
 ## Adopt hand-copied pieces
 
 A project that was never scaffolded and hand-copied a delivery target from
-`templates/pieces` (webext, tauri, keycloak wiring, the Frappe dev bench as
-`frappe-bench`) has no provenance:
+`templates/pieces` (webext, tauri, keycloak wiring) has no provenance:
 
 ```bash
 mpo adopt --webext --name my-app   # clean git tree; at least one piece
@@ -128,9 +123,7 @@ mpo adopt --webext --name my-app   # clean git tree; at least one piece
 Adoption writes `.mpo.json` (template `"none"` + pieces) and seeds
 `.updateignore`; it changes no project file. The first `mpo update` reconciles
 the piece files from an empty base (diffs and conflicts are expected); later
-updates merge three-way against the pieces of the recorded CLI version. An
-adoption recorded while the `frappe` piece still carried the bench gains
-`frappe-bench` on its next update, so the bench stays.
+updates merge three-way against the pieces of the recorded CLI version.
 
 A project from the retired template scaffolder (`.mpo.json` with `template:
 "universal"` or `"app"`) has no reproducible base left: its next `mpo update`
@@ -148,16 +141,11 @@ sh scripts/scaffold.sh [--app <name>]... [--service <name>]... [--mpo-version <r
 
 ## Other commands
 
-| Command                       | Purpose                                                                           |
-| ----------------------------- | --------------------------------------------------------------------------------- |
-| `mpo wait`                    | Wait for a service (frappe, postgres, mariadb, keycloak) to be ready              |
-| `mpo frappe bootstrap`        | Bootstrap the Frappe development environment                                      |
-| `mpo frappe dev`              | Start the Frappe development server                                               |
-| `mpo frappe bench -- <args>`  | Run a bench command                                                               |
-| `mpo frappe clean`            | Clean Frappe bench artifacts                                                      |
-| `mpo frappe types <doctype…>` | Emit doctype TypeScript types from getdoctype; `--check -o <file>` fails on drift |
-| `mpo build`                   | Run the build command                                                             |
-| `mpo test`                    | Run tests (E2E flags: `--up-only`, `--down`, `--filter`, …)                       |
+| Command     | Purpose                                                     |
+| ----------- | ----------------------------------------------------------- |
+| `mpo wait`  | Wait for a service (postgres, keycloak) to be ready         |
+| `mpo build` | Run the build command                                       |
+| `mpo test`  | Run tests (E2E flags: `--up-only`, `--down`, `--filter`, …) |
 
 ## Development
 

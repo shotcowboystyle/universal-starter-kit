@@ -1,7 +1,7 @@
 /**
- * Locale persistence contracts — the `preferred_language` cookie (Frappe's
- * convention) round-trip on the client, and the SSR-side cookie-header
- * parser used to boot i18n with the user's language before hydration.
+ * Locale persistence contracts — the `preferred_language` cookie round-trip
+ * on the client, and the SSR-side cookie-header parser used to boot i18n
+ * with the user's language before hydration.
  */
 
 import { deleteCookie } from '@repo/platform';
