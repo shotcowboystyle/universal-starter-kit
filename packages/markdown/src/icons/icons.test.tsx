@@ -33,14 +33,14 @@ describe('markdown icons', () => {
     expect(svg!.getAttribute('viewBox')).toBe('0 0 24 24');
   });
 
-  it.each(icons)('$name honours an explicit size', ({ Icon }) => {
+  it.each(icons)('$name honors an explicit size', ({ Icon }) => {
     const { container } = renderWithProviders(<Icon size={40} />);
     const svg = container.querySelector('svg')!;
     expect(svg.getAttribute('width')).toBe('40');
     expect(svg.getAttribute('height')).toBe('40');
   });
 
-  it.each(icons)('$name resolves a $-token colour before it reaches the stroke (SB-M-1206)', ({ name, Icon }) => {
+  it.each(icons)('$name resolves a $-token color before it reaches the stroke (SB-M-1206)', ({ name, Icon }) => {
     const { container } = renderWithProviders(<Icon color="$color10" />);
     const painted = strokes(container);
     expect(painted.length, name).toBeGreaterThan(0);
@@ -50,14 +50,14 @@ describe('markdown icons', () => {
     }
   });
 
-  it.each(icons)('$name passes a concrete colour straight through', ({ Icon }) => {
+  it.each(icons)('$name passes a concrete color straight through', ({ Icon }) => {
     const { container } = renderWithProviders(<Icon color="#ff8800" />);
     for (const stroke of strokes(container)) {
       expect(stroke).toBe('#ff8800');
     }
   });
 
-  it.each(icons)('$name paints a concrete stroke with no colour prop at all', ({ name, Icon }) => {
+  it.each(icons)('$name paints a concrete stroke with no color prop at all', ({ name, Icon }) => {
     const { container } = renderWithProviders(<Icon />);
     const painted = strokes(container);
     expect(painted.length, name).toBeGreaterThan(0);
@@ -66,7 +66,7 @@ describe('markdown icons', () => {
     }
   });
 
-  it('an unknown $token degrades to a concrete colour rather than an empty stroke', () => {
+  it('an unknown $token degrades to a concrete color rather than an empty stroke', () => {
     const { container } = renderWithProviders(<CheckIcon color="$notARealToken" />);
     for (const stroke of strokes(container)) {
       expect(stroke).not.toMatch(TOKEN_PREFIX_REGEX);

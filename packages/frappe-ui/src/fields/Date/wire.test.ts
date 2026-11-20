@@ -8,7 +8,7 @@
  * UTC instant rather than the timezone-naive local value Frappe stores. Each
  * assertion below is paired with a negative control running that old
  * formulation through the same expectation, so a matrix that stopped
- * discriminating — because the host stopped honouring `TZ`, say — fails
+ * discriminating — because the host stopped honoring `TZ`, say — fails
  * loudly instead of passing vacuously.
  */
 

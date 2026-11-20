@@ -69,7 +69,7 @@ export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-
     ensureKeyboardModalityTracking();
   }
   // The selected segment carried a neutral `$color3`
-  // -tier fill, so a segmented control marked its choice in the same grey it
+  // -tier fill, so a segmented control marked its choice in the same gray it
   // marks hover with. Selection is the accent language; segmented-control
   // STRENGTH is pinned at tinted (not the solid an accent CTA takes), so the
   // chip resolves the accent-ramp analogue of that neutral surface tier and
@@ -136,7 +136,7 @@ export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-
       data-density={knobProps.density}
       // Recessed track (Apple) so unselected segments still read as inside
       // the control once per-item borders are gone. `$color2` is the surface
-      // tier — a step off the page, not the hover grey that used to fake
+      // tier — a step off the page, not the hover gray that used to fake
       // selection.
       backgroundColor="$color2"
       // R-OUTER (container clip): the outer frame owns the
@@ -197,7 +197,7 @@ export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-
             // rule the checked Switch track already follows). `focus` is
             // not optional: selecting a segment focuses it, and ToggleFrame's
             // own active recipe carries a neutral `$backgroundActive` focus
-            // fill that would otherwise grey out the chip the moment it is
+            // fill that would otherwise gray out the chip the moment it is
             // chosen.
             hoverStyle={{
               ...restSegment,

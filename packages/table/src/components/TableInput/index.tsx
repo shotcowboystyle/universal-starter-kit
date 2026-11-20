@@ -50,7 +50,7 @@ import type { ChildCellHidden } from './shared';
 
 const chromeColumnIds = new Set(['_reorder', '_rowNumber', '_detail', '_actions']);
 
-/** Stable default for `data`, so the inner grid's memoised work survives re-renders. */
+/** Stable default for `data`, so the inner grid's memoized work survives re-renders. */
 const EMPTY_ROWS: never[] = [];
 
 /**
@@ -444,7 +444,7 @@ const TableInputInner = <TData extends DataTableData>({
     commitRowDetail: handleRowDetailCommit,
   };
 
-  // oxlint-disable-next-line react/incompatible-library -- the TanStack Table instance is read fresh each render; no memoised child depends on its identity
+  // oxlint-disable-next-line react/incompatible-library -- the TanStack Table instance is read fresh each render; no memoized child depends on its identity
   const table = useReactTable({
     data: rows,
     columns: tableColumns,

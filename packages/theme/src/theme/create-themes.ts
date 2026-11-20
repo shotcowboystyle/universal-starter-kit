@@ -140,7 +140,7 @@ import { aaTextContrastRatio, contrastRatio, minContrastRatio, normalizeToHex, r
  * every palette entry through color2k as `hsla()` with INTEGER degrees and
  * percentages, so the reachable palette is coarser than hex and a hex chosen
  * on paper is not what renders. The first pass here picked `#996800` /
- * `#208156` by minimising CIEDE2000 in hex space; `#208156` quantized to the
+ * `#208156` by minimizing CIEDE2000 in hex space; `#208156` quantized to the
  * SAME `hsla(154, 60%, 32%)` as the stock stop and changed nothing at all,
  * while `#996800` landed two hundredths off its predicted ratio. Both values
  * below were searched in the quantized space and confirmed against the built
@@ -151,7 +151,7 @@ import { aaTextContrastRatio, contrastRatio, minContrastRatio, normalizeToHex, r
  * imperceptible amount. It improves it: the solid warning Button's
  * luminance-picked on-fill label was itself at 4.48:1 — a second, unpinned AA
  * miss. The `pickReadableForeground` anchor does not flip for either intent,
- * so no label changes colour.
+ * so no label changes color.
  */
 const intentInkFloor = {
   /** stored `hsla(41, 100%, 30%)`; 4.34:1 -> 4.56:1 on the base `$color2` */

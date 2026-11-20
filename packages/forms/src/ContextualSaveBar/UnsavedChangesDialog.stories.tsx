@@ -43,7 +43,7 @@ export const Basic: Story = {
 };
 
 /**
- * The body pluralises: one field reads "1 field ... has edits", more than one
+ * The body pluralizes: one field reads "1 field ... has edits", more than one
  * reads "N fields ... have edits". Getting this wrong is the tell that a count
  * was interpolated into a fixed string.
  */

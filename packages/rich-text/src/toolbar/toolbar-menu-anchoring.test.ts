@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 // MPO-35 ruling B (Clay, 2026-09-26): toolbar menus are input-anchored. Each
 // one drops flush below its trigger and starts at the trigger's left edge, so
-// a menu never covers the toolbar being worked in and never centres itself
+// a menu never covers the toolbar being worked in and never centers itself
 // off to one side. The selection and block bubbles are their own lineage and
 // are not held to this.
 const here = import.meta.dirname;

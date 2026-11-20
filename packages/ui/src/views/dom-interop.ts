@@ -3,7 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from
 import type { TamaguiElement } from 'tamagui';
 
 /**
- * Props the web DOM node accepts but Tamagui's RN-flavoured prop types omit
+ * Props the web DOM node accepts but Tamagui's RN-flavored prop types omit
  * (ARIA roles outside RN's `Role` union, hover callbacks, CSS-only style keys).
  */
 export interface WebOnlyProps {

@@ -3,7 +3,7 @@
  * does (MPO-15 AC1): Save, Submit, Update, Cancel and Amend, one action at
  * a time, gated by the roles' submit/cancel/amend rights.
  *
- * The "Asset Loan" fixture (tests/fixtures/assetLoanLifecycle.ts) is a
+ * The "Asset Loan" fixture (tests/fixtures/asset-loan-lifecycle.ts) is a
  * submittable doctype with one document per state. Transitions are asserted
  * against the fixture corpus, which is what the form wrote.
  */
@@ -18,7 +18,7 @@ import { Text } from 'tamagui';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import { assetLoanLifecycleFixtures } from '../tests/fixtures/assetLoanLifecycle';
+import { assetLoanLifecycleFixtures } from '../tests/fixtures/asset-loan-lifecycle';
 
 import { takeCreatePrefill } from './formEngine/create-prefill';
 import type { FrappeNavigation } from './frappe-navigation';
@@ -131,10 +131,9 @@ const docstatusOf = async (fixtures: InMemoryFixtureProvider, name: string) => {
   return doc?.docstatus;
 };
 
-const holdWrites = (fixtures: InMemoryFixtureProvider, method: 'createDoc' | 'updateDoc') => {
-  // A never-settling promise keeps the write in flight for the whole test.
+// A never-settling promise keeps the write in flight for the whole test.
+const holdWrites = (fixtures: InMemoryFixtureProvider, method: 'createDoc' | 'updateDoc') =>
   vi.spyOn(fixtures, method).mockReturnValue(Promise.withResolvers<never>().promise);
-};
 
 const isInert = (element: HTMLElement) =>
   element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
@@ -486,7 +485,7 @@ describe('FrappeForm lifecycle', () => {
   describe('the leave button stays live while a write is in flight (LC-30)', () => {
     it('Save disables while it waits on the server; Cancel stays enabled and still leaves', async () => {
       const fixtures = corpus();
-      holdWrites(fixtures, 'createDoc');
+      const createDoc = holdWrites(fixtures, 'createDoc');
       const onCancel = vi.fn<() => void>();
       renderForm(fixtures, { onCancel });
       await expectProbe('employee_name', 'ro=false');
@@ -498,7 +497,7 @@ describe('FrappeForm lifecycle', () => {
         expect(isInert(screen.getByTestId('frappe-form-save'))).toBe(true);
       });
       await waitFor(() => {
-        expect(fixtures.createDoc).toHaveBeenCalledWith('Asset Loan', expect.any(Object));
+        expect(createDoc).toHaveBeenCalledWith('Asset Loan', expect.any(Object));
       });
 
       const cancel = screen.getByTestId('frappe-form-close');
@@ -509,7 +508,7 @@ describe('FrappeForm lifecycle', () => {
 
     it('Cancel Document in flight leaves Close enabled beside it', async () => {
       const fixtures = corpus();
-      holdWrites(fixtures, 'updateDoc');
+      const updateDoc = holdWrites(fixtures, 'updateDoc');
       const onCancel = vi.fn<() => void>();
       renderForm(fixtures, { name: 'LOAN-SUBMITTED', onCancel });
       await expectStatus('submitted');
@@ -520,7 +519,7 @@ describe('FrappeForm lifecycle', () => {
         expect(isInert(screen.getByTestId('frappe-form-cancel-document'))).toBe(true);
       });
       await waitFor(() => {
-        expect(fixtures.updateDoc).toHaveBeenCalledWith('Asset Loan', 'LOAN-SUBMITTED', expect.any(Object));
+        expect(updateDoc).toHaveBeenCalledWith('Asset Loan', 'LOAN-SUBMITTED', expect.any(Object));
       });
 
       const close = screen.getByTestId('frappe-form-close');

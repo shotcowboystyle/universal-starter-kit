@@ -42,7 +42,7 @@ describe('SheetModal stories', () => {
     }
   });
 
-  it('the sheet frame is a labelled modal dialog', () => {
+  it('the sheet frame is a labeled modal dialog', () => {
     mountStory(OpenOnMount);
     // tamagui renders the sheet through a portal AND inline, so the frame
     // appears more than once with the same accessible name; every copy has to

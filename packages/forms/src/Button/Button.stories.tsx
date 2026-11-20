@@ -404,7 +404,7 @@ export const Comparison: Story = {
  * 3:1 floor, which `parameters.focusRingBoard.expectedBelowFloor` tells the
  * shooter; the old board reported those as severe findings because the
  * specimen was built from a bare ensureFocusVisibleRing() that now returns 0.
- * The shooter measures the painted composition (computed outline colour and
+ * The shooter measures the painted composition (computed outline color and
  * offset, then the surface the band actually lands on), never the declaration.
  */
 /**

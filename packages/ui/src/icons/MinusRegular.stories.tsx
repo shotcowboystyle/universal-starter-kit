@@ -11,7 +11,7 @@ const meta: Meta<typeof MinusRegular> = {
     docs: {
       description: {
         component:
-          'Minus icon wrapped with themed(): used for indeterminate checkbox state. Colour and size resolve through the theme — no black fallback.',
+          'Minus icon wrapped with themed(): used for indeterminate checkbox state. Color and size resolve through the theme — no black fallback.',
       },
     },
   },

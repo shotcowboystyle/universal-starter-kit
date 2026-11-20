@@ -36,7 +36,7 @@ export const inkMotionProps = (transition?: TransitionProp) =>
  * property that actually changes is not reachable any other way either: the
  * star's ink is the `fill`/`stroke` PROP of a `react-native-svg` shape, while
  * the RN driver only interpolates the style keys in its own table
- * (`animatedStyleKey` = `transform`, `opacity`, plus a fixed colour set in
+ * (`animatedStyleKey` = `transform`, `opacity`, plus a fixed color set in
  * `colorStyleKey`). An SVG paint prop is in neither, so NO `transition` on any
  * wrapper — however it is spelled — can ever reach it. That is why the native
  * star jumped while the web star tweened.

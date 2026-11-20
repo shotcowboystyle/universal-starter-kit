@@ -92,7 +92,7 @@ export const lassoSlopPx = 10;
  * instance keeps this hook mountable outside `ReactFlowProvider` — and, more
  * usefully, keeps the screen/flow arithmetic below honest: it is the same
  * `(screen - paneOrigin - pan) / zoom` React Flow uses, written out, rather
- * than a helper whose behaviour a spec would have to take on trust.
+ * than a helper whose behavior a spec would have to take on trust.
  *
  * Whether d3 HONOURS a `setViewport` mid-gesture is not something a unit test
  * can answer. That is the device video's job, and until it exists the long

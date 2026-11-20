@@ -32,7 +32,7 @@ export interface AbsoluteDateFormatOptions {
    * `"auto"` (default) elides the current year — the display register for
    * tables, feeds, and system events. `"always"` keeps it — the editing
    * register for picker display values. `"never"` drops it — the axis-tick
-   * register, where a wider label would collide with its neighbours and the
+   * register, where a wider label would collide with its neighbors and the
    * period header carries the year.
    */
   year?: 'auto' | 'always' | 'never';

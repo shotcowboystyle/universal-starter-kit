@@ -26,7 +26,9 @@ describe('paths web stubs', () => {
     });
 
     it('joins an empty set of segments', async () => {
-      await expect(paths.join(',')).resolves.toBe('');
+      // `paths.join` is the variadic PathsApi method, not Array#join; a separator would be a segment.
+      // oxlint-disable-next-line unicorn/require-array-join-separator
+      await expect(paths.join()).resolves.toBe('');
     });
 
     it('preserves leading slashes', async () => {

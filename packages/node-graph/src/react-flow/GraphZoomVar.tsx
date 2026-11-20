@@ -6,7 +6,7 @@
  * pan and the zoom. So a region declared 44 px renders 44 × zoom SCREEN px, and
  * on device that was measured rather than reasoned about: on the iPhone 16e at
  * zoom 0.377 the region was 16.6 pt wide — a half-width of 8.3 pt against a
- * demanded 18 — and a tap 18 pt off the painted centre panned the canvas
+ * demanded 18 — and a tap 18 pt off the painted center panned the canvas
  * instead of grabbing the port. The same miss on emulator-5592 at zoom 0.397.
  *
  * The fix is to counter-scale the region by 1/zoom, which needs the zoom in

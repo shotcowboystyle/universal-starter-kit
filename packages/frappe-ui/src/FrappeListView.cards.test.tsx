@@ -14,8 +14,8 @@ import {
   rosterPokemon,
   rosterPokemonFields,
   rosterPokemonMeta,
-} from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+} from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import { FrappeListView } from './FrappeListView';
 import type { FrappeListViewProps } from './FrappeListView';
@@ -156,7 +156,7 @@ describe('FrappeListView cards', () => {
       const getList = fixtures.getList.bind(fixtures);
       vi.spyOn(fixtures, 'getList').mockImplementation(async (...args) => {
         await gate;
-        return getList(...args);
+        return await getList(...args);
       });
       renderCards(fixtures);
       await waitFor(() => {

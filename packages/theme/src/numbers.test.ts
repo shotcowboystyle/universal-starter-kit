@@ -23,7 +23,7 @@ describe('formatNumber (cardinal register)', () => {
     expect(formatNumber(15_400.6, { ...enUS, precision: 0 })).toBe('15,401');
   });
 
-  it('honours a wider maximum for report floats', () => {
+  it('honors a wider maximum for report floats', () => {
     expect(formatNumber(7.89126, { ...enUS, maximumFractionDigits: 4 })).toBe('7.8913');
   });
 
@@ -74,7 +74,7 @@ describe('formatCurrency (money register)', () => {
     expect(formatCurrency(1500, { ...enUS, currency: 'EUROS' })).toBe('EUROS1,500.00');
   });
 
-  it('honours an explicit precision from a Frappe field', () => {
+  it('honors an explicit precision from a Frappe field', () => {
     expect(formatCurrency(1500.456, { ...enUS, symbol: '$', precision: 3 })).toBe('$1,500.456');
   });
 

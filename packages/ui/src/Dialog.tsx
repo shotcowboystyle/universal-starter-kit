@@ -21,7 +21,7 @@ import type { GetProps } from 'tamagui';
 import { useTranslation } from './shared/i18n';
 import { isBareTextChild } from './shared/text-rides-text';
 
-interface Labelled {
+interface Labeled {
   'aria-label'?: unknown;
   'aria-labelledby'?: unknown;
   accessibilityLabel?: unknown;
@@ -44,15 +44,15 @@ const hasText = (node: ReactNode): boolean => {
   return false;
 };
 
-const isLabelled = (props: Labelled): boolean =>
+const isLabelled = (props: Labeled): boolean =>
   props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
 
-const needsCloseName = (props: Labelled & { asChild?: unknown; children?: ReactNode }): boolean => {
+const needsCloseName = (props: Labeled & { asChild?: unknown; children?: ReactNode }): boolean => {
   if (isLabelled(props)) {
     return false;
   }
   const { asChild, children } = props;
-  if (Boolean(asChild) && isValidElement<Labelled & { children?: ReactNode }>(children)) {
+  if (Boolean(asChild) && isValidElement<Labeled & { children?: ReactNode }>(children)) {
     return !isLabelled(children.props) && !hasText(children.props.children);
   }
   return !hasText(children);

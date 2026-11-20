@@ -141,7 +141,7 @@ export const bodyFontLineHeights: Record<string, number> = bodyLineHeights;
  * Inter faces the workspace ships. v5 heading weights are sparse — 600 up to
  * $5, 700 at $6–$8, 800 from $9 — and A4's reading of that is the point:
  * everything between inherits, so bold is rare and therefore means something.
- * Each declared weight needs a face or the browser synthesises one.
+ * Each declared weight needs a face or the browser synthesizes one.
  */
 const interFaces = {
   400: { normal: 'Inter' },

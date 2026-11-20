@@ -3,7 +3,7 @@
 /**
  * The seeded knob fuzz for the Button frame's radius, judged in
  * jsdom against the Button radius law (default,
- * outlined): honour at none/small/large/full, remap at medium to the
+ * outlined): honor at none/small/large/full, remap at medium to the
  * size-recipe radius. The combos come from a fixed seed, painted in both
  * schemes at $2/$3/$4/$6.
  */

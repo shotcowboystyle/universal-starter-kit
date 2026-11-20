@@ -105,7 +105,7 @@ const ReadOnlyGlyph = ({ drawn }: { drawn: DrawnIconName | undefined }) => (
     height={NESTED_GLYPH_WELL}
     alignItems="center"
     justifyContent="center">
-    {/* Outside InputParts.Icon, which is what injects a colour. */}
+    {/* Outside InputParts.Icon, which is what injects a color. */}
     {drawn ? (
       <DrawnIcon
         name={drawn}
@@ -293,7 +293,7 @@ const IconOption = ({ name, selected, markFill, onMark, onPick }: IconOptionProp
         // accent, never a neutral ramp step.
         backgroundColor={selected ? markFill : 'transparent'}
         hoverStyle={selected ? undefined : { backgroundColor: '$color3' }}>
-        {/* Outside InputParts.Icon, so the colour is passed here. */}
+        {/* Outside InputParts.Icon, so the color is passed here. */}
         <DrawnIcon
           name={name}
           size={16}

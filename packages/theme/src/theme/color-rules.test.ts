@@ -365,7 +365,7 @@ describe('contrast floor on built themes', () => {
     expect(reports.map((report) => report.ratio)).toStrictEqual([expect.closeTo(7.31, 2), expect.closeTo(7.61, 2)]);
   });
 
-  it('a colour pair below the floor FAILS', () => {
+  it('a color pair below the floor FAILS', () => {
     // The dark accent toast action pill, measured on the page ground.
     // Built: dark_accent.backgroundHover is #46349d; dark.background is #161519.
     expect(() =>
@@ -543,7 +543,7 @@ describe(holdInkFloor, () => {
     expect(onFill(ink, '#2870bd')).toBeGreaterThanOrEqual(aaTextContrastRatio);
   });
 
-  it('returns the ink untouched when a colour cannot be parsed', () => {
+  it('returns the ink untouched when a color cannot be parsed', () => {
     expect(holdInkFloor('var(--x)', '#161519')).toBe('#161519');
   });
 });

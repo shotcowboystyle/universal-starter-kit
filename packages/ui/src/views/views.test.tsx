@@ -553,7 +553,7 @@ describe('views suite', () => {
       expect(screen.getByText('Day')).toBeInTheDocument();
     });
 
-    it('a colourless event chip takes the ink resolved for the accent fill', () => {
+    it('a colorless event chip takes the ink resolved for the accent fill', () => {
       expect(eventChipTextColor(undefined, '#ffffff')).toBe('#ffffff');
       expect(eventChipTextColor('', '#f0eff1')).toBe('#f0eff1');
       expect(eventChipTextColor()).toBe('$accentColor');

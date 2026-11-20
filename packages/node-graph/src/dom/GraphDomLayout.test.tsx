@@ -37,7 +37,7 @@ describe(graphDomLayoutCss, () => {
     expect(graphDomLayoutCss).toMatch(/body\s*\{[^}]*margin:\s*0/u);
   });
 
-  it('carries no colour and no font', () => {
+  it('carries no color and no font', () => {
     // Paint belongs to the var layer and to `graph.css`; this file is geometry.
     expect(graphDomLayoutCss).not.toMatch(/color|background|font/iu);
   });

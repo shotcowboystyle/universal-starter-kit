@@ -45,7 +45,7 @@ describe('OTPInput field', () => {
       expect(cells(result.container)).toHaveLength(6);
     });
 
-    it('honours an explicit length', () => {
+    it('honors an explicit length', () => {
       const result = renderWithProviders(
         <OTPInputField
           label="Code"
@@ -178,7 +178,7 @@ describe('OTPInput field', () => {
       // programmatic change still moves the digits and still emits. A real
       // browser never fires change on a readonly input, so this is not a user
       // -reachable bug today; it is a missing guard, asserted here as the
-      // behaviour that actually exists rather than the one that should.
+      // behavior that actually exists rather than the one that should.
       await act(async () => {
         fireEvent.change(cells(result.container)[2], { target: { value: '9' } });
       });

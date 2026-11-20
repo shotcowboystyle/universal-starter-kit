@@ -87,32 +87,31 @@ const childFields: [string, string][] = [
 ];
 
 /** "Sales Invoice Item" → "SalesInvoiceItem". */
-export function interfaceName(doctype: string): string {
+export const interfaceName = (doctype: string): string => {
   const name = doctype
-    .split(/[^A-Za-z0-9]+/)
+    .split(/[^A-Za-z0-9]+/u)
     .filter(Boolean)
     .map((part) => part[0].toUpperCase() + part.slice(1))
     .join('');
-  return /^[0-9]/.test(name) ? `DocType${name}` : name || 'DocType';
-}
+  return /^[0-9]/u.test(name) ? `DocType${name}` : name || 'DocType';
+};
 
-function propertyKey(fieldname: string): string {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(fieldname) ? fieldname : JSON.stringify(fieldname);
-}
+const propertyKey = (fieldname: string): string =>
+  /^[A-Za-z_$][A-Za-z0-9_$]*$/u.test(fieldname) ? fieldname : JSON.stringify(fieldname);
 
-function selectType(options?: string): string {
-  if (!options?.trim()) {
+/** Frappe sends flags as 0 / 1 (or booleans from some endpoints). */
+const isSet = (flag: DocFieldMeta['required']): boolean => flag === 1 || flag === true;
+
+const selectType = (options?: string): string => {
+  if (options === undefined || options.trim() === '') {
     return 'string';
   }
   const choices = [...new Set(options.split('\n').map((choice) => choice.trim()))];
-  return choices
-    .filter((choice, index) => choice !== '' || index === 0)
-    .map((choice) => JSON.stringify(choice))
-    .join(' | ');
-}
+  return choices.flatMap((choice, index) => (choice !== '' || index === 0 ? [JSON.stringify(choice)] : [])).join(' | ');
+};
 
 /** The TypeScript type a field's value takes, or undefined for layout/display fields. */
-export function fieldTsType(field: DocFieldMeta): string | undefined {
+export const fieldTsType = (field: DocFieldMeta): string | undefined => {
   const { fieldtype, options } = field;
   if (valuelessFieldtypes.has(fieldtype)) {
     return undefined;
@@ -130,73 +129,70 @@ export function fieldTsType(field: DocFieldMeta): string | undefined {
     return selectType(options);
   }
   if (fieldtype === 'Table' || fieldtype === 'Table MultiSelect') {
-    return options ? `${interfaceName(options)}[]` : 'Record<string, unknown>[]';
+    return options === undefined || options === '' ? 'Record<string, unknown>[]' : `${interfaceName(options)}[]`;
   }
   return 'unknown';
-}
+};
 
-function interfaceFor(meta: DoctypeMeta): string {
+const interfaceFor = (meta: DoctypeMeta): string => {
   const lines = [`export interface ${interfaceName(meta.name)} {`];
   lines.push(`  doctype: ${JSON.stringify(meta.name)};`);
-  const base = meta.istable ? [...standardFields, ...childFields] : standardFields;
+  const base = isSet(meta.istable) ? [...standardFields, ...childFields] : standardFields;
   const taken = new Set(['doctype', ...base.map(([key]) => key)]);
   for (const [key, type] of base) {
     lines.push(`  ${key}${key === 'name' ? '' : '?'}: ${type};`);
   }
   for (const field of meta.fields) {
-    if (!field.fieldname || taken.has(field.fieldname)) {
-      continue;
+    const type = field.fieldname === '' || taken.has(field.fieldname) ? undefined : fieldTsType(field);
+    if (type !== undefined) {
+      taken.add(field.fieldname);
+      lines.push(`  ${propertyKey(field.fieldname)}${isSet(field.required) ? '' : '?'}: ${type};`);
     }
-    const type = fieldTsType(field);
-    if (!type) {
-      continue;
-    }
-    taken.add(field.fieldname);
-    lines.push(`  ${propertyKey(field.fieldname)}${field.required ? '' : '?'}: ${type};`);
   }
   lines.push('}');
   return lines.join('\n');
-}
+};
 
 /** One module with an interface per DocType, sorted by name so output is stable. */
-export function doctypesToTypeScript(docs: DoctypeMeta[]): string {
+export const doctypesToTypeScript = (docs: DoctypeMeta[]): string => {
   const byName = new Map(docs.map((meta) => [meta.name, meta]));
-  const sorted = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = [...byName.values()].toSorted((a, b) => a.name.localeCompare(b.name));
   return `${[generatedHeader, ...sorted.map(interfaceFor)].join('\n\n')}\n`;
-}
+};
 
 /** The requested DocType plus its child tables, as getdoctype returns them. */
-export async function fetchDoctypeMeta(doctype: string, options: GetDoctypeOptions): Promise<DoctypeMeta[]> {
+export const fetchDoctypeMeta = async (doctype: string, options: GetDoctypeOptions): Promise<DoctypeMeta[]> => {
   const url = new URL('/api/method/frappe.desk.form.load.getdoctype', options.baseURL);
   url.searchParams.set('doctype', doctype);
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.apiKey && options.apiSecret) {
-    headers.Authorization = `token ${options.apiKey}:${options.apiSecret}`;
+  const { apiKey, apiSecret } = options;
+  const hasCredentials = apiKey !== undefined && apiKey !== '' && apiSecret !== undefined && apiSecret !== '';
+  const headers = new Headers({ Accept: 'application/json' });
+  if (hasCredentials) {
+    headers.set('Authorization', `token ${apiKey}:${apiSecret}`);
   }
   const response = await (options.fetch ?? fetch)(url, { headers });
   if (!response.ok) {
     throw new Error(`getdoctype ${doctype}: HTTP ${response.status}`);
   }
+  // SAFETY: getdoctype answers `{ docs: DocType[] }`; the array and the requested doctype's presence are checked below
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Response#json is untyped wire data and this is its parse boundary
   const body = (await response.json()) as { docs?: DoctypeMeta[] };
   if (!Array.isArray(body.docs) || !body.docs.some((meta) => meta?.name === doctype)) {
     throw new Error(`getdoctype ${doctype}: the response carried no meta for it`);
   }
   return body.docs;
-}
+};
 
-export async function generateDoctypeTypes(doctypes: string[], options: GetDoctypeOptions): Promise<string> {
-  const docs: DoctypeMeta[] = [];
-  for (const doctype of doctypes) {
-    docs.push(...(await fetchDoctypeMeta(doctype, options)));
-  }
-  return doctypesToTypeScript(docs);
-}
+export const generateDoctypeTypes = async (doctypes: string[], options: GetDoctypeOptions): Promise<string> => {
+  const metas = await Promise.all(doctypes.map(async (doctype) => await fetchDoctypeMeta(doctype, options)));
+  return doctypesToTypeScript(metas.flat());
+};
 
 /**
  * Line diff of the committed file against a fresh generation: `-` lines the
  * server no longer has, `+` lines it now has. Empty means no drift.
  */
-export function typesDrift(committed: string, generated: string): string[] {
+export const typesDrift = (committed: string, generated: string): string[] => {
   const before = committed.replaceAll('\r\n', '\n').split('\n');
   const after = generated.split('\n');
   const lcs: number[][] = Array.from({ length: before.length + 1 }, () =>
@@ -223,4 +219,4 @@ export function typesDrift(committed: string, generated: string): string[] {
     }
   }
   return drift;
-}
+};

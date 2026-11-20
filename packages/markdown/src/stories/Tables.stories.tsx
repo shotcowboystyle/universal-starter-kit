@@ -111,7 +111,7 @@ export const MdxTable: Story = {
           </MDXTableRow>
           <MDXTableRow>
             <MDXTableCell>
-              a very long cell that keeps going and going to force horizontal overflow behaviour in the MDX table
+              a very long cell that keeps going and going to force horizontal overflow behavior in the MDX table
               wrapper scroll view
             </MDXTableCell>
             <MDXTableCell>ragged</MDXTableCell>

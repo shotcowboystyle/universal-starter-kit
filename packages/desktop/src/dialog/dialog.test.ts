@@ -1,22 +1,23 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 import { dialog } from './index';
 
 describe('dialog web stubs', () => {
-  let alertFn: ReturnType<typeof vi.fn>;
-  let confirmFn: ReturnType<typeof vi.fn>;
-  let promptFn: ReturnType<typeof vi.fn>;
+  let alertFn: Mock<typeof window.alert>;
+  let confirmFn: Mock<typeof window.confirm>;
+  let promptFn: Mock<typeof window.prompt>;
 
   beforeEach(() => {
-    alertFn = vi.fn();
-    confirmFn = vi.fn().mockReturnValue(true);
-    promptFn = vi.fn().mockReturnValue('typed');
+    alertFn = vi.fn<typeof window.alert>();
+    confirmFn = vi.fn<typeof window.confirm>().mockReturnValue(true);
+    promptFn = vi.fn<typeof window.prompt>().mockReturnValue('typed');
     vi.stubGlobal('alert', alertFn);
     vi.stubGlobal('confirm', confirmFn);
     vi.stubGlobal('prompt', promptFn);
-    window.alert = alertFn as unknown as typeof window.alert;
-    window.confirm = confirmFn as unknown as typeof window.confirm;
-    window.prompt = promptFn as unknown as typeof window.prompt;
+    window.alert = alertFn;
+    window.confirm = confirmFn;
+    window.prompt = promptFn;
   });
 
   afterEach(() => {
@@ -102,7 +103,7 @@ describe('dialog web stubs', () => {
 describe('dialog defaults on a platform with no modal globals (GJS)', () => {
   beforeEach(() => {
     for (const name of ['alert', 'confirm', 'prompt'] as const) {
-      vi.stubGlobal(name);
+      vi.stubGlobal(name, null);
       Reflect.deleteProperty(window, name);
     }
   });
@@ -116,17 +117,22 @@ describe('dialog defaults on a platform with no modal globals (GJS)', () => {
   });
 
   it.each([
-    ['message', async () => await dialog.message('hi')],
+    [
+      'message',
+      async () => {
+        await dialog.message('hi');
+      },
+    ],
     ['ask', async () => await dialog.ask('sure?')],
     ['confirm', async () => await dialog.confirm('delete?')],
     ['prompt', async () => await dialog.prompt('name?')],
   ])('dialog.%s rejects instead of throwing a bare TypeError', async (api, call) => {
-    await expect(call()).rejects.toThrow(new RegExp(`dialog\\.${api} needs window\\.(alert|confirm|prompt)`));
+    await expect(call()).rejects.toThrow(new RegExp(`dialog\\.${api} needs window\\.(?:alert|confirm|prompt)`, 'u'));
   });
 
   it('names the package and points at the GNOME backend that would fix it', async () => {
-    await expect(dialog.confirm('delete?')).rejects.toThrow(/@repo\/desktop/);
-    await expect(dialog.confirm('delete?')).rejects.toThrow(/index\.gnome\.ts/);
+    await expect(dialog.confirm('delete?')).rejects.toThrow(/@repo\/desktop/u);
+    await expect(dialog.confirm('delete?')).rejects.toThrow(/index\.gnome\.ts/u);
   });
 
   it('leaves open and save working, since their default is an honest null', async () => {

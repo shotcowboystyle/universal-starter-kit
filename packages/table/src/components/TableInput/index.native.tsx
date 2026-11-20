@@ -27,7 +27,7 @@ import { RowDetailEditor } from './RowDetailEditor';
 import { columnKey, generateRowId, isEmptyRows, SKELETON_ROW_COUNT } from './shared';
 import type { ChildCellHidden } from './shared';
 
-/** Stable default for `data`, so the inner list's memoised work survives re-renders. */
+/** Stable default for `data`, so the inner list's memoized work survives re-renders. */
 const EMPTY_ROWS: never[] = [];
 
 export interface TableInputProps<TData extends DataTableData = DataTableData> {

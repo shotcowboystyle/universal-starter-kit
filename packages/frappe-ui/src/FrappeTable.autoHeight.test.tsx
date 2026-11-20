@@ -8,7 +8,7 @@
  * shrink 1 / basis auto / minHeight 0, and it carries the note saying why).
  * The FrappeTable wrapper sitting above it reintroduced the trap.
  *
- * Two halves here. The render cases pin the behaviour a caller sees: 12 rows
+ * Two halves here. The render cases pin the behavior a caller sees: 12 rows
  * in a plain auto-height parent, and the same table in a fixed-height parent.
  * The source cases are the mechanical guard, because happy-dom runs no flex
  * layout, so a basis-0 regression is invisible to a rendered assertion and

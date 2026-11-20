@@ -69,7 +69,7 @@ const PointyStar = ({ size, weight, color }: { size: number; weight: 'fill' | 'r
       <Path
         d={d}
         // `transparent` rather than `none`: an empty->filled star has to
-        // interpolate its fill, and `none` is not a colour so it can
+        // interpolate its fill, and `none` is not a color so it can
         // only jump. Paints identically.
         fill={weight === 'fill' ? color : 'transparent'}
         stroke={color}

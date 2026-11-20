@@ -69,7 +69,7 @@ oxlint resolves `extends` as a file path, not a package name, hence the
 `no-hex-literals`, `no-raw-typography` and `no-parameter-properties` on as
 errors, turns `no-chrome-props`, `no-raw-geometry` and `no-child-margin` on
 as warnings while their burndowns run, and exempts specs and `tests/` trees,
-which assert computed colours, from all but `no-raw-typography` and
+which assert computed colors, from all but `no-raw-typography` and
 `no-parameter-properties`. A project that wants its
 own levels keeps the older one-line form,
 `{ "jsPlugins": ["@repo/config/oxlint"] }`, and writes its own

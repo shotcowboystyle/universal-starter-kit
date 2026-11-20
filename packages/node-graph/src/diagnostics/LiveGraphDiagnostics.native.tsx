@@ -13,7 +13,7 @@
  *
  * So this mounts the same `<NodeGraph>` the Kitchen Sink's `Main` story mounts,
  * takes the `ready` payload, and renders it straight into `GraphDiagnostics`.
- * Nothing is synthesised here. If the canvas never reports, the panel says so
+ * Nothing is synthesized here. If the canvas never reports, the panel says so
  * rather than showing zeroes that look like measurements.
  *
  * `../NodeGraph.native` is imported by its explicit filename, the same way

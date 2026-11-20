@@ -4,7 +4,7 @@
  * (1) what `sanitizeHtml` refuses to let through and (2) what the field shows
  * when there is nothing to paint.
  *
- * The sanitiser is the security surface — a Frappe HTML field carries whatever
+ * The sanitizer is the security surface — a Frappe HTML field carries whatever
  * a desk author typed — so it is asserted directly, tag by tag, rather than
  * through the rendered tree.
  */
@@ -87,7 +87,7 @@ script:alert(1)`;
       expect(sanitizeHtml('')).toBe('');
     });
 
-    it('sanitises nested descendants, not just the top level', () => {
+    it('sanitizes nested descendants, not just the top level', () => {
       const out = sanitizeHtml('<div><section><img src="javascript:alert(1)" onerror="x()"></section></div>');
       expect(out.toLowerCase()).not.toContain('onerror');
       // oxlint-disable-next-line eslint/no-script-url -- asserts the hostile scheme is gone
@@ -96,7 +96,7 @@ script:alert(1)`;
   });
 
   describe('Html field', () => {
-    it('paints the sanitised value into the DOM', () => {
+    it('paints the sanitized value into the DOM', () => {
       const result = renderWithProviders(
         <Html
           label="Body"
@@ -129,7 +129,7 @@ script:alert(1)`;
       expect(result.container.textContent).toContain('No content');
     });
 
-    it("falls back to 'No content' when sanitising removed everything", () => {
+    it("falls back to 'No content' when sanitizing removed everything", () => {
       const result = renderWithProviders(
         <Html
           label="Body"

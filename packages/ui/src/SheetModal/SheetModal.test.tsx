@@ -31,7 +31,7 @@ describe(resolveSheetDetents, () => {
     expect(resolveSheetDetents({ travel, snapPoint: 92 })).toStrictEqual([600, 552]);
   });
 
-  it('honours the four heights real callers pass', () => {
+  it('honors the four heights real callers pass', () => {
     // CommandPalette 92, list-tools-sheet 85, ListThemePlayground 85,
     // Toast.stories 70 — every one of these was a no-op on device.
     for (const snapPoint of [92, 85, 70]) {

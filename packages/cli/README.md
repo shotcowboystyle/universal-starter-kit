@@ -162,9 +162,9 @@ sh scripts/scaffold.sh [--app <name>]... [--service <name>]... [--mpo-version <r
 ## Development
 
 `pnpm --filter @repo/cli test` runs the vitest specs: the
-provenance and merge units, and `updateApp.spec.ts`, which scaffolds from
+provenance and merge units, and `update-app.test.ts`, which scaffolds from
 this checkout at `HEAD`, updates from a second clone that moved ahead, and
-adds an app. `make -C public/cli test/bats` runs `tests/*.bats` against
+adds an app. `make -C packages/cli test/bats` runs `tests/*.bats` against
 `scripts/scaffold.sh` directly (needs `bats`). `pnpm build` stamps
 `lib/source.json` from `git rev-parse HEAD` (`MPO_SOURCE_SHA` /
 `MPO_SOURCE_URL` override it), unless `HEAD` carries another CLI version;

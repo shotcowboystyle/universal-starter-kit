@@ -53,7 +53,7 @@ const taskMetaRaw = (name: string) => ({
   permissions: [{ role: 'All', read: 1, write: 1, create: 1 }],
 });
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock envelope the stories answer with
 const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const requestUrl = (input: RequestInfo | URL): string => {

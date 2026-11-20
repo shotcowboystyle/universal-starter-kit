@@ -171,12 +171,12 @@ const probe = async (worker: WorkerLike, timeoutMs: number): Promise<string | nu
       }
       settled = true;
       // The handlers below and `finish` reference each other; `finish` only
-      // runs after all three bindings are initialised.
-      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
+      // runs after all three bindings are initialized.
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialization
       clearTimeout(timer);
-      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialization
       worker.removeEventListener?.('message', onMessage);
-      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialisation
+      // oxlint-disable-next-line eslint/no-use-before-define -- mutual reference; called only after initialization
       worker.removeEventListener?.('error', onError);
       resolve(reason);
     };

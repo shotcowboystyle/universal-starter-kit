@@ -31,7 +31,7 @@ const MOCK_HOST = 'https://frappeprovider.mock.test';
 /** What the probe prints for a config value that is not set. */
 const UNSET = '(undefined)';
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock envelope the stories answer with
 const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const requestUrl = (input: RequestInfo | URL): string => {

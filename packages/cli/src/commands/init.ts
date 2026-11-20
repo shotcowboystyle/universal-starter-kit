@@ -7,7 +7,7 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { basename, resolve } from 'node:path';
+import path from 'node:path';
 
 import inquirer from 'inquirer';
 import spawn from 'nano-spawn';
@@ -17,6 +17,7 @@ import type { SourceSpec } from '../source';
 
 import { mpoRange, validateName } from './provenance';
 import { runScaffold, ScaffoldError } from './scaffold';
+import type { ScaffoldProvenance, ScaffoldRequest } from './scaffold';
 
 /** The apps that exist once per project; everything else under apps/ is a product app. */
 export const SINGLETON_APPS = [
@@ -65,22 +66,22 @@ export interface InitOptions {
   verbose?: boolean;
 }
 
-function unique(values: string[]): string[] {
-  return [...new Set(values)];
-}
+const unique = (values: string[]): string[] => [...new Set(values)];
 
-export function validateServices(services: string[]): SingletonApp[] {
-  const known = new Set<string>(SINGLETON_APPS);
-  for (const service of services) {
-    if (!known.has(service)) {
-      throw new Error(`Unknown service "${service}". Services are the singleton apps: ${SINGLETON_APPS.join(', ')}`);
-    }
-  }
-  return unique(services).sort() as SingletonApp[];
-}
+const isSingletonApp = (service: string): service is SingletonApp => SINGLETON_APPS.some((known) => known === service);
 
-async function promptServices(): Promise<SingletonApp[]> {
-  const result = await inquirer.prompt([
+export const validateServices = (services: string[]): SingletonApp[] =>
+  unique(services)
+    .toSorted()
+    .map((service) => {
+      if (!isSingletonApp(service)) {
+        throw new Error(`Unknown service "${service}". Services are the singleton apps: ${SINGLETON_APPS.join(', ')}`);
+      }
+      return service;
+    });
+
+const promptServices = async (): Promise<SingletonApp[]> => {
+  const result = await inquirer.prompt<{ services: string[] }>([
     {
       message: 'Which singleton apps should the project keep? (space to toggle, enter to confirm)',
       name: 'services',
@@ -92,20 +93,20 @@ async function promptServices(): Promise<SingletonApp[]> {
       })),
     },
   ]);
-  return validateServices(result.services as string[]);
-}
+  return validateServices(result.services);
+};
 
-async function insideGitRepo(dir: string): Promise<boolean> {
-  return await spawn('git', ['rev-parse', '--is-inside-work-tree'], { cwd: dir }).then(
-    () => true,
-    () => false,
-  );
-}
+const insideGitRepo = async (dir: string): Promise<boolean> => {
+  try {
+    await spawn('git', ['rev-parse', '--is-inside-work-tree'], { cwd: dir });
+    return true;
+  } catch {
+    // git exits non-zero outside a work tree; that is the answer, not a failure.
+    return false;
+  }
+};
 
-async function scaffoldWithFallback(
-  spec: SourceSpec,
-  request: Parameters<typeof runScaffold>[0],
-): Promise<Awaited<ReturnType<typeof runScaffold>>> {
+const scaffoldWithFallback = async (spec: SourceSpec, request: ScaffoldRequest): Promise<ScaffoldProvenance> => {
   try {
     return await runScaffold({ ...request, source: spec.source, ref: spec.ref });
   } catch (error) {
@@ -115,110 +116,76 @@ async function scaffoldWithFallback(
     console.warn(`⚠️  ${error.message}; retrying from main`);
     return await runScaffold({ ...request, source: spec.source, ref: 'main' });
   }
-}
+};
 
-export async function init(nameArg: string | undefined, options: InitOptions = {}): Promise<void> {
-  const interactive = !options.yes && process.stdout.isTTY;
-
-  // --into: the argument is the directory; the product app is named after it.
-  let targetDir: string;
-  let name: string;
+/** --into: the argument is the directory; the product app is named after it. */
+const resolveTarget = async (
+  nameArg: string | undefined,
+  options: InitOptions,
+  interactive: boolean,
+): Promise<{ targetDir: string; name: string }> => {
   if (options.into) {
-    targetDir = resolve(nameArg ?? '.');
-    name = validateName(options.apps?.[0] ?? basename(targetDir));
-  } else {
-    let projectName = nameArg;
-    if (!projectName) {
-      if (interactive) {
-        const result = await inquirer.prompt([
-          { message: 'What is the app name?', name: 'name', type: 'input', default: 'my-app' },
-        ]);
-        projectName = result.name as string;
-      } else {
-        projectName = 'my-app';
-      }
-    }
-    name = validateName(projectName);
-    targetDir = resolve(name);
+    const targetDir = path.resolve(nameArg ?? '.');
+    return { targetDir, name: validateName(options.apps?.[0] ?? path.basename(targetDir)) };
   }
-  const apps = unique([name, ...(options.apps ?? []).map(validateName)]);
+  let projectName = nameArg ?? '';
+  if (projectName === '' && interactive) {
+    const answers = await inquirer.prompt<{ name: string }>([
+      { message: 'What is the app name?', name: 'name', type: 'input', default: 'my-app' },
+    ]);
+    projectName = answers.name;
+  } else if (projectName === '') {
+    projectName = 'my-app';
+  }
+  const name = validateName(projectName);
+  return { targetDir: path.resolve(name), name };
+};
 
-  let services: SingletonApp[];
+const resolveServices = async (options: InitOptions, interactive: boolean): Promise<SingletonApp[]> => {
   if (options.services) {
-    services = validateServices(options.services);
-  } else if (interactive) {
-    services = await promptServices();
-  } else {
-    services = [];
+    return validateServices(options.services);
   }
+  return interactive ? await promptServices() : [];
+};
 
-  if (existsSync(targetDir) && readdirSync(targetDir).length > 0 && !options.into) {
-    throw new Error(
-      `Directory "${targetDir}" already exists and is not empty. ` +
-        'Pass --into to scaffold into it (paths that already exist are kept and pinned in ' +
-        '.updateignore), or pick another name.',
-    );
-  }
-
-  const spec = resolveSource({ source: options.source, checkout: options.checkout });
-  if (spec.warning) {
-    console.warn(`⚠️  ${spec.warning}`);
-  }
-
-  console.log(`\nScaffolding ${targetDir} from ${spec.source} @ ${spec.ref}`);
-  console.log(`  apps      ${apps.join(', ')}`);
-  console.log(`  services  ${services.length ? services.join(', ') : '(none)'}`);
-
-  const provenance = await scaffoldWithFallback(spec, {
-    source: spec.source,
-    ref: spec.ref,
-    target: targetDir,
-    apps,
-    services,
-    mpoVersion: options.mpoVersion ? mpoRange(options.mpoVersion) : undefined,
-    into: options.into,
-    verbose: options.verbose,
-  });
-  const { sha } = provenance.source!;
-  console.log(`  source    ${sha}`);
-
-  // A fresh project gets its scaffold commit; a directory already inside a
-  // repository (--into, or nested in another project) is left for the
-  // owner to commit.
-  let scaffoldCommitted = false;
-  if (!options.skipGit && !(await insideGitRepo(targetDir))) {
-    await spawn('git', ['init', '--quiet'], { cwd: targetDir });
-    await spawn('git', ['add', '-A'], { cwd: targetDir });
-    scaffoldCommitted = await spawn(
+/** A fresh project gets its scaffold commit; returns whether it was made. */
+const commitScaffold = async (targetDir: string, sha: string): Promise<boolean> => {
+  await spawn('git', ['init', '--quiet'], { cwd: targetDir });
+  await spawn('git', ['add', '-A'], { cwd: targetDir });
+  try {
+    await spawn(
       'git',
       ['commit', '--quiet', '-m', `feat: scaffold from universal-starter-kit ${sha.slice(0, 12)} (mpo init)`],
       { cwd: targetDir },
-    ).then(
-      () => true,
-      () => {
-        console.warn('⚠️  git commit failed (missing git identity?) — repo left staged.');
-        return false;
-      },
     );
+    return true;
+  } catch {
+    // Safe to continue: the scaffold stays staged and the owner commits it.
+    console.warn('⚠️  git commit failed (missing git identity?) — repo left staged.');
+    return false;
   }
+};
 
-  if (options.skipInstall) {
-    console.log('Skipped pnpm install (--skip-install).');
-  } else {
-    console.log('\nInstalling dependencies...');
-    await spawn('pnpm', ['install'], { cwd: targetDir, stdio: 'inherit' });
-    if (scaffoldCommitted) {
-      // The lockfile belongs to the scaffold commit so a fresh init is clean.
-      await spawn('git', ['add', '--', 'pnpm-lock.yaml'], { cwd: targetDir })
-        .then(async () => await spawn('git', ['commit', '--amend', '--no-edit', '--quiet'], { cwd: targetDir }))
-        .catch(() => {});
-    }
+const installDependencies = async (targetDir: string, scaffoldCommitted: boolean): Promise<void> => {
+  console.log('\nInstalling dependencies...');
+  await spawn('pnpm', ['install'], { cwd: targetDir, stdio: 'inherit' });
+  if (!scaffoldCommitted) {
+    return;
   }
+  // The lockfile belongs to the scaffold commit so a fresh init is clean.
+  try {
+    await spawn('git', ['add', '--', 'pnpm-lock.yaml'], { cwd: targetDir });
+    await spawn('git', ['commit', '--amend', '--no-edit', '--quiet'], { cwd: targetDir });
+  } catch {
+    // Safe to continue: the lockfile is left for the owner to commit.
+  }
+};
 
+const printNextSteps = (targetDir: string, options: InitOptions, services: SingletonApp[]): void => {
   console.log(`\n✅ Project created at ${targetDir}`);
   console.log('\nNext steps:');
   if (!options.into) {
-    console.log(`  cd ${basename(targetDir)}`);
+    console.log(`  cd ${path.basename(targetDir)}`);
   }
   if (options.skipInstall) {
     console.log('  pnpm install');
@@ -232,4 +199,55 @@ export async function init(nameArg: string | undefined, options: InitOptions = {
   }
   console.log('\nLater: `mpo update` merges monorepo changes into the project without committing;');
   console.log('`mpo add-app <name>` adds another product app.');
-}
+};
+
+export const init = async (nameArg: string | undefined, options: InitOptions = {}): Promise<void> => {
+  const interactive = !options.yes && process.stdout.isTTY;
+  const { targetDir, name } = await resolveTarget(nameArg, options, interactive);
+  const apps = unique([name, ...(options.apps ?? []).map(validateName)]);
+  const services = await resolveServices(options, interactive);
+
+  if (existsSync(targetDir) && readdirSync(targetDir).length > 0 && !options.into) {
+    throw new Error(
+      `Directory "${targetDir}" already exists and is not empty. ` +
+        'Pass --into to scaffold into it (paths that already exist are kept and pinned in ' +
+        '.updateignore), or pick another name.',
+    );
+  }
+
+  const spec = resolveSource({ source: options.source, checkout: options.checkout });
+  if (spec.warning !== undefined && spec.warning !== '') {
+    console.warn(`⚠️  ${spec.warning}`);
+  }
+
+  console.log(`\nScaffolding ${targetDir} from ${spec.source} @ ${spec.ref}`);
+  console.log(`  apps      ${apps.join(', ')}`);
+  console.log(`  services  ${services.length ? services.join(', ') : '(none)'}`);
+
+  const provenance = await scaffoldWithFallback(spec, {
+    source: spec.source,
+    ref: spec.ref,
+    target: targetDir,
+    apps,
+    services,
+    mpoVersion:
+      options.mpoVersion === undefined || options.mpoVersion === '' ? undefined : mpoRange(options.mpoVersion),
+    into: options.into,
+    verbose: options.verbose,
+  });
+  const { sha } = provenance.source;
+  console.log(`  source    ${sha}`);
+
+  // A directory already inside a repository (--into, or nested in another
+  // project) is left for the owner to commit.
+  const scaffoldCommitted =
+    !options.skipGit && !(await insideGitRepo(targetDir)) ? await commitScaffold(targetDir, sha) : false;
+
+  if (options.skipInstall) {
+    console.log('Skipped pnpm install (--skip-install).');
+  } else {
+    await installDependencies(targetDir, scaffoldCommitted);
+  }
+
+  printNextSteps(targetDir, options, services);
+};

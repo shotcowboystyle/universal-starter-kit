@@ -6,7 +6,7 @@
  * rendered as a CHILD of `<NodeGraph>` — and `NodeGraph.native.tsx` accepts
  * children and ignores them. So on the iPhone 16e simulator and both emulators
  * this story painted 200 nodes with no Start, no Stop, no toggle and no
- * readout. Proven in the artefact as well as on the screen: `__mpoPerf200`
+ * readout. Proven in the artifact as well as on the screen: `__mpoPerf200`
  * appears 0 times in the emitted www.bundle while `hermes-inline` appears 6.
  *
  * The sampler now runs in `GraphCommandBridge`, inside whichever realm the
@@ -133,7 +133,7 @@ const line = (stats: FrameStats): string =>
  * the whole Start-to-Stop window, six scripted pans and every idle frame
  * between them, and it shipped with that caveat attached because there was no
  * way to subtract them. A run with no marks still prints the whole window,
- * labelled as one, rather than pretending to be something it is not.
+ * labeled as one, rather than pretending to be something it is not.
  */
 const summarize = (report: PerfReportWire | null): string => {
   if (!report) {

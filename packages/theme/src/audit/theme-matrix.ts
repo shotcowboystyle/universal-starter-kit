@@ -2,14 +2,14 @@
  * Theme-matrix invariance + no-breakage assertions.
  *
  * The theme matrix sweeps every story cell across the globals axes
- * (scheme × theme colour × preset) and holds TWO separate assertions,
+ * (scheme × theme color × preset) and holds TWO separate assertions,
  * never one:
  *
  *  1. GEOMETRY INVARIANCE across the THEME axis — switching the theme
- *     colour may repaint ink, never move a box. Colour is the one axis
+ *     color may repaint ink, never move a box. Color is the one axis
  *     whose whole contract is "paint only" (RECIPE-INPUTS: size
- *     recipes are generated from inputs at config time; Tamagui colour
- *     themes stay the colour path). Any geometry delta across colours
+ *     recipes are generated from inputs at config time; Tamagui color
+ *     themes stay the color path). Any geometry delta across colors
  *     means a recipe consumed a theme option.
  *
  *  2. NO-BREAKAGE across the PRESET axis — presets are EXPECTED to move
@@ -24,7 +24,7 @@
  * MEASURING RULE: every text assertion here measures TEXT NODES — the
  * computed style of the element that DIRECTLY contains the text, and the
  * Range-measured rect of the text itself — never the story frame. The
- * frame's font-family is always Inter and its colour is not the ink
+ * frame's font-family is always Inter and its color is not the ink
  * (that trap has shipped wrong fixes before).
  * SVG measurements read descendant fill/stroke, including opacity. The
  * bounded model handles single-ink shapes over a resolved solid backdrop;
@@ -59,7 +59,7 @@ export interface MatrixElementGeometry {
   rect: MatrixRect;
   /**
    * Geometry-bearing computed properties. The theme axis must never move
-   * any of these; colour properties are deliberately absent.
+   * any of these; color properties are deliberately absent.
    */
   props: Record<string, string>;
   /** Range-measured rect of the element's DIRECT text nodes, when any. */
@@ -71,7 +71,7 @@ export interface MatrixTextSample {
   key: string;
   /** First characters of the text node (identification only). */
   text: string;
-  /** Composited ink colour as #rrggbb (alpha already blended over background). */
+  /** Composited ink color as #rrggbb (alpha already blended over background). */
   color: string;
   /** Composited effective background as #rrggbb. */
   background: string;
@@ -265,12 +265,12 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   const UNRESOLVED_BACKDROP = 'unresolved-backdrop' as const;
   const UNSUPPORTED_PAINT = 'unsupported-paint' as const;
   // dataset exists on HTMLElement and SVGElement; no other node kind in a story carries data attributes.
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const dataOf = (el: Element): DOMStringMap =>
     el instanceof HTMLElement || el instanceof SVGElement ? el.dataset : {};
   const SKIP_TAGS = new Set(['script', 'style', 'link', 'meta', 'head', 'title', 'noscript', 'br', 'wbr', 'template']);
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const roundTo = (value: number, steps: number) => Math.round(value * steps) / steps;
   const round = (n: number) => roundTo(n, 4);
 
@@ -298,7 +298,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     return [toFloat(r), toFloat(g), toFloat(b), alpha === undefined ? 1 : alphaValue(alpha)];
   };
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const toHex = (rgb: [number, number, number]): string => {
     const channels = rgb.map((v) =>
       Math.max(0, Math.min(255, Math.round(v)))
@@ -309,7 +309,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   };
 
   // Composite `top` (with alpha) over opaque `bottom`.
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const blend = (top: [number, number, number, number], bottom: [number, number, number]): [number, number, number] => {
     const [topR, topG, topB, a] = top;
     const [bottomR, bottomG, bottomB] = bottom;
@@ -379,7 +379,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   };
 
   const roundMilli = (value: number) => roundTo(value, 1000);
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const pathTokens = (path: string): string => {
     const tokens: string[] =
       path
@@ -411,7 +411,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   ] as const;
 
   // Prefer the preview's stable inner root. `#storybook-root` also contains
-  // the Tamagui `<Theme>` host, which is present only when a colour global
+  // the Tamagui `<Theme>` host, which is present only when a color global
   // is set — capturing there reports a remount as geometry drift.
   const matrixRoot = document.querySelector('#mpo-matrix-root') ?? document.querySelector('[data-mpo-matrix-root]');
   const root =
@@ -425,7 +425,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   let svgRootCount = 0;
   const capturedSvgRoots = new Set<Element>();
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const accessibleName = (el: Element): string => {
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy !== null && labelledBy !== '') {
@@ -1088,14 +1088,14 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
    * The children that actually generate a BOX, hoisting straight through
    * `display: contents`.
    *
-   * This is what makes the structural key survive the colour axis. Tamagui's
+   * This is what makes the structural key survive the color axis. Tamagui's
    * `<Theme>` emits a boxless passthrough span when the requested theme is
    * already the active one and a real theme host when it differs, so the
-   * number of wrapper spans is a function of the colour global itself.
-   * Counting them made every coloured cell report `+N/-M elements` with ZERO
-   * moves — a keying artefact wearing the costume of a geometry failure.
+   * number of wrapper spans is a function of the color global itself.
+   * Counting them made every colored cell report `+N/-M elements` with ZERO
+   * moves — a keying artifact wearing the costume of a geometry failure.
    * Measured on dogfood--settings at scheme:light: 158 nodes at the default
-   * colour, 151 with `color:blue`, 142 with `color:gray`; hoisting through
+   * color, 151 with `color:blue`, 142 with `color:gray`; hoisting through
    * the boxless wrappers gives 130 in every cell, light and dark, default and
    * bold. Nothing an invariance gate can assert is lost, because an element
    * with no box has no geometry to move.

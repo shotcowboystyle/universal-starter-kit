@@ -15,13 +15,13 @@ const meta: Meta<typeof Separator> = {
         component:
           'House rule between content groups: a painted 1px line in $borderColor ' +
           '(tamagui-rendered-reference §7.3 — 1px, never 0.5px). The quiet variant dims ' +
-          'with opacity 0.5 rather than a lighter colour; vertical rules are 1px wide.',
+          'with opacity 0.5 rather than a lighter color; vertical rules are 1px wide.',
       },
     },
   },
   argTypes: {
     vertical: { control: 'boolean', description: '1px-wide vertical rule' },
-    quiet: { control: 'boolean', description: 'Half-opacity rule (never a lighter colour)' },
+    quiet: { control: 'boolean', description: 'Half-opacity rule (never a lighter color)' },
   },
 };
 export default meta;
@@ -50,7 +50,7 @@ export const Quiet: Story = {
       <Separator />
       <Text>Between a default rule…</Text>
       <Separator {...args} />
-      <Text>…and a quiet one: same colour, half the opacity.</Text>
+      <Text>…and a quiet one: same color, half the opacity.</Text>
     </YStack>
   ),
 };

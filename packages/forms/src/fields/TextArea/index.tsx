@@ -386,7 +386,7 @@ export const TextArea = ({
             // fontWeight after size, and baked into ThemedTextArea's size
             // variant: Tamagui's size atomic otherwise pins 400 (RM-TXT-6).
             fontWeight={knobProps.body.fontWeight}
-            // T-VALUE: entered text stays the full ramp. textAccent honours
+            // T-VALUE: entered text stays the full ramp. textAccent honors
             // on the FieldLayout helper, not here.
             color="$color"
             backgroundColor="transparent"

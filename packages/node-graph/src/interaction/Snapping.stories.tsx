@@ -4,7 +4,7 @@
  *
  * The three stories map to the rules that cannot be seen in a unit test:
  *
- *  - `Main` — one node against two neighbours, and the guides that appear.
+ *  - `Main` — one node against two neighbors, and the guides that appear.
  *  - `MultiSelect` — S6. Shift-click two nodes and drag; the SELECTION's box
  *    snaps and the two nodes keep their spacing. A per-node snapper deforms the
  *    pair here, visibly.
@@ -13,7 +13,7 @@
  *    at 0.5x the flow threshold doubles and at 2x it halves, which is what
  *    keeps the SCREEN distance fixed.
  *
- * Every node starts a few units off its neighbour's line on purpose. A graph
+ * Every node starts a few units off its neighbor's line on purpose. A graph
  * laid out on a grid is already aligned, and a snap that fires on the first
  * pixel of a drag shows nothing.
  */
@@ -43,7 +43,7 @@ const meta: Meta<typeof NodeGraph> = {
     docs: {
       description: {
         component:
-          "Alignment snapping (design 7.2). A drag is snapped to a neighbour's left, centre or right line and to its top, middle or bottom line, nearest per axis independently, with the threshold measured in SCREEN pixels and divided by the zoom. Guides are one svg with at most two lines, inside the viewport transform. The end of a drag is never snapped: that frame is the one the document commits.",
+          "Alignment snapping (design 7.2). A drag is snapped to a neighbor's left, center or right line and to its top, middle or bottom line, nearest per axis independently, with the threshold measured in SCREEN pixels and divided by the zoom. Guides are one svg with at most two lines, inside the viewport transform. The end of a drag is never snapped: that frame is the one the document commits.",
       },
     },
   },
@@ -55,7 +55,7 @@ export default meta;
 
 type Story = StoryObj<typeof NodeGraph>;
 
-/** Deliberately 3 to 6 units off every line the neighbours offer. */
+/** Deliberately 3 to 6 units off every line the neighbors offer. */
 const unalignedDocument = (): Doc => ({
   version: 1,
   nodes: [
@@ -134,7 +134,7 @@ export const Main: Story = {
         size="$2"
         opacity={0.7}
         paddingBottom="$2">
-        Drag `drag-me`. A vertical guide means its left, centre or right lined up with a neighbour&rsquo;s; a horizontal
+        Drag `drag-me`. A vertical guide means its left, center or right lined up with a neighbor&rsquo;s; a horizontal
         one means the same on the other axis. Let go and the guides clear.
       </SizableText>
       <YStack flex={1}>

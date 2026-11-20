@@ -4,7 +4,7 @@
  * Two things are pinned here and they are not the same thing. The rules
  * themselves — each refuses its own case and, on a document where nothing else
  * is wrong, passes every other rule's, which is what stops a rule from
- * accidentally covering for a broken neighbour. And the SPLIT: `refuseCycle` is
+ * accidentally covering for a broken neighbor. And the SPLIT: `refuseCycle` is
  * O(V+E) and React Flow calls `isValidConnection` on every pointer tick, so a
  * cycle check on the tick path is a frame budget spent per mouse move. The
  * split is a type, not a comment, and the `@ts-expect-error` below is what

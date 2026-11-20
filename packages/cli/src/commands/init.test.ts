@@ -1,17 +1,17 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import path from 'node:path';
 
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { init } from './init';
 
 // init reads THIS checkout at HEAD (resolveSource finds the monorepo around
-// public/cli), so this runs the real scaffold.sh.
+// packages/cli), so this runs the real scaffold.sh.
 const heavy = 300_000;
 
 describe('mpo init --into', () => {
-  const sandbox = mkdtempSync(join(tmpdir(), 'mpo-init-spec-'));
+  const sandbox = mkdtempSync(path.join(tmpdir(), 'mpo-init-spec-'));
 
   afterAll(() => {
     rmSync(sandbox, { recursive: true, force: true });
@@ -20,8 +20,8 @@ describe('mpo init --into', () => {
   it(
     "leaves an existing repository's files byte for byte and names every one it kept",
     async () => {
-      const target = join(sandbox, 'wealthflow-repo');
-      const existing: Record<string, string> = {
+      const target = path.join(sandbox, 'wealthflow-repo');
+      const existing = {
         'pyproject.toml': '[project]\nname = "wealthflow"\n',
         'uv.lock': 'version = 1\n',
         Makefile: '.POSIX:\nbuild:\n\tuv build\n',
@@ -31,8 +31,8 @@ describe('mpo init --into', () => {
         'docs/index.md': '# docs\n',
       };
       for (const [file, content] of Object.entries(existing)) {
-        mkdirSync(dirname(join(target, file)), { recursive: true });
-        writeFileSync(join(target, file), content);
+        mkdirSync(path.dirname(path.join(target, file)), { recursive: true });
+        writeFileSync(path.join(target, file), content);
       }
       const lines: string[] = [];
       const log = vi.spyOn(console, 'log').mockImplementation((...args) => {
@@ -53,11 +53,11 @@ describe('mpo init --into', () => {
       const output = lines.join('\n');
 
       for (const [file, content] of Object.entries(existing)) {
-        expect(readFileSync(join(target, file), 'utf-8'), file).toBe(content);
+        expect(readFileSync(path.join(target, file), 'utf-8'), file).toBe(content);
       }
-      expect(existsSync(join(target, 'apps/wealthflow/package.json'))).toBe(true);
-      expect(output).toMatch(/Kept \d+ path\(s\) already here, pinned in \.updateignore:/);
-      const updateignore = readFileSync(join(target, '.updateignore'), 'utf-8');
+      expect(existsSync(path.join(target, 'apps/wealthflow/package.json'))).toBe(true);
+      expect(output).toMatch(/Kept \d+ path\(s\) already here, pinned in \.updateignore:/u);
+      const updateignore = readFileSync(path.join(target, '.updateignore'), 'utf-8');
       for (const kept of ['Makefile', 'README.md']) {
         expect(output).toContain(`  ${kept}`);
         expect(updateignore).toContain(`${kept}\n`);

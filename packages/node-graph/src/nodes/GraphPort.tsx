@@ -4,8 +4,8 @@
  * `validateConnection`'s job (task 1.3) and the puck's (task 3.5).
  *
  * Two knob laws it obeys and one it refuses (design §11):
- *  - size: `honour`. The painted dot is 8 / 10 / 12.
- *  - borderWidth: `honour`. The dot's ring follows the knob.
+ *  - size: `honor`. The painted dot is 8 / 10 / 12.
+ *  - borderWidth: `honor`. The dot's ring follows the knob.
  *  - borderRadius: `IGNORE`. 50% at every stop, `none` included, because a
  *    square port reads as a resize grip. The circle is the part's identity,
  *    not its styling.
@@ -36,7 +36,7 @@ export interface GraphPortProps {
   readonly id: string;
   readonly side: GraphPortSide;
   readonly direction: 'in' | 'out';
-  /** Semantic intent — reaches the resolver, never a colour prop. */
+  /** Semantic intent — reaches the resolver, never a color prop. */
   readonly intent?: string;
   /**
    * true on a touch surface. Picks H3's 44 over its fine-pointer value.

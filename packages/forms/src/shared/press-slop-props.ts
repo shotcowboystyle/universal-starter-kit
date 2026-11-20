@@ -35,7 +35,7 @@ export type PressSlopProps =
 /**
  * The slop channel at a given outset, for a part whose outset is not
  * "whatever reaches 44": a pitch-limited target passes the largest
- * outset that does not cross its neighbour.
+ * outset that does not cross its neighbor.
  */
 export const pressSlopOutsetProps = (
   outset: number,

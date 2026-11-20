@@ -143,7 +143,7 @@ describe(unionBounds, () => {
   });
 
   it('is undefined for nothing, rather than a zero rect at the origin', () => {
-    // A zero rect at 0,0 is a REAL position, and a toolbar that centres on it
+    // A zero rect at 0,0 is a REAL position, and a toolbar that centers on it
     // would jump the viewport whenever the selection emptied.
     expect(unionBounds([])).toBeUndefined();
   });

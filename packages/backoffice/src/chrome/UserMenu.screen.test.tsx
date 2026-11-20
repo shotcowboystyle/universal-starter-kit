@@ -105,7 +105,7 @@ describe(UserMenu, () => {
     expect(setScheme).toHaveBeenCalledWith('light');
   });
 
-  it('offers no theme toggle a host cannot honour', async () => {
+  it('offers no theme toggle a host cannot honor', async () => {
     renderMenu();
     await screen.findByText('Jane Cooper');
     expect(item('Toggle Theme').getAttribute('aria-disabled')).toBe('true');

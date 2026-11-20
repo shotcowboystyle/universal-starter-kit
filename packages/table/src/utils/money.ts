@@ -131,7 +131,7 @@ export const sumMoney = (values: readonly string[]): string => {
  * @param rows - Anything carrying an amount and a currency
  * @param amountOf - Reads the decimal-string amount off a row
  * @param currencyOf - Reads the currency code off a row. Rows carrying none
- *   group under "—", so an unlabelled figure is never merged into a labelled
+ *   group under "—", so an unlabeled figure is never merged into a labeled
  *   one.
  */
 export const sumMoneyByCurrency = <TRow>(
@@ -198,7 +198,7 @@ export const moneyComparator = (a: unknown, b: unknown): number => {
   return compareMoney(left, right);
 };
 
-/** True when the money string is negative — for colour, not for arithmetic. */
+/** True when the money string is negative — for color, not for arithmetic. */
 // oxlint-disable-next-line anti-slop/no-unknown-parameters, anti-slop/no-runtime-typeof -- arbitrary cell value; the typeof check is the parse boundary
 export const isNegativeMoney = (raw: unknown): boolean => typeof raw === 'string' && raw.trimStart().startsWith('-');
 

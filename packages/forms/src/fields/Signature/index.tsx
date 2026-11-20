@@ -313,7 +313,7 @@ const signatureHeightRows = 3;
 const signatureAspect = 2.5;
 const defaultClearIcon = <EraserIcon size={16} />;
 
-// Large-canvas family: honour elevation on the
+// Large-canvas family: honor elevation on the
 // pad FRAME the same way FileUpload's dropzone does — a styled surface that
 // accepts the resolver token. Ink stays clipped; web box-shadow paints
 // outside overflow:hidden.

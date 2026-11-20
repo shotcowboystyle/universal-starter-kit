@@ -54,12 +54,12 @@ const mount = (story: StoryLike) => {
  * The row the groups sit in. A ToolbarGroup renders a fragment
  * (group frame + optional separator), so the row's element children ARE the
  * groups and their separators — which is where "did the separator render"
- * is observable, the separator being an unlabelled styled Separator.
+ * is observable, the separator being an unlabeled styled Separator.
  */
 const rowOf = (container: HTMLElement, anyButtonLabel: string): HTMLElement => {
   const button = container.querySelector<HTMLElement>(`[aria-label="${anyButtonLabel}"]`);
   if (!button) {
-    throw new Error(`no button labelled ${anyButtonLabel}`);
+    throw new Error(`no button labeled ${anyButtonLabel}`);
   }
   const groupFrame = button.parentElement;
   const row = groupFrame?.parentElement;
@@ -95,7 +95,7 @@ describe('ToolbarGroup stories', () => {
     expect(rowOf(container, 'Undo').children).toHaveLength(2);
   });
 
-  it("Hidden removes the group's buttons AND its separator, leaving the neighbour", () => {
+  it("Hidden removes the group's buttons AND its separator, leaving the neighbor", () => {
     const { container } = mount(Hidden);
     const labels = labelsIn(container);
     expect(labels).not.toContain('Undo');

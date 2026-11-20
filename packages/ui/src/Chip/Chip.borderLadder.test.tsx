@@ -40,7 +40,7 @@ const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
 describe('Chip borderWidth ladder', () => {
   afterEach(cleanup);
 
-  it("the frame honours the resolver's edge: 0 / 0.5 / 1 / 2", () => {
+  it("the frame honors the resolver's edge: 0 / 0.5 / 1 / 2", () => {
     expect(renderAt('none')).toStrictEqual(['_btw-0px']);
     expect(renderAt('small')).toStrictEqual(['_btw-0--5px']);
     expect(renderAt('medium')).toStrictEqual(['_btw-1px']);

@@ -6,7 +6,7 @@
  * controlled value, and the read-only / disabled gates.
  *
  * A dropped `defaultCountry` is the failure that matters here: the same digits
- * serialise to a different E.164 number under a different region, so a silent
+ * serialize to a different E.164 number under a different region, so a silent
  * default of US would corrupt every non-US phone field on save.
  */
 import { renderWithProviders } from '@repo/test-utils';
@@ -70,7 +70,7 @@ describe('Phone composes the forms PhoneInput', () => {
     expect(input?.value).toContain('555');
   });
 
-  it('emits a serialised number through canonical onChange', async () => {
+  it('emits a serialized number through canonical onChange', async () => {
     const onChange = vi.fn<(value: string | ChangeEvent<HTMLDivElement>) => void>();
     const result = renderWithProviders(
       <Phone
@@ -84,7 +84,7 @@ describe('Phone composes the forms PhoneInput', () => {
       fireEvent.change(input, { target: { value: '4155550123' } });
     });
     expect(onChange).toHaveBeenCalledWith(expect.stringMatching(/^\+/u));
-    // SAFETY: Phone emits the serialised E.164 string through onChange, never the DOM change event
+    // SAFETY: Phone emits the serialized E.164 string through onChange, never the DOM change event
     const emitted = onChange.mock.calls.at(-1)?.[0] as string;
     expect(emitted.startsWith('+')).toBe(true);
     expect(emitted).toContain('4155550123');
@@ -103,7 +103,7 @@ describe('Phone defaultCountry', () => {
     expect(result.container.textContent).toContain('+1');
   });
 
-  it('honours defaultCountry, so the dial code follows the DocField', () => {
+  it('honors defaultCountry, so the dial code follows the DocField', () => {
     const result = renderWithProviders(
       <Phone
         label="Mobile"
@@ -130,7 +130,7 @@ describe('Phone defaultCountry', () => {
         target: { value: '8074052136' },
       });
     });
-    // SAFETY: Phone emits the serialised E.164 string through onChange, never the DOM change event
+    // SAFETY: Phone emits the serialized E.164 string through onChange, never the DOM change event
     const emitted = onChange.mock.calls.at(-1)?.[0] as string;
     expect(emitted.startsWith('+91')).toBe(true);
   });

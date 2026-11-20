@@ -19,7 +19,7 @@
 
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import path from 'node:path';
 
 import { isGitUrl, monorepoCheckout, monorepoUrl, resolveSource } from '../source';
 import type { SourceSpec } from '../source';
@@ -42,79 +42,108 @@ export interface UpdateAppOptions {
   verbose?: boolean;
 }
 
-function isSha(ref: string): boolean {
-  return /^[0-9a-f]{40}$/.test(ref);
-}
+const isSha = (ref: string): boolean => /^[0-9a-f]{40}$/u.test(ref);
+
+const ALREADY_UP_TO_DATE = '\n✅ already up to date';
+
+const isNonEmpty = (value: string | undefined): value is string => value !== undefined && value !== '';
 
 /** The commit a source spec names, when it can be known without scaffolding. */
-async function resolveSha(spec: SourceSpec): Promise<string | undefined> {
+const resolveSha = async (spec: SourceSpec): Promise<string | undefined> => {
   if (isSha(spec.ref)) {
     return spec.ref;
   }
   if (isGitUrl(spec.source)) {
     return undefined;
   }
-  return await gitOut(spec.source, ['rev-parse', '--verify', `${spec.ref}^{commit}`]).catch(() => undefined);
-}
+  try {
+    return await gitOut(spec.source, ['rev-parse', '--verify', `${spec.ref}^{commit}`]);
+  } catch {
+    // Unknown locally: the scaffold resolves it instead.
+    return undefined;
+  }
+};
 
 // pnpm-lock.yaml stays pinned to HEAD through the merge, so a merge that
 // removes .pnpmfile.cjs leaves its checksum behind, and pnpm re-resolves every
 // dependency over the mismatch instead of keeping the lockfile's pins.
-async function dropStalePnpmfileChecksum(projectDir: string): Promise<void> {
-  const lockfile = join(projectDir, 'pnpm-lock.yaml');
-  if (existsSync(join(projectDir, '.pnpmfile.cjs')) || !existsSync(lockfile)) {
+const dropStalePnpmfileChecksum = async (projectDir: string): Promise<void> => {
+  const lockfile = path.join(projectDir, 'pnpm-lock.yaml');
+  if (existsSync(path.join(projectDir, '.pnpmfile.cjs')) || !existsSync(lockfile)) {
     return;
   }
   const lock = readFileSync(lockfile, 'utf-8');
-  const stripped = lock.replace(/^pnpmfileChecksum: .*\n\n?/m, '');
+  const stripped = lock.replace(/^pnpmfileChecksum: .*\n\n?/mu, '');
   if (stripped === lock) {
     return;
   }
   writeFileSync(lockfile, stripped);
   await git(projectDir, ['add', '--', 'pnpm-lock.yaml']);
+};
+
+interface TempDir {
+  dir: string;
+  cleanup: () => void;
 }
 
-function tempDir(): { dir: string; cleanup: () => void } {
-  const dir = mkdtempSync(join(tmpdir(), 'mpo-update-'));
+const tempDir = (): TempDir => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'mpo-update-'));
   return {
     dir,
     cleanup: () => {
       rmSync(dir, { recursive: true, force: true });
     },
   };
+};
+
+/** templates/pieces of some CLI version; `root` is absent when the current ones serve. */
+interface PiecesRoot {
+  root?: string;
+  cleanup: () => void;
 }
+
+const currentPieces = (): PiecesRoot => ({
+  cleanup: () => {
+    // Nothing to remove: the current templates are used in place.
+  },
+});
 
 /**
  * templates/pieces as they were at another CLI version: the monorepo tag
  * v<version>, from the CLI's source (or --source). Falls back to the
  * current templates with a warning, which degrades that merge to two-way.
  */
-async function piecesRootAt(
-  version: string,
-  options: UpdateAppOptions,
-): Promise<{ root?: string; cleanup: () => void }> {
+const piecesRootAt = async (version: string, options: UpdateAppOptions): Promise<PiecesRoot> => {
   if (version === cliVersion()) {
-    return { cleanup: () => {} };
+    return currentPieces();
   }
   const scratch = tempDir();
   const source = options.source ?? monorepoCheckout() ?? monorepoUrl;
   try {
-    await archiveSubtree(source, `v${version}`, 'public/cli/templates/pieces', scratch.dir);
-    return { root: join(scratch.dir, 'public/cli/templates/pieces'), cleanup: scratch.cleanup };
+    await archiveSubtree(source, `v${version}`, 'packages/cli/templates/pieces', scratch.dir);
+    return { root: path.join(scratch.dir, 'packages/cli/templates/pieces'), cleanup: scratch.cleanup };
   } catch {
+    // Safe to continue: the warning below says the merge degrades to two-way.
     scratch.cleanup();
     console.warn(
       `⚠️  could not read templates/pieces at v${version} from ${source}; ` +
         "using the current pieces as the merge base (changes since that version won't land).",
     );
-    return { cleanup: () => {} };
+    return currentPieces();
   }
-}
+};
 
-async function updateAdopted(projectDir: string, provenance: MpoProvenance, options: UpdateAppOptions): Promise<void> {
+const updateAdopted = async (
+  projectDir: string,
+  provenance: MpoProvenance,
+  options: UpdateAppOptions,
+): Promise<void> => {
   const currentVersion = cliVersion() ?? '0.0.0';
   const targetRange = mpoRange(options.version, currentVersion);
-  const name = provenance.name!;
+  const { name } = provenance;
+  if (name === undefined) {
+    throw new Error(`${PROVENANCE_FILE} of an adopted project records no name`);
+  }
   const firstReconcile = provenance.reconciled === false;
   console.log(`\nmpo update (adopted): cli ${provenance.cliVersion} → ${currentVersion}`);
   console.log(`  pieces  ${provenance.pieces.join(', ')}`);
@@ -128,7 +157,7 @@ async function updateAdopted(projectDir: string, provenance: MpoProvenance, opti
 
   const base = tempDir();
   const theirs = tempDir();
-  let oldPieces: { root?: string; cleanup: () => void } = { cleanup: () => {} };
+  let oldPieces = currentPieces();
   let { pieces } = provenance;
   try {
     if (!firstReconcile) {
@@ -153,13 +182,9 @@ async function updateAdopted(projectDir: string, provenance: MpoProvenance, opti
       baseLabel: `mpo pieces ${provenance.cliVersion}`,
       theirsLabel: `mpo pieces ${currentVersion}`,
     });
-    const next: MpoProvenance = {
-      ...provenance,
-      cliVersion: currentVersion,
-      mpoVersion: targetRange,
-      pieces,
-      reconciled: undefined,
-    };
+    // The update reconciles the project, so the "never reconciled" flag goes.
+    const next: MpoProvenance = { ...provenance, cliVersion: currentVersion, mpoVersion: targetRange, pieces };
+    delete next.reconciled;
     if (!outcome.changed && !outcome.conflicts.length) {
       if (
         provenance.cliVersion !== currentVersion ||
@@ -168,9 +193,9 @@ async function updateAdopted(projectDir: string, provenance: MpoProvenance, opti
         firstReconcile
       ) {
         writeProvenance(projectDir, next);
-        console.log(`\n✅ already up to date; ${PROVENANCE_FILE} refreshed — commit it`);
+        console.log(`${ALREADY_UP_TO_DATE}; ${PROVENANCE_FILE} refreshed — commit it`);
       } else {
-        console.log('\n✅ already up to date');
+        console.log(ALREADY_UP_TO_DATE);
       }
       return;
     }
@@ -182,70 +207,46 @@ async function updateAdopted(projectDir: string, provenance: MpoProvenance, opti
     theirs.cleanup();
     oldPieces.cleanup();
   }
-}
+};
 
-async function updateClone(projectDir: string, provenance: MpoProvenance, options: UpdateAppOptions): Promise<void> {
-  const currentVersion = cliVersion() ?? '0.0.0';
+const announceCloneUpdate = (provenance: MpoProvenance, nextSpec: SourceSpec): void => {
   const recorded = provenance.source;
-  const templateEra = !recorded;
-  const { apps } = provenance;
-  if (!apps.length) {
-    throw new Error(`${PROVENANCE_FILE} lists no product apps — nothing to update`);
-  }
-
-  // theirs: the CLI's source commit unless --source/--checkout say otherwise.
-  const nextSpec = resolveSource({ source: options.source, checkout: options.checkout });
-  if (nextSpec.warning) {
-    console.warn(`⚠️  ${nextSpec.warning}`);
-  }
-  // base: the recorded commit, read from --source when given (a mirror or a
-  // local clone must hold that commit too).
-  const baseSource = options.source ?? recorded?.url ?? nextSpec.source;
-  const targetRange = options.version ? mpoRange(options.version) : undefined;
-
   console.log(
     `\nmpo update: ${recorded ? recorded.sha.slice(0, 12) : '(template-era project)'} → ${nextSpec.source} @ ${nextSpec.ref}`,
   );
-  console.log(`  apps      ${apps.join(', ')}`);
+  console.log(`  apps      ${provenance.apps.join(', ')}`);
   console.log(`  services  ${provenance.services.length ? provenance.services.join(', ') : '(none)'}`);
-  if (templateEra) {
+  if (!recorded) {
     console.log('\n⚠️  This project came from the retired template scaffolder, so there is no');
     console.log("   scaffold to use as a merge base. The monorepo's One app is merged in");
     console.log('   from an empty base once: expect additions and conflicts on shared files.');
     console.log('   Pin what is yours in .updateignore first if needed. After this update the');
     console.log(`   project is clone-derived and later updates merge three-way.\n`);
   }
+};
 
-  if (recorded && !options.version) {
-    const nextSha = await resolveSha(nextSpec);
-    if (nextSha === recorded.sha) {
-      console.log('\n✅ already up to date');
-      return;
-    }
-  }
+interface CloneMerge {
+  projectDir: string;
+  provenance: MpoProvenance;
+  options: UpdateAppOptions;
+  nextSpec: SourceSpec;
+  theirs: TempScaffold;
+  /** Package name both scaffolds carry. */
+  name: string;
+}
 
-  // Both scaffolds carry the project's own root package name, so the name
-  // never reads as a change (an empty base would otherwise conflict on it).
-  const name = packageJsonName(projectDir) ?? basename(projectDir);
-  const theirs = await scaffoldToTemp({
-    source: nextSpec.source,
-    ref: nextSpec.ref,
-    apps,
-    services: provenance.services,
-    mpoVersion: targetRange,
-    name,
-    verbose: options.verbose,
-  });
+/** Scaffold the recorded base (if any), merge it with theirs into the project, and record the new provenance. */
+const mergeClone = async ({ projectDir, provenance, options, nextSpec, theirs, name }: CloneMerge): Promise<void> => {
+  const recorded = provenance.source;
+  const { apps } = provenance;
+  const nextSha = theirs.provenance.source.sha;
   let base: TempScaffold | undefined;
   try {
-    const nextSha = theirs.provenance.source!.sha;
-    if (recorded && nextSha === recorded.sha && !options.version) {
-      console.log('\n✅ already up to date');
-      return;
-    }
     if (recorded) {
       base = await scaffoldToTemp({
-        source: baseSource,
+        // base: the recorded commit, read from --source when given (a mirror
+        // or a local clone must hold that commit too).
+        source: options.source ?? recorded.url ?? nextSpec.source,
         ref: recorded.sha,
         apps,
         services: provenance.services,
@@ -254,9 +255,9 @@ async function updateClone(projectDir: string, provenance: MpoProvenance, option
         verbose: options.verbose,
       });
     }
-    for (const dir of [theirs.dir, base?.dir]) {
-      if (dir) {
-        rmSync(join(dir, PROVENANCE_FILE), { force: true });
+    for (const scaffold of [theirs, base]) {
+      if (scaffold) {
+        rmSync(path.join(scaffold.dir, PROVENANCE_FILE), { force: true });
       }
     }
     const outcome = await mergeScaffolds({
@@ -267,29 +268,74 @@ async function updateClone(projectDir: string, provenance: MpoProvenance, option
       theirsLabel: `mpo scaffold ${nextSha}`,
     });
     const next: MpoProvenance = {
-      cliVersion: theirs.provenance.cliVersion || currentVersion,
+      cliVersion: theirs.provenance.cliVersion || (cliVersion() ?? '0.0.0'),
       source: { sha: nextSha, url: options.source ?? recorded?.url ?? nextSpec.source },
       apps,
       services: provenance.services,
       pieces: [],
     };
-    const label = `${recorded ? recorded.sha.slice(0, 12) : 'template'} → ${nextSha.slice(0, 12)}`;
     if (!outcome.changed && !outcome.conflicts.length) {
       writeProvenance(projectDir, next);
-      console.log(`\n✅ already up to date; ${PROVENANCE_FILE} refreshed — commit it`);
+      console.log(`${ALREADY_UP_TO_DATE}; ${PROVENANCE_FILE} refreshed — commit it`);
       return;
     }
     await landTree(projectDir, outcome.mergedTree);
     await dropStalePnpmfileChecksum(projectDir);
     writeProvenance(projectDir, next);
+    const label = `${recorded ? recorded.sha.slice(0, 12) : 'template'} → ${nextSha.slice(0, 12)}`;
     await finishMerge(projectDir, outcome, `chore: mpo update ${label}`, options);
   } finally {
-    theirs.cleanup();
     base?.cleanup();
   }
-}
+};
 
-export async function updateApp(options: UpdateAppOptions = {}): Promise<void> {
+const updateClone = async (projectDir: string, provenance: MpoProvenance, options: UpdateAppOptions): Promise<void> => {
+  const recorded = provenance.source;
+  const { apps } = provenance;
+  if (!apps.length) {
+    throw new Error(`${PROVENANCE_FILE} lists no product apps — nothing to update`);
+  }
+
+  // theirs: the CLI's source commit unless --source/--checkout say otherwise.
+  const nextSpec = resolveSource({ source: options.source, checkout: options.checkout });
+  if (isNonEmpty(nextSpec.warning)) {
+    console.warn(`⚠️  ${nextSpec.warning}`);
+  }
+  const pinnedVersion = isNonEmpty(options.version);
+  announceCloneUpdate(provenance, nextSpec);
+
+  if (recorded && !pinnedVersion) {
+    const nextSha = await resolveSha(nextSpec);
+    if (nextSha === recorded.sha) {
+      console.log(ALREADY_UP_TO_DATE);
+      return;
+    }
+  }
+
+  // Both scaffolds carry the project's own root package name, so the name
+  // never reads as a change (an empty base would otherwise conflict on it).
+  const name = packageJsonName(projectDir) ?? path.basename(projectDir);
+  const theirs = await scaffoldToTemp({
+    source: nextSpec.source,
+    ref: nextSpec.ref,
+    apps,
+    services: provenance.services,
+    mpoVersion: isNonEmpty(options.version) ? mpoRange(options.version) : undefined,
+    name,
+    verbose: options.verbose,
+  });
+  try {
+    if (recorded && theirs.provenance.source.sha === recorded.sha && !pinnedVersion) {
+      console.log(ALREADY_UP_TO_DATE);
+      return;
+    }
+    await mergeClone({ projectDir, provenance, options, nextSpec, theirs, name });
+  } finally {
+    theirs.cleanup();
+  }
+};
+
+export const updateApp = async (options: UpdateAppOptions = {}): Promise<void> => {
   const projectDir = await projectRootOf('mpo update');
   await requireCleanTree(projectDir, 'mpo update');
   const provenance = readProvenance(projectDir);
@@ -308,4 +354,4 @@ export async function updateApp(options: UpdateAppOptions = {}): Promise<void> {
     return;
   }
   await updateClone(projectDir, provenance, options);
-}
+};

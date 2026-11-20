@@ -150,7 +150,7 @@ export const Sections: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// MarkdownCapabilities — GFM cannot express colour or underline, so those
+// MarkdownCapabilities — GFM cannot express color or underline, so those
 // controls are absent, not merely disabled
 // ---------------------------------------------------------------------------
 

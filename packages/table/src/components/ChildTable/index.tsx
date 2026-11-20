@@ -80,7 +80,7 @@ const ChildTableFieldError = ({
   );
 };
 
-// oxlint-disable-next-line eslint/complexity -- the branches are prop defaults and the bare/labelled/form-bound layout variants
+// oxlint-disable-next-line eslint/complexity -- the branches are prop defaults and the bare/labeled/form-bound layout variants
 export const ChildTable = <TRow extends DataTableData = DataTableData>(props: ChildTableProps<TRow>) => {
   const {
     name,

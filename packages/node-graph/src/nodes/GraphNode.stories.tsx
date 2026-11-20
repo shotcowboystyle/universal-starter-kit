@@ -266,7 +266,7 @@ export const KnobFuzz: Story = {
     docs: {
       description: {
         story:
-          "Seed MPO-191-graphnode, 3 combos, light and dark. Measure the GraphNode FRAME against knob-laws.md § Radius › GraphNode frame (CONTAINER-CAP), § Size › GraphNode frame (remap to the measure table) and § Elevation › GraphNode frame (declared honour). Measuring an inset against the frame's row is the false FAIL the procedure warns about.",
+          "Seed MPO-191-graphnode, 3 combos, light and dark. Measure the GraphNode FRAME against knob-laws.md § Radius › GraphNode frame (CONTAINER-CAP), § Size › GraphNode frame (remap to the measure table) and § Elevation › GraphNode frame (declared honor). Measuring an inset against the frame's row is the false FAIL the procedure warns about.",
       },
     },
   },

@@ -22,7 +22,7 @@
  *
  * No `import.meta`, and none reachable: `verify-no-import-meta.mjs` walks this
  * file, and `worker.generated.test.ts` re-asserts it against the BUNDLED
- * string, which is the artefact a WebView actually parses.
+ * string, which is the artifact a WebView actually parses.
  */
 
 import { layoutWithDagre } from './dagre';

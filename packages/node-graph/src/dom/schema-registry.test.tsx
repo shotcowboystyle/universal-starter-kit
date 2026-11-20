@@ -9,7 +9,7 @@
  * measurement session, so one schema per entry meant the Tamagui cost on device
  * stayed carried over from web rather than measured.
  *
- * These are the resolution rules, stated as behaviour rather than as a shape:
+ * These are the resolution rules, stated as behavior rather than as a shape:
  * the list is keyed BY ID, a non-matching schema is never substituted, a miss
  * still reports what is missing, and the process-wide registry still wins so the
  * two mechanisms compose.

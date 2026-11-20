@@ -11,7 +11,7 @@ const meta: Meta<typeof CheckRegular> = {
     docs: {
       description: {
         component:
-          'Check icon wrapped with themed(): colour comes from the active theme (or a theme key). Size follows numeric px or a size token. No structural knob applies (R-NONE).',
+          'Check icon wrapped with themed(): color comes from the active theme (or a theme key). Size follows numeric px or a size token. No structural knob applies (R-NONE).',
       },
     },
   },

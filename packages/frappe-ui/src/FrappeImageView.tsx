@@ -24,7 +24,7 @@ import { useFrappeRows } from './use-frappe-rows';
  * never runs and the whole module fails to parse.
  *
  * `isServer` carries no `import.meta` and is split at the FILE level
- * (@tamagui/constants ships a `.native` flavour hardcoding it false), so it
+ * (@tamagui/constants ships a `.native` flavor hardcoding it false), so it
  * answers correctly in all four places: true only under web server render,
  * false in a browser, on native, and inside a DOM component's WebView.
  */

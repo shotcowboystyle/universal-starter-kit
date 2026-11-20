@@ -41,7 +41,7 @@ export const defaultOverviewZoom = 0.35;
  * A non-finite zoom resolves to `detail`. It only reaches here from a store
  * mid-initialization or a consumer's own transform, and a graph that renders
  * its full body is a graph a user can still work with — where an overview of
- * unknown zoom is a screen of grey rectangles with no way back.
+ * unknown zoom is a screen of gray rectangles with no way back.
  */
 export const lodForZoom = (zoom: number, overviewZoom: number = defaultOverviewZoom): GraphRenderMode => {
   if (!Number.isFinite(zoom)) {

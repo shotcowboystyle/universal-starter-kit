@@ -23,7 +23,7 @@ export interface FrappeTreeViewProps<TDoc extends { name: string; doctype: strin
    * Separator that splits {@link FrappeTreeViewProps.pathField} into levels,
    * e.g. ":" for an account named `Assets:Personal:Bank:Checking`. Setting it
    * switches the tree to path mode: the branches between root and leaf are
-   * synthesised from the segments, `parentField` is neither read nor fetched,
+   * synthesized from the segments, `parentField` is neither read nor fetched,
    * and the `is_tree` gate is skipped. A doctype whose hierarchy lives in the
    * row's own key has no parent field and the server will never report
    * `is_tree`.
@@ -41,7 +41,7 @@ export interface FrappeTreeViewProps<TDoc extends { name: string; doctype: strin
   filters?: Partial<TDoc> | [keyof TDoc & string, string, unknown][];
   onNodeClick?: (doc: Partial<TDoc>) => void;
   /**
-   * Path-mode selection, fired for synthesised branches as well as documents.
+   * Path-mode selection, fired for synthesized branches as well as documents.
    * `doc` is present only when a document actually sits at that path.
    */
   onPathSelect?: (path: string, doc?: Partial<TDoc>) => void;
@@ -130,8 +130,8 @@ interface PathBucket<TDoc> {
  * Build a TreeNode forest from paths held on the rows themselves, e.g.
  * `Assets:Personal:Bank:Checking` split on ":".
  *
- * The branches between root and leaf are not rows, so they are synthesised:
- * a synthesised node carries no `data` and its `id` is the path prefix it
+ * The branches between root and leaf are not rows, so they are synthesized:
+ * a synthesized node carries no `data` and its `id` is the path prefix it
  * stands for. A row whose path value is empty falls back to a single segment
  * of its own name, so nothing is silently dropped.
  */
@@ -367,7 +367,7 @@ const resolveTreeHierarchy = ({
  * (realtime-backed), then builds a `TreeNode` forest from the parent field.
  *
  * Pass `pathSeparator` instead when the hierarchy lives in the row's own key
- * (`Assets:Personal:Bank:Checking`). The branches are synthesised client-side,
+ * (`Assets:Personal:Bank:Checking`). The branches are synthesized client-side,
  * so no parent field and no `is_tree` are needed.
  */
 export const FrappeTreeView = <TDoc extends { name: string; doctype: string }>({
@@ -465,7 +465,7 @@ export const FrappeTreeView = <TDoc extends { name: string; doctype: string }>({
       if (isPathMode) {
         onPathSelect?.(node.id, doc);
       }
-      // A synthesised branch is not a document, so onNodeClick stays silent
+      // A synthesized branch is not a document, so onNodeClick stays silent
       // rather than handing a caller a name that would 404 on open.
       if (!doc) {
         return;

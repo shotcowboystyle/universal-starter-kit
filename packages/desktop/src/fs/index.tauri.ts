@@ -34,4 +34,4 @@ export const fs: FsApi = {
   },
 };
 
-export type { FsApi };
+export type { FsApi } from './index';

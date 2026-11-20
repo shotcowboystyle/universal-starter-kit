@@ -138,7 +138,7 @@ describe(SnapGuides, () => {
     },
   );
 
-  it('pads the box, so a centred stroke is not sliced in half by its own edge', () => {
+  it('pads the box, so a centered stroke is not sliced in half by its own edge', () => {
     const box = snapGuidesBounds([xGuide]);
     expect(box).toStrictEqual({
       x: 300 - snapGuidePadding,

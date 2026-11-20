@@ -214,7 +214,7 @@ export const GraphCommandBridge = ({ commands, culling, emit, host, onMounted, r
         void flow.setViewport({ x, y, zoom });
       },
       /**
-       * Synthesised pinch, design §13.2. Dispatched on the PANE, because that
+       * Synthesized pinch, design §13.2. Dispatched on the PANE, because that
        * is the element d3-zoom binds its touch listener to.
        *
        * It moved in here from the Perf200 story in milestone 6 for the reason

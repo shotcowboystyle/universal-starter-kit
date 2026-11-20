@@ -56,7 +56,7 @@ const renderedNodeIds = (container: HTMLElement): string[] =>
  * 20 px, which agrees with neither of our two hit diameters. 20 under a 44 px
  * touch target is a drop that looks on the port and refuses; 20 over a 24 px
  * mouse target is one that looks off it and takes. So the canvas sets the
- * radius to the hit diameter and the affordance and the behaviour are one
+ * radius to the hit diameter and the affordance and the behavior are one
  * number.
  *
  * Read off React Flow's OWN store rather than a prop we passed to ourselves —
@@ -262,7 +262,7 @@ describe('node-graph-web', () => {
       const text = style?.textContent ?? '';
       expect(text).toContain(`.${graphRootClassName} {`);
       expect(text).toMatch(/--xy-edge-stroke:/u);
-      // The bridge's whole point: no literal colour reaches the sheet.
+      // The bridge's whole point: no literal color reaches the sheet.
       expect(/#[0-9a-f]{3,8}\b/iu.test(text)).toBe(false);
     });
   });

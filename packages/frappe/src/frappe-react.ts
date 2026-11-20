@@ -1154,7 +1154,7 @@ export const useFrappeInfiniteList = <TDoc extends object & { name: string; doct
   const subscriptionIdRef = useRef<string | null>(null);
   const syncModuleRef = useRef<SyncModule | null>(null);
 
-  // Stable serialised key for filters so we can depend on it in useEffect
+  // Stable serialized key for filters so we can depend on it in useEffect
   const filtersKey = JSON.stringify(filters);
   const syncModule = getFrappeSyncModule(config);
 

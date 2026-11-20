@@ -165,7 +165,7 @@ describe('FileUpload field', () => {
       expect(element.props.isImage).toBe(true);
     });
 
-    it('honours an explicit library:false from the schema', () => {
+    it('honors an explicit library:false from the schema', () => {
       const Component = getFieldComponent('Attach')!;
       const element = (Component as RenderAdapter)(propsFor({ library: false } as Partial<FieldRenderProps>));
       expect(element.props.library).toBe(false);

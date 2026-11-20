@@ -90,7 +90,7 @@ export const PlainMode: Story = {
 /**
  * Side-by-side comparison of the compound `Checkboxes` API and the
  * options-driven `CheckboxGroup` API with equivalent data, for verifying
- * their knob/state behaviour stays aligned.
+ * their knob/state behavior stays aligned.
  */
 const ComparisonWithCheckboxGroupExample = () => {
   const [compound, setCompound] = useState<Record<string, boolean>>({

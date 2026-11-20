@@ -186,7 +186,7 @@ export const InitialColumnsNoMeta = () => (
 
 /**
  * Meta refused, one record readable: the columns come from that record's own
- * fields, labelled from their keys, and there is nothing to save (LC-96).
+ * fields, labeled from their keys, and there is nothing to save (LC-96).
  */
 // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- the export name is the Storybook story id; renaming breaks saved links
 export const GuestRecordShape = () => (

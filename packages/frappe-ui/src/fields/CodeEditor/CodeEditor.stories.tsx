@@ -39,7 +39,7 @@ export default {
     docs: {
       description: {
         component:
-          'Frappe `Code` / `JSON` fieldtypes: monospace source pane + shiki-highlighted preview (unified components Highlighter). Language follows the stock df.options convention via `frappeCodeLanguage()`. Source textarea honours knob `containerRadius` (F14).',
+          'Frappe `Code` / `JSON` fieldtypes: monospace source pane + shiki-highlighted preview (unified components Highlighter). Language follows the stock df.options convention via `frappeCodeLanguage()`. Source textarea honors knob `containerRadius` (F14).',
       },
     },
   },

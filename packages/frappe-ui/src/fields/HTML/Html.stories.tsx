@@ -16,7 +16,7 @@ export default {
     docs: {
       description: {
         component:
-          'Frappe HTML field: read-only sanitised HTML display panel (scripts, event handlers, and dangerous URIs stripped).',
+          'Frappe HTML field: read-only sanitized HTML display panel (scripts, event handlers, and dangerous URIs stripped).',
       },
     },
   },

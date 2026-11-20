@@ -174,7 +174,7 @@ const resolvePx = (scale: VariableRecord, token: number | string, fallback: numb
   return typeof value === 'number' ? value : fallback;
 };
 
-/** A tamagui theme: colour / shadow Variables keyed by theme key. */
+/** A tamagui theme: color / shadow Variables keyed by theme key. */
 type ThemeRecord = Record<string, { val?: string } | undefined>;
 
 const buildSuggestionChrome = (

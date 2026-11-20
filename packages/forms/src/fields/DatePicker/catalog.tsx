@@ -350,7 +350,7 @@ export const DatePicker = <
             }}
             error={hasError}
             id={id}
-            // Labelled: FieldLayout's Label wires `aria-labelledby` onto this
+            // Labeled: FieldLayout's Label wires `aria-labelledby` onto this
             // id itself — naming it here too doubles the spoken name.
             aria-label={hasLabel ? undefined : t('Date')}
             aria-describedby={

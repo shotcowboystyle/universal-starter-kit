@@ -86,7 +86,7 @@ const meta: Meta<typeof XAxis> = {
     docs: {
       description: {
         component:
-          "The two axis primitives the cartesian charts compose. `XAxis` is categorical: a baseline, tick marks, and a label centred under each band or point, truncated with an ellipsis once it is wider than its step so nothing overflows the surface (LC-10). `YAxis` is continuous: nice d3 ticks, right-aligned labels in the left margin, and horizontal grid lines on by default with the axis line off, because the grid already carries the edge. All chrome resolves through `useChartTheme` — axis lines take the border role, grid the divider role, labels the muted text role at the AA floor. Tick numbers ride the charts package's own density register, the declared exemption to the house number channel.",
+          "The two axis primitives the cartesian charts compose. `XAxis` is categorical: a baseline, tick marks, and a label centered under each band or point, truncated with an ellipsis once it is wider than its step so nothing overflows the surface (LC-10). `YAxis` is continuous: nice d3 ticks, right-aligned labels in the left margin, and horizontal grid lines on by default with the axis line off, because the grid already carries the edge. All chrome resolves through `useChartTheme` — axis lines take the border role, grid the divider role, labels the muted text role at the AA floor. Tick numbers ride the charts package's own density register, the declared exemption to the house number channel.",
       },
     },
   },

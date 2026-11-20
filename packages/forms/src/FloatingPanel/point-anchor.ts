@@ -100,7 +100,7 @@ export const referenceCornerPoint = (reference: PointReference, rtl = false): Pa
  * Where a `contextmenu` event asks the menu to open. A mouse right-click or a
  * touch long-press carries the pointer's viewport coordinates. A keyboard open
  * (Shift+F10, the Menu key) has no pointer: Chromium sends a PointerEvent with
- * an empty `pointerType` aimed at the focused element's centre
+ * an empty `pointerType` aimed at the focused element's center
  * (`EventHandler::ShowNonLocatedContextMenu`). It opens from the target's
  * bottom start corner. A plain MouseEvent counts as a pointer only when it is
  * a right-click or carries coordinates.

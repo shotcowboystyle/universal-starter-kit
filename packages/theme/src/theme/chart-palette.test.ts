@@ -291,7 +291,7 @@ describe('chart identity under the held dark accent', () => {
     (lightness) => `hsla(250, 50%, ${lightness}%, 1)`,
   );
 
-  it('keeps the accent channel on the neighbouring step when the held fill misses the mark floor', () => {
+  it('keeps the accent channel on the neighboring step when the held fill misses the mark floor', () => {
     const identitySolid = darkAccentSolids.at(8);
     const palette = resolveChartPalette({
       scheme: 'dark',

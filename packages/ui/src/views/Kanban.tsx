@@ -290,7 +290,7 @@ const KanbanColumnView = <T,>({
   // Hide column counts when a parent AsyncBoundary is in error.
   const itemCount = useAsyncCount(column.items.length);
 
-  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual's instance is stable and read fresh each render; no memoised child depends on its identity-unstable getters
+  // oxlint-disable-next-line react/incompatible-library -- TanStack Virtual's instance is stable and read fresh each render; no memoized child depends on its identity-unstable getters
   const virtualizer = useVirtualizer({
     count: column.items.length,
     getScrollElement: () => parentRef.current,
@@ -1246,12 +1246,12 @@ export const Kanban = <T,>({
       const onMove = (me: PointerEvent) => {
         pointerRef.current = { x: me.clientX, y: me.clientY };
         if (!lifted) {
-          const travelled = Math.hypot(me.clientX - startX, me.clientY - startY);
+          const traveled = Math.hypot(me.clientX - startX, me.clientY - startY);
           if (pointerType === 'mouse') {
-            if (travelled >= DRAG_THRESHOLD_PX) {
+            if (traveled >= DRAG_THRESHOLD_PX) {
               lift(me.clientX, me.clientY);
             }
-          } else if (travelled >= DRAG_THRESHOLD_PX) {
+          } else if (traveled >= DRAG_THRESHOLD_PX) {
             // Finger moved before the hold elapsed — this is a scroll, not a drag.
             teardown();
           }

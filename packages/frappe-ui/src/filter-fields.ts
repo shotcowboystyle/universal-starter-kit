@@ -2,7 +2,7 @@
  * The one filterable-field vocabulary (MPO-15, LC-16).
  *
  * Which doctype fields can filter, the standard doc fields every doctype
- * carries, how they are labelled, desk's operator vocabulary (=, !=, like,
+ * carries, how they are labeled, desk's operator vocabulary (=, !=, like,
  * not like, in, not in, comparisons, between, is set / is not set) and the
  * two-way frappe tuple conversion. Both list stacks read it: the desk list
  * chrome (filter editor, chips, quick filters) takes the descriptors, and

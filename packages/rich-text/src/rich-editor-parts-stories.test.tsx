@@ -145,7 +145,7 @@ describe('RichEditor shell stories', () => {
     expect(labels).not.toContain('Text Color');
   });
 
-  it("WithError keeps the whole shell, since the error is the frame's colour", () => {
+  it("WithError keeps the whole shell, since the error is the frame's color", () => {
     const { container, getByText } = mount(WithError);
     expect(container.querySelector("[role='toolbar']")).toBeTruthy();
     expect(getByText('Rich text')).toBeTruthy();

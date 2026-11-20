@@ -122,7 +122,7 @@ describe("the type scale IS the era's, not a copy of it", () => {
     expect(weight['10']).toBe('800');
   });
 
-  it('every declared weight has a face, so nothing is synthesised', () => {
+  it('every declared weight has a face, so nothing is synthesized', () => {
     const { face } = defaultHeadingFont;
     for (const w of new Set(Object.values(table(defaultHeadingFont.weight)))) {
       expect(face?.[String(w)], `face[${w}]`).toBeDefined();
@@ -196,7 +196,7 @@ describe('surfaces address semantic tokens, so sub-themes work', () => {
 
   it('a raw ramp step is inert inside surface1/surface2, which is the whole point', () => {
     // Structural, not chromatic: `$background` resolves to `$color1` under the
-    // default template so the rendered colour did not change. What changed is
+    // default template so the rendered color did not change. What changed is
     // that `<Theme name="surface1">` can now move it.
     const painted = Object.values(knobProps())
       .map(backgroundColorOf)

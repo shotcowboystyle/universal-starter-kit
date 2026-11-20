@@ -18,7 +18,7 @@ import { renderMarkdown } from './renderer';
 import type { MarkdownComponents } from './types';
 
 // The factory is hoisted above every import, so it closes over nothing but
-// JSX — a tamagui element here would be read before its module initialises.
+// JSX — a tamagui element here would be read before its module initializes.
 vi.mock(import('./mermaid/MermaidBlock'), () => ({
   MermaidBlock: ({ children }: { children: string }) => <span data-testid="mermaid-block">{children}</span>,
 }));
@@ -40,7 +40,7 @@ describe('renderMarkdown — mermaid fences', () => {
     expect(container.textContent).toContain('const a = 1;');
   });
 
-  it('treats an unlabelled fence as code, never as a diagram', () => {
+  it('treats an unlabeled fence as code, never as a diagram', () => {
     const { queryByTestId } = renderDoc('```\ngraph TD\n  A-->B\n```');
     expect(queryByTestId('mermaid-block')).toBeNull();
   });

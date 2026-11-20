@@ -82,7 +82,7 @@ export const themeConfig = createDefaultThemeConfig({
 ```
 
 A dropped component sub-theme does not crash, it renders in its parent's
-colours, so list everything the surface renders and enters. `subsetThemes`
+colors, so list everything the surface renders and enters. `subsetThemes`
 is the same filter as a pure function over a built matrix.
 
 ## License

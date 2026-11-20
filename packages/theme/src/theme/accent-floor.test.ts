@@ -11,7 +11,7 @@ const themes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, default
 const hex = (raw: string) => {
   const value = normalizeToHex(raw);
   if (value == null || value === '') {
-    throw new Error(`not an opaque colour: ${raw}`);
+    throw new Error(`not an opaque color: ${raw}`);
   }
   return value;
 };

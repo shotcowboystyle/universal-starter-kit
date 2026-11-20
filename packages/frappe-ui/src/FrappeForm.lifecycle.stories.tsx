@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { assetLoanLifecycleFixtures } from '../tests/fixtures/assetLoanLifecycle';
+import { assetLoanLifecycleFixtures } from '../tests/fixtures/asset-loan-lifecycle';
 
 import { FrappeStoryProvider, frappeStoriesLive } from './frappe-story-target';
 import { FrappeForm } from './FrappeForm';

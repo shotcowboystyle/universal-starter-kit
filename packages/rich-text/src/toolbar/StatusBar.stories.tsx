@@ -122,7 +122,7 @@ export const MarkdownMode: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Empty — a fresh document pluralises at zero
+// Empty — a fresh document pluralizes at zero
 // ---------------------------------------------------------------------------
 
 export const Empty: Story = {

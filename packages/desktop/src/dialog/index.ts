@@ -31,12 +31,12 @@ export interface ConfirmDialogOptions {
 }
 
 export interface DialogApi {
-  open(options?: OpenDialogOptions): Promise<string | string[] | null>;
-  save(options?: SaveDialogOptions): Promise<string | null>;
-  message(message: string, options?: MessageDialogOptions): Promise<void>;
-  ask(message: string, options?: ConfirmDialogOptions): Promise<boolean>;
-  confirm(message: string, options?: ConfirmDialogOptions): Promise<boolean>;
-  prompt(message: string, defaultValue?: string): Promise<string | null>;
+  open: (options?: OpenDialogOptions) => Promise<string | string[] | null>;
+  save: (options?: SaveDialogOptions) => Promise<string | null>;
+  message: (message: string, options?: MessageDialogOptions) => Promise<void>;
+  ask: (message: string, options?: ConfirmDialogOptions) => Promise<boolean>;
+  confirm: (message: string, options?: ConfirmDialogOptions) => Promise<boolean>;
+  prompt: (message: string, defaultValue?: string) => Promise<string | null>;
 }
 
 /**
@@ -58,20 +58,22 @@ export interface DialogApi {
  * the `.gnome.*` extensions the GNOME vite config registers. Until then this
  * throws, loudly, on GNOME.
  */
-function browserDialog<Name extends 'alert' | 'confirm' | 'prompt'>(
-  name: Name,
-  api: string,
-): NonNullable<Window[Name]> {
-  const fn = typeof window === 'undefined' ? undefined : window[name];
-  if (typeof fn !== 'function') {
+const browserWindow = (name: 'alert' | 'confirm' | 'prompt', api: string): Window => {
+  // `typeof` because GJS may not declare `window` at all; a bare reference would throw.
+  const target = typeof window === 'undefined' ? undefined : window;
+  // The DOM typings say these globals always exist; the GJS stub window proves otherwise.
+  if (target?.[name] == null) {
     throw new TypeError(
       `@repo/desktop: dialog.${api} needs window.${name}, which this platform does not have. ` +
         `The dialog defaults are the browser's modal globals and are web-only; GNOME needs an Adw.AlertDialog ` +
         `backend in dialog/index.gnome.ts.`,
     );
   }
-  return fn.bind(window) as NonNullable<Window[Name]>;
-}
+  return target;
+};
+
+const withTitle = (message: string, title?: string): string =>
+  title === undefined || title === '' ? message : `${title}\n\n${message}`;
 
 export const dialog: DialogApi = {
   async open(_options?: OpenDialogOptions): Promise<string | string[] | null> {
@@ -83,15 +85,15 @@ export const dialog: DialogApi = {
     return null;
   },
   async message(message: string, options?: MessageDialogOptions): Promise<void> {
-    browserDialog('alert', 'message')(options?.title ? `${options.title}\n\n${message}` : message);
+    browserWindow('alert', 'message').alert(withTitle(message, options?.title));
   },
   async ask(message: string, options?: ConfirmDialogOptions): Promise<boolean> {
-    return browserDialog('confirm', 'ask')(options?.title ? `${options.title}\n\n${message}` : message);
+    return browserWindow('confirm', 'ask').confirm(withTitle(message, options?.title));
   },
   async confirm(message: string, options?: ConfirmDialogOptions): Promise<boolean> {
-    return browserDialog('confirm', 'confirm')(options?.title ? `${options.title}\n\n${message}` : message);
+    return browserWindow('confirm', 'confirm').confirm(withTitle(message, options?.title));
   },
   async prompt(message: string, defaultValue = ''): Promise<string | null> {
-    return browserDialog('prompt', 'prompt')(message, defaultValue);
+    return browserWindow('prompt', 'prompt').prompt(message, defaultValue);
   },
 };

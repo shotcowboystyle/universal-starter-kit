@@ -1,5 +1,5 @@
 /**
- * K4 (ruled 2026-09-26): DataTable honours tableZebra in every body mode. The
+ * K4 (ruled 2026-09-26): DataTable honors tableZebra in every body mode. The
  * virtual rows used to stripe unconditionally, so a virtualized table showed
  * zebra with the knob off and the paginated grid beside it did not.
  */

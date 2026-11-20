@@ -9,7 +9,7 @@ import { FrappeProvider } from './FrappeProvider';
 
 const PALETTE_REFERENCE = 'Frappe palette reference';
 
-// hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
+// hex-escape: Frappe sends column, event and series colors as hex: fixture data, not paint
 
 export default {
   title: 'FrappeUI/FrappeCalendar',

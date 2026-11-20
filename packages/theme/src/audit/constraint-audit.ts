@@ -159,11 +159,11 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
   // parseFloat tolerates unit suffixes ('9px', '0.5'); Number() would turn those into NaN.
   const toFloat = Number.parseFloat;
   // Own-property lookup by an arbitrary knob name read from the DOM.
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const lookup = <T>(table: Record<string, T>, name: string): T | undefined =>
     Object.hasOwn(table, name) ? table[name] : undefined;
   // dataset exists on HTMLElement and SVGElement; no other node kind in a surface carries data attributes.
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const dataOf = (el: Element): DOMStringMap =>
     el instanceof HTMLElement || el instanceof SVGElement ? el.dataset : {};
 
@@ -394,7 +394,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
    * Check inline style for hardcoded color values that bypass theme tokens.
    * Returns the offending property and value, or null if clean.
    */
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const _checkInlineColors = (el: Element): InlineColorBypass | null => {
     if (!(el instanceof HTMLElement || el instanceof SVGElement)) {
       return null;
@@ -432,7 +432,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // getComputedStyle resolves percentages to px, so check inline style
   // or CSS text for percentages. This is a best-effort check.
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const isPercentageBorderRadius = (el: Element): boolean =>
     (el instanceof HTMLElement || el instanceof SVGElement) && el.style.borderRadius.includes('%');
 
@@ -457,7 +457,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     return `${tag}${id}${cls}${role}${testId}` || tag;
   };
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const elementKey = (el: Element, scope: Element | Document): string => {
     const path: string[] = [];
     for (let node: Element | null = el; node; node = node.parentElement) {
@@ -493,7 +493,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // ── Helper: audit a single numeric property ───────────────────────────────
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const auditProp = (
     value: number | null,
     validSet: Set<number>,
@@ -514,7 +514,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // ── Read active preset and scheme from DOM ────────────────────────────────
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const readPreset = (): string => {
     const root = document.documentElement;
     // Try data attributes set by ThemeProvider
@@ -528,7 +528,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     );
   };
 
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serializes this function alone, so every helper must live inside it
   const readScheme = (): string => {
     const root = document.documentElement;
     if (root.classList.contains('t_dark')) {

@@ -3,7 +3,7 @@
  *
  * A map written from the docs goes stale the first time upstream adds a
  * variable, and nothing notices until a designer asks why one thing is the
- * wrong colour. So the vocabulary is re-derived from
+ * wrong color. So the vocabulary is re-derived from
  * `@xyflow/react/dist/style.css` on every run: a new name that is neither
  * mapped nor allowlisted fails here, and so does an allowlist entry whose
  * stated reason stops being true of the sheet.

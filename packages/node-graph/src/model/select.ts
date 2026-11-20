@@ -49,7 +49,7 @@ export const selectInMarquee = (nodes: readonly NodeRect[], marquee: Rect, mode:
 
 /**
  * `undefined` for an empty selection, not a zero rect at the origin — 0,0 is a
- * real position, and a toolbar centring on it would jump the viewport every
+ * real position, and a toolbar centering on it would jump the viewport every
  * time the selection emptied.
  */
 export const unionBounds = (rects: readonly Rect[]): Rect | undefined => {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button, Text, XStack, YStack } from 'tamagui';
 
-import { toDoFixtureData, useStoryConfig } from '../tests/storyFixtures';
-import type { ToDo, ToDoStatus } from '../tests/storyFixtures';
+import { toDoFixtureData, useStoryConfig } from '../tests/story-fixtures';
+import type { ToDo, ToDoStatus } from '../tests/story-fixtures';
 
 import type { FrappeCollectionOptionsConfig } from './collection';
 import { useFrappeCollection } from './frappe-react';

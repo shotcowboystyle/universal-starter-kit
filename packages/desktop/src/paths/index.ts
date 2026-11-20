@@ -1,9 +1,9 @@
 export interface PathsApi {
-  getAppPath(): Promise<string>;
-  getPath(name: string): Promise<string>;
-  join(...segments: string[]): Promise<string>;
-  resolve(...segments: string[]): Promise<string>;
-  dirname(path: string): Promise<string>;
+  getAppPath: () => Promise<string>;
+  getPath: (name: string) => Promise<string>;
+  join: (...segments: string[]) => Promise<string>;
+  resolve: (...segments: string[]) => Promise<string>;
+  dirname: (path: string) => Promise<string>;
 }
 
 // Default web implementation (no-op)

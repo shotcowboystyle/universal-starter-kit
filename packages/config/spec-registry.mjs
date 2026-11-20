@@ -1,5 +1,5 @@
 /**
- * Slot-margin, size-recipe-escape and colour-literal-escape registries — parsed from the living
+ * Slot-margin, size-recipe-escape and color-literal-escape registries — parsed from the living
  * rulebook, the same way drawingRegistry.mjs reads its own.
  *
  * An escape is declared by name in a committed registry that is
@@ -197,7 +197,7 @@ if (invokedDirectly) {
     for (const { file, reason } of escapes.escapes) {
       console.log(`    ${file} — ${reason}`);
     }
-    console.log(`  colour-literal escapes (present=${hexEscapes.present}):`);
+    console.log(`  color-literal escapes (present=${hexEscapes.present}):`);
     for (const { file, reason } of hexEscapes.escapes) {
       console.log(`    ${file} — ${reason}`);
     }

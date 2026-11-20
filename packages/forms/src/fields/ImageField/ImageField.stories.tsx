@@ -256,7 +256,7 @@ export const BrokenImage: Story = {
     value: 'https://invalid.invalid/missing.png',
     imageWidth: 96,
     imageHeight: 96,
-    helperText: 'Failed load keeps the frame and stays labelled',
+    helperText: 'Failed load keeps the frame and stays labeled',
   },
   render: (args) => <ImageField {...args} />,
 };

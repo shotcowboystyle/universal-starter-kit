@@ -4,7 +4,7 @@
  * Three laws, each from design §11 / §7.1:
  *  - the width ladder remaps to `NodeKindSpec.measure.width` and never touches
  *    the control-height recipe;
- *  - `capContainerRadius` behaviour at all five radius stops;
+ *  - `capContainerRadius` behavior at all five radius stops;
  *  - `portSpacing` floors `minHeight` at ports × portSpacing.
  */
 

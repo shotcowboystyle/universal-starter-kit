@@ -330,7 +330,7 @@ export const semanticGroups: SemanticGroup[] = [
   { key: 'text', label: 'Text', from: 11, to: 12, color: '#5af' },
 ];
 
-/** Normalise a raw color scale into 6-digit hex strings. Returns null when parsing fails. */
+/** Normalize a raw color scale into 6-digit hex strings. Returns null when parsing fails. */
 export const normalizeColorScale = (raw: string[]): string[] | null => {
   if (raw.length !== 12) {
     return null;

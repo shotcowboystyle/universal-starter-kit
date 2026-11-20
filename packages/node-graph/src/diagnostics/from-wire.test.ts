@@ -5,7 +5,7 @@
  * so milestone 4 can add a runner without a bridge change, and the record types
  * it as a union the panel renders. A cast would let a canvas one version ahead
  * put a runner name on screen that this build knows nothing about; narrowing to
- * `none` says "no runner I recognise" instead, which is the honest reading of
+ * `none` says "no runner I recognize" instead, which is the honest reading of
  * an unknown value.
  */
 
@@ -51,11 +51,11 @@ describe(graphDiagnosticsFromWire, () => {
     expect(record.scheme).toBe('dark');
   });
 
-  it('keeps a runner kind it recognises', () => {
+  it('keeps a runner kind it recognizes', () => {
     expect(graphDiagnosticsFromWire({ ...wire, layoutRunner: 'worker-blob' }).layoutRunner).toBe('worker-blob');
   });
 
-  it('narrows a runner it does not recognise to none, rather than casting', () => {
+  it('narrows a runner it does not recognize to none, rather than casting', () => {
     // A canvas from a later milestone naming a runner this build has never
     // heard of. Reporting the string verbatim would put an unknown runner on
     // screen as if this build knew what it meant.

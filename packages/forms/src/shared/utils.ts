@@ -276,7 +276,7 @@ const RADIUS_TOKEN_TO_STOP = new Map<string, BorderRadius>(
 
 /**
  * A state bag carries whatever the recipe put in it — a stop name, a radius
- * token, or a raw px value. An unrecognised value resolves to `full`, which
+ * token, or a raw px value. An unrecognized value resolves to `full`, which
  * for BINARY is h/2: the safe direction, because the class has no
  * intermediate value to fall back to.
  */

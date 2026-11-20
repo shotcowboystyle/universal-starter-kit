@@ -72,7 +72,7 @@ const clearIfHeld = (prev: string | null, value: string): string | null => (prev
 
 const hasText = (value: string | undefined | null): value is string => (value ?? '') !== '';
 
-/** Seam hairline between unselected neighbours, laid along the run's cross axis. */
+/** Seam hairline between unselected neighbors, laid along the run's cross axis. */
 const seamProps = (orientation: 'horizontal' | 'vertical') =>
   orientation === 'horizontal'
     ? {
@@ -531,7 +531,7 @@ export const ToggleGroup = ({
           )}
           // Ring rides the keyboard-focused item (inset, clipped
           // group). Never a selection border. ToggleFrame's focus fill is
-          // re-asserted so the accent chip does not grey out on choose.
+          // re-asserted so the accent chip does not gray out on choose.
           focusStyle={{
             ...(selectedLive ? activeColors : undefined),
             ...focusRing,

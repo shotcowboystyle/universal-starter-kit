@@ -8,46 +8,74 @@
 // stamped commit (MPO-346).
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-const root = resolve(import.meta.dirname, '..');
-const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
-const url = process.env.MPO_SOURCE_URL ?? pkg.repository.url.replace(/^git\+/, '');
+/** @typedef {{ version: string, repository: { url: string } }} CliPackage */
 
-function git(args) {
-  return execFileSync('git', args, {
+/**
+ * @param {string} text the contents of a CLI package.json
+ * @returns {CliPackage} the parsed manifest
+ */
+const parsePackage = (text) =>
+  // SAFETY: the CLI's package.json always declares version and repository.url
+  // oxlint-disable-next-line eslint/no-inline-comments, typescript/no-unsafe-type-assertion -- a JSDoc cast is an inline comment; JSON.parse returns any, see SAFETY above
+  /** @type {CliPackage} */ (JSON.parse(text));
+
+const root = path.resolve(import.meta.dirname, '..');
+const pkg = parsePackage(readFileSync(path.join(root, 'package.json'), 'utf-8'));
+const url = process.env.MPO_SOURCE_URL ?? pkg.repository.url.replace(/^git\+/u, '');
+
+/**
+ * @param {string[]} args git arguments
+ * @returns {string} git's trimmed stdout
+ */
+const git = (args) =>
+  // oxlint-disable-next-line sonarjs/no-os-command-from-path -- build-time script; the developer's git reads this checkout
+  execFileSync('git', args, {
     cwd: root,
     encoding: 'utf-8',
     stdio: ['ignore', 'pipe', 'ignore'],
   }).trim();
-}
 
-function committedVersion(rev) {
+/**
+ * @param {string} rev a commit
+ * @returns {string | undefined} the CLI version package.json carries at that commit, if any
+ */
+const committedVersion = (rev) => {
+  let version;
   try {
-    return JSON.parse(git(['show', `${rev}:./package.json`])).version;
+    ({ version } = parsePackage(git(['show', `${rev}:./package.json`])));
   } catch {
-    return;
+    // No package.json at that commit: it carries no CLI version.
   }
-}
+  return version;
+};
 
-let sha = process.env.MPO_SOURCE_SHA;
-let skipped = '';
-if (!sha) {
+/** @returns {string | undefined} the HEAD commit, when this is a git checkout */
+const headCommit = () => {
   let head;
   try {
     head = git(['rev-parse', 'HEAD']);
   } catch {
-    head = undefined;
+    // Not a git checkout (e.g. a tarball build): nothing to stamp.
   }
-  const version = head && committedVersion(head);
-  if (version === pkg.version) {
-    sha = head;
-  } else if (head) {
-    skipped = ` (HEAD ${head.slice(0, 12)} carries ${version ?? 'no'} cli version, not ${pkg.version})`;
+  return head;
+};
+
+let sha = process.env.MPO_SOURCE_SHA ?? '';
+let skipped = '';
+if (sha === '') {
+  const head = headCommit();
+  if (head !== undefined) {
+    const version = committedVersion(head);
+    if (version === pkg.version) {
+      sha = head;
+    } else {
+      skipped = ` (HEAD ${head.slice(0, 12)} carries ${version ?? 'no'} cli version, not ${pkg.version})`;
+    }
   }
 }
-const stamp = { cliVersion: pkg.version, url, ...(sha ? { sha } : {}) };
-mkdirSync(join(root, 'lib'), { recursive: true });
-writeFileSync(join(root, 'lib/source.json'), `${JSON.stringify(stamp, null, 2)}\n`);
-process.stdout.write(`source: ${sha ?? '(no git sha)'}${skipped} ${url}\n`);
+const stamp = sha === '' ? { cliVersion: pkg.version, url } : { cliVersion: pkg.version, url, sha };
+mkdirSync(path.join(root, 'lib'), { recursive: true });
+writeFileSync(path.join(root, 'lib/source.json'), `${JSON.stringify(stamp, null, 2)}\n`);
+process.stdout.write(`source: ${sha === '' ? '(no git sha)' : sha}${skipped} ${url}\n`);

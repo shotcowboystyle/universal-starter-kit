@@ -47,7 +47,7 @@ export type GraphFlowNodeData = {
   /** The consumer's own node payload. */
   readonly data: unknown;
   readonly ports: readonly PortSpec[];
-  /** `NodeKindSpec.intent`, so a kind can carry a semantic colour. */
+  /** `NodeKindSpec.intent`, so a kind can carry a semantic color. */
   readonly intent?: string;
   readonly locked?: boolean;
 };

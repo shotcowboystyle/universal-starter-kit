@@ -16,7 +16,7 @@ const meta: Meta<typeof DatetimePicker> = {
     docs: {
       description: {
         component:
-          'Combined date + time picker. Date stays a calendar grid; time uses iOS hour/minute/AM-PM wheels with a fixed centre band.',
+          'Combined date + time picker. Date stays a calendar grid; time uses iOS hour/minute/AM-PM wheels with a fixed center band.',
       },
     },
   },

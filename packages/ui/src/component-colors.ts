@@ -12,7 +12,7 @@ export const componentColors = {
    * Surface-level backgrounds and borders (cards, panels, containers).
    *
    * `background` was `$color2` while `resolveKnobs`' own `surface`
-   * fragment said `$color1` — two answers to "what colour is a surface",
+   * fragment said `$color1` — two answers to "what color is a surface",
    * split across two packages. Both now say `$background`, which is also the
    * token Tamagui addresses and the only one a `surface1`/`surface2`
    * sub-theme can move.

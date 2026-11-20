@@ -68,8 +68,8 @@ describe(SchemaWizard, () => {
   it('LC-63 wizard probe: fill, advance, return keeps the value', async () => {
     const { container } = renderWithProviders(<Harness />);
     const input =
-      (container.querySelector('#first_name') as HTMLInputElement | null) ??
-      (container.querySelector("[name='first_name']") as HTMLInputElement | null) ??
+      container.querySelector<HTMLInputElement>('#first_name') ??
+      container.querySelector<HTMLInputElement>("[name='first_name']") ??
       container.querySelector('input')!;
     expect(input).toBeTruthy();
     fireEvent.change(input, { target: { value: 'Ada' } });
@@ -84,8 +84,8 @@ describe(SchemaWizard, () => {
       fireEvent.click(container.querySelector("[data-testid='wizard-back']")!);
     });
     const again =
-      (container.querySelector('#first_name') as HTMLInputElement | null) ??
-      (container.querySelector("[name='first_name']") as HTMLInputElement | null) ??
+      container.querySelector<HTMLInputElement>('#first_name') ??
+      container.querySelector<HTMLInputElement>("[name='first_name']") ??
       container.querySelector('input')!;
     expect(again.value).toBe('Ada');
   });
@@ -101,9 +101,9 @@ describe(SchemaWizard, () => {
       await sleep(0);
     });
     const first =
-      (container.querySelector('#first_name') as HTMLElement | null) ??
-      (container.querySelector("[name='first_name']") as HTMLElement | null) ??
-      (container.querySelector('input') as HTMLElement | null);
+      container.querySelector<HTMLElement>('#first_name') ??
+      container.querySelector<HTMLElement>("[name='first_name']") ??
+      container.querySelector<HTMLElement>('input');
     expect(first).toBeTruthy();
     expect(
       document.activeElement === first ||
@@ -127,7 +127,7 @@ describe(SchemaWizard, () => {
     await act(async () => {
       fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
-    const primary = container.querySelector("[data-testid='wizard-primary']") as HTMLElement;
+    const primary = container.querySelector<HTMLElement>("[data-testid='wizard-primary']")!;
     expect(primary.textContent).toBe('Restore backup');
     await act(async () => {
       fireEvent.click(primary);

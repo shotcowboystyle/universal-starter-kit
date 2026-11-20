@@ -249,7 +249,7 @@ describe('Signature field', () => {
       expect(bg.replaceAll(/\s/gu, '')).not.toMatch(/^#fff(?:fff)?$/iu);
     });
 
-    it('elevation knob reaches the pad frame (large-canvas honour, FileUpload sibling)', () => {
+    it('elevation knob reaches the pad frame (large-canvas honor, FileUpload sibling)', () => {
       const none = renderWithProviders(
         <Preset overrides={{ elevation: 'none' }}>
           <Signature

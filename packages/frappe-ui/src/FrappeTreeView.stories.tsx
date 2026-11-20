@@ -55,7 +55,7 @@ const regionDocs: Region[] = [
   },
 ];
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock envelope the stories answer with
 const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const requestUrl = (input: RequestInfo | URL): string => {
@@ -208,7 +208,7 @@ ColonPath.parameters = {
   docs: {
     description: {
       story:
-        "The account IS its path (Assets:Personal:Bank:Checking). Meta reports is_tree 0 and the doctype has no parent field, so the parent-field path would paint the unsupported state instead. pathSeparator synthesises the branches client-side from each row's own key. A synthesised branch carries no document: clicking it fires onPathSelect with the path and no doc, and onNodeClick stays silent. The balances hang off the leaves, which are the only real rows.",
+        "The account IS its path (Assets:Personal:Bank:Checking). Meta reports is_tree 0 and the doctype has no parent field, so the parent-field path would paint the unsupported state instead. pathSeparator synthesizes the branches client-side from each row's own key. A synthesized branch carries no document: clicking it fires onPathSelect with the path and no doc, and onNodeClick stays silent. The balances hang off the leaves, which are the only real rows.",
     },
   },
 };

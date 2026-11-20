@@ -12,7 +12,7 @@ export default {
     docs: {
       description: {
         component:
-          'Twelve-step theme ramp with semantic group brackets. Tamagui has no equivalent; this is the mpo knob-devtools colour line.',
+          'Twelve-step theme ramp with semantic group brackets. Tamagui has no equivalent; this is the mpo knob-devtools color line.',
       },
     },
   },

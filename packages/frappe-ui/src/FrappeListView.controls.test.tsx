@@ -9,8 +9,8 @@ import { initReactI18next } from 'react-i18next';
 import { Text } from 'tamagui';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import type { FrappeNavigation } from './frappe-navigation';
 import { FrappeListView } from './FrappeListView';

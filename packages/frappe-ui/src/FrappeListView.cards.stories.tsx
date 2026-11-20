@@ -3,8 +3,8 @@ import { useResolvedKnobs } from '@repo/theme';
 import { Card, Image } from '@repo/ui';
 import { Text, YStack } from 'tamagui';
 
-import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import { FrappeListView } from './FrappeListView';
 import { FrappeProvider } from './FrappeProvider';

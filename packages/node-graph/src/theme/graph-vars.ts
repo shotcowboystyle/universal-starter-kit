@@ -24,7 +24,7 @@ import type { ResolvedKnobs } from '@repo/theme';
 // ── Theme access ─────────────────────────────────────────────────────────────
 
 /**
- * How a colour is reached, in the two forms this module needs.
+ * How a color is reached, in the two forms this module needs.
  *
  * `css` is what gets emitted for a plain reference. On web it is the Tamagui
  * Variable's own `var(--…)` string, read off the live theme rather than
@@ -58,7 +58,7 @@ export const xyVarAllowlist: Readonly<Record<string, string>> = {
     "same four built-in node classes; a GraphNode's border comes from knobProps.controlBorderOutlined / .surface",
   '--xy-node-border-radius':
     "same four built-in node classes; a GraphNode's radius rides the CONTAINER-CAP law in graphNode.ts",
-  '--xy-node-color': "same four built-in node classes; a GraphNode's text colour comes from knobProps.body",
+  '--xy-node-color': "same four built-in node classes; a GraphNode's text color comes from knobProps.body",
   '--xy-node-boxshadow-hover':
     "same four built-in node classes, hover only; a GraphNode's elevation comes from knobProps.elevationChrome",
   '--xy-node-boxshadow-selected':
@@ -74,9 +74,9 @@ export const xyVarAllowlist: Readonly<Record<string, string>> = {
  *
  * Design 6.2 asks the spec to run `isResolvableThemeValue` over "every mapped
  * value", and taken literally that is not satisfiable: two of the 28 are CSS
- * SHORTHANDS (`1px dashed <colour>`, a box-shadow), and the predicate answers
- * "is this a colour a renderer can resolve" — it says no to any shorthand, and
- * to `2px`. So the map carries the ATOMS: every `color`, and every colour
+ * SHORTHANDS (`1px dashed <color>`, a box-shadow), and the predicate answers
+ * "is this a color a renderer can resolve" — it says no to any shorthand, and
+ * to `2px`. So the map carries the ATOMS: every `color`, and every color
  * inside a `composite`, is put through the predicate; a `length` is a finite
  * number, which the predicate also accepts. Nothing is exempted by hand.
  */
@@ -177,18 +177,18 @@ export const edgeStrokeWidthPx: Readonly<Record<string, number>> = {
   '2': 3,
 };
 
-// ── Colour helpers ───────────────────────────────────────────────────────────
+// ── Color helpers ───────────────────────────────────────────────────────────
 
 const clamp255 = (value: number): number => Math.max(0, Math.min(255, Math.round(value)));
 
 const roundAlpha = (value: number): number => Math.round(Math.max(0, Math.min(1, value)) * 1000) / 1000;
 
 /**
- * The same colour at a different alpha, as `rgba()` / `hsla()`.
+ * The same color at a different alpha, as `rgba()` / `hsla()`.
  *
  * No `color-mix()` and no hex out: the blends are computed here so the emitted
  * value is one every engine in play already paints. Returns `undefined` when
- * the input is not a literal colour this can read (a `var()` reference, an
+ * the input is not a literal color this can read (a `var()` reference, an
  * `oklch()`), so the caller degrades visibly rather than emitting nonsense.
  */
 export const withAlpha = (color: string | undefined, alpha: number): string | undefined => {
@@ -275,7 +275,7 @@ const warnOnce = (message: string): void => {
  * (`resolveKnobs.ts:312-322`, pure `rgba()`), so it is used verbatim. On the
  * NATIVE host that key is absent — `elevationPaint` only sets it under `isWeb`
  * — and the shadow is rebuilt from the paint props, resolving a `$token`
- * shadow colour through the theme. `elevation: "none"` resolves to an empty
+ * shadow color through the theme. `elevation: "none"` resolves to an empty
  * chrome and emits `none`, which is the right answer rather than a missing one.
  */
 export interface ElevationShadow {
@@ -296,7 +296,7 @@ export const elevationBoxShadow = (resolved: ResolvedKnobs, theme: GraphThemeAcc
   const tinted = withAlpha(raw, chrome.shadowOpacity ?? 0.15);
   if (tinted === undefined) {
     warnOnce(
-      `elevation shadow colour ${JSON.stringify(chrome.shadowColor)} is not a literal colour this can blend, so --xy-controls-box-shadow falls back to none`,
+      `elevation shadow color ${JSON.stringify(chrome.shadowColor)} is not a literal color this can blend, so --xy-controls-box-shadow falls back to none`,
     );
     return { css: 'none', colors: [] };
   }
@@ -331,9 +331,9 @@ export const graphVarValues = (
   const bodyColor = toCss(knobProps.body.color, theme) ?? themeColor('color');
   const hoverBackground = toCss(control.hoverKnobProps?.backgroundColor, theme);
   // Design 6.2 reads this off `control.hoverKnobProps.color`, but
-  // `ControlStateProps` carries no colour at all (recipes.ts:7-17) — text
-  // colour is `TextStateProps` on the `text` recipe (recipes.ts:19-23), which
-  // is where the hover label colour actually lives.
+  // `ControlStateProps` carries no color at all (recipes.ts:7-17) — text
+  // color is `TextStateProps` on the `text` recipe (recipes.ts:19-23), which
+  // is where the hover label color actually lives.
   const hoverColor = toCss(text.hoverKnobProps?.color, theme);
 
   const edgeStrokeWidth = edgeStrokeWidthPx[String(knobProps.controlBorderFilled.borderWidth)] ?? 2;

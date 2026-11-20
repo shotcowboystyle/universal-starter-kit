@@ -14,7 +14,7 @@ import { renderWithProviders } from '@repo/test-utils';
  *
  * `expo-linear-gradient` ships untranspiled JSX in its published build, which
  * the web transform cannot parse, so it is mocked into a probe element. The
- * mock is the gradient, not the component under test: colours, start and end
+ * mock is the gradient, not the component under test: colors, start and end
  * come straight from WheelEdgeFade.
  */
 import { cleanup } from '@testing-library/react';
@@ -122,18 +122,18 @@ describe('WheelEdgeFade — native', () => {
     expect(top[0]).not.toMatch(/,\s*0\)$/u);
   });
 
-  it('derives the fade colour from the theme background rather than a hardcoded white', () => {
+  it('derives the fade color from the theme background rather than a hardcoded white', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={24} />);
     const [opaque, clear] = colorsOf(gradients(container)[0]);
     expect(opaque).toBeTruthy();
     expect(opaque).not.toBe('transparent');
-    // The clear stop is the SAME colour at zero alpha, so the band never
+    // The clear stop is the SAME color at zero alpha, so the band never
     // shifts hue across its length.
     const channels = /rgba\((?<channels>[^)]+),\s*0\)$/u.exec(clear)?.groups?.channels;
     expect(channels, `clear stop ${clear} must be the opaque stop at alpha 0`).toBeTruthy();
   });
 
-  it('runs both gradients vertically down the centre line', () => {
+  it('runs both gradients vertically down the center line', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={24} />);
     for (const gradient of gradients(container)) {
       expect(gradient.dataset.start).toBe(JSON.stringify({ x: 0.5, y: 0 }));

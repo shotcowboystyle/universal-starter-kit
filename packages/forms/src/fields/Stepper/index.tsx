@@ -655,7 +655,7 @@ const StepperArea = ({
     aria-valuenow={currentValue ?? undefined}
     aria-valuemin={boundsLo}
     aria-valuemax={boundsHi}
-    // Labelled: the sibling Label wires `aria-labelledby` onto this id
+    // Labeled: the sibling Label wires `aria-labelledby` onto this id
     // itself — naming it here too doubles the spoken name.
     aria-label={hasLabel ? undefined : t('Number')}
     aria-required={required ? true : undefined}

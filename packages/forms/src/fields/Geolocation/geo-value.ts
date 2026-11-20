@@ -136,7 +136,7 @@ export const detectGeoFormat = (value: string | undefined): GeoStorageFormat =>
 const isPointFeature = (feature: GeoJsonFeature): boolean => feature.geometry?.type === 'Point';
 
 /**
- * Serialise coordinates back to disk in the format the document arrived in.
+ * Serialize coordinates back to disk in the format the document arrived in.
  *
  * `latlng` emits this repo's compact `{"lat":n,"lng":n}`. `featurecollection`
  * emits a stock-Frappe GeoJSON FeatureCollection with `[lng, lat]` ordering, so
@@ -147,7 +147,7 @@ const isPointFeature = (feature: GeoJsonFeature): boolean => feature.geometry?.t
  * writes `point_type`/`radius` there for circles), and any Polygon/LineString
  * features the user drew in Frappe survive a coordinate edit untouched. With no
  * Point feature to move, one is appended with the empty `properties` a plain
- * `L.marker` serialises to.
+ * `L.marker` serializes to.
  */
 export const formatGeoValue = (coordinates: GeoValue, format: GeoStorageFormat, previous?: string): string => {
   if (format !== 'featurecollection') {

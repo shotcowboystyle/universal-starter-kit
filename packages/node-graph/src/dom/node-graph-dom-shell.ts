@@ -224,7 +224,7 @@ interface BoundaryProps {
  *
  * Measured on the iPhone 16e simulator: a render throw inside the canvas
  * reached `window.onerror`, which reported the message `"Script error."` and
- * nothing else. That is not a bug in the handler — a browser sanitises
+ * nothing else. That is not a bug in the handler — a browser sanitizes
  * `onerror` to exactly that string when the throw came from a script loaded
  * from a different origin than the document, and an Expo DOM component's
  * `<script src>` is precisely that. So the host saw `phase: "runtime"`, kept

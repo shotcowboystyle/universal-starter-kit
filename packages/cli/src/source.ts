@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import path from 'node:path';
 
 import { cliRoot, cliVersion } from './commands/provenance';
 
-export const monorepoUrl = 'https://github.com/shotcowboystyle/universal-starter-kit/mpo.git';
+export const monorepoUrl = 'https://github.com/shotcowboystyle/universal-starter-kit.git';
 
 export interface SourceSpec {
   /** Path to a local clone, or a git URL. */
@@ -17,6 +18,7 @@ export interface SourceSpec {
    * stamp    = lib/source.json written by the build
    * tag      = no stamp: the release tag of this CLI version
    */
+  // oxlint-disable-next-line sonarjs/max-union-size -- closed set of origins documented above; an alias would only move it
   origin: 'flag' | 'monorepo' | 'stamp' | 'tag';
   warning?: string;
 }
@@ -27,26 +29,37 @@ export interface SourceStamp {
   url?: string;
 }
 
-export function isGitUrl(source: string): boolean {
-  return /^(https?|ssh|git|file):\/\//.test(source) || /^[\w.-]+@[\w.-]+:/.test(source);
-}
+const URL_SCHEME = /^(?:https?|ssh|git|file):\/\//u;
+const SCP_LIKE = /^[\w.-]+@[\w.-]+:/u;
+
+export const isGitUrl = (source: string): boolean => URL_SCHEME.test(source) || SCP_LIKE.test(source);
+
+const nonEmpty = (value: string | undefined): value is string => value !== undefined && value !== '';
 
 /** The monorepo checkout this CLI runs from, if any (src via tsx, or the workspace link). */
-export function monorepoCheckout(): string | undefined {
-  const root = resolve(cliRoot(), '../..');
-  if (existsSync(join(root, 'apps/one/package.json')) && existsSync(join(root, 'public/cli/package.json'))) {
+export const monorepoCheckout = (): string | undefined => {
+  const root = path.resolve(cliRoot(), '../..');
+
+  if (
+    existsSync(path.join(root, 'apps/one/package.json')) &&
+    existsSync(path.join(root, 'packages/cli/package.json'))
+  ) {
     return root;
   }
-  return undefined;
-}
 
-export function readSourceStamp(): SourceStamp | undefined {
+  return undefined;
+};
+
+export const readSourceStamp = (): SourceStamp | undefined => {
   try {
-    return JSON.parse(readFileSync(join(cliRoot(), 'lib/source.json'), 'utf-8')) as SourceStamp;
+    // SAFETY: lib/source.json is written by scripts/stamp-source.mjs as {cliVersion, url, sha?}; every field is optional here
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse returns any; see SAFETY above
+    return JSON.parse(readFileSync(path.join(cliRoot(), 'lib/source.json'), 'utf-8')) as SourceStamp;
   } catch {
+    // No stamp (dev build or unbuilt checkout): resolveSource falls back to the release tag.
     return undefined;
   }
-}
+};
 
 /**
  * Where `mpo init` clones from. Flags win; a CLI running inside the monorepo
@@ -54,63 +67,70 @@ export function readSourceStamp(): SourceStamp | undefined {
  * time; a build without a stamp falls back to the release tag of its own
  * version, and `init` retries `main` when that tag is missing.
  */
-export function resolveSource(flags: { source?: string; checkout?: string } = {}): SourceSpec {
-  if (flags.source) {
+export const resolveSource = (flags: { source?: string; checkout?: string } = {}): SourceSpec => {
+  if (nonEmpty(flags.source)) {
     return {
       source: flags.source,
       ref: flags.checkout ?? (isGitUrl(flags.source) ? 'main' : 'HEAD'),
       origin: 'flag',
     };
   }
+
   const checkout = monorepoCheckout();
-  if (checkout) {
+
+  if (nonEmpty(checkout)) {
     return { source: checkout, ref: flags.checkout ?? 'HEAD', origin: 'monorepo' };
   }
+
   const stamp = readSourceStamp();
   const url = stamp?.url ?? monorepoUrl;
-  if (flags.checkout) {
+
+  if (nonEmpty(flags.checkout)) {
     return { source: url, ref: flags.checkout, origin: 'flag' };
   }
-  if (stamp?.sha) {
+
+  if (nonEmpty(stamp?.sha)) {
     return { source: url, ref: stamp.sha, origin: 'stamp' };
   }
+
   const version = cliVersion();
-  const ref = version ? `v${version}` : 'main';
+  const ref = nonEmpty(version) ? `v${version}` : 'main';
+
   return {
     source: url,
     ref,
     origin: 'tag',
-    warning: `this build of @repo/cli carries no source commit (lib/source.json); ` + `scaffolding from ${ref} instead`,
+    warning: `this build of @repo/cli carries no source commit (lib/source.json); scaffolding from ${ref} instead`,
   };
-}
+};
 
 export type SourceFailure = 'auth' | 'network' | 'unknown';
 
 const authFailures = [
-  /access denied/i,
-  /authentication failed/i,
-  /could not read (username|password)/i,
-  /terminal prompts disabled/i,
-  /permission denied \(/i,
-  /host key verification failed/i,
-  /returned error: 40[13]/i,
-  /repository not found/i,
-  /you don't have permission/i,
+  /access denied/iu,
+  /authentication failed/iu,
+  /could not read (?:username|password)/iu,
+  /terminal prompts disabled/iu,
+  /permission denied \(/iu,
+  /host key verification failed/iu,
+  /returned error: 40[13]/iu,
+  /repository not found/iu,
+  /you don't have permission/iu,
 ];
 
 const networkFailures = [
-  /could not resolve (host|hostname|proxy)/i,
-  /failed to connect/i,
-  /couldn't connect/i,
-  /connection (refused|reset|timed out|closed)/i,
-  /operation timed out/i,
-  /network is unreachable/i,
-  /no route to host/i,
-  /ssl|certificate/i,
+  /could not resolve (?:host|hostname|proxy)/iu,
+  /failed to connect/iu,
+  /couldn't connect/iu,
+  /connection (?:refused|reset|timed out|closed)/iu,
+  /operation timed out/iu,
+  /network is unreachable/iu,
+  /no route to host/iu,
+  /ssl|certificate/iu,
 ];
 
 /** What a failed `git ls-remote` says about why the source is unreadable. */
-export function classifySourceFailure(stderr: string): SourceFailure {
+export const classifySourceFailure = (stderr: string): SourceFailure => {
   if (authFailures.some((pattern) => pattern.test(stderr))) {
     return 'auth';
   }
@@ -118,31 +138,49 @@ export function classifySourceFailure(stderr: string): SourceFailure {
     return 'network';
   }
   return 'unknown';
-}
+};
+
+const URL_HOST = /^[a-z]+:\/\/(?:[^@/]*@)?(?<host>[^/:]+)/iu;
+
+/** Host of a scheme url (`https://host/…`) or an scp-like one (`git@host:org/repo`). */
+const hostOf = (url: string): string | undefined => {
+  const fromUrl = URL_HOST.exec(url)?.groups?.host;
+  if (fromUrl !== undefined) {
+    return fromUrl;
+  }
+  const at = url.indexOf('@');
+  const colon = at === -1 ? -1 : url.indexOf(':', at + 1);
+  return colon > at + 1 ? url.slice(at + 1, colon) : undefined;
+};
+
+const failureLines = (url: string, kind: SourceFailure, reason: string | undefined): string[] => {
+  if (kind === 'network') {
+    const because = nonEmpty(reason) ? `: ${reason}` : '';
+    return [
+      `Cannot reach the source repository ${url}${because}.`,
+      `The CLI scaffolds from this git repository, so it needs a network path to ${hostOf(url) ?? 'its host'} (check the connection, proxy or VPN).`,
+    ];
+  }
+  const denied = kind === 'auth' ? ': access denied' : '';
+  return [
+    `Cannot read the source repository ${url}${denied}.`,
+    'The CLI scaffolds from this git repository, so it needs read access to it: an account that can clone it, and a credential git uses without asking (a token in a git credential helper for https, an SSH key for ssh).',
+  ];
+};
 
 export class SourceAccessError extends Error {
   readonly url: string;
   readonly kind: SourceFailure;
   readonly gitOutput: string;
   constructor(url: string, kind: SourceFailure, gitOutput: string, reason?: string) {
-    const host = /^[a-z]+:\/\/(?:[^@/]*@)?([^/:]+)/i.exec(url)?.[1] ?? /@([^:]+):/.exec(url)?.[1];
-    const lines =
-      kind === 'network'
-        ? [
-            `Cannot reach the source repository ${url}${reason ? `: ${reason}` : ''}.`,
-            `The CLI scaffolds from this git repository, so it needs a network path to ${host ?? 'its host'} (check the connection, proxy or VPN).`,
-          ]
-        : [
-            `Cannot read the source repository ${url}${kind === 'auth' ? ': access denied' : ''}.`,
-            'The CLI scaffolds from this git repository, so it needs read access to it: an account that can clone it, and a credential git uses without asking (a token in a git credential helper for https, an SSH key for ssh).',
-          ];
+    const lines = failureLines(url, kind, reason);
     lines.push(`Check with: git ls-remote ${url}`, 'Or scaffold from a copy you can read: --source <path|url>');
     const detail = gitOutput
       .split('\n')
       .map((line) => line.trim())
-      .filter(Boolean)
+      .filter((line) => line !== '')
       .slice(-4);
-    if (detail.length) {
+    if (detail.length > 0) {
       lines.push('git said:', ...detail.map((line) => `  ${line}`));
     }
     super(lines.join('\n'));
@@ -162,14 +200,17 @@ const readableSources = new Set<string>();
  * timeout kills the whole process group: git's transport helper holds stderr
  * open after git itself exits.
  */
-export async function checkSourceAccess(
+export const checkSourceAccess = async (
   source: string,
   { timeoutMs = 30_000 }: { timeoutMs?: number } = {},
-): Promise<void> {
+): Promise<void> => {
   if (!isGitUrl(source) || readableSources.has(source)) {
     return;
   }
+
   const detached = process.platform !== 'win32';
+
+  // oxlint-disable-next-line sonarjs/no-os-command-from-path -- the user's own git, with their credential helpers, is the point of the probe
   const child = spawn('git', ['ls-remote', source, 'HEAD'], {
     detached,
     stdio: ['ignore', 'ignore', 'pipe'],
@@ -183,34 +224,48 @@ export async function checkSourceAccess(
       LC_ALL: 'C',
     },
   });
+
   let stderr = '';
   child.stderr.on('data', (chunk: Buffer) => {
     stderr += chunk.toString();
   });
+
   let timedOut = false;
+
   const timer = setTimeout(() => {
     timedOut = true;
     try {
-      if (detached && child.pid) {
+      if (detached && child.pid !== undefined) {
         process.kill(-child.pid, 'SIGKILL');
       } else {
         child.kill('SIGKILL');
       }
-    } catch {}
+    } catch {
+      // The process already exited between the timeout firing and the kill; nothing to stop.
+    }
   }, timeoutMs);
-  const code = await new Promise<number | null>((resolveExit, reject) => {
-    child.on('error', (err: NodeJS.ErrnoException) => {
-      reject(err.code === 'ENOENT' ? new Error(`git is required to scaffold from ${source}`) : err);
-    });
-    child.on('close', resolveExit);
-  }).finally(() => {
+
+  let code: number | null;
+
+  try {
+    // SAFETY: a ChildProcess 'close' event is emitted with (code: number | null, signal)
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- events.once returns any[]; see SAFETY above
+    [code] = (await once(child, 'close')) as [number | null];
+  } catch (error) {
+    throw error instanceof Error && 'code' in error && error.code === 'ENOENT'
+      ? new Error(`git is required to scaffold from ${source}`)
+      : error;
+  } finally {
     clearTimeout(timer);
-  });
+  }
+
   if (timedOut) {
     throw new SourceAccessError(source, 'network', stderr, `no answer within ${Math.round(timeoutMs / 1000)}s`);
   }
+
   if (code !== 0) {
     throw new SourceAccessError(source, classifySourceFailure(stderr), stderr);
   }
+
   readableSources.add(source);
-}
+};

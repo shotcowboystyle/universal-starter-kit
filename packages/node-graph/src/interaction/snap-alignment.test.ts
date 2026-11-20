@@ -157,7 +157,7 @@ describe('snapToAlignment: S4, nine line pairs per axis, nearest per axis', () =
     });
   });
 
-  it('takes x from one neighbour and y from another', () => {
+  it('takes x from one neighbor and y from another', () => {
     const result = snap({
       rect: { x: 302, y: 199, width: 100, height: 50 },
       candidates: [box('left', 300, 0), box('above', 0, 200)],

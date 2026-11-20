@@ -1,5 +1,5 @@
 /**
- * MPO-191 AC-3, mechanised.
+ * MPO-191 AC-3, mechanized.
  *
  * The claim is that a Tamagui node inside the WebView resolves knobs through
  * the REAL stack — `<Preset>` / `<Surface>` / `IntentContext` /

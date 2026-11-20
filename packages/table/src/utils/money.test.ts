@@ -145,7 +145,7 @@ describe('isMoneyString / isNegativeMoney', () => {
     expect(isMoneyString(10)).toBe(false);
   });
 
-  it('reads the sign for colour without parsing', () => {
+  it('reads the sign for color without parsing', () => {
     expect(isNegativeMoney('-0.01')).toBe(true);
     expect(isNegativeMoney('0.00')).toBe(false);
   });

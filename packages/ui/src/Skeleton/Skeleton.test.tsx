@@ -88,7 +88,7 @@ describe('Skeleton — announcer and motion', () => {
     expect(bone.className).toMatch(/_pe-none/u);
   });
 
-  it('fillStyle does not recolour the bone (neutral chrome)', () => {
+  it('fillStyle does not recolor the bone (neutral chrome)', () => {
     const filled = renderWithProviders(
       <Preset overrides={{ fillStyle: 'filled' }}>
         <Skeleton width={80} />

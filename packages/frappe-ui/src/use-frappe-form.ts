@@ -384,7 +384,7 @@ export const useFrappeForm = <TDoc extends { name: string; doctype: string }>(
   const promptNamed = isCreate && !!meta && isPromptNamed(meta.autoname, meta.naming_rule);
   const fetchMap = useMemo(() => (meta ? buildFetchMap(meta.fields) : undefined), [meta]);
 
-  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the sync layer threw; normalised to an Error here
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the sync layer threw; normalized to an Error here
   const handleDocSyncError = useCallback((err: unknown) => {
     setDocError(err instanceof Error ? err : new Error(String(err)));
   }, []);

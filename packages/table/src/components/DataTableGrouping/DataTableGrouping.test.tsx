@@ -130,7 +130,7 @@ describe(DataTableGrouping, () => {
     // Should show aggregation values
     expect(screen.getByText('North America')).toBeInTheDocument();
     // LC-12 render channel: the sum reaches the slot through the house
-    // number register, so it reads like the cells it summarises.
+    // number register, so it reads like the cells it summarizes.
     expect(screen.getByText(formatNumber(15_400))).toBeInTheDocument();
     expect(screen.queryByText('15400')).not.toBeInTheDocument();
   });

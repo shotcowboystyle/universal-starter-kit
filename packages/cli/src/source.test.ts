@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
@@ -6,7 +7,7 @@ import { createRequire } from 'node:module';
 import { createServer as createTcpServer } from 'node:net';
 import type { AddressInfo, Socket } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -20,28 +21,28 @@ import {
   SourceAccessError,
 } from './source';
 
-const monorepo = fileURLToPath(new URL('../../..', import.meta.url)).replace(/\/$/, '');
+const monorepo = fileURLToPath(new URL('../../..', import.meta.url)).replace(/\/$/u, '');
 
 describe(resolveSource, () => {
   it('flags win, with HEAD for a path and main for a url', () => {
-    expect(resolveSource({ source: '/tmp/mpo' })).toEqual({
-      source: '/tmp/mpo',
+    expect(resolveSource({ source: '/srv/mpo' })).toStrictEqual({
+      source: '/srv/mpo',
       ref: 'HEAD',
       origin: 'flag',
     });
-    expect(resolveSource({ source: 'https://example.com/mpo.git' })).toEqual({
+    expect(resolveSource({ source: 'https://example.com/mpo.git' })).toStrictEqual({
       source: 'https://example.com/mpo.git',
       ref: 'main',
       origin: 'flag',
     });
-    expect(resolveSource({ source: '/tmp/mpo', checkout: 'v7.11.0' }).ref).toBe('v7.11.0');
+    expect(resolveSource({ source: '/srv/mpo', checkout: 'v7.11.0' }).ref).toBe('v7.11.0');
   });
 
   it("a CLI running inside the monorepo scaffolds from that checkout's HEAD", () => {
     expect(monorepoCheckout()).toBe(monorepo);
-    expect(existsSync(join(monorepo, 'apps/one/package.json'))).toBe(true);
+    expect(existsSync(path.join(monorepo, 'apps/one/package.json'))).toBe(true);
     const spec = resolveSource();
-    expect(spec).toEqual({ source: monorepo, ref: 'HEAD', origin: 'monorepo' });
+    expect(spec).toStrictEqual({ source: monorepo, ref: 'HEAD', origin: 'monorepo' });
     expect(resolveSource({ checkout: 'main' }).ref).toBe('main');
   });
 
@@ -54,27 +55,22 @@ describe(resolveSource, () => {
     ]) {
       expect(isGitUrl(url), url).toBe(true);
     }
-    for (const path of ['/tmp/repo', '../repo', 'repo']) {
-      expect(isGitUrl(path), path).toBe(false);
+    for (const localPath of ['/srv/repo', '../repo', 'repo']) {
+      expect(isGitUrl(localPath), localPath).toBe(false);
     }
   });
 });
 
-async function listen(server: Server | ReturnType<typeof createTcpServer>): Promise<number> {
-  return await new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => {
-      resolve((server.address() as AddressInfo).port);
-    });
-  });
-}
+const listen = async (server: Server | ReturnType<typeof createTcpServer>): Promise<number> => {
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  return (server.address() as AddressInfo).port;
+};
 
-async function close(server: Server | ReturnType<typeof createTcpServer>): Promise<void> {
-  await new Promise((resolve) =>
-    server.close(() => {
-      resolve();
-    }),
-  );
-}
+const close = async (server: Server | ReturnType<typeof createTcpServer>): Promise<void> => {
+  server.close();
+  await once(server, 'close');
+};
 
 /**
  * Sources the CLI cannot read: a server that answers every request the way
@@ -84,9 +80,9 @@ async function close(server: Server | ReturnType<typeof createTcpServer>): Promi
  * never answers, so any prompt it reaches hangs the run.
  */
 describe('a source the CLI cannot read', () => {
-  const sandbox = mkdtempSync(join(tmpdir(), 'mpo-source-access-'));
-  const home = join(sandbox, 'home');
-  const prompt = join(sandbox, 'prompt.sh');
+  const sandbox = mkdtempSync(path.join(tmpdir(), 'mpo-source-access-'));
+  const home = path.join(sandbox, 'home');
+  const prompt = path.join(sandbox, 'prompt.sh');
   const sockets = new Set<Socket>();
   const denying = createServer((_request, response) => {
     response.writeHead(401, {
@@ -101,9 +97,9 @@ describe('a source the CLI cannot read', () => {
   let deniedUrl = '';
   let refusedUrl = '';
   let silentUrl = '';
-  const env: Record<string, string> = {
+  const env = {
     HOME: home,
-    XDG_CONFIG_HOME: join(home, '.config'),
+    XDG_CONFIG_HOME: path.join(home, '.config'),
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_ASKPASS: prompt,
     SSH_ASKPASS: prompt,
@@ -137,40 +133,39 @@ describe('a source the CLI cannot read', () => {
 
   it('an unauthorized source is an access error naming the url, without waiting on a prompt', async () => {
     const started = Date.now();
-    const error = await checkSourceAccess(deniedUrl).catch((error: unknown) => error);
+    const failure = checkSourceAccess(deniedUrl);
+    await expect(failure).rejects.toBeInstanceOf(SourceAccessError);
     expect(Date.now() - started).toBeLessThan(15_000);
-    expect(error).toBeInstanceOf(SourceAccessError);
-    const { kind, url, message } = error as SourceAccessError;
-    expect(kind).toBe('auth');
-    expect(url).toBe(deniedUrl);
-    expect(message).toContain(deniedUrl);
-    expect(message).toMatch(/needs read access/);
-    expect(message).toContain('--source <path|url>');
+    await expect(failure).rejects.toMatchObject({ kind: 'auth', url: deniedUrl });
+    await expect(failure).rejects.toThrow(deniedUrl);
+    await expect(failure).rejects.toThrow(/needs read access/u);
+    await expect(failure).rejects.toThrow('--source <path|url>');
   }, 20_000);
 
   it('an unreachable source is a network error naming the url', async () => {
-    const error = await checkSourceAccess(refusedUrl).catch((error: unknown) => error);
-    expect(error).toBeInstanceOf(SourceAccessError);
-    expect((error as SourceAccessError).kind).toBe('network');
-    expect((error as SourceAccessError).message).toContain(refusedUrl);
-    expect((error as SourceAccessError).message).toMatch(/cannot reach/i);
+    const failure = checkSourceAccess(refusedUrl);
+    await expect(failure).rejects.toBeInstanceOf(SourceAccessError);
+    await expect(failure).rejects.toMatchObject({ kind: 'network' });
+    await expect(failure).rejects.toThrow(refusedUrl);
+    await expect(failure).rejects.toThrow(/cannot reach/iu);
   }, 20_000);
 
   it('a source that never answers gives up at the timeout', async () => {
     const started = Date.now();
-    const error = await checkSourceAccess(silentUrl, { timeoutMs: 1000 }).catch((error: unknown) => error);
+    const failure = checkSourceAccess(silentUrl, { timeoutMs: 1000 });
+    await expect(failure).rejects.toBeInstanceOf(SourceAccessError);
     expect(Date.now() - started).toBeLessThan(10_000);
-    expect(error).toBeInstanceOf(SourceAccessError);
-    expect((error as SourceAccessError).kind).toBe('network');
-    expect((error as SourceAccessError).message).toContain(silentUrl);
-    expect((error as SourceAccessError).message).toMatch(/no answer within 1s/);
+    await expect(failure).rejects.toMatchObject({ kind: 'network' });
+    await expect(failure).rejects.toThrow(silentUrl);
+    await expect(failure).rejects.toThrow(/no answer within 1s/u);
   }, 20_000);
 
   it('a readable url and a local path pass', async () => {
-    const bare = join(sandbox, 'empty.git');
+    const bare = path.join(sandbox, 'empty.git');
+    // oxlint-disable-next-line sonarjs/no-os-command-from-path -- the test needs the developer's git to create a bare repo
     spawnSync('git', ['init', '--quiet', '--bare', bare]);
     await expect(checkSourceAccess(`file://${bare}`)).resolves.toBeUndefined();
-    await expect(checkSourceAccess(join(sandbox, 'no-such-clone'))).resolves.toBeUndefined();
+    await expect(checkSourceAccess(path.join(sandbox, 'no-such-clone'))).resolves.toBeUndefined();
   }, 20_000);
 
   it('mpo init exits nonzero with the message and creates nothing', async () => {
@@ -181,7 +176,7 @@ describe('a source the CLI cannot read', () => {
       [
         '--import',
         tsx,
-        join(cli, 'src/bin/multiplatformOne.ts'),
+        path.join(cli, 'src/bin/multiplatform-one.ts'),
         'init',
         'my-app',
         '--source',
@@ -192,7 +187,7 @@ describe('a source the CLI cannot read', () => {
       ],
       {
         cwd: sandbox,
-        env: { ...process.env, ...env, TSX_TSCONFIG_PATH: join(cli, 'tsconfig.json') },
+        env: { ...process.env, ...env, TSX_TSCONFIG_PATH: path.join(cli, 'tsconfig.json') },
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
@@ -202,17 +197,13 @@ describe('a source the CLI cannot read', () => {
     });
     child.stdout.resume();
     const timer = setTimeout(() => child.kill('SIGKILL'), 45_000);
-    const [code, signal] = await new Promise<[number | null, NodeJS.Signals | null]>((resolve) =>
-      child.on('close', (exitCode, exitSignal) => {
-        resolve([exitCode, exitSignal]);
-      }),
-    );
+    const [code, signal] = (await once(child, 'close')) as [number | null, NodeJS.Signals | null];
     clearTimeout(timer);
     expect(signal, stderr).toBeNull();
     expect(code, stderr).toBe(1);
     expect(stderr).toContain(deniedUrl);
-    expect(stderr).toMatch(/needs read access/);
-    expect(existsSync(join(sandbox, 'my-app'))).toBe(false);
+    expect(stderr).toMatch(/needs read access/u);
+    expect(existsSync(path.join(sandbox, 'my-app'))).toBe(false);
   }, 60_000);
 });
 
@@ -221,8 +212,8 @@ describe(classifySourceFailure, () => {
     for (const text of [
       'remote: HTTP Basic: Access denied. If a password was provided for Git authentication, the password was incorrect',
       "fatal: Authentication failed for 'https://github.com/shotcowboystyle/universal-starter-kit-kit/mpo.git/'",
-      "fatal: could not read Username for 'https://github.com/shotcowboystyle'universal-starter-kit disabled",
-      'git@github.com/shotcowboystyle:universal-starter-kitpublickey).\nfatal: Could not read from remote repository.',
+      "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+      'git@github.com: Permission denied (publickey).\nfatal: Could not read from remote repository.',
       "remote: The project you were looking for could not be found or you don't have permission to view it.",
       'remote: Repository not found.',
       "fatal: unable to access 'https://host/repo.git/': The requested URL returned error: 403",

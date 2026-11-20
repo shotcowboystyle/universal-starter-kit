@@ -282,7 +282,7 @@ describe('Table Primitives', () => {
     expect(getByText('F2')).toBeDefined();
   });
 
-  it('honours animation on the frame, row and cell (data-chrome)', () => {
+  it('honors animation on the frame, row and cell (data-chrome)', () => {
     const { container: none } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
         <Table>
@@ -336,7 +336,7 @@ describe('Table Primitives', () => {
     expect(container.querySelector<HTMLElement>('td')?.dataset.animation).toBe('on');
   });
 
-  it('honours textAccent on header labels and leaves body cells as T-VALUE', () => {
+  it('honors textAccent on header labels and leaves body cells as T-VALUE', () => {
     const { container: high } = renderWithProviders(
       <Preset overrides={{ textAccent: 'high' }}>
         <Table>
@@ -416,7 +416,7 @@ describe('Table Primitives', () => {
     expect(cardFill('outlined')).toStrictEqual(cardFill('filled'));
   });
 
-  describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honour it)', () => {
+  describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honor it)', () => {
     const names = ['Ada', 'Grace', 'Edsger', 'Barbara'];
     const plainRows = names.map((name) => (
       <Table.Row key={name}>

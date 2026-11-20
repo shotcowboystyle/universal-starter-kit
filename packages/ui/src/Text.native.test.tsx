@@ -47,7 +47,7 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
     expect(platform.isNative).toBe(true);
   });
 
-  it('changes colour on a textAccent flip', () => {
+  it('changes color on a textAccent flip', () => {
     const high = renderTextClasses(
       <Preset overrides={{ textAccent: 'high' }}>
         <Text>{LABEL}</Text>

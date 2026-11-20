@@ -296,11 +296,11 @@ describe(Icon, () => {
     }
   });
 
-  // A glyph outside InputParts.Icon has nothing injecting a colour, and
+  // A glyph outside InputParts.Icon has nothing injecting a color, and
   // `currentColor` does not cascade on react-native-svg: iOS resolved it to nil
   // and Core Graphics then painted with whatever stroke was last in the
   // context. Every paint has to leave here as a concrete value.
-  it('paints the readOnly glyph with a resolved colour, never currentColor', () => {
+  it('paints the readOnly glyph with a resolved color, never currentColor', () => {
     const result = renderWithProviders(
       <Icon
         label="Workspace icon"

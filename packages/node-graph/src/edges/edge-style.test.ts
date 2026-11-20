@@ -144,7 +144,7 @@ describe('the animation knob', () => {
   it("keeps the dash PATTERN, because that is the kind's identity", () => {
     // Stopping the march is not the same as erasing the dashes. An `error`
     // edge that stops dashing and also goes solid is indistinguishable from a
-    // `flow` edge with a different colour, and reduced-motion users would lose
+    // `flow` edge with a different color, and reduced-motion users would lose
     // a channel rather than an animation.
     const still = resolveEdgeStyle({ kind: 'error', borderWidth: 'medium', animation: 'none' });
     expect(still.strokeDasharray).toBe('6 4');
@@ -213,7 +213,7 @@ describe('an unknown kind', () => {
     );
   });
 
-  it('honours an explicit appearance name from the kind spec', () => {
+  it('honors an explicit appearance name from the kind spec', () => {
     expect(
       resolveEdgeStyle({
         kind: 'bespoke',

@@ -12,7 +12,7 @@
  * It filters WHICH themes exist, never what a theme contains: `$color5` means
  * the same thing in every theme that survives. A subset is a loaded gun, all
  * the same. A component whose sub-theme was dropped does not crash, it renders
- * in its parent's colours, so list everything the surface renders.
+ * in its parent's colors, so list everything the surface renders.
  */
 export interface ThemeSubset {
   /**

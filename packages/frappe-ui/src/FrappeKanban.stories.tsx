@@ -7,7 +7,7 @@ import { FrappeKanban } from './FrappeKanban';
 import type { KanbanColumn } from './FrappeKanban';
 import { FrappeProvider } from './FrappeProvider';
 
-// hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
+// hex-escape: Frappe sends column, event and series colors as hex: fixture data, not paint
 
 export default {
   title: 'FrappeUI/FrappeKanban',

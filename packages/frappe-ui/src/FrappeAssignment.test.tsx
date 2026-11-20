@@ -195,10 +195,10 @@ describe('buildAssignmentTodo — the default due date', () => {
     ]);
   });
 
-  it('guard: the host honours process.env.TZ, so the matrix reads real zones', () => {
+  it('guard: the host honors process.env.TZ, so the matrix reads real zones', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-15T05:00:00Z'));
-    // If TZ ever stopped being honoured in-process these collapse to one
+    // If TZ ever stopped being honored in-process these collapse to one
     // value and the matrix would stop proving anything.
     expect(inZone('America/Los_Angeles', () => new Date().getDate())).toBe(14);
     expect(inZone('Pacific/Kiritimati', () => new Date().getDate())).toBe(15);

@@ -3,7 +3,7 @@
  *
  * `connectionRadius` is the 44 px hit diameter (task 3.4 H5), so React Flow's
  * magnetism will snap a drag onto whatever handle is nearest — including one
- * the schema refuses. That is correct behaviour from React Flow and the wrong
+ * the schema refuses. That is correct behavior from React Flow and the wrong
  * thing to SHOW: a puck naming a target the drop then rejects teaches a user
  * that the affordance lies. So the candidates get filtered through the same
  * rule engine the drop will use.

@@ -942,7 +942,7 @@ const SliderControl = ({
           {...(onBlur ? { onBlur } : undefined)}
           {...sliderAriaProps({ required, hasError, readOnly })}
           aria-label={ariaLabel}
-          // Labelled: the sibling Label wires `aria-labelledby` onto this id
+          // Labeled: the sibling Label wires `aria-labelledby` onto this id
           // itself — naming it here too doubles the spoken name.
           aria-describedby={describedBy}>
           <SliderRail
@@ -985,7 +985,7 @@ export const Slider = ({
   value,
   defaultValue,
   onChange,
-  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honoured
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored
   onValueChange,
   onBlur,
   min = 0,

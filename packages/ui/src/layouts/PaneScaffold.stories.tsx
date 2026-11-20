@@ -173,7 +173,7 @@ export const NestedThreeRegion: Story = {
     docs: {
       description: {
         story:
-          'Rail | (centre | inspector): the recipe for three regions. Switch `sizeClass` to `xl` for two seams side by side; on compact all three stack, none is dropped.',
+          'Rail | (center | inspector): the recipe for three regions. Switch `sizeClass` to `xl` for two seams side by side; on compact all three stack, none is dropped.',
       },
     },
   },
@@ -192,7 +192,7 @@ export const NestedThreeRegion: Story = {
           secondary=<PaneScaffold
             paneFlex={[2, 1]}
             primary=<PaneFill
-              label="Centre"
+              label="Center"
               hint="Main canvas"
             />
             secondary=<PaneFill

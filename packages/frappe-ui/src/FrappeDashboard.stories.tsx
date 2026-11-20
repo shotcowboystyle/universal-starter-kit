@@ -14,7 +14,7 @@ const COMPLETION_RATE_ID = 'completion-rate';
 const REVENUE_STATUS_ID = 'revenue-status';
 const SALES_REGION_ID = 'sales-region';
 
-// hex-escape: Frappe sends column, event and series colours as hex: fixture data, not paint
+// hex-escape: Frappe sends column, event and series colors as hex: fixture data, not paint
 
 export default {
   title: 'FrappeUI/FrappeDashboard',

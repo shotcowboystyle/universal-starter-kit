@@ -441,7 +441,7 @@ const FrappeFormView = <TDoc extends { name: string; doctype: string }>({
   // no event) and can't update live; the assignment ToDos emit ordinary
   // insert/update events, so their name-filtered subscription is the live
   // source of truth. Fixture mode keeps the `_assign` fallback (no fixture
-  // data exists for referencing ToDos), signalled by assignmentRows=undefined.
+  // data exists for referencing ToDos), signaled by assignmentRows=undefined.
   const readsAssignments = showSidebar && hasName && frappeConfig !== undefined && !frappeConfig.fixtures;
   const assignmentCollection = useFrappeCollection<AssignmentTodoRow>(
     readsAssignments ? frappeConfig : undefined,

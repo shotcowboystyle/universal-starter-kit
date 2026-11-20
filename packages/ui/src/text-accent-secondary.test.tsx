@@ -35,7 +35,7 @@ type Scheme = 'light' | 'dark';
 const inScheme = (scheme: Scheme, node: ReactElement): ReactElement =>
   scheme === 'dark' ? <Theme name="dark">{node}</Theme> : node;
 
-/** The TEXT NODE's colour atom, by identity — hashed names never asserted. */
+/** The TEXT NODE's color atom, by identity — hashed names never asserted. */
 const inkAtoms = (el: Element): string[] =>
   (el as HTMLElement).className
     .split(' ')
@@ -190,7 +190,7 @@ describe('Meter — textAccent reaches the ok-zone value readout', () => {
 
 /**
  * low == medium alone also passes a surface pinned to a static step, so the
- * dim stops are checked against a probe painting the resolver's own colour.
+ * dim stops are checked against a probe painting the resolver's own color.
  */
 const restInk = (el: Element): string | undefined => {
   for (const cls of [...el.classList].filter((c) => c.startsWith('_col-'))) {

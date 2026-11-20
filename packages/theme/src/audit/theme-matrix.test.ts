@@ -134,7 +134,7 @@ describe('declared chart proof keeps uncertainty visible', () => {
 const inputsForTheme = (theme: string): Partial<SizeRecipeInputs> => (theme === 'blue' ? { baseHeight: 48 } : {});
 
 describe('theme-axis geometry invariance (tripwire)', () => {
-  it('identical recipe inputs across theme colours keep the diff clean', () => {
+  it('identical recipe inputs across theme colors keep the diff clean', () => {
     const base = snapshotFromRecipeInputs({});
     const blue = snapshotFromRecipeInputs({});
     const diff = diffGeometry(base, blue);
@@ -144,7 +144,7 @@ describe('theme-axis geometry invariance (tripwire)', () => {
 
   it('deliberately feeding a theme option into recipeInputs FAILS the invariance diff', () => {
     // The banned coupling: a size recipe input derived from the active
-    // theme colour. Geometry becomes a function of theme and the theme
+    // theme color. Geometry becomes a function of theme and the theme
     // axis is no longer paint-only.
     const defaultCell = snapshotFromRecipeInputs(inputsForTheme(''));
     const blueCell = snapshotFromRecipeInputs(inputsForTheme('blue'));
@@ -374,7 +374,7 @@ describe('evaluateTextContrast (the assertion downstream repos call)', () => {
     expect(result.violations[0].required).toBe(4.5);
   });
 
-  it('counts unparseable colours as unmeasurable (measureContrast throws, never skips silently)', () => {
+  it('counts unparseable colors as unmeasurable (measureContrast throws, never skips silently)', () => {
     const result = evaluateTextContrast([textSample({ color: 'potato' })]);
     expect(result.measured).toBe(0);
     expect(result.unmeasurable).toBe(1);
@@ -383,12 +383,12 @@ describe('evaluateTextContrast (the assertion downstream repos call)', () => {
 });
 
 /**
- * The measured artefact this locks down. Tamagui's `<Theme>` emits a
+ * The measured artifact this locks down. Tamagui's `<Theme>` emits a
  * boxless `display: contents` passthrough when the requested theme is
  * already the active one and a REAL theme host when it differs, so the
- * wrapper count is a function of the colour global. Keying on it made
- * every coloured cell of dogfood--settings report `+N/-M elements` with
- * ZERO moves: 158 nodes at the default colour, 151 with `color:blue`, 142
+ * wrapper count is a function of the color global. Keying on it made
+ * every colored cell of dogfood--settings report `+N/-M elements` with
+ * ZERO moves: 158 nodes at the default color, 151 with `color:blue`, 142
  * with `color:gray`, against 130 in every cell once the boxless wrappers
  * are hoisted through.
  */
@@ -412,7 +412,7 @@ describe('captureMatrixSnapshot keys survive the theme axis', () => {
     expect(diff.removedKeys).toStrictEqual([]);
   });
 
-  it('stays stable when the wrapper count differs the way the colour axis makes it differ', () => {
+  it('stays stable when the wrapper count differs the way the color axis makes it differ', () => {
     mount(`<span style="display: contents"><span style="display: contents">${card}</span></span>`);
     const twoWrappers = captureMatrixSnapshot();
     mount(card);

@@ -13,8 +13,8 @@ import {
   rosterPokemon,
   rosterPokemonFields,
   rosterPokemonMeta,
-} from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+} from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import type { FrappeNavigation } from './frappe-navigation';
 import { FrappeProvider } from './FrappeProvider';

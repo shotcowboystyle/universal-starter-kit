@@ -370,7 +370,7 @@ export const truncateLabel = (text: string, fontSize: number, maxWidth: number):
   return `${text.slice(0, budget)}\u2026`;
 };
 
-/** Bare numbers become datums labelled by their 1-based position. */
+/** Bare numbers become datums labeled by their 1-based position. */
 export const normalizeChartData = (data: readonly (number | ChartDatum)[]): ChartDatum[] =>
   data.map((datum, index) =>
     // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public `data` props accept bare numbers or datums; typeof is the only discriminator between them

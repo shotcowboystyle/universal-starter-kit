@@ -10,7 +10,7 @@
  * that is not a `--xy-*` variable has to land here, in one file a reviewer can
  * read whole.
  *
- * Nothing below is COLOUR. Colour is the var layer in src/theme/graph-vars.ts
+ * Nothing below is COLOR. Color is the var layer in src/theme/graph-vars.ts
  * and never appears in this file. What is here is the dash keyframes, the touch
  * rules, and the port hit region — three sections, each appended by the task
  * that owns it (1.10, 1.7, 1.9). Every future addition APPENDS.
@@ -72,7 +72,7 @@
   pointer-events: none;
 }
 
-/* Colour comes from the mpo-owned var layer, never a literal.
+/* Color comes from the mpo-owned var layer, never a literal.
    `non-scaling-stroke` is what keeps a hairline a hairline: without it the
    viewport transform multiplies the stroke and a 4x zoom paints a 2px bar. */
 .mp-graph .mp-graph-guide {
@@ -139,7 +139,7 @@
    * transform carries the zoom, so a region declared 44 px renders 44 x zoom
    * SCREEN px. Measured on the iPhone 16e at zoom 0.377: 16.6 pt wide, a
    * half-width of 8.3 pt against a demanded 18, and a tap 18 pt off the painted
-   * centre PANNED the canvas. Dividing the hit by the live zoom makes the
+   * center PANNED the canvas. Dividing the hit by the live zoom makes the
    * rendered region 44 screen px at every zoom.
    *
    * `--mpo-graph-zoom` is written on the canvas root by `GraphZoomVar` on every

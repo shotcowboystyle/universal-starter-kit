@@ -29,7 +29,7 @@ export interface ResolveSheetDetentsOptions {
  * The heights the sheet is allowed to rest at, largest first.
  *
  * `snapPoint` is a percent on the web Sheet (`snapPoints={[snapPoint]}`).
- * Native honours the same prop by turning that percent into a detent, so a
+ * Native honors the same prop by turning that percent into a detent, so a
  * caller that writes `snapPoint={85}` gets an 85%-height rest on both twins
  * rather than the prop being silently dropped on device.
  *

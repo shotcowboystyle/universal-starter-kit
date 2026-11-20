@@ -91,7 +91,7 @@ export const buildEdgePath = (
  * The raw knob values an edge paints from.
  *
  * `useResolvedKnobs` returns `knobProps`, not the knob NAMES, and the edge
- * needs the names because §11 remaps `borderWidth` rather than honouring the
+ * needs the names because §11 remaps `borderWidth` rather than honoring the
  * resolved value. So this reads the same Preset context `useResolvedKnobs`
  * reads at its own step 1 — which means task 1.6's `KnobEnvelopeProvider`,
  * which rebuilds that context inside the WebView, feeds this hook with no
@@ -130,7 +130,7 @@ const useStrokeValue = (stroke: string): string => {
   // `currentColor` rather than a hex fallback: a hex literal in this package is
   // exactly what `edge-style.test.ts` bans, and an edge that inherits the canvas
   // ink is still visible.
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- a theme value may be a string or a number; only a string is a paintable colour
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- a theme value may be a string or a number; only a string is a paintable color
   return typeof value === 'string' ? value : 'currentColor';
 };
 

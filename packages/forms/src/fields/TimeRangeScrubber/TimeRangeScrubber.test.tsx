@@ -44,7 +44,7 @@ const WINDOW = {
 };
 
 const mockRailRect = (container: HTMLElement) => {
-  const rail = container.querySelector("[data-testid='trs-rail']") as HTMLElement | null;
+  const rail = container.querySelector<HTMLElement>("[data-testid='trs-rail']");
   if (!rail) {
     return;
   }

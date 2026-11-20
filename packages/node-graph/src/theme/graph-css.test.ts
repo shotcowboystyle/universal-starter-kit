@@ -54,7 +54,7 @@ describe('css/graph.css', () => {
     }
   });
 
-  it('carries no colour of its own — colour is the var layer', () => {
+  it('carries no color of its own — color is the var layer', () => {
     expect(/#[0-9a-f]{3,8}\b/iu.test(graphCss)).toBe(false);
     expect(/\b(?:rgba?|hsla?)\(/u.test(graphCss)).toBe(false);
   });

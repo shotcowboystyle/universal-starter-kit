@@ -4,7 +4,7 @@
  * DocType meta is permission-gated (Guest gets 403 on getdoctype) while the
  * records themselves are often readable. A data-aware view that cannot read
  * meta still owes the reader the weakest honest rendering of what they may
- * read (LC-96): the record's own fields, labelled from their keys, typed from
+ * read (LC-96): the record's own fields, labeled from their keys, typed from
  * their values and read-only. These helpers are that shape, shared by every
  * view that falls back to it.
  */

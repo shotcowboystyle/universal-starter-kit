@@ -354,7 +354,7 @@ export interface GanttTick {
 
 // Timeline labels ride the canonical date registers.
 // Ticks take `year: "never"` — the header states the year, and a widened
-// "Mar 10, 2025" tick would collide with its neighbour.
+// "Mar 10, 2025" tick would collide with its neighbor.
 const dayLabel = (date: Date) => formatDayOfMonth(date);
 const monthDayLabel = (date: Date) => formatAbsoluteDate(date, { year: 'never' });
 const monthYearLabel = (date: Date) => formatMonthYear(date);

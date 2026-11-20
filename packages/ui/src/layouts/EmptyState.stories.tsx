@@ -99,7 +99,7 @@ export const LongCopyNarrow: Story = {
   args: {
     title: 'Zusammengehörigkeitsgefühl-Konfigurationsproblem',
     description:
-      'A very long translated description that runs on and on to verify the copy stays centred, wraps within its reading width, and never overflows the narrow container horizontally.',
+      'A very long translated description that runs on and on to verify the copy stays centered, wraps within its reading width, and never overflows the narrow container horizontally.',
   },
   render: (args) => (
     <YStack

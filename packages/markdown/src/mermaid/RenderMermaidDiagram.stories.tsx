@@ -7,7 +7,7 @@
  * dependency-free `@repo/markdown/mermaid` subpath precisely so
  * other surfaces can call it themselves — the rich-text editor's live
  * code-block preview does. These stories render the result of that call: the
- * `{ ok, svg }` / `{ ok, error }` union, the scheme-driven re-initialise, and
+ * `{ ok, svg }` / `{ ok, error }` union, the scheme-driven re-initialize, and
  * the fontFamily option, with the SVG mounted through mountDiagramSvg so the
  * engine's real output is on screen.
  */
@@ -27,7 +27,7 @@ const meta: Meta = {
     docs: {
       description: {
         component:
-          "renderMermaidDiagram(code, { scheme, fontFamily }) dynamically imports the mermaid engine on first call, parses before rendering so a syntax error never leaves mermaid's error-bomb SVG behind, and resolves to { ok: true, svg } or { ok: false, error }. The engine is global, so it re-initialises only when scheme or fontFamily changes.",
+          "renderMermaidDiagram(code, { scheme, fontFamily }) dynamically imports the mermaid engine on first call, parses before rendering so a syntax error never leaves mermaid's error-bomb SVG behind, and resolves to { ok: true, svg } or { ok: false, error }. The engine is global, so it re-initializes only when scheme or fontFamily changes.",
       },
     },
   },
@@ -123,7 +123,7 @@ export const Main: Story = {
 };
 
 /**
- * Mermaid's config is global, so the helper re-initialises when the scheme
+ * Mermaid's config is global, so the helper re-initializes when the scheme
  * changes. Both specimens render from the same source; only the theme differs.
  */
 export const SchemeSwitch: Story = {

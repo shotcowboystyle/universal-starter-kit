@@ -10,7 +10,7 @@
  * no diagnostics). A `.web.ts` / `.native.ts` twin is not a way out either:
  * One's web build and tamagui-build both resolve `.web.ts` exactly as Metro
  * does, so a web twin replaced this module in the Vite web build too and the
- * bake vanished there. One file, one behaviour.
+ * bake vanished there. One file, one behavior.
  *
  * Baking: `createViteConfig` sets `VITE_MP_CONFIG` (values) and
  * `VITE_MP_PUBLIC_CONFIG_KEYS` (names) on `process.env` and defines both as

@@ -101,7 +101,7 @@ export const graphNodeWidth = (opts: {
  * How many ports stack down the tallest vertical edge.
  *
  * Height crowding is per EDGE, not per node: `left` and `right` ports stack
- * vertically and can collide with their own side's neighbours, never with the
+ * vertically and can collide with their own side's neighbors, never with the
  * opposite side's. `top` / `bottom` ports stack horizontally and constrain
  * width, so they do not enter a height floor at all.
  */

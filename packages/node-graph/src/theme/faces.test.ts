@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   corruptFirstFamily,
@@ -224,7 +224,7 @@ describe('the generated payload', () => {
     // And the TYPE refuses one too, so this cannot be undone by editing data.
     // @ts-expect-error GraphFaceCategory is "sans-serif" alone.
     const mono: GraphFaceCategory = 'mono';
-    // oxlint-disable-next-line sonarjs/no-trivial-assertions -- the @ts-expect-error above is the check; this only keeps `mono` used
-    expect(mono).toBe('mono');
+    // The @ts-expect-error above is the check; this only keeps `mono` used.
+    expectTypeOf(mono).toEqualTypeOf<GraphFaceCategory>();
   });
 });

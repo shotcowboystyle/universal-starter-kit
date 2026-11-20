@@ -1,7 +1,7 @@
 import { Button, isWeb, Text, XStack, YStack } from 'tamagui';
 
-import { toDoFixtureData, useStoryConfig } from '../tests/storyFixtures';
-import type { ToDo } from '../tests/storyFixtures';
+import { toDoFixtureData, useStoryConfig } from '../tests/story-fixtures';
+import type { ToDo } from '../tests/story-fixtures';
 
 import { useFrappeInfiniteList } from './frappe-react';
 import type { UseFrappeCollectionConfig } from './frappe-react';

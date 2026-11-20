@@ -3,7 +3,7 @@
  *
  * A header label wider than its column painted over the next column: the
  * label run would not shrink below its max-content width, so a start-aligned
- * label pushed its sort and filter glyphs into the neighbour and an
+ * label pushed its sort and filter glyphs into the neighbor and an
  * end-aligned (number) label spilled left over the previous column. The
  * label is now the part that yields: it shrinks to the column and wraps,
  * breaking a long word if it must, while the glyphs keep their size.

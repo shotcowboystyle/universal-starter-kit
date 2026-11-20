@@ -172,7 +172,7 @@ export const EdgeCases: Story = {
       </YStack>
       <YStack gap="$1.5">
         <Label htmlFor="label-long">
-          This is an extremely long label that keeps going and going to check wrapping behaviour of label text over
+          This is an extremely long label that keeps going and going to check wrapping behavior of label text over
           multiple lines without breaking the layout of the associated control
         </Label>
         <Control

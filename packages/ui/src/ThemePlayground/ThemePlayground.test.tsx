@@ -15,7 +15,7 @@ import { ThemePlayground } from './index';
 describe(ThemePlayground, () => {
   afterEach(cleanup);
 
-  it('offers a labelled palette toggle, closed until pressed', async () => {
+  it('offers a labeled palette toggle, closed until pressed', async () => {
     renderWithProviders(<ThemePlayground testID="playground" />);
     const toggle = await screen.findByTestId('playground', {}, { timeout: 10_000 });
     expect(toggle.getAttribute('aria-label')).toBe('Theme');

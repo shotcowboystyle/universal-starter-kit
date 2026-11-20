@@ -129,7 +129,7 @@ describe(orderRows, () => {
   it('keeps the rows as they are without an order, and never mutates them', () => {
     // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required; undefined is the case under test
     expect(orderRows(rows, undefined)).toStrictEqual(rows);
-    // A serialised "no order" (JSON.parse('null')) used to throw on `.length`.
+    // A serialized "no order" (JSON.parse('null')) used to throw on `.length`.
     expect(orderRows(rows, null)).toStrictEqual(rows);
     const before = rows.map((row) => row.name);
     orderRows(rows, [{ field: 'xp', order: 'desc' }]);

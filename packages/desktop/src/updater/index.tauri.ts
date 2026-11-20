@@ -9,12 +9,8 @@
 
 import type { UpdaterApi, UpdateInfo } from './index';
 
-let _updater: typeof import('@tauri-apps/plugin-updater') | null = null;
-
-async function getUpdater() {
-  _updater ??= await import('@tauri-apps/plugin-updater');
-  return _updater;
-}
+// The runtime caches the module after the first dynamic import.
+const getUpdater = async () => await import('@tauri-apps/plugin-updater');
 
 export const updater: UpdaterApi = {
   async checkForUpdates(): Promise<UpdateInfo | null> {
@@ -65,6 +61,9 @@ export const updater: UpdaterApi = {
             if (onProgress) {
               onProgress(100);
             }
+            break;
+          }
+          default: {
             break;
           }
         }

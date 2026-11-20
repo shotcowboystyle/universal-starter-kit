@@ -15,7 +15,7 @@ import { Text } from 'tamagui';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import { assetLoanLifecycleFixtures } from '../tests/fixtures/assetLoanLifecycle';
+import { assetLoanLifecycleFixtures } from '../tests/fixtures/asset-loan-lifecycle';
 
 import { setCreatePrefill } from './formEngine/create-prefill';
 import { FrappeForm } from './FrappeForm';

@@ -71,7 +71,7 @@ export interface KnobEnvelope {
   readonly vars: Readonly<Record<string, string>>;
   readonly fonts: readonly GraphFontRef[];
   readonly pixelRatio: number;
-  /** Bumped on any change above, so the DOM side memoises cheaply. */
+  /** Bumped on any change above, so the DOM side memoizes cheaply. */
   readonly revision: number;
 }
 

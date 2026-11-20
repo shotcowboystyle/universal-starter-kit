@@ -21,7 +21,7 @@ export const builtinEdgeKindNames: readonly BuiltinEdgeKind[] = ['flow', 'data',
  * A type alias, not an interface. An interface has no implicit index signature,
  * so `interface BuiltinEdgeData` does not satisfy `EdgeKindDefs` and
  * `createGraphSchema` refuses it. That is a TypeScript rule about declaration
- * merging rather than a modelling choice, and it bites every consumer the same
+ * merging rather than a modeling choice, and it bites every consumer the same
  * way — so the kind maps in this package are written the shape a consumer must
  * write too.
  */

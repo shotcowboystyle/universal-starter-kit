@@ -5,7 +5,7 @@
  * `fontWeight="400"` sat after the `knobProps.body` spread and pinned the
  * label at 400 in both schemes, while Input and Select moved to 700 off the
  * same knob. The knob family rules already say
- * `button | ... | fonts honour`, so the render was the thing that was wrong.
+ * `button | ... | fonts honor`, so the render was the thing that was wrong.
  *
  * The weight is read off the TEXT NODE, not the frame — the frame reported
  * 400 either way, which is how the defect survived. jsdom cannot cascade

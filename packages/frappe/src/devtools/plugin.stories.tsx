@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { isWeb, Text, YStack } from 'tamagui';
 
-import { toDoFixtureData, useSeededJournal, useStoryConfig } from '../../tests/storyFixtures';
-import type { ToDo } from '../../tests/storyFixtures';
+import { toDoFixtureData, useSeededJournal, useStoryConfig } from '../../tests/story-fixtures';
+import type { ToDo } from '../../tests/story-fixtures';
 import { useFrappeCollection } from '../frappe-react';
 import type { SyncModule } from '../sync';
 import { useLiveQuery } from '../use-live-query';

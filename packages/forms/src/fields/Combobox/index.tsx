@@ -1396,7 +1396,7 @@ const FloatingComboboxCore = ({
   if (hasText(ariaLabel)) {
     boxEventProps['aria-label'] = ariaLabel;
   } else if (!(hasLabel === true && hasText(id)) && hasText(placeholder)) {
-    // A labelled trigger is already named: the sibling Label wires
+    // A labeled trigger is already named: the sibling Label wires
     // `aria-labelledby` onto this id itself, so naming it again here doubles the
     // spoken name. Standalone triggers still need one (axe aria-input-field-name).
     boxEventProps['aria-label'] = placeholder;
@@ -2849,7 +2849,7 @@ export const Combobox = ({
   value: valueProp,
   defaultValue,
   onChange,
-  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honoured at the single emit site
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored at the single emit site
   onValueChange,
   placeholder: placeholderProp,
   searchPlaceholder: searchPlaceholderProp,

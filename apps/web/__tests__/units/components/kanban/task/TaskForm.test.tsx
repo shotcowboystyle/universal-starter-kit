@@ -63,7 +63,7 @@ describe(TaskForm, () => {
     mocks.searchUsers.mockResolvedValue(mockUsers);
   });
 
-  it('renders all labelled fields', () => {
+  it('renders all labeled fields', () => {
     render(<TaskForm onSubmit={mockOnSubmit} />);
     for (const label of ['titleLabel', 'dueDateLabel', 'assignToLabel', 'statusLabel', 'descriptionLabel']) {
       expect(screen.getByText(label)).toBeInTheDocument();

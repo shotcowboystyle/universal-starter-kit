@@ -68,7 +68,7 @@ const reportedNames = (source: string, names: string[]): string[] => {
 };
 
 describe(matchColorLiteral, () => {
-  it('matches hex and functional CSS colours, not a Pokedex number in isolation of AST', () => {
+  it('matches hex and functional CSS colors, not a Pokedex number in isolation of AST', () => {
     expect(matchColorLiteral('#34c759')).toBe('#34c759');
     expect(matchColorLiteral('#fff')).toBe('#fff');
     expect(matchColorLiteral('rgba(0,0,0,0.35)')).toBe('rgba(0,0,0,0.35)');
@@ -102,7 +102,7 @@ describe('export surface', () => {
 });
 
 /**
- * no-raw-typography behavioural teeth. The block above only asserts the rule
+ * no-raw-typography behavioral teeth. The block above only asserts the rule
  * is DEFINED — a rule that never reports would pass it. These cases drive the
  * rule's own visitor and assert it reports on every raw typography hatch and
  * stays silent on the house names, so "the lint fails on raw typography in app
@@ -416,7 +416,7 @@ describe('no-hex-literals hex-escape comment', () => {
 });
 
 /**
- * no-child-margin behavioural teeth. The rule counts JSX depth on enter and
+ * no-child-margin behavioral teeth. The rule counts JSX depth on enter and
  * exit, so the driver walks a small tree the way the linter does: enter a
  * node, visit its children, then fire `<type>:exit`.
  */

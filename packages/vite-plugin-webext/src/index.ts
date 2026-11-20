@@ -32,6 +32,8 @@ import type { Alias, Plugin, UserConfig } from 'vite';
 
 const PLUGIN_NAME = '@repo/vite-plugin-webext';
 
+const INDEX_HTML = 'index.html';
+
 const logger = console;
 
 export interface WebextPackageInfo {
@@ -60,7 +62,7 @@ export interface WebextTargetOptions {
    *  NODE_ENV !== "production". */
   isDev?: boolean;
   /** Extra defines merged over the factory defaults. */
-  define?: Record<string, unknown>;
+  define?: UserConfig['define'];
   /** Extra resolve aliases appended after the factory's. */
   aliases?: Alias[];
 }
@@ -93,43 +95,45 @@ const OPTIMIZE_INCLUDE = [
 
 /** shiki's chunk graph (wasm/TLA) can't fold into the single-file iife a
  *  content script requires. Stub it with an empty module —
- *  @repo/ui' highlightCode() catches the missing
+ *  the `highlightCode()` in `@repo/ui` catches the missing
  *  codeToTokens and falls back to plain text. */
-export function shikiStubPlugin(): Plugin {
+export const shikiStubPlugin = (): Plugin => {
   const VIRTUAL_ID = '\0webext-shiki-stub';
   return {
     name: 'webext-shiki-stub',
     enforce: 'pre',
     resolveId(id: string) {
-      if (/^shiki(\/.*)?$/.test(id)) {
+      if (/^shiki(?:\/.*)?$/u.test(id)) {
         return VIRTUAL_ID;
       }
+      return null;
     },
     load(id: string) {
       if (id === VIRTUAL_ID) {
         return 'export {}';
       }
+      return null;
     },
   };
-}
+};
 
-function barePackageName(specifier: string): string | undefined {
-  if (!specifier || /^[./#\\]/.test(specifier)) {
-    return;
+const barePackageName = (specifier: string): string | null => {
+  if (specifier === '' || /^[./#\\]/u.test(specifier)) {
+    return null;
   }
-  if (/^(node|data|file|https?):/.test(specifier)) {
-    return;
+  if (/^(?:node|data|file|https?):/u.test(specifier)) {
+    return null;
   }
   const packageName = specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0];
   if (builtinModules.includes(packageName)) {
-    return;
+    return null;
   }
   return packageName;
-}
+};
 
 /** Node ESM bare-import resolution walks parent node_modules dirs and — unlike
  *  CJS — ignores NODE_PATH. Presence of the package dir is what we probe. */
-function packageVisibleFromDir(packageName: string, fromDir: string): boolean {
+const packageVisibleFromDir = (packageName: string, fromDir: string): boolean => {
   let dir = fromDir;
   while (true) {
     if (fs.existsSync(path.join(dir, 'node_modules', packageName, 'package.json'))) {
@@ -141,7 +145,7 @@ function packageVisibleFromDir(packageName: string, fromDir: string): boolean {
     }
     dir = parent;
   }
-}
+};
 
 /**
  * The Tamagui static extractor bundles the app's tamagui config to
@@ -159,108 +163,102 @@ function packageVisibleFromDir(packageName: string, fromDir: string): boolean {
  * that breaks the .mjs artifact under pnpm) — and name the missing package.
  * A missing artifact (bundling died before writing it) is equally fatal.
  */
-function tamaguiConfigBundleGuard(isDev: boolean): Plugin {
-  return {
-    name: 'webext-tamagui-config-guard',
-    closeBundle() {
-      if (isDev) {
+const tamaguiConfigBundleGuard = (isDev: boolean): Plugin => ({
+  name: 'webext-tamagui-config-guard',
+  closeBundle() {
+    if (isDev) {
+      return;
+    }
+    const dotDir = path.join(process.cwd(), '.tamagui');
+    const artifacts = ['tamagui.config.cjs', 'tamagui.config.mjs']
+      .map((name) => path.join(dotDir, name))
+      .filter((file) => fs.existsSync(file));
+    if (artifacts.length === 0) {
+      // No .tamagui dir at all means the extractor never ran for this
+      // build (nothing to verify) — an existing dir without the config
+      // artifact means bundling died before writing it.
+      if (!fs.existsSync(dotDir)) {
         return;
       }
-      const dotDir = path.join(process.cwd(), '.tamagui');
-      const artifacts = ['tamagui.config.cjs', 'tamagui.config.mjs']
-        .map((name) => path.join(dotDir, name))
-        .filter((file) => fs.existsSync(file));
-      if (artifacts.length === 0) {
-        // No .tamagui dir at all means the extractor never ran for this
-        // build (nothing to verify) — an existing dir without the config
-        // artifact means bundling died before writing it.
-        if (!fs.existsSync(dotDir)) {
-          return;
-        }
-        throw new Error(
-          `[${PLUGIN_NAME}] the Tamagui static extractor did not produce its bundled config ` +
-            `(expected ${path.join(dotDir, 'tamagui.config.{cjs,mjs}')}). The build would ` +
-            'silently fall back to a de-optimized runtime-styled bundle. Re-run with ' +
-            'DEBUG=tamagui to see the underlying bundling error.',
-        );
+      throw new Error(
+        `[${PLUGIN_NAME}] the Tamagui static extractor did not produce its bundled config ` +
+          `(expected ${path.join(dotDir, 'tamagui.config.{cjs,mjs}')}). The build would ` +
+          'silently fall back to a de-optimized runtime-styled bundle. Re-run with ' +
+          'DEBUG=tamagui to see the underlying bundling error.',
+      );
+    }
+    const [artifact] = artifacts.toSorted((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+    const source = fs.readFileSync(artifact, 'utf-8');
+    const requireFromArtifact = createRequire(artifact);
+    const importRe = /(?:require\s*\(\s*|import\s*\(\s*|from\s*|import\s*)["'](?<specifier>[^"'\n]+)["']/gu;
+    const missing = new Set<string>();
+    for (const match of source.matchAll(importRe)) {
+      const packageName = barePackageName(match.groups?.specifier ?? '');
+      if (packageName === null) {
+        continue;
       }
-      const artifact = artifacts.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs)[0];
-      const source = fs.readFileSync(artifact, 'utf-8');
-      const requireFromArtifact = createRequire(artifact);
-      const importRe = /(?:require\s*\(\s*|import\s*\(\s*|from\s*|import\s*)["']([^"'\n]+)["']/g;
-      const missing = new Set<string>();
-      for (const match of source.matchAll(importRe)) {
-        const packageName = barePackageName(match[1]);
-        if (!packageName) {
-          continue;
-        }
-        if (artifact.endsWith('.cjs')) {
-          try {
-            requireFromArtifact.resolve(packageName);
-          } catch {
-            missing.add(packageName);
-          }
-        } else if (!packageVisibleFromDir(packageName, dotDir)) {
+      if (artifact.endsWith('.cjs')) {
+        try {
+          requireFromArtifact.resolve(packageName);
+        } catch {
           missing.add(packageName);
         }
+      } else if (!packageVisibleFromDir(packageName, dotDir)) {
+        missing.add(packageName);
       }
-      if (missing.size > 0) {
-        const names = [...missing].map((name) => `"${name}"`).join(', ');
-        throw new Error(
-          `[${PLUGIN_NAME}] Tamagui config bundling failed: ${names} cannot be resolved ` +
-            `from ${artifact}. The Tamagui static extractor swallows this ("Error bundling ` +
-            'tamagui config") and ships a de-optimized runtime-styled build. Fix: add ' +
-            `${names} to your app's dependencies — under pnpm's default isolated ` +
-            'node_modules, transitive packages are not resolvable from the app.',
-        );
-      }
-    },
-  };
-}
+    }
+    if (missing.size > 0) {
+      const names = [...missing].map((name) => `"${name}"`).join(', ');
+      throw new Error(
+        `[${PLUGIN_NAME}] Tamagui config bundling failed: ${names} cannot be resolved ` +
+          `from ${artifact}. The Tamagui static extractor swallows this ("Error bundling ` +
+          'tamagui config") and ships a de-optimized runtime-styled build. Fix: add ' +
+          `${names} to your app's dependencies — under pnpm's default isolated ` +
+          'node_modules, transitive packages are not resolvable from the app.',
+      );
+    }
+  },
+});
 
-function resolveDefaults(options: WebextTargetOptions) {
+const resolveDefaults = (options: WebextTargetOptions) => {
   const workspaceRootInferred = options.workspaceRoot == null;
   const workspaceRoot = options.workspaceRoot ?? lookupProjectRoot();
   const isDev = options.isDev ?? process.env.NODE_ENV !== 'production';
   const port = options.port ?? (Number(process.env.PORT) || 3303);
   return { workspaceRoot, workspaceRootInferred, isDev, port };
-}
+};
 
 /** Peers stay lazy so requiring them is deferred to the factory that needs
  *  them — but a missing peer must name itself, not crash the config file. */
-async function importPeer<T>(load: () => Promise<T>, specifier: string): Promise<T> {
+const importPeer = async <T>(load: () => Promise<T>, specifier: string): Promise<T> => {
   try {
     return await load();
   } catch (error) {
     throw new Error(
       `[${PLUGIN_NAME}] could not import its peer dependency "${specifier}" — install it ` +
-        `next to ${PLUGIN_NAME} (it is a required peer): ${error instanceof Error ? error.message : error}`,
+        `next to ${PLUGIN_NAME} (it is a required peer): ${error instanceof Error ? error.message : String(error)}`,
       { cause: error },
     );
   }
-}
+};
 
-function baseDefine(options: WebextTargetOptions, isDev: boolean): Record<string, unknown> {
-  return {
-    __DEV__: isDev,
-    __NAME__: JSON.stringify(options.packageInfo.name),
-    'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
-    global: 'globalThis',
-    ...options.define,
-  };
-}
+const baseDefine = (options: WebextTargetOptions, isDev: boolean) => ({
+  __DEV__: isDev,
+  __NAME__: JSON.stringify(options.packageInfo.name),
+  'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
+  global: 'globalThis',
+  ...options.define,
+});
 
 const loggedNoPublicRoots = new Set<string>();
 
-function baseResolve(options: WebextTargetOptions, workspaceRoot: string, workspaceRootInferred: boolean) {
+const baseResolve = (options: WebextTargetOptions, workspaceRoot: string, workspaceRootInferred: boolean) => {
   const sourceAliases = workspaceSourceAliases(workspaceRoot);
   // Out-of-repo consumers have no public/ checkout, so the in-repo source
   // aliasing silently no-ops — say so once, to make the divergence visible.
   if (workspaceRootInferred && Object.keys(sourceAliases).length === 0 && !loggedNoPublicRoots.has(workspaceRoot)) {
     loggedNoPublicRoots.add(workspaceRoot);
-    logger.info(
-      `[${PLUGIN_NAME}] no public/ under ${workspaceRoot} — resolving @repo/* from node_modules`,
-    );
+    logger.info(`[${PLUGIN_NAME}] no public/ under ${workspaceRoot} — resolving @repo/* from node_modules`);
   }
   return {
     alias: [
@@ -275,41 +273,40 @@ function baseResolve(options: WebextTargetOptions, workspaceRoot: string, worksp
     extensions: WEBEXT_EXTENSIONS,
     mainFields: ['browser', 'module', 'main'],
   } satisfies UserConfig['resolve'];
-}
+};
 
-function baseOptimizeDeps(): UserConfig['optimizeDeps'] {
-  return {
-    include: OPTIMIZE_INCLUDE,
-    esbuildOptions: {
-      resolveExtensions: WEBEXT_EXTENSIONS,
-      mainFields: ['module', 'main'],
-    },
-  };
-}
+const baseOptimizeDeps = (): UserConfig['optimizeDeps'] => ({
+  include: OPTIMIZE_INCLUDE,
+  esbuildOptions: {
+    resolveExtensions: WEBEXT_EXTENSIONS,
+    mainFields: ['module', 'main'],
+  },
+});
 
 /** Discover view names — every directory under <targetDir>/views with an
  *  index.html becomes an extension page (popup, options, sidepanel, …). */
-export function listWebextViews(targetDir: string): string[] {
+export const listWebextViews = (targetDir: string): string[] => {
   const viewsDir = path.join(targetDir, 'views');
   if (!fs.existsSync(viewsDir)) {
     return [];
   }
   return fs
     .readdirSync(viewsDir)
-    .filter((file) => fs.statSync(path.join(viewsDir, file)).isDirectory())
-    .filter((view) => fs.existsSync(path.join(viewsDir, view, 'index.html')));
-}
+    .filter(
+      (view) =>
+        fs.statSync(path.join(viewsDir, view)).isDirectory() && fs.existsSync(path.join(viewsDir, view, INDEX_HTML)),
+    );
+};
 
 /** The extension pages build (popup/options/sidepanel/devtools…). */
-export async function createWebextViewsConfig(options: WebextTargetOptions): Promise<UserConfig> {
+export const createWebextViewsConfig = async (options: WebextTargetOptions): Promise<UserConfig> => {
   const { workspaceRoot, workspaceRootInferred, isDev, port } = resolveDefaults(options);
   // Both vite-integration peers load lazily at factory-call time so a consumer
   // following the peer contract sees a named error, not a module-scope crash.
-  const { default: react, reactCompilerPreset } = await importPeer(
-    async () => await import('@vitejs/plugin-react'),
-    '@vitejs/plugin-react',
-  );
-  const { tamaguiPlugin } = await importPeer(async () => await import('@tamagui/vite-plugin'), '@tamagui/vite-plugin');
+  const [{ default: react, reactCompilerPreset }, { tamaguiPlugin }] = await Promise.all([
+    importPeer(async () => await import('@vitejs/plugin-react'), '@vitejs/plugin-react'),
+    importPeer(async () => await import('@tamagui/vite-plugin'), '@tamagui/vite-plugin'),
+  ]);
   const views = listWebextViews(options.targetDir);
   return {
     root: options.targetDir,
@@ -325,7 +322,7 @@ export async function createWebextViewsConfig(options: WebextTargetOptions): Pro
         components: lookupTamaguiModules([options.targetDir]),
         config: options.tamaguiConfig,
         outputCSS: path.join(options.targetDir, 'tamagui.css'),
-      }) as Plugin,
+      }),
       tamaguiConfigBundleGuard(isDev),
     ],
     define: baseDefine(options, isDev),
@@ -357,17 +354,15 @@ export async function createWebextViewsConfig(options: WebextTargetOptions): Pro
         mangle: false,
       },
       rollupOptions: {
-        input: Object.fromEntries(
-          views.map((view) => [view, path.join(options.targetDir, 'views', view, 'index.html')]),
-        ),
+        input: Object.fromEntries(views.map((view) => [view, path.join(options.targetDir, 'views', view, INDEX_HTML)])),
       },
     },
   };
-}
+};
 
 /** The background service-worker (chromium) / background-script (firefox)
  *  build — a single-file iife, no DOM. */
-export function createWebextBackgroundConfig(options: WebextTargetOptions): UserConfig {
+export const createWebextBackgroundConfig = (options: WebextTargetOptions): UserConfig => {
   const { workspaceRoot, workspaceRootInferred, isDev } = resolveDefaults(options);
   return {
     root: options.targetDir,
@@ -398,17 +393,16 @@ export function createWebextBackgroundConfig(options: WebextTargetOptions): User
       },
     },
   };
-}
+};
 
 /** The content-script build — a single-file iife injected into pages, with
  *  Tamagui CSS extracted separately (webext.css web-accessible resource). */
-export async function createWebextContentConfig(options: WebextTargetOptions): Promise<UserConfig> {
+export const createWebextContentConfig = async (options: WebextTargetOptions): Promise<UserConfig> => {
   const { workspaceRoot, workspaceRootInferred, isDev } = resolveDefaults(options);
-  const { default: react, reactCompilerPreset } = await importPeer(
-    async () => await import('@vitejs/plugin-react'),
-    '@vitejs/plugin-react',
-  );
-  const { tamaguiPlugin } = await importPeer(async () => await import('@tamagui/vite-plugin'), '@tamagui/vite-plugin');
+  const [{ default: react, reactCompilerPreset }, { tamaguiPlugin }] = await Promise.all([
+    importPeer(async () => await import('@vitejs/plugin-react'), '@vitejs/plugin-react'),
+    importPeer(async () => await import('@tamagui/vite-plugin'), '@tamagui/vite-plugin'),
+  ]);
   return {
     root: options.targetDir,
     plugins: [
@@ -423,7 +417,7 @@ export async function createWebextContentConfig(options: WebextTargetOptions): P
         components: lookupTamaguiModules([options.targetDir]),
         config: options.tamaguiConfig,
         outputCSS: path.join(options.targetDir, 'tamagui.content.css'),
-      }) as Plugin,
+      }),
       tamaguiConfigBundleGuard(isDev),
     ],
     define: {
@@ -464,7 +458,7 @@ export async function createWebextContentConfig(options: WebextTargetOptions): P
       },
     },
   };
-}
+};
 
 // ── prepare pipeline (manifest + dev HMR scaffolding) ─────────────
 
@@ -487,28 +481,28 @@ export interface WebextPrepareOptions {
 /** Copy static extension files (icons, …) into the staging root — the
  *  staging dir is build output (gitignored), so committed assets live in
  *  the target source tree instead. */
-export async function copyWebextStatic(options: WebextPrepareOptions): Promise<void> {
+export const copyWebextStatic = async (options: WebextPrepareOptions): Promise<void> => {
   const staticDir = options.staticDir ?? path.join(options.targetDir, 'static');
   if (!fs.existsSync(staticDir)) {
     return;
   }
   await fs.promises.mkdir(options.stagingDir, { recursive: true });
   await fs.promises.cp(staticDir, options.stagingDir, { recursive: true });
-}
+};
 
-export async function writeWebextManifest(options: WebextPrepareOptions): Promise<void> {
+export const writeWebextManifest = async (options: WebextPrepareOptions): Promise<void> => {
   const manifestPath = path.join(options.stagingDir, 'manifest.json');
   await fs.promises.mkdir(path.dirname(manifestPath), { recursive: true });
   await fs.promises.writeFile(manifestPath, JSON.stringify(await options.getManifest(), null, 2), 'utf-8');
-}
+};
 
 /** Dev mode: emit view HTML that loads main.tsx from the vite dev server
  *  (extension pages can't be served BY vite — the html on disk must point
  *  at it) plus the react-refresh preamble shim. */
-export async function stubWebextIndexHtml(options: WebextPrepareOptions): Promise<void> {
+export const stubWebextIndexHtml = async (options: WebextPrepareOptions): Promise<void> => {
   const port = options.port ?? 3303;
-  for (const view of listWebextViews(options.targetDir)) {
-    let data = await fs.promises.readFile(path.join(options.targetDir, 'views', view, 'index.html'), 'utf-8');
+  const stubView = async (view: string): Promise<void> => {
+    let data = await fs.promises.readFile(path.join(options.targetDir, 'views', view, INDEX_HTML), 'utf-8');
     data = data.replace(
       '</head>',
       `  <script type="module" src="http://localhost:${port}/@vite/client"></script>
@@ -521,13 +515,14 @@ export async function stubWebextIndexHtml(options: WebextPrepareOptions): Promis
         `<script type="module" src="http://localhost:${port}/views/${view}/main.tsx"></script>`,
       )
       .replace('<div id="app"></div>', '<div id="app">vite server did not start</div>');
-    const outPath = path.join(options.stagingDir, 'dist/views', view, 'index.html');
+    const outPath = path.join(options.stagingDir, 'dist/views', view, INDEX_HTML);
     await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
     await fs.promises.writeFile(outPath, data, 'utf-8');
-  }
-}
+  };
+  await Promise.all(listWebextViews(options.targetDir).map(stubView));
+};
 
-export async function writeWebextRefreshScript(options: WebextPrepareOptions): Promise<void> {
+export const writeWebextRefreshScript = async (options: WebextPrepareOptions): Promise<void> => {
   const port = options.port ?? 3303;
   const refreshPath = path.join(options.stagingDir, 'dist/refresh.js');
   await fs.promises.mkdir(path.dirname(refreshPath), { recursive: true });
@@ -548,11 +543,21 @@ window.addEventListener('load', () => {
 `,
     'utf-8',
   );
-}
+};
+
+/** A failed rewrite in the watch loop is logged, not thrown: one bad save
+ *  must not kill the dev loop, and the next save retries it. */
+const logFailure = async (task: () => Promise<void>): Promise<void> => {
+  try {
+    await task();
+  } catch (error) {
+    logger.error(error);
+  }
+};
 
 /** One-shot (prod) or watching (dev) prepare: manifest + static assets +
  *  dev scaffolding. */
-export async function runWebextPrepare(options: WebextPrepareOptions): Promise<void> {
+export const runWebextPrepare = async (options: WebextPrepareOptions): Promise<void> => {
   const isDev = options.isDev ?? process.env.NODE_ENV !== 'production';
   if (!isDev) {
     await copyWebextStatic(options);
@@ -565,13 +570,15 @@ export async function runWebextPrepare(options: WebextPrepareOptions): Promise<v
   await writeWebextManifest(options);
   if (options.watch) {
     const { watch } = await import('chokidar');
-    watch(path.join(options.targetDir, '**/*.html')).on(
-      'change',
-      async () => await stubWebextIndexHtml(options).catch(console.error),
-    );
-    watch(path.join(options.targetDir, 'manifest.ts')).on(
-      'change',
-      async () => await writeWebextManifest(options).catch(console.error),
-    );
+    watch(path.join(options.targetDir, '**/*.html')).on('change', () => {
+      void logFailure(async () => {
+        await stubWebextIndexHtml(options);
+      });
+    });
+    watch(path.join(options.targetDir, 'manifest.ts')).on('change', () => {
+      void logFailure(async () => {
+        await writeWebextManifest(options);
+      });
+    });
   }
-}
+};

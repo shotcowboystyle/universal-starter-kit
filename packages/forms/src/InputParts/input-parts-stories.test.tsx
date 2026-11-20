@@ -73,7 +73,7 @@ describe('Forms/InputParts stories', () => {
     expect(placeholders).toStrictEqual(['Leading icon', 'Trailing icon', 'Both ends']);
   });
 
-  it('TrailingButton exposes a labelled reveal toggle beside the field', () => {
+  it('TrailingButton exposes a labeled reveal toggle beside the field', () => {
     const { container } = mount(TrailingButton as StoryLike);
     const button = container.querySelector("[aria-label='Show password']");
     expect(button).toBeTruthy();

@@ -474,7 +474,7 @@ const Trigger = ({
   open,
   disabled,
   id,
-  labelled,
+  labeled,
   onToggle,
   triggerRef,
   sizeToken,
@@ -485,7 +485,7 @@ const Trigger = ({
   open: boolean;
   disabled: boolean;
   id?: string;
-  labelled: boolean;
+  labeled: boolean;
   accessibilityLabel?: string;
   onToggle: () => void;
   triggerRef: (node: HTMLElement | null) => void;
@@ -512,7 +512,7 @@ const Trigger = ({
         role="combobox"
         aria-haspopup="tree"
         aria-expanded={open}
-        aria-label={accessibilityLabel ?? (labelled ? undefined : placeholder)}
+        aria-label={accessibilityLabel ?? (labeled ? undefined : placeholder)}
         id={id}
         // Same family as ToggleGroup / RadioGroup: every semantic on
         // this trigger above is a web attribute, and tamagui does not map any
@@ -811,7 +811,7 @@ const FloatingTreeSelect = ({
   emptyMessage,
   disabled,
   id,
-  labelled,
+  labeled,
   open,
   onOpenChange,
   onCommit,
@@ -828,7 +828,7 @@ const FloatingTreeSelect = ({
   emptyMessage: string;
   disabled: boolean;
   id?: string;
-  labelled: boolean;
+  labeled: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCommit: (node: TreeNode) => void;
@@ -916,7 +916,7 @@ const FloatingTreeSelect = ({
         open={open}
         disabled={disabled}
         id={id}
-        labelled={labelled}
+        labeled={labeled}
         onToggle={() => {
           if (!disabled) {
             onOpenChange(!open);
@@ -1001,7 +1001,7 @@ const SheetTreeSelect = ({
   emptyMessage,
   disabled,
   id,
-  labelled,
+  labeled,
   open,
   onOpenChange,
   onCommit,
@@ -1018,7 +1018,7 @@ const SheetTreeSelect = ({
   emptyMessage: string;
   disabled: boolean;
   id?: string;
-  labelled: boolean;
+  labeled: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCommit: (node: TreeNode) => void;
@@ -1054,7 +1054,7 @@ const SheetTreeSelect = ({
         open={open}
         disabled={disabled}
         id={id}
-        labelled={labelled}
+        labeled={labeled}
         onToggle={() => {
           if (!disabled) {
             onOpenChange(true);
@@ -1231,7 +1231,7 @@ export const TreeSelect = ({
     emptyMessage,
     disabled,
     id,
-    labelled: Boolean(label),
+    labeled: Boolean(label),
     open,
     onOpenChange: setOpen,
     onCommit: (node: TreeNode) => onChange?.(node.id),

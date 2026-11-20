@@ -108,7 +108,7 @@ describe(HighlightedCode, () => {
         />
       </Preset>,
     );
-    const gutter = container.querySelector('[data-line-number]') as HTMLElement | null;
+    const gutter = container.querySelector<HTMLElement>('[data-line-number]');
     expect(gutter).toBeTruthy();
     expect(gutter?.textContent).toMatch(/1/u);
     const width = Number(getComputedStyle(gutter!).width.replace(/px$/u, ''));
@@ -124,14 +124,14 @@ describe(HighlightedCode, () => {
     // querySelector("span") used to land on renderWithProviders' Theme
     // wrapper (`t_light _dsp_contents`), never the code line, so this guard
     // asserted null and had been red on main. Select the line itself.
-    const line = container.querySelector('[data-code-font]') as HTMLElement | null;
+    const line = container.querySelector<HTMLElement>('[data-code-font]');
     expect(line).toBeTruthy();
     expect(container.textContent).toContain('const');
     expect(line!.dataset.codeFont).toBe('mono');
     // The actual pin: bodyFont serif / fontWeight bold must not reach
     // code text, so the line keeps the mono family class.
     expect(line!.className).toContain('font_mono');
-    // React does not recognise the RN prop map; leaving it on the line logged
+    // React does not recognize the RN prop map; leaving it on the line logged
     // an unknown-prop error and wrote dataset="[object Object]" on every node.
     expect(container.querySelectorAll('[dataset]')).toHaveLength(0);
   });

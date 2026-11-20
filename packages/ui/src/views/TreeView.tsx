@@ -1263,12 +1263,12 @@ export const TreeView = <T = unknown,>({
       const onMove = (me: PointerEvent) => {
         pointerPosRef.current = { x: me.clientX, y: me.clientY };
         if (!lifted) {
-          const travelled = Math.hypot(me.clientX - startX, me.clientY - startY);
+          const traveled = Math.hypot(me.clientX - startX, me.clientY - startY);
           if (pointerType === 'mouse') {
-            if (travelled >= DRAG_THRESHOLD_PX) {
+            if (traveled >= DRAG_THRESHOLD_PX) {
               lift(me.clientX, me.clientY);
             }
-          } else if (travelled >= DRAG_THRESHOLD_PX) {
+          } else if (traveled >= DRAG_THRESHOLD_PX) {
             // Finger moved before the hold elapsed — this is a scroll, not a drag.
             teardown();
           }

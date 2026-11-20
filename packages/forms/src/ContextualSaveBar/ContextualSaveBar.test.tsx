@@ -20,7 +20,7 @@ const barButton = (label: string, root: ParentNode = document.body): HTMLElement
   const buttons = [...root.querySelectorAll('[role="button"], button')];
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
-    throw new Error(`No button labelled "${label}"`);
+    throw new Error(`No button labeled "${label}"`);
   }
   return match as HTMLElement;
 };

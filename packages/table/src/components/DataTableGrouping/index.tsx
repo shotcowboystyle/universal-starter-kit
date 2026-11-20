@@ -180,7 +180,7 @@ const formatCellValue = (value: unknown): string => {
 };
 
 /**
- * Group aggregates are the same number class as the cells they summarise, so
+ * Group aggregates are the same number class as the cells they summarize, so
  * they render through the house number register (LC-12 render channel) —
  * "15,400", never the raw `15400` beside a localized cell. Counts are whole
  * by construction; a custom aggregation may return anything, and a

@@ -114,7 +114,7 @@ describe("CheckboxBox — the empty box's edge is the shape", () => {
     expect(getCheckboxBoxBorderWidth(Number.NaN)).toBe(2);
   });
 
-  it('honours a thicker knob instead of clamping it down', () => {
+  it('honors a thicker knob instead of clamping it down', () => {
     expect(getCheckboxBoxBorderWidth(3)).toBe(3);
     expect(getCheckboxBoxBorderWidth(6)).toBe(6);
   });
@@ -157,7 +157,7 @@ describe('CheckboxBox — the radius law', () => {
     // This is the module's own shared clamp fallback (clampRadius(..., "$4")),
     // and it contradicts the comment three lines above it in CheckboxBox.tsx:
     // "$4 (9) already paints as a circle on that box". Asserted as OBSERVED
-    // behaviour, deliberately not "fixed" here — which of the two is right is
+    // behavior, deliberately not "fixed" here — which of the two is right is
     // an open design decision, not something to guess at.
     expect(clampCheckboxGlyphRadius()).toBe('$4');
     // The live caller always passes a resolved knob token, so the gap is in
@@ -352,7 +352,7 @@ describe('CheckboxGlyphBox — the painted box', () => {
     // Checked paints the MARK channel (formSelectedColors.mark), so the
     // transparent fill is gone. The mark token is an accent value the test
     // config does not resolve, which is exactly why this asserts the absence
-    // of the idle fill rather than a colour literal.
+    // of the idle fill rather than a color literal.
     expect(classesOf(glyph(marked.container))).not.toContain('_bg-transparent');
   });
 

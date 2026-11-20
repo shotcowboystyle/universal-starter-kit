@@ -232,7 +232,7 @@ export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Side
             return (
               <YStack
                 key={section.title ?? sectionIdx}
-                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- none of the suggested tags is a labelled generic group; role also maps to the native accessibilityRole
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- none of the suggested tags is a labeled generic group; role also maps to the native accessibilityRole
                 role="group"
                 aria-labelledby={titleId}
                 {...knobProps.gap}

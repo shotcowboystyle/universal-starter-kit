@@ -195,7 +195,7 @@ export const __resetAsyncDevWarnSeen = (): void => {
 
 export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) => {
   const { t } = useTranslation();
-  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- `generic` is the intentional default so an unrecognised layout from untyped callers still paints the generic skeleton
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- `generic` is the intentional default so an unrecognized layout from untyped callers still paints the generic skeleton
   switch (layout) {
     case 'list': {
       return (

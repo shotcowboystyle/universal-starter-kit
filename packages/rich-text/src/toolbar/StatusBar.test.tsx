@@ -64,7 +64,7 @@ describe(StatusBar, () => {
         />,
       ),
     );
-    // Tamagui compiles the weight/colour props to class tokens, so the
+    // Tamagui compiles the weight/color props to class tokens, so the
     // rendered class list is where "active" is actually observable.
     const classesOf = (label: string) => getByText(label).className;
 
@@ -87,7 +87,7 @@ describe(StatusBar, () => {
     expect(classesOf('Rich text')).toBe(idleClasses);
   });
 
-  it('singularises exactly at one word and one character', () => {
+  it('singularizes exactly at one word and one character', () => {
     const { getByText } = renderWithProviders(
       withContext(
         <StatusBar
@@ -101,7 +101,7 @@ describe(StatusBar, () => {
     expect(getByText('1 character')).toBeTruthy();
   });
 
-  it('pluralises at zero as well as at many', () => {
+  it('pluralizes at zero as well as at many', () => {
     const { getByText, rerender } = renderWithProviders(
       withContext(
         <StatusBar

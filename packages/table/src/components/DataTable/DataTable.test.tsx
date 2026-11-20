@@ -713,7 +713,7 @@ describe(DataTable, () => {
 
       expect(screen.queryByLabelText('Select all rows')).toBeNull();
       // Anchored on the row-name template, not the bare "Select row" prefix:
-      // DataTablePagination's page-size control is labelled "Select rows per
+      // DataTablePagination's page-size control is labeled "Select rows per
       // page", which /^Select row/ also matches.
       expect(screen.queryByLabelText(/^Select row \S/u)).toBeNull();
       expect(screen.queryByText(/selected/u)).toBeNull();

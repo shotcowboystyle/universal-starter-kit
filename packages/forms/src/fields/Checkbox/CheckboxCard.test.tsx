@@ -129,7 +129,7 @@ describe('CheckboxCardFrame — control leading, whole card interactive', () => 
     const activeCard = painted(active.container, '_fd-row');
     expect(activeCard).toContain('_bg-color3');
     expect(activeCard).not.toContain('_bg-color2');
-    // the border is untouched: same width, same colour, no second outline
+    // the border is untouched: same width, same color, no second outline
     expect(activeCard).toContain('_btw-1px');
     expect(activeCard).toContain('_btc-color6');
   });

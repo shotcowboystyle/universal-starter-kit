@@ -144,7 +144,7 @@ describe(ImageField, () => {
       click.mockRestore();
     });
 
-    it('shows a labelled fallback when the attached image fails to load', async () => {
+    it('shows a labeled fallback when the attached image fails to load', async () => {
       const result = renderWithProviders(
         <ImageField
           label="Photo"

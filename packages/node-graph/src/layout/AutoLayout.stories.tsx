@@ -196,7 +196,7 @@ const AutoLayoutPage = ({
       return;
     }
     /*
-      Re-fit once a tidy has settled — STORY behaviour, not package behaviour.
+      Re-fit once a tidy has settled — STORY behavior, not package behavior.
 
       The engine deliberately anchors the tidied box where the old one was
       (design §8: a tidy that teleports the graph reads as a crash), so a graph

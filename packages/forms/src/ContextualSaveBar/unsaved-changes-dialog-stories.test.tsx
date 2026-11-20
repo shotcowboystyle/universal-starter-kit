@@ -1,7 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 /**
  * Mounts every Forms/ContextualSaveBar/UnsavedChangesDialog story and asserts
- * what it exists to show — chiefly the copy pluralisation and that the safe
+ * what it exists to show — chiefly the copy pluralization and that the safe
  * choice, not the destructive one, is what a dismissal resolves to.
  *
  * Only one open dialog per test: Dialog.Portal mounts to the document body, so

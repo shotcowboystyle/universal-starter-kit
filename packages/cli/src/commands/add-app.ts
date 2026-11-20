@@ -12,7 +12,7 @@
  */
 
 import { rmSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import path from 'node:path';
 
 import { finishMerge, landTree, mergeScaffolds, projectRootOf, requireCleanTree } from './merge';
 import {
@@ -24,6 +24,7 @@ import {
   writeProvenance,
 } from './provenance';
 import { scaffoldToTemp } from './scaffold';
+import type { TempScaffold } from './scaffold';
 
 export interface AddAppOptions {
   /** Path or url holding the recorded source commit (default: the recorded url). */
@@ -32,7 +33,7 @@ export interface AddAppOptions {
   verbose?: boolean;
 }
 
-export async function addApp(nameArg: string, options: AddAppOptions = {}): Promise<void> {
+export const addApp = async (nameArg: string, options: AddAppOptions = {}): Promise<void> => {
   const name = validateName(nameArg);
   const projectDir = await projectRootOf('mpo add-app');
   await requireCleanTree(projectDir, 'mpo add-app');
@@ -51,7 +52,7 @@ export async function addApp(nameArg: string, options: AddAppOptions = {}): Prom
     throw new Error(`apps/${name} is already a product app of this project`);
   }
   const source = options.source ?? provenance.source.url;
-  if (!source) {
+  if (source === undefined || source === '') {
     throw new Error(`${PROVENANCE_FILE} records no source url — pass --source <path or url>`);
   }
   const { sha } = provenance.source;
@@ -60,19 +61,22 @@ export async function addApp(nameArg: string, options: AddAppOptions = {}): Prom
     ref: sha,
     services: provenance.services,
     mpoVersion: `^${provenance.cliVersion}`,
-    name: packageJsonName(projectDir) ?? basename(projectDir),
+    name: packageJsonName(projectDir) ?? path.basename(projectDir),
     verbose: options.verbose,
   };
 
   console.log(`\nmpo add-app ${name}: ${provenance.apps.join(', ')} + ${name} @ ${sha.slice(0, 12)}`);
   const base = await scaffoldToTemp({ ...common, apps: provenance.apps });
-  const theirs = await scaffoldToTemp({ ...common, apps: [...provenance.apps, name] }).catch((error: unknown) => {
+  let theirs: TempScaffold;
+  try {
+    theirs = await scaffoldToTemp({ ...common, apps: [...provenance.apps, name] });
+  } catch (error) {
     base.cleanup();
     throw error;
-  });
+  }
   try {
     for (const dir of [base.dir, theirs.dir]) {
-      rmSync(join(dir, PROVENANCE_FILE), { force: true });
+      rmSync(path.join(dir, PROVENANCE_FILE), { force: true });
     }
     const outcome = await mergeScaffolds({
       projectDir,
@@ -96,4 +100,4 @@ export async function addApp(nameArg: string, options: AddAppOptions = {}): Prom
     base.cleanup();
     theirs.cleanup();
   }
-}
+};

@@ -43,7 +43,7 @@
 import { isDrawingFile, readDrawingRegistry } from './drawing-registry.mjs';
 import { readSlotMarginRegistry } from './spec-registry.mjs';
 
-/** Hex + functional CSS colour literals. AST-visited only (not a text scan). */
+/** Hex + functional CSS color literals. AST-visited only (not a text scan). */
 export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/iu;
 
 /** Palette modules where a 12-step ramp in hex/hsl is the deliverable (EN-2). */
@@ -541,7 +541,7 @@ const houseJsxVisitors = (context, onHouseElement) => {
 
 /**
  * @param {string | undefined} filename path being linted
- * @returns {boolean} true for a palette module, where colour literals are the deliverable
+ * @returns {boolean} true for a palette module, where color literals are the deliverable
  */
 export const isPaletteModule = (filename) => {
   if (filename === undefined || filename === '') {

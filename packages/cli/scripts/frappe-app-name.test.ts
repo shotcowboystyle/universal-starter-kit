@@ -1,8 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -10,9 +9,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // uses it for apps/<name> dirs and bench --app args, so it must always be
 // the importable python module name (frappe_mcp), never the hyphenated
 // repo/distribution name (frappe-mcp).
-const SCRIPT = join(import.meta.dirname, 'frappe-app-name.py');
+const SCRIPT = path.join(import.meta.dirname, 'frappe-app-name.py');
 
-function derive(appPath: string, fallback?: string) {
+const derive = (appPath: string, fallback?: string) => {
+  // oxlint-disable-next-line sonarjs/no-os-command-from-path -- the script under test runs on the developer's python3, as frappe-bootstrap.sh does
   const result = spawnSync('python3', [SCRIPT, appPath, ...(fallback === undefined ? [] : [fallback])], {
     encoding: 'utf-8',
   });
@@ -21,7 +21,7 @@ function derive(appPath: string, fallback?: string) {
     stdout: result.stdout.trim(),
     stderr: result.stderr.trim(),
   };
-}
+};
 
 interface Case {
   name: string;
@@ -124,7 +124,7 @@ const cases: Case[] = [
       'pyproject.toml': pyproject('universal-starter-kit-app'),
     },
     fallback: 'repo',
-    expected: 'multiplatform_one_app',
+    expected: 'universal_starter_kit_app',
   },
   {
     name: 'fallback only: repo basename is normalized',
@@ -138,41 +138,40 @@ describe('frappe-app-name.py', () => {
   let sandbox: string;
 
   beforeAll(() => {
+    // oxlint-disable-next-line sonarjs/no-os-command-from-path -- probes the same python3 the script under test needs
     const python = spawnSync('python3', ['--version'], { encoding: 'utf-8' });
     if (python.status !== 0) {
       throw new Error('python3 is required to run the frappe-app-name derivation specs');
     }
-    sandbox = mkdtempSync(join(tmpdir(), 'mpo-frappe-app-name-'));
+    sandbox = mkdtempSync(path.join(tmpdir(), 'mpo-frappe-app-name-'));
   });
 
   afterAll(() => {
     rmSync(sandbox, { recursive: true, force: true });
   });
 
-  function makeApp(name: string, files: Record<string, string>): string {
-    const root = join(sandbox, name.replaceAll(/[^a-z0-9]+/gi, '-'));
+  const makeApp = (name: string, files: Record<string, string>): string => {
+    const root = path.join(sandbox, name.replaceAll(/[^a-z0-9]+/giu, '-'));
     mkdirSync(root, { recursive: true });
     for (const [relative, contents] of Object.entries(files)) {
-      const target = join(root, relative);
+      const target = path.join(root, relative);
       if (relative.endsWith('/')) {
         mkdirSync(target, { recursive: true });
         continue;
       }
-      mkdirSync(dirname(target), { recursive: true });
+      mkdirSync(path.dirname(target), { recursive: true });
       writeFileSync(target, contents);
     }
     return root;
-  }
+  };
 
-  for (const [index, spec] of cases.entries()) {
-    it(spec.name, () => {
-      const root = makeApp(`case-${index}`, spec.files);
-      const result = derive(root, spec.fallback);
-      expect(result.stderr).toBe('');
-      expect(result.status).toBe(0);
-      expect(result.stdout).toBe(spec.expected);
-    });
-  }
+  it.each(cases.map((spec, index) => ({ ...spec, index })))('$name', (spec) => {
+    const root = makeApp(`case-${spec.index}`, spec.files);
+    const result = derive(root, spec.fallback);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe(spec.expected);
+  });
 
   it('fails loudly when nothing can be derived', () => {
     const root = makeApp('case-underivable', {});

@@ -16,7 +16,7 @@ const meta: Meta<typeof TimePicker> = {
     docs: {
       description: {
         component:
-          'A time picker with iOS-style hour, minute, and AM/PM wheels: inertial snap, a fixed centre band, and looping hours/minutes.',
+          'A time picker with iOS-style hour, minute, and AM/PM wheels: inertial snap, a fixed center band, and looping hours/minutes.',
       },
     },
   },

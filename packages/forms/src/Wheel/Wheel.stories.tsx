@@ -24,7 +24,7 @@ const meta: Meta<typeof Wheel> = {
     docs: {
       description: {
         component:
-          'iOS UIPickerView / Flutter CupertinoPicker cylinder. Drag, flick or arrow-key to bring an item through the centre band. TimePicker and DatePicker paint columns of these; `highlightEdges` joins adjacent columns into one selection band.',
+          'iOS UIPickerView / Flutter CupertinoPicker cylinder. Drag, flick or arrow-key to bring an item through the center band. TimePicker and DatePicker paint columns of these; `highlightEdges` joins adjacent columns into one selection band.',
       },
     },
   },
@@ -90,7 +90,7 @@ export const PlainValues: Story = {
 
 /**
  * `visibleItems` is the cylinder depth. 3 is a compact inline row, 7 the full
- * iOS sheet; the value must stay odd so an item sits dead centre.
+ * iOS sheet; the value must stay odd so an item sits dead center.
  */
 export const VisibleItems: Story = {
   render: () => (

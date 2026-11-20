@@ -63,7 +63,7 @@ export interface UseFrappePaginationResult<TDoc> {
 
 const defaultPageSize = 20;
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the sync layer threw; normalised to an Error here
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the sync layer threw; normalized to an Error here
 const toError = (err: unknown): Error => (err instanceof Error ? err : new Error(String(err)));
 
 type OrderBy<TDoc> = NonNullable<UseFrappeRowsOptions<TDoc>['orderBy']>;

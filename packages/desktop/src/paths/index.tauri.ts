@@ -20,4 +20,4 @@ export const paths: PathsApi = {
   },
 };
 
-export type { PathsApi };
+export type { PathsApi } from './index';

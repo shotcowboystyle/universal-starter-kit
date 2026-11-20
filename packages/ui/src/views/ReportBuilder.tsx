@@ -950,7 +950,7 @@ interface ReportDataOptions {
   emptyGroupLabel: string;
 }
 
-/** Sorted, grouped and totalled views of the report data, plus the keyboard focus order. */
+/** Sorted, grouped and totaled views of the report data, plus the keyboard focus order. */
 const useReportData = ({
   data,
   columns,

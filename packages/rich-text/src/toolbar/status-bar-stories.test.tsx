@@ -53,7 +53,7 @@ describe('StatusBar stories', () => {
     expect(queryByText('1 words')).toBeNull();
   });
 
-  it('Empty pluralises at zero', () => {
+  it('Empty pluralizes at zero', () => {
     const { getByText } = mount(Empty);
     expect(getByText('0 words')).toBeTruthy();
     expect(getByText('0 characters')).toBeTruthy();

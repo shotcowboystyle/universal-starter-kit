@@ -77,7 +77,7 @@ const setViewport = (width: number) => {
 };
 
 describe('TreeSelect cover + width', () => {
-  it('panel attaches at zero over the trigger and honours at-least-trigger', async () => {
+  it('panel attaches at zero over the trigger and honors at-least-trigger', async () => {
     setViewport(1200);
     const result = renderWithProviders(
       <TreeSelect

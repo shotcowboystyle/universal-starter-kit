@@ -33,7 +33,7 @@ import {
 import babel from '@rolldown/plugin-babel';
 import vscode from '@tomjs/vite-plugin-vscode';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
-import type { Alias, Plugin, UserConfig } from 'vite';
+import type { Alias, UserConfig } from 'vite';
 
 /** Default CSP: the plugin's default lacks font-src/img-src and blocks
  *  dynamically imported chunks (script-src nonce-only) — the app bundle
@@ -56,7 +56,7 @@ export interface VscodeTargetOptions {
   csp?: string;
   isDev?: boolean;
   /** Extra defines merged over the factory defaults. */
-  define?: Record<string, unknown>;
+  define?: UserConfig['define'];
   /** Extra resolve aliases appended after the factory's. */
   aliases?: Alias[];
 }
@@ -77,15 +77,15 @@ const WEB_EXTENSIONS = [
 
 /** Resolve the seam's one-adapter: workspace source when developing inside
  *  the framework monorepo, the built package export otherwise. */
-export function resolveSeamOneAdapter(workspaceRoot: string): string {
+export const resolveSeamOneAdapter = (workspaceRoot: string): string => {
   const source = path.join(workspaceRoot, 'public/router/src/seam/oneAdapter.tsx');
   if (fs.existsSync(source)) {
     return source;
   }
   return '@repo/router/seam';
-}
+};
 
-export async function createVscodeConfig(options: VscodeTargetOptions): Promise<UserConfig> {
+export const createVscodeConfig = async (options: VscodeTargetOptions): Promise<UserConfig> => {
   const workspaceRoot = options.workspaceRoot ?? lookupProjectRoot();
   const isDev = options.isDev ?? process.env.NODE_ENV !== 'production';
   const { tamaguiPlugin } = await import('@tamagui/vite-plugin');
@@ -128,7 +128,7 @@ export async function createVscodeConfig(options: VscodeTargetOptions): Promise<
         components: lookupTamaguiModules([options.targetDir]),
         config: options.tamaguiConfig,
         outputCSS: path.join(options.targetDir, 'tamagui.css'),
-      }) as Plugin,
+      }),
       vscode({
         recommended: true,
         extension: {
@@ -148,7 +148,7 @@ export async function createVscodeConfig(options: VscodeTargetOptions): Promise<
           replacement,
         })),
         // One routing layer: `one` rides the stack-navigation seam.
-        { find: /^one$/, replacement: resolveSeamOneAdapter(workspaceRoot) },
+        { find: /^one$/u, replacement: resolveSeamOneAdapter(workspaceRoot) },
         { find: '@', replacement: path.join(options.targetDir, 'webview') },
         { find: 'react-native', replacement: 'react-native-web' },
         // Force every "react", "react-dom", and jsx-runtime import to the
@@ -156,8 +156,8 @@ export async function createVscodeConfig(options: VscodeTargetOptions): Promise<
         // to its vendored React 18 (one/vendor/react/...), which uses internal
         // APIs (ReactCurrentOwner) that React 19 has removed — crashing the
         // webview at first render.
-        { find: /^react$/, replacement: path.join(workspaceRoot, 'node_modules/react') },
-        { find: /^react-dom$/, replacement: path.join(workspaceRoot, 'node_modules/react-dom') },
+        { find: /^react$/u, replacement: path.join(workspaceRoot, 'node_modules/react') },
+        { find: /^react-dom$/u, replacement: path.join(workspaceRoot, 'node_modules/react-dom') },
         {
           find: 'react/jsx-runtime',
           replacement: path.join(workspaceRoot, 'node_modules/react/jsx-runtime.js'),
@@ -173,15 +173,7 @@ export async function createVscodeConfig(options: VscodeTargetOptions): Promise<
       mainFields: ['browser', 'module', 'main'],
     },
     optimizeDeps: {
-      include: [
-        'react',
-        'react-dom',
-        '@tamagui/core',
-        '@tamagui/web',
-        'tamagui',
-        'react-native-web',
-        '@repo/ui',
-      ],
+      include: ['react', 'react-dom', '@tamagui/core', '@tamagui/web', 'tamagui', 'react-native-web', '@repo/ui'],
       esbuildOptions: {
         resolveExtensions: ['.web.ts', '.web.tsx', '.web.js', '.web.jsx', '.ts', '.tsx', '.js', '.jsx'],
         mainFields: ['module', 'main'],
@@ -198,9 +190,12 @@ export async function createVscodeConfig(options: VscodeTargetOptions): Promise<
       },
     },
   };
-}
+};
 
 // ── vsce staging manifest ─────────────────────────────────────────
+
+/** A JSON value as written to the extension manifest. */
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 export interface VsceManifest {
   name: string;
@@ -214,17 +209,17 @@ export interface VsceManifest {
   engines?: { vscode: string; [key: string]: string };
   /** Defaults to `extension/index.js` (the staging layout). */
   main?: string;
-  contributes?: Record<string, unknown>;
+  contributes?: Record<string, JsonValue>;
   activationEvents?: string[];
   categories?: string[];
   icon?: string;
-  repository?: unknown;
+  repository?: JsonValue;
   license?: string;
 }
 
 /** Correct the webview dist path baked into the extension-host bundle.
  *
- *  @tomjs/vite-plugin-vscode computes `VITE_WEBVIEW_DIST` (the segment its
+ *  The `@tomjs/vite-plugin-vscode` plugin computes `VITE_WEBVIEW_DIST` (the segment its
  *  runtime joins onto `context.extensionUri` to form the webview base URI)
  *  by stripping `process.cwd()` off the resolved outDir. That model assumes
  *  the extension is packaged from the vite project root; with an
@@ -237,27 +232,29 @@ export interface VsceManifest {
  *  `"webview"` (the assets dir next to the generated package.json), so the
  *  staging step rewrites the joinPath call site — anchored on the
  *  `.extensionUri` property read, which survives minification. */
-export async function fixStagedWebviewAssetUris(stagingDir: string): Promise<boolean> {
+export const fixStagedWebviewAssetUris = async (stagingDir: string): Promise<boolean> => {
   const bundles = ['extension/index.js', 'extension/index.cjs'].map((file) => path.join(stagingDir, file));
-  let fixed = false;
-  for (const bundle of bundles) {
-    if (!fs.existsSync(bundle)) {
-      continue;
-    }
-    const source = await fs.promises.readFile(bundle, 'utf-8');
-    const rewritten = source.replaceAll(
-      // The dist segment may be emitted as a quoted string OR a template
-      // literal (tsdown's env define does both depending on content).
-      /joinPath\(([A-Za-z_$][\w$]*\.extensionUri),\s*("[^"\n]*"|'[^'\n]*'|`[^`\n]*`)\)/g,
-      'joinPath($1, "webview")',
-    );
-    if (rewritten !== source) {
+  const results = await Promise.all(
+    bundles.map(async (bundle) => {
+      if (!fs.existsSync(bundle)) {
+        return false;
+      }
+      const source = await fs.promises.readFile(bundle, 'utf-8');
+      const rewritten = source.replaceAll(
+        // The dist segment may be emitted as a quoted string OR a template
+        // literal (tsdown's env define does both depending on content).
+        /joinPath\((?<uri>[A-Za-z_$][\w$]*\.extensionUri),\s*(?:"[^"\n]*"|'[^'\n]*'|`[^`\n]*`)\)/gu,
+        'joinPath($<uri>, "webview")',
+      );
+      if (rewritten === source) {
+        return false;
+      }
       await fs.promises.writeFile(bundle, rewritten, 'utf-8');
-      fixed = true;
-    }
-  }
-  return fixed;
-}
+      return true;
+    }),
+  );
+  return results.includes(true);
+};
 
 /** Write the extension-manifest package.json into the staging dir. A VS
  *  Code extension's package.json IS its manifest — the product app's own
@@ -265,7 +262,7 @@ export async function fixStagedWebviewAssetUris(stagingDir: string): Promise<boo
  *  package` runs against the staging dir instead. Also applies
  *  `fixStagedWebviewAssetUris` — staging is the earliest race-free point after
  *  the plugin's detached extension-host build has finished. */
-export async function writeVsceManifest(stagingDir: string, manifest: VsceManifest): Promise<void> {
+export const writeVsceManifest = async (stagingDir: string, manifest: VsceManifest): Promise<void> => {
   const { engines, main, ...rest } = manifest;
   const packageJson = {
     ...rest,
@@ -279,4 +276,4 @@ export async function writeVsceManifest(stagingDir: string, manifest: VsceManife
     'utf-8',
   );
   await fixStagedWebviewAssetUris(stagingDir);
-}
+};

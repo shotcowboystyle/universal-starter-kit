@@ -207,7 +207,7 @@ describe('DataTableExport date export', () => {
     });
 
     it('host guard: TZ actually moves the in-process reading', () => {
-      // Without this, a host that stopped honouring TZ would make every matrix
+      // Without this, a host that stopped honoring TZ would make every matrix
       // above pass by rendering the same thing four times. The negative control
       // cannot cover it — toISOString() is UTC on a broken host too, so it would
       // keep "disagreeing" in exactly the right places.

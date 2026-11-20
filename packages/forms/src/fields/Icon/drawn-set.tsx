@@ -188,7 +188,7 @@ export const DrawnIcon = ({ name, size = 16, color }: { name: DrawnIconName; siz
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      // Also the parent colour, so any nested `currentColor` resolves to ink
+      // Also the parent color, so any nested `currentColor` resolves to ink
       // instead of nil.
       color={ink}
       pointerEvents="none"

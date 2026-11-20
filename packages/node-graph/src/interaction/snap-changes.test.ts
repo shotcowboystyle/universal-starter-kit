@@ -185,7 +185,7 @@ describe('applySnapToChanges: S3, the index is built once per drag', () => {
 });
 
 describe('applySnapToChanges: S5, grid and alignment compose per axis', () => {
-  it('puts the node on the grid when no neighbour is in range', () => {
+  it('puts the node on the grid when no neighbor is in range', () => {
     const nodes = [node('a', 309, 205)];
     const result = applySnapToChanges([drag('a', 309, 205)], context({ nodes, grid: 16 }));
     expect(positionOf(result.changes[0])).toStrictEqual({ x: 304, y: 208 });
@@ -195,7 +195,7 @@ describe('applySnapToChanges: S5, grid and alignment compose per axis', () => {
   it('lets alignment override the axis a guide fired on, and only that one', () => {
     const nodes = [node('a', 309, 205), node('c', 300, 600)];
     const result = applySnapToChanges([drag('a', 309, 205)], context({ nodes, grid: 16 }));
-    // x aligned to the neighbour's left edge; y still on the grid.
+    // x aligned to the neighbor's left edge; y still on the grid.
     expect(positionOf(result.changes[0])).toStrictEqual({ x: 300, y: 208 });
     expect(result.guides).toHaveLength(1);
     expect(result.guides[0].axis).toBe('x');
@@ -208,7 +208,7 @@ describe('applySnapToChanges: S5, grid and alignment compose per axis', () => {
   });
 
   it('runs the grid FIRST, so a node the grid carried into range still aligns', () => {
-    // 309 is 9 from the neighbour's edge and outside an 8 px pull. The grid
+    // 309 is 9 from the neighbor's edge and outside an 8 px pull. The grid
     // moves it to 304, which is 4 away, and alignment then takes it.
     const nodes = [node('a', 309, 0), node('c', 300, 400)];
     const loose = applySnapToChanges([drag('a', 309, 0)], context({ nodes, grid: null }));

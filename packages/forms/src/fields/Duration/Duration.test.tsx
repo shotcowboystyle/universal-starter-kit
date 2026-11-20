@@ -192,7 +192,7 @@ describe(Duration, () => {
       expect(result.container.querySelector('svg')).toBeNull();
     });
 
-    it('normalises a negative value in the hours segment', () => {
+    it('normalizes a negative value in the hours segment', () => {
       const result = renderWithProviders(
         <Duration
           label="Neg"
@@ -379,7 +379,7 @@ describe(Duration, () => {
       expect(onChange).toHaveBeenCalledWith(7200);
     });
 
-    it('normalises overflow minutes on blur', () => {
+    it('normalizes overflow minutes on blur', () => {
       const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration

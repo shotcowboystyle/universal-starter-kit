@@ -101,7 +101,7 @@ const composeGetTheme = (
     const merged = { ...base(props) };
     const consumer = custom(props);
     // Dropping nullish is not enough: a misspelled
-    // colour is not nullish, survives the merge, and resolves to nothing at
+    // color is not nullish, survives the merge, and resolves to nothing at
     // paint. Fail here, while there is a stack that names the getTheme.
     assertResolvableThemeValues(consumer, props.name);
     for (const [key, value] of Object.entries(consumer)) {

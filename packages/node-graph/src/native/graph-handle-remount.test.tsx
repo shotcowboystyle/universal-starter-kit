@@ -60,7 +60,7 @@ const envelope = {
 const landed: { instance: number; command: string }[] = [];
 
 /**
- * `expo/dom`'s `RawWebView`, reduced to the one behaviour that matters.
+ * `expo/dom`'s `RawWebView`, reduced to the one behavior that matters.
  *
  * Copied from `expo@55`'s `src/dom/webview-wrapper.tsx`, which does exactly
  * this: `if (ref != null && typeof ref === 'object' && ref.current == null) {

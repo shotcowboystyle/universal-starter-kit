@@ -332,7 +332,7 @@ export const SheetModal = ({
     }, 280);
     // The modal fades (backdrop dims IN PLACE); only the panel slides.
     // The sheet is already parked off-screen before the present, so
-    // this setValue only normalises the start to exactly `travel` once the
+    // this setValue only normalizes the start to exactly `travel` once the
     // sheet has measured. Priming it here ALONE is the open-close-open bug:
     // by the time onShow runs the dissolve has already shown the sheet.
     translateY.setValue(travelRef.current);

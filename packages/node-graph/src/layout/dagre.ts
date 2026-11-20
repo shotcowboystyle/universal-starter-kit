@@ -10,7 +10,7 @@
  *
  * Three things this file is responsible for that dagre is not:
  *
- *  - **Centres to top-left.** dagre reports a node's CENTRE. Documents and
+ *  - **Centers to top-left.** dagre reports a node's CENTRE. Documents and
  *    React Flow both hold top-left. Converting at the boundary is why nothing
  *    downstream has to know dagre's convention.
  *  - **Determinism.** dagre's own result depends on insertion order, so nodes
@@ -23,7 +23,7 @@
  *    top-left the moved set already occupied, so the arrangement changes and
  *    the location does not.
  *
- * Design §8. Licence: dagre is MIT, compatible with this repo's Apache-2.0 —
+ * Design §8. License: dagre is MIT, compatible with this repo's Apache-2.0 —
  * unlike elkjs, whose `EPL-2.0 OR GPL-3.0-or-later` is decision D2 and is
  * still unruled, which is why there is no second engine here.
  */
@@ -83,7 +83,7 @@ interface DagreCentre {
   readonly y?: number;
 }
 
-/** Dagre's centre → our top-left; the input position when dagre placed nothing usable. */
+/** Dagre's center → our top-left; the input position when dagre placed nothing usable. */
 const topLeftOf = (out: DagreCentre | undefined, node: LayoutNodeInput): XY => {
   const { x, y } = out ?? {};
   if (x === undefined || y === undefined) {

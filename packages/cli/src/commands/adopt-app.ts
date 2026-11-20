@@ -2,7 +2,7 @@
  * `mpo adopt` — bring an EXISTING, never-scaffolded project under `mpo
  * update` management. Projects like this hand-copied one or more delivery
  * targets (webext, gnome, …) from templates/pieces and consume
- * @repo/* from npm, but have no .mpo.json provenance, so
+ * `@repo/*` from npm, but have no .mpo.json provenance, so
  * `mpo update` refuses to run. A project that wants the whole monorepo
  * scaffold instead runs `mpo init --into`.
  *
@@ -14,15 +14,22 @@
  * every later update is an ordinary three-way merge.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 
 import inquirer from 'inquirer';
-import spawn from 'nano-spawn';
 
+import { git, gitOrRefuse } from './merge';
 import { INIT_APP_PIECES, availablePieces, normalizePieces, pieceDescription } from './pieces';
 import type { InitAppPiece } from './pieces';
-import { PROVENANCE_FILE, cliVersion, packageJsonName, validateName, writeProvenance } from './provenance';
+import {
+  PROVENANCE_FILE,
+  cliVersion,
+  packageJsonName,
+  rawPackageJsonName,
+  validateName,
+  writeProvenance,
+} from './provenance';
 
 export interface AdoptAppOptions {
   /** Pieces the project hand-adopted (at least one is required). */
@@ -39,33 +46,21 @@ const UPDATEIGNORE_SEED = `# .updateignore — \`mpo update\` never rewrites pat
 # during template updates. Lines starting with "#" are comments.
 `;
 
-async function git(projectDir: string, args: string[]) {
-  return await spawn('git', args, { cwd: projectDir });
-}
-
 /**
  * The universal-starter-kit monorepo (and its forks) is the home of the
  * templates themselves — adopting it into consumer-project update
  * management would be circular. It is identified by the CLI package
- * living at public/cli.
+ * living at packages/cli.
  */
-function isMpoMonorepo(projectDir: string): boolean {
-  try {
-    const pkg = JSON.parse(readFileSync(join(projectDir, 'public/cli/package.json'), 'utf-8')) as {
-      name?: string;
-    };
-    return pkg.name === '@repo/cli';
-  } catch {
-    return false;
-  }
-}
+const isMpoMonorepo = (projectDir: string): boolean =>
+  rawPackageJsonName(path.join(projectDir, 'packages/cli')) === '@repo/cli';
 
-async function resolveAdoptPieces(options: AdoptAppOptions): Promise<InitAppPiece[]> {
-  if (options.pieces?.length) {
+const resolveAdoptPieces = async (options: AdoptAppOptions): Promise<InitAppPiece[]> => {
+  if (options.pieces !== undefined && options.pieces.length > 0) {
     return normalizePieces(options.pieces);
   }
   if (!options.yes && process.stdout.isTTY) {
-    const result = await inquirer.prompt([
+    const result = await inquirer.prompt<{ pieces: string[] }>([
       {
         message: 'Which pieces did this project adopt? (space to toggle, enter to confirm)',
         name: 'pieces',
@@ -75,27 +70,21 @@ async function resolveAdoptPieces(options: AdoptAppOptions): Promise<InitAppPiec
           value: piece,
           checked: false,
         })),
-        validate: (selection: unknown[]) =>
+        validate: (selection: readonly string[]) =>
           selection.length > 0 || 'Select at least one piece — adopting nothing is meaningless',
       },
     ]);
-    return normalizePieces(result.pieces as string[]);
+    return normalizePieces(result.pieces);
   }
-  throw new Error(
-    'mpo adopt needs at least one piece ' +
-      `(${INIT_APP_PIECES.map((piece) => `--${piece}`).join(', ')}) — ` +
-      'adopting nothing is meaningless',
-  );
-}
+  const flags = INIT_APP_PIECES.map((piece) => `--${piece}`).join(', ');
+  throw new Error(`mpo adopt needs at least one piece (${flags}) — adopting nothing is meaningless`);
+};
 
-export async function adoptApp(options: AdoptAppOptions = {}): Promise<void> {
-  const projectDir = await spawn('git', ['rev-parse', '--show-toplevel'], {
-    cwd: process.cwd(),
-  }).then(
-    (result) => result.stdout.trim(),
-    () => {
-      throw new Error('mpo adopt must run inside a git repository');
-    },
+export const adoptApp = async (options: AdoptAppOptions = {}): Promise<void> => {
+  const projectDir = await gitOrRefuse(
+    process.cwd(),
+    ['rev-parse', '--show-toplevel'],
+    'mpo adopt must run inside a git repository',
   );
 
   if (isMpoMonorepo(projectDir)) {
@@ -104,26 +93,32 @@ export async function adoptApp(options: AdoptAppOptions = {}): Promise<void> {
         'it is for consumer projects that use @repo/* from npm',
     );
   }
-  if (existsSync(join(projectDir, PROVENANCE_FILE))) {
+  if (existsSync(path.join(projectDir, PROVENANCE_FILE))) {
     throw new Error(
       `${PROVENANCE_FILE} already exists — this project already has scaffold provenance. ` +
         'Run `mpo update` directly.',
     );
   }
-  await git(projectDir, ['rev-parse', 'HEAD']).catch(() => {
-    throw new Error('mpo adopt requires at least one commit — commit your project first');
-  });
+  await gitOrRefuse(
+    projectDir,
+    ['rev-parse', 'HEAD'],
+    'mpo adopt requires at least one commit — commit your project first',
+  );
   // Clean tree required — adoption lands as its own commit, and the next
   // step (`mpo update`) needs a clean tree anyway.
-  await git(projectDir, ['diff', '--quiet']).catch(() => {
-    throw new Error('mpo adopt requires a clean working tree (unstaged changes present)');
-  });
-  await git(projectDir, ['diff', '--cached', '--quiet']).catch(() => {
-    throw new Error('mpo adopt requires a clean working tree (staged changes present)');
-  });
+  await gitOrRefuse(
+    projectDir,
+    ['diff', '--quiet'],
+    'mpo adopt requires a clean working tree (unstaged changes present)',
+  );
+  await gitOrRefuse(
+    projectDir,
+    ['diff', '--cached', '--quiet'],
+    'mpo adopt requires a clean working tree (staged changes present)',
+  );
 
   const rawName = options.name ?? packageJsonName(projectDir);
-  if (!rawName) {
+  if (rawName === undefined || rawName === '') {
     throw new Error('Could not derive a project name from package.json — pass one with --name <name>');
   }
   let name: string;
@@ -131,7 +126,7 @@ export async function adoptApp(options: AdoptAppOptions = {}): Promise<void> {
     name = validateName(rawName);
   } catch (error) {
     throw new Error(
-      `${(error as Error).message} The name renders piece file paths (apps/<name>/…), ` +
+      `${error instanceof Error ? error.message : String(error)} The name renders piece file paths (apps/<name>/…), ` +
         'so pick the one matching your app directory: --name <name>.',
       { cause: error },
     );
@@ -151,23 +146,19 @@ export async function adoptApp(options: AdoptAppOptions = {}): Promise<void> {
     reconciled: false,
   });
   const files = [PROVENANCE_FILE];
-  if (!existsSync(join(projectDir, UPDATEIGNORE_FILE))) {
-    writeFileSync(join(projectDir, UPDATEIGNORE_FILE), UPDATEIGNORE_SEED);
+  if (!existsSync(path.join(projectDir, UPDATEIGNORE_FILE))) {
+    writeFileSync(path.join(projectDir, UPDATEIGNORE_FILE), UPDATEIGNORE_SEED);
     files.push(UPDATEIGNORE_FILE);
   }
   await git(projectDir, ['add', '--', ...files]);
-  const committed = await git(projectDir, [
-    'commit',
-    '--quiet',
-    '-m',
-    'chore: adopt universal-starter-kit tooling (mpo adopt)',
-  ]).then(
-    () => true,
-    () => {
-      console.warn('⚠️  git commit failed (missing git identity?) — provenance left staged.');
-      return false;
-    },
-  );
+  let committed = true;
+  try {
+    await git(projectDir, ['commit', '--quiet', '-m', 'chore: adopt universal-starter-kit tooling (mpo adopt)']);
+  } catch {
+    // Safe to continue: provenance stays staged and the owner commits it.
+    console.warn('⚠️  git commit failed (missing git identity?) — provenance left staged.');
+    committed = false;
+  }
 
   console.log(`\n✅ adopted ${name} (pieces: ${pieces.join(', ')}, cli ${currentVersion})`);
   console.log(`   ${files.join(' + ')} ${committed ? 'committed' : 'written'} — NO project files`);
@@ -179,4 +170,4 @@ export async function adoptApp(options: AdoptAppOptions = {}): Promise<void> {
   console.log('   are ordinary three-way merges, and re-running `mpo update` right');
   console.log('   after a successful update makes zero changes.');
   console.log(`Pin anything the updater must never touch in ${UPDATEIGNORE_FILE}.`);
-}
+};

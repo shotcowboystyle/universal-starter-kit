@@ -61,4 +61,10 @@ export const dialog: DialogApi = {
   },
 };
 
-export type { DialogApi, OpenDialogOptions, SaveDialogOptions, MessageDialogOptions, ConfirmDialogOptions };
+export type {
+  DialogApi,
+  OpenDialogOptions,
+  SaveDialogOptions,
+  MessageDialogOptions,
+  ConfirmDialogOptions,
+} from './index';

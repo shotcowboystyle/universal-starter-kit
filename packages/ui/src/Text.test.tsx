@@ -51,7 +51,7 @@ const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string
 describe('house Text — textAccent reaches the text node', () => {
   afterEach(cleanup);
 
-  it('changes colour on a textAccent flip', () => {
+  it('changes color on a textAccent flip', () => {
     const high = renderTextClasses(
       <Preset overrides={{ textAccent: 'high' }}>
         <Text>{LABEL}</Text>
@@ -189,7 +189,7 @@ const AccentProbe = ({ onInk }: { onInk: (ink: string) => void }) => {
 describe("house Anchor — link chrome is house Text's, in the accent", () => {
   afterEach(cleanup);
 
-  it("paints the AA-safe accent ink, not tamagui's link colour", () => {
+  it("paints the AA-safe accent ink, not tamagui's link color", () => {
     let ink = '';
     const anchor = renderTextClasses(
       <>
@@ -206,7 +206,7 @@ describe("house Anchor — link chrome is house Text's, in the accent", () => {
     expect(anchor).not.toStrictEqual(body);
   });
 
-  it('a consumer colour still ejects (STD-EJECT-LAST)', () => {
+  it('a consumer color still ejects (STD-EJECT-LAST)', () => {
     const ejected = renderTextClasses(<Anchor color="$color9">{LABEL}</Anchor>, ['_col-']);
     const explicit = renderTextClasses(<Text color="$color9">{LABEL}</Text>, ['_col-']);
     expect(ejected).toStrictEqual(explicit);

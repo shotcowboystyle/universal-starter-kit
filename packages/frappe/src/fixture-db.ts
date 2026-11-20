@@ -115,7 +115,7 @@ export class FixtureDbModule {
       fixtureOptions.limit = options.limit;
     }
 
-    // Honour `cursor` the way getListWithCursor does. Dropping it silently
+    // Honor `cursor` the way getListWithCursor does. Dropping it silently
     // made every cursor-paged fetch return page ONE again, and
     // VirtualPageManager.fetchMorePages appends what it gets without
     // de-duplicating — so a fixture-backed useFrappeInfiniteList grew

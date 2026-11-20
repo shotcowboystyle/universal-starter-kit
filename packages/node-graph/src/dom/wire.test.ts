@@ -1,6 +1,6 @@
 /**
  * The wire is the whole bridge surface, so it is specced as data rather than
- * as behaviour: a table the spec walks, not a set of hand-written cases that
+ * as behavior: a table the spec walks, not a set of hand-written cases that
  * drift from it.
  *
  * Four things are load-bearing here and each has a failure it is preventing.

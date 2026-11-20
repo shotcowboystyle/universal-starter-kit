@@ -9,7 +9,7 @@
  *
  * **elk is not here, and that is deliberate.** Design §8 describes an optional
  * `@repo/node-graph/layout-elk` entry, and the plan's decision D2
- * gates it on a licence ruling that has NOT been made: elkjs is `EPL-2.0 OR
+ * gates it on a license ruling that has NOT been made: elkjs is `EPL-2.0 OR
  * GPL-3.0-or-later` against this repo's Apache-2.0. So `LayoutEngine` has one
  * member, the subpath does not exist, and `worker.generated.test.ts` asserts
  * the token `elkjs` appears nowhere in the bundled worker. When the ruling

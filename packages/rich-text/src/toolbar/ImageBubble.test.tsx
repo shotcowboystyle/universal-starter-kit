@@ -74,7 +74,7 @@ const render = (editor: any) =>
 const press = (container: HTMLElement, label: string) => {
   const el = container.querySelector(`[aria-label="${label}"]`);
   if (!el) {
-    throw new Error(`no control labelled "${label}"`);
+    throw new Error(`no control labeled "${label}"`);
   }
   fireEvent.click(el);
   return el;

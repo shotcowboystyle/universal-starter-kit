@@ -97,7 +97,7 @@ describe(CellOptionsEditor, () => {
 
   it('the face is a named, focusable button that reports its expanded state', () => {
     const { container } = renderEditor();
-    const face = container.querySelector('[role="button"]') as HTMLElement;
+    const face = container.querySelector('[role="button"]')!;
     expect(face).not.toBeNull();
     expect(face.getAttribute('aria-label')).toBe('Priority');
     expect(face.getAttribute('aria-expanded')).toBe('false');
@@ -135,7 +135,7 @@ describe(CellOptionsEditor, () => {
 
   it('the face paints no ring of its own — the parent cell owns the one ring (LC-71)', () => {
     const { container } = renderEditor();
-    const face = container.querySelector('[role="button"]') as HTMLElement;
+    const face = container.querySelector('[role="button"]')!;
     expect(face.style.outlineWidth === '' || face.style.outlineWidth === '0px').toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { FolderIcon, HeartIcon } from '@phosphor-icons/react';
 /**
- * A phosphor glyph handed a Tamagui token paints that token's colour
+ * A phosphor glyph handed a Tamagui token paints that token's color
  * on web. Raw @phosphor-icons/react writes `color` straight into `<svg fill>`;
  * "$color9" is not a paint, the browser drops it and the glyph falls back to
  * black. createVitestConfig carries the same IconBase resolution every web
@@ -26,8 +26,8 @@ const fillOf = (container: HTMLElement, testId: string) =>
 const themeValueOf = (container: HTMLElement, name: string) =>
   container.querySelector<HTMLElement>(`[data-theme-value="${name}"]`)?.dataset.val ?? '';
 
-describe('phosphor glyph token colour on web', () => {
-  it("paints $color9 with the theme's resolved colour, not the token string", () => {
+describe('phosphor glyph token color on web', () => {
+  it("paints $color9 with the theme's resolved color, not the token string", () => {
     const { container } = renderWithProviders(
       <>
         <FolderIcon
@@ -79,7 +79,7 @@ describe('phosphor glyph token colour on web', () => {
     expect(fillOf(container, 'glyph')).toBe(themeValueOf(container, 'red11'));
   });
 
-  it('leaves a literal colour alone', () => {
+  it('leaves a literal color alone', () => {
     const { container } = renderWithProviders(
       <HeartIcon
         data-testid="glyph"
@@ -89,7 +89,7 @@ describe('phosphor glyph token colour on web', () => {
     expect(fillOf(container, 'glyph')).toBe('#123456');
   });
 
-  it('inherits currentColor when no colour is given', () => {
+  it('inherits currentColor when no color is given', () => {
     const { container } = renderWithProviders(<HeartIcon data-testid="glyph" />);
     expect(fillOf(container, 'glyph')).toBe('currentColor');
   });

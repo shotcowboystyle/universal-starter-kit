@@ -2,7 +2,7 @@
  * The house shiki theme: github-light's scope rules one for one,
  * each painted with a theme token in the rich-text editor's roles, so code
  * ink follows the scheme and tint and holds `holdSyntaxFloor`'s 4.5:1. Shiki
- * passes a non-hex colour through untouched (a placeholder while tokenizing,
+ * passes a non-hex color through untouched (a placeholder while tokenizing,
  * restored on every token), which is what lets a theme name Tamagui tokens.
  */
 

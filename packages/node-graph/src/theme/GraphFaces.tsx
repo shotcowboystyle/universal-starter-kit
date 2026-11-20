@@ -91,7 +91,7 @@ const loadWithin = async (query: string, timeoutMs: number): Promise<boolean> =>
 /**
  * Resolves each face to the mechanism that actually delivered it.
  *
- * Returns the URIs still worth honouring, so the sheet re-renders with base64
+ * Returns the URIs still worth honoring, so the sheet re-renders with base64
  * for the ones that did not answer.
  */
 export interface GraphFacesResult {
@@ -168,7 +168,7 @@ export const useGraphFaces = (
     const out: Record<string, string> = {};
     for (const face of faces) {
       const uri = requested[face.id];
-      // Before the probe answers, honour the URL: rendering base64 first and
+      // Before the probe answers, honor the URL: rendering base64 first and
       // swapping to the URL later would download both.
       if (uri && resolved[face.id] !== 'inline') {
         out[face.id] = uri;

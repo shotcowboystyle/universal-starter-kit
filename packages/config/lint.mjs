@@ -39,7 +39,7 @@
  *    bundle down rather than one component.
  * 9. Fail on a `.react-flow__` SELECTOR outside the token bridge —
  *    React Flow paints through `var(--xy-thing, var(--xy-thing-default))`, so
- *    every colour, width and shadow is settable without touching its
+ *    every color, width and shadow is settable without touching its
  *    stylesheet. A hand-written `.react-flow__` rule anywhere else forks that
  *    paint: it wins or loses on specificity rather than on the knob, and the
  *    next library upgrade silently changes which. The whole point of the
@@ -65,7 +65,7 @@
  *    knobs, so a knob sweep that trusts the story scores the primitive and
  *    marks the component checked. Layout and text primitives (XStack,
  *    Paragraph, …) are out of scope by rule.
- * 13. Fail on an UNDECLARED COLOUR-LITERAL ESCAPE — a
+ * 13. Fail on an UNDECLARED COLOR-LITERAL ESCAPE — a
  *    `hex-escape:` comment, which exempts its file from
  *    `mpo-conventions/no-hex-literals`, whose file and reason are not a row
  *    in the spec's `## Colour-literal escapes` table, or a row whose comment
@@ -560,8 +560,8 @@ const checkTransitionTokens = () => {
 };
 
 /**
- * A grey ramp palette: only the theme NAMES and keys the builder emits matter to
- * the registry checks, not the colours.
+ * A gray ramp palette: only the theme NAMES and keys the builder emits matter to
+ * the registry checks, not the colors.
  * @returns {{ palette: { dark: string[], light: string[] } }} a palette accepted by `createThemes`
  */
 const neutralPalette = () => {
@@ -1131,6 +1131,7 @@ export const findSizeRecipeEscapes = (src) => {
  * Missing spec or missing section → skip, the same as the drawing registry.
  */
 const checkUndeclaredSizeRecipeEscapes = () => {
+  /** @type {ReturnType<typeof readSizeRecipeEscapeRegistry>} */
   let registry;
   try {
     registry = readSizeRecipeEscapeRegistry(path.join(ROOT, SPEC_PATH));
@@ -1195,11 +1196,12 @@ const checkUndeclaredSizeRecipeEscapes = () => {
  * Missing spec or missing section → skip, the same as the drawing registry.
  */
 const checkUndeclaredHexEscapes = () => {
+  /** @type {ReturnType<typeof readHexEscapeRegistry>} */
   let registry;
   try {
     registry = readHexEscapeRegistry(path.join(ROOT, SPEC_PATH));
   } catch (error) {
-    return [`colour-literal escape registry: ${error instanceof Error ? error.message : String(error)}`];
+    return [`color-literal escape registry: ${error instanceof Error ? error.message : String(error)}`];
   }
   if (!registry.present) {
     return [];
@@ -1320,6 +1322,7 @@ const checkStoryFileIndexability = () => {
  */
 const checkUndeclaredDrawings = () => {
   const specPath = path.join(ROOT, SPEC_PATH);
+  /** @type {ReturnType<typeof readDrawingRegistry>} */
   let registry;
   try {
     registry = readDrawingRegistry(specPath);
@@ -1536,7 +1539,7 @@ const metroViolationsForPackage = (pkgRoot) => {
 /**
  * Metro subpath fallback.
  *
- * Metro reads the exports map, picks the first condition it recognises, and
+ * Metro reads the exports map, picks the first condition it recognizes, and
  * if that file is missing it does NOT reconsider `source` or `default`: it
  * warns and retries as a plain file lookup for `<pkg>/<subpath>.*`. The
  * packages under packages/ are consumed from source and never
@@ -2113,7 +2116,7 @@ export const runConventionChecks = (options = {}) => {
       undeclaredEscapes,
     ),
     reportViolations(
-      'Convention (COLOUR-LITERAL ESCAPE REGISTRY): a `hex-escape: <reason>` comment exempts its file from mpo-conventions/no-hex-literals, so every one must be a row in docs/theme-propagation-spec.md `## Colour-literal escapes`, by file and by the exact reason the comment writes. Reach for a theme token first; the escape is for surfaces no token reaches. A row whose comment is gone fails too.\n',
+      'Convention (COLOR-LITERAL ESCAPE REGISTRY): a `hex-escape: <reason>` comment exempts its file from mpo-conventions/no-hex-literals, so every one must be a row in docs/theme-propagation-spec.md `## Colour-literal escapes`, by file and by the exact reason the comment writes. Reach for a theme token first; the escape is for surfaces no token reaches. A row whose comment is gone fails too.\n',
       undeclaredHexEscapes,
     ),
     reportViolations(

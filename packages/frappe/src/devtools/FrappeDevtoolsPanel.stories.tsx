@@ -7,8 +7,8 @@ import {
   toDoFixtureData,
   useSeededJournal,
   useStoryConfig,
-} from '../../tests/storyFixtures';
-import type { ToDo, ToDoStatus } from '../../tests/storyFixtures';
+} from '../../tests/story-fixtures';
+import type { ToDo, ToDoStatus } from '../../tests/story-fixtures';
 import { useFrappeCollection } from '../frappe-react';
 import type { SyncModule } from '../sync';
 import type { FrappeDebugState } from '../sync/types';

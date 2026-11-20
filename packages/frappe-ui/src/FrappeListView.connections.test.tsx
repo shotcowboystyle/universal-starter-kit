@@ -8,8 +8,8 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import type { FrappeConnection } from './frappe-connections';
 import { connectionsFromMeta } from './frappe-connections';
@@ -181,7 +181,7 @@ describe('FrappeListView connections', () => {
         if (doctype === 'Pokemon Poke Type') {
           throw Object.assign(new Error('PermissionError'), { status: 403 });
         }
-        return getList(doctype, options);
+        return await getList(doctype, options);
       });
       renderRoster(
         { connections: [typeConnection], filters: [['Pokemon Poke Type', 'poke_type', '=', 'fire']] },

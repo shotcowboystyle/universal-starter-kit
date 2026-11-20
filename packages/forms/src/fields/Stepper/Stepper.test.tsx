@@ -430,7 +430,7 @@ describe('Stepper currency', () => {
     expect(currencyGlyph(container)?.textContent).toBe('₹');
   });
 
-  it('without a currency the value stays centred and no glyph renders', () => {
+  it('without a currency the value stays centered and no glyph renders', () => {
     const { container } = renderWithProviders(
       <Stepper
         aria-label="Qty"

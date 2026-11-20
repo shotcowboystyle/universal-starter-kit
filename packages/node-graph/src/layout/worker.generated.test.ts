@@ -6,7 +6,7 @@
  * script (an `export` in it is a SyntaxError in a non-module worker), it has
  * to carry no `import.meta` (design §9.4 layer 1 — a parse-time SyntaxError,
  * so no guard and no try/catch ever runs), and it has to answer the protocol.
- * So the last case here evaluates the artefact in a synthetic worker scope and
+ * So the last case here evaluates the artifact in a synthetic worker scope and
  * drives a real layout through it.
  *
  * The bundler is re-run in a SUBPROCESS rather than imported. faces.test.ts
@@ -84,7 +84,7 @@ describe("worker.generated", () => {
   });
 
   describe("evaluated in a synthetic worker scope", () => {
-    /** Runs the artefact the way a blob Worker would, and returns its outbox. */
+    /** Runs the artifact the way a blob Worker would, and returns its outbox. */
     const boot = () => {
       class FakeWorkerGlobalScope {}
       const posted: LayoutWorkerResponse[] = [];

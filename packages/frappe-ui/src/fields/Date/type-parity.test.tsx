@@ -1,5 +1,5 @@
 /**
- * The web half honours all three Frappe date fieldtypes, and both halves
+ * The web half honors all three Frappe date fieldtypes, and both halves
  * persist the same bytes for the same pick.
  *
  * The web field used to render ONE date-only calendar whatever the type

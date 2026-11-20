@@ -2,7 +2,7 @@
 //
 // The real barrel reaches the whole field library, and with it phosphor
 // icons, lucide and the expo surface (camera for the barcode field, the
-// linear-gradient for the colour picker). None of those resolve under
+// linear-gradient for the color picker). None of those resolve under
 // GJS.
 //
 // Re-export the fields the starter ContactForm uses, through deep

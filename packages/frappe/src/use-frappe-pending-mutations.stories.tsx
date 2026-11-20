@@ -1,7 +1,7 @@
 import { Button, Text, XStack, YStack } from 'tamagui';
 
-import { toDoFixtureData, useSeededJournal, useStoryConfig } from '../tests/storyFixtures';
-import type { ToDo } from '../tests/storyFixtures';
+import { toDoFixtureData, useSeededJournal, useStoryConfig } from '../tests/story-fixtures';
+import type { ToDo } from '../tests/story-fixtures';
 
 import { useFrappeCollection, useFrappePendingMutations } from './frappe-react';
 import { Status } from './sync/types';

@@ -90,7 +90,7 @@ const meta: Meta<ToolbarGroupStoryArgs> = {
     ),
   ],
   // The group only reads as a group inside the bar it segments, so every
-  // story renders it in a real ToolbarFrame with a neighbour after it.
+  // story renders it in a real ToolbarFrame with a neighbor after it.
   render: (args) => (
     <ToolbarFrame maxWidth={420}>
       <XStack

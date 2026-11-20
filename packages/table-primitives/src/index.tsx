@@ -534,7 +534,7 @@ const ThemedRow = ({ accent, error, warning, success, ...props }: ThemedRowProps
   const intent = resolveIntent({ accent, error, warning, success });
   const bodyIndex = useContext(BodyRowIndexContext);
   const stripe = bodyIndex === undefined ? undefined : tableZebraStripe(knobProps.tableZebra, bodyIndex);
-  // Rows abut, so a slop outset would intersect the neighbour and the
+  // Rows abut, so a slop outset would intersect the neighbor and the
   // painted row is the only press target a pressable row can have.
   const pressFloor =
     props.onPress == null ? null : rowMinimum(props.displayMode ?? context.displayMode, MIN_PRESS_TARGET);
@@ -582,12 +582,12 @@ const TableCellSurfaceBody = ({ isHeader, children }: { isHeader: boolean; child
   // not just the singleton case. A body cell's value takes bodyFont and
   // fontWeight like any body text; the weight is the last prop so
   // no size or family variant paints the font ramp's weight over it.
-  const labelled = wrapBareTextChildren(children, (label, key) => (
+  const labeled = wrapBareTextChildren(children, (label, key) => (
     <SizableText
       key={key}
       {...(isHeader ? {} : body)}
       fontSize={asToken<FontSizeTokens>(knobProps.sizeToken)}
-      // data-chrome: honour textAccent on labels. Body cells stay T-VALUE
+      // data-chrome: honor textAccent on labels. Body cells stay T-VALUE
       // (inherit), matching SimpleTable's header vs value split.
       {...(isHeader
         ? {
@@ -601,7 +601,7 @@ const TableCellSurfaceBody = ({ isHeader, children }: { isHeader: boolean; child
   ));
   // A component must return a concrete element; ReactNode admits Promise.
   // oxlint-disable-next-line react/jsx-no-useless-fragment -- see above
-  return <>{labelled}</>;
+  return <>{labeled}</>;
 };
 
 const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => {

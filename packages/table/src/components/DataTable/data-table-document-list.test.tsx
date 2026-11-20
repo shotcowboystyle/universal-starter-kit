@@ -2,7 +2,7 @@
  * DataTableDocumentList specs — the list body's OWN contract.
  *
  * card-layout.test.tsx proves layout=list picks this body over the grid and the
- * cards, that the title slot honours meta.role, and that rows are a nowrap flex
+ * cards, that the title slot honors meta.role, and that rows are a nowrap flex
  * list rather than a column grid. What no spec pinned is the SLOT TAXONOMY the
  * list is built on (document-list-slots.ts): which column lands in the trailing
  * indicator cluster, which becomes muted meta, which is dropped outright, and

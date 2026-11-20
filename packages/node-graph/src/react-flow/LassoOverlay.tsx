@@ -6,7 +6,7 @@
  * `.react-flow__selection` reads (`style.css`), which `graph-vars.ts` already
  * writes from the mpo token layer. So the long-press marquee and the toolbar-
  * mode marquee are the same rectangle to look at, in both schemes, without this
- * file knowing a colour. `checkGraphVarsCoverage()` would fail the build for a
+ * file knowing a color. `checkGraphVarsCoverage()` would fail the build for a
  * `.react-flow__` selector outside `css/graph.css`; reading the variables from
  * an inline style is the way to match upstream's paint without restating its
  * selector.

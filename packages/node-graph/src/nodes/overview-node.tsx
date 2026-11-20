@@ -10,7 +10,7 @@
  * height come from `node-measure.ts` — the same recipe `GraphNode` uses, given
  * the same knobs and the same ports — so swapping the body cannot change the
  * node's box, and React Flow's per-node `ResizeObserver` has nothing to report.
- * A "small grey rectangle" here would move every edge endpoint on the canvas
+ * A "small gray rectangle" here would move every edge endpoint on the canvas
  * the moment a user zoomed out, which is the failure design §5 is written
  * against.
  *
@@ -28,7 +28,7 @@ export interface OverviewNodeProps {
   readonly id: string;
   /** Same ports the detail body would render. They set the height floor. */
   readonly ports?: readonly GraphNodePort[];
-  /** Semantic intent — reaches the resolver, never a colour prop. */
+  /** Semantic intent — reaches the resolver, never a color prop. */
   readonly intent?: string;
   readonly selected?: boolean;
   /** `NodeKindSpec.measure`; falls back to the per-kind default table. */
@@ -46,7 +46,7 @@ export const OverviewNode = ({
   coarsePointer = false,
 }: OverviewNodeProps) => {
   // The same resolver call the detail body makes, so the fill is the fill the
-  // user was just looking at rather than a second grey invented here.
+  // user was just looking at rather than a second gray invented here.
   const { knobProps } = useResolvedKnobs({ component: 'GraphNode', intent });
   // SAFETY: the knob resolver only ever hands a graph component one of the
   // three size stops its kind declares (small / medium / large), which is

@@ -75,7 +75,7 @@ export interface ResolveChartPaletteInput {
 }
 
 /**
- * Fixed categorical hue cycle: Radix solids ordered so neighbouring
+ * Fixed categorical hue cycle: Radix solids ordered so neighboring
  * entries sit far apart on the hue wheel (min adjacent distance ~78°).
  * Light blue, orange, green, amber and teal deepen within their hue to clear
  * 3:1 on reference cards. Dark violet deepens for tinted card backgrounds.

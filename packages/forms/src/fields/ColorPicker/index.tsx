@@ -730,7 +730,7 @@ const ColorPickerControl = ({
           }}
           error={hasError}
           id={id}
-          // Labelled: the sibling Label wires `aria-labelledby` onto this id
+          // Labeled: the sibling Label wires `aria-labelledby` onto this id
           // itself — naming it here too doubles the spoken name.
           aria-label={hasLabel ? undefined : t('Color')}
           aria-describedby={describedByFor(id, helperText, hasError)}
@@ -780,7 +780,7 @@ export const ColorPicker = <
     onBlur,
     value: controlledValue,
     onChange,
-    // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honoured for back-compat
+    // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored for back-compat
     onValueChange,
     skeleton,
     compact,

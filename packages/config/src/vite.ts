@@ -1083,7 +1083,7 @@ const buildVitePlugins = (options: CreateViteConfigOptions, projectRoot: string)
   if (externalReactRouter !== false && one !== false) {
     vitePlugins.push(
       createExternal({
-        // @ts-expect-error -- `{}` (external, no global name) is a form the plugin honours at runtime but its `externals` typings omit
+        // @ts-expect-error -- `{}` (external, no global name) is a form the plugin honors at runtime but its `externals` typings omit
         externals: {
           'react-router-dom': {},
         },
@@ -1189,7 +1189,7 @@ export const createViteConfig = (options: CreateViteConfigOptions = {}): UserCon
           // handles it during SSR (avoiding the "module is not defined" error).
           // Do NOT alias it here — Vite's prefix-match aliases catch subpaths
           // like /shim/with-selector.js and /with-selector, rewriting them to
-          // react/with-selector which doesn't exist, crashing dep optimisation.
+          // react/with-selector which doesn't exist, crashing dep optimization.
         },
         projectRoot,
       ),

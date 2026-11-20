@@ -1,7 +1,10 @@
 import crypto from 'node:crypto';
+import { once } from 'node:events';
 import fs from 'node:fs/promises';
+import { Socket } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import spawn from 'nano-spawn';
 import YAML from 'yaml';
@@ -16,6 +19,13 @@ export interface E2EOptions {
   filter?: string;
 }
 
+interface Healthcheck {
+  test: string[];
+  interval: string;
+  timeout: string;
+  retries: number;
+}
+
 interface ServiceConfig {
   image: string;
   ports?: string[];
@@ -25,70 +35,112 @@ interface ServiceConfig {
   depends_on?: string[];
   restart?: string;
   privileged?: boolean;
-  healthcheck?: Record<string, unknown>;
+  healthcheck?: Healthcheck;
 }
 
-function sessionFileName(portOffset: number): string {
-  return `.e2e-session-${portOffset}.json`;
+/** A compose service plus the named volumes it needs. */
+interface ServiceSpec {
+  service: ServiceConfig;
+  volumes?: string[];
 }
 
-const defaultPorts: Record<string, { host: number; container: number }[]> = {
-  mailpit: [
-    { host: 8025, container: 8025 },
-    { host: 1025, container: 1025 },
+/** What `mpo test e2e --down` needs to find the running stack again. */
+interface E2ESession {
+  projectName: string;
+  composeFile: string;
+  tmpDir: string;
+  portOffset: number;
+}
+
+interface ServiceUrl {
+  name: string;
+  url: string;
+}
+
+const RESTART_POLICY = 'unless-stopped';
+const REDIS_CACHE = 'redis-cache';
+const REDIS_QUEUE = 'redis-queue';
+const REDIS_IMAGE = 'docker.io/redis:alpine';
+
+const sessionFileName = (portOffset: number): string => `.e2e-session-${portOffset}.json`;
+
+const defaultPorts = new Map([
+  [
+    'mailpit',
+    [
+      { host: 8025, container: 8025 },
+      { host: 1025, container: 1025 },
+    ],
   ],
-  keycloak: [{ host: 8080, container: 8080 }],
-  'redis-cache': [{ host: 6379, container: 6379 }],
-  'redis-queue': [{ host: 6380, container: 6379 }],
-  postgres: [{ host: 5432, container: 5432 }],
-  mariadb: [{ host: 3306, container: 3306 }],
+  ['keycloak', [{ host: 8080, container: 8080 }]],
+  [REDIS_CACHE, [{ host: 6379, container: 6379 }]],
+  [REDIS_QUEUE, [{ host: 6380, container: 6379 }]],
+  ['postgres', [{ host: 5432, container: 5432 }]],
+  ['mariadb', [{ host: 3306, container: 3306 }]],
+]);
+
+const dirExists = async (p: string): Promise<boolean> => {
+  try {
+    const stat = await fs.stat(p);
+    return stat.isDirectory();
+  } catch {
+    // Missing or unreadable: not a directory we can use.
+    return false;
+  }
 };
 
-async function getPresentAppNames(projectRoot: string): Promise<string[]> {
-  const appsDir = path.join(projectRoot, 'apps');
+const fileExists = async (p: string): Promise<boolean> => {
   try {
-    const entries = (await fs.readdir(appsDir, { withFileTypes: true })).filter((e) => e.isDirectory());
-    const names: string[] = [];
-    for (const e of entries) {
-      try {
-        await fs.access(path.join(appsDir, e.name, 'package.json'));
-        names.push(e.name);
-      } catch {
-        // no package.json
-      }
-    }
-    return names;
+    await fs.access(p);
+    return true;
   } catch {
+    // Missing or unreadable: absent for our purposes.
+    return false;
+  }
+};
+
+const getPresentAppNames = async (projectRoot: string): Promise<string[]> => {
+  const appsDir = path.join(projectRoot, 'apps');
+  let entries: string[];
+  try {
+    const dirents = await fs.readdir(appsDir, { withFileTypes: true });
+    entries = dirents.flatMap((entry) => (entry.isDirectory() ? [entry.name] : []));
+  } catch {
+    // No apps/ directory: no apps.
     return [];
   }
-}
+  const withPackageJson = await Promise.all(
+    entries.map(async (name) => ((await fileExists(path.join(appsDir, name, 'package.json'))) ? name : undefined)),
+  );
+  return withPackageJson.filter((name) => name !== undefined);
+};
+
+const PLAYWRIGHT_CONFIGS = ['playwright.config.ts', 'playwright.config.js', 'playwright.config.mjs'];
+
+const hasPlaywrightConfig = async (appPath: string): Promise<boolean> => {
+  const found = await Promise.all(
+    PLAYWRIGHT_CONFIGS.map(async (config) => await fileExists(path.join(appPath, config))),
+  );
+  return found.includes(true);
+};
 
 /** Discover app that has Playwright config (for E2E test cwd). Returns app name (e.g. "one") or null. */
-export async function discoverE2EApp(projectRoot: string): Promise<string | null> {
+export const discoverE2EApp = async (projectRoot: string): Promise<string | null> => {
   const names = await getPresentAppNames(projectRoot);
-  for (const name of names) {
-    const appPath = path.join(projectRoot, 'apps', name);
-    for (const config of ['playwright.config.ts', 'playwright.config.js', 'playwright.config.mjs']) {
-      try {
-        await fs.access(path.join(appPath, config));
-        return name;
-      } catch {
-        // continue
-      }
-    }
-  }
-  return null;
-}
+  const configured = await Promise.all(
+    names.map(async (name) => await hasPlaywrightConfig(path.join(projectRoot, 'apps', name))),
+  );
+  const index = configured.indexOf(true);
+  return index === -1 ? null : names[index];
+};
 
-export async function detectServices(projectRoot: string): Promise<string[]> {
-  const services: string[] = [];
-
+export const detectServices = async (projectRoot: string): Promise<string[]> => {
   // Always include base infrastructure
-  services.push('mailpit');
+  const services: string[] = ['mailpit'];
 
   // Frappe needs MariaDB + Redis
   if (await dirExists(path.join(projectRoot, 'apps', 'frappe'))) {
-    services.push('mariadb', 'redis-cache', 'redis-queue');
+    services.push('mariadb', REDIS_CACHE, REDIS_QUEUE);
   }
 
   // Keycloak needs Postgres (discover from present apps)
@@ -98,44 +150,20 @@ export async function detectServices(projectRoot: string): Promise<string[]> {
   }
 
   return services;
-}
+};
 
-export function generateCompose(services: string[], portOffset: number, projectRoot: string): string {
-  const compose: {
-    services: Record<string, ServiceConfig>;
-    volumes: Record<string, Record<string, never>>;
-  } = {
-    services: {},
-    volumes: {},
-  };
+const offsetPorts = (service: string, offset: number): string[] =>
+  (defaultPorts.get(service) ?? []).map((port) => `${port.host + offset}:${port.container}`);
 
-  for (const service of services) {
-    const cfg = buildServiceConfig(service, portOffset, projectRoot);
-    if (cfg) {
-      compose.services[service] = cfg.service;
-      if (cfg.volumes) {
-        for (const vol of cfg.volumes) {
-          compose.volumes[vol] = {};
-        }
-      }
-    }
-  }
-
-  return YAML.stringify(compose);
-}
-
-function buildServiceConfig(
-  service: string,
-  portOffset: number,
-  _projectRoot: string,
-): { service: ServiceConfig; volumes?: string[] } | null {
+const buildServiceConfig = (service: string, portOffset: number): ServiceSpec | null => {
+  const ports = offsetPorts(service, portOffset);
   switch (service) {
     case 'mailpit': {
       return {
         service: {
           image: 'axllent/mailpit',
-          restart: 'unless-stopped',
-          ports: offsetPorts('mailpit', portOffset),
+          restart: RESTART_POLICY,
+          ports,
           environment: {
             MP_MAX_MESSAGES: '5000',
             MP_SMTP_AUTH_ACCEPT_ANY: '1',
@@ -150,8 +178,8 @@ function buildServiceConfig(
       return {
         service: {
           image: 'quay.io/keycloak/keycloak:latest',
-          restart: 'unless-stopped',
-          ports: offsetPorts('keycloak', portOffset),
+          restart: RESTART_POLICY,
+          ports,
           command: [
             'start-dev',
             '--http-relative-path=/auth',
@@ -176,8 +204,8 @@ function buildServiceConfig(
       return {
         service: {
           image: 'postgres:16.10-alpine',
-          restart: 'unless-stopped',
-          ports: offsetPorts('postgres', portOffset),
+          restart: RESTART_POLICY,
+          ports,
           environment: {
             POSTGRES_DB: 'keycloak',
             POSTGRES_USER: 'keycloak',
@@ -188,32 +216,17 @@ function buildServiceConfig(
       };
     }
 
-    case 'redis-cache': {
-      return {
-        service: {
-          image: 'docker.io/redis:alpine',
-          restart: 'unless-stopped',
-          ports: offsetPorts('redis-cache', portOffset),
-        },
-      };
-    }
-
-    case 'redis-queue': {
-      return {
-        service: {
-          image: 'docker.io/redis:alpine',
-          restart: 'unless-stopped',
-          ports: offsetPorts('redis-queue', portOffset),
-        },
-      };
+    case REDIS_CACHE:
+    case REDIS_QUEUE: {
+      return { service: { image: REDIS_IMAGE, restart: RESTART_POLICY, ports } };
     }
 
     case 'mariadb': {
       return {
         service: {
           image: 'mariadb:10.6',
-          restart: 'unless-stopped',
-          ports: offsetPorts('mariadb', portOffset),
+          restart: RESTART_POLICY,
+          ports,
           environment: {
             MARIADB_DATABASE: 'frappe',
             MARIADB_ROOT_PASSWORD: 'root',
@@ -234,17 +247,142 @@ function buildServiceConfig(
       return null;
     }
   }
-}
+};
 
-function offsetPorts(service: string, offset: number): string[] {
-  const portDefs = defaultPorts[service];
-  if (!portDefs) {
-    return [];
+export const generateCompose = (services: string[], portOffset: number, _projectRoot: string): string => {
+  const specs = services.flatMap((name) => {
+    const spec = buildServiceConfig(name, portOffset);
+    return spec ? [{ name, spec }] : [];
+  });
+  return YAML.stringify({
+    services: Object.fromEntries(specs.map(({ name, spec }) => [name, spec.service])),
+    volumes: Object.fromEntries(specs.flatMap(({ spec }) => (spec.volumes ?? []).map((volume) => [volume, {}]))),
+  });
+};
+
+const readSession = async (sessionFilePath: string): Promise<E2ESession> =>
+  // SAFETY: the file is the E2ESession runE2ESession wrote; a corrupt one fails at the docker call below
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- JSON.parse is untyped; this is the session file's parse boundary
+  JSON.parse(await fs.readFile(sessionFilePath, 'utf-8')) as E2ESession;
+
+const tearDown = async (projectRoot: string, sessionFilePath: string): Promise<void> => {
+  const spinner = yoctoSpinner({ text: 'Tearing down test environment...' }).start();
+  try {
+    const { projectName, composeFile, tmpDir } = await readSession(sessionFilePath);
+
+    await spawn('docker', ['compose', '-f', composeFile, '-p', projectName, 'down', '-v', '--remove-orphans'], {
+      stdio: 'pipe',
+      cwd: projectRoot,
+    });
+
+    // Clean up temp files
+    await fs.rm(tmpDir, { recursive: true, force: true });
+    await fs.rm(sessionFilePath, { force: true });
+
+    spinner.success('Test environment torn down');
+  } catch {
+    // Reported via the spinner; the session file goes either way so the next run starts clean.
+    spinner.error('Failed to tear down (session may not exist)');
+    await fs.rm(sessionFilePath, { force: true });
   }
-  return portDefs.map((p) => `${p.host + offset}:${p.container}`);
+};
+
+const getServiceUrls = (services: string[], portOffset: number): ServiceUrl[] => {
+  const urls: ServiceUrl[] = [{ name: 'Frontend', url: `http://localhost:${3000 + portOffset}` }];
+  if (services.includes('keycloak')) {
+    urls.push({ name: 'Keycloak', url: `http://localhost:${8080 + portOffset}/auth` });
+  }
+  if (services.includes('mailpit')) {
+    urls.push({ name: 'Mailpit', url: `http://localhost:${8025 + portOffset}` });
+  }
+  if (services.includes('mariadb')) {
+    urls.push({ name: 'Frappe (MariaDB)', url: `localhost:${3306 + portOffset}` });
+  }
+  if (services.includes(REDIS_CACHE)) {
+    urls.push({ name: 'Redis Cache', url: `localhost:${6379 + portOffset}` });
+  }
+  if (services.includes('postgres')) {
+    urls.push({ name: 'Postgres', url: `localhost:${5432 + portOffset}` });
+  }
+  return urls;
+};
+
+const CHECK_TIMEOUT_MS = 2000;
+
+const checkTcp = async (host: string, port: number): Promise<boolean> => {
+  const socket = new Socket();
+  socket.connect(port, host);
+  try {
+    await once(socket, 'connect', { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
+    return true;
+  } catch {
+    // Refused, unreachable or timed out: not ready yet.
+    return false;
+  } finally {
+    socket.destroy();
+  }
+};
+
+const checkHttp = async (url: string): Promise<boolean> => {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
+    return response.ok;
+  } catch {
+    // Not listening yet or timed out: not ready yet.
+    return false;
+  }
+};
+
+interface ReadinessCheck {
+  name: string;
+  check: () => Promise<boolean>;
 }
 
-export async function runE2ESession(projectRoot: string, options: E2EOptions): Promise<void> {
+const readinessChecks = (services: string[], portOffset: number): ReadinessCheck[] =>
+  services.flatMap((service) =>
+    (defaultPorts.get(service) ?? []).map((port): ReadinessCheck => {
+      const hostPort = port.host + portOffset;
+      const name = `${service}:${hostPort}`;
+      if (service === 'mailpit' && port.container === 8025) {
+        return { name, check: async () => await checkHttp(`http://localhost:${hostPort}/api/v1/info`) };
+      }
+      if (service === 'keycloak') {
+        return { name, check: async () => await checkHttp(`http://localhost:${hostPort}/auth/realms/master`) };
+      }
+      return { name, check: async () => await checkTcp('localhost', hostPort) };
+    }),
+  );
+
+const MAX_RETRIES = 30;
+const RETRY_INTERVAL_MS = 2000;
+
+/** Polls one check until it passes or the attempts run out. */
+const pollUntilReady = async (check: () => Promise<boolean>, attemptsLeft: number): Promise<boolean> => {
+  if (await check()) {
+    return true;
+  }
+  if (attemptsLeft <= 1) {
+    return false;
+  }
+  await delay(RETRY_INTERVAL_MS);
+  return await pollUntilReady(check, attemptsLeft - 1);
+};
+
+/**
+ * Poll services for readiness instead of relying on a fixed sleep.
+ * Checks TCP connectivity for MariaDB, Redis, Postgres, and HTTP for Mailpit/Keycloak.
+ */
+const waitForServices = async (services: string[], portOffset: number): Promise<void> => {
+  const checks = readinessChecks(services, portOffset);
+  const ready = await Promise.all(checks.map(async ({ check }) => await pollUntilReady(check, MAX_RETRIES)));
+  for (const [index, { name }] of checks.entries()) {
+    if (!ready[index]) {
+      console.warn(`Warning: ${name} did not become ready within ${(MAX_RETRIES * RETRY_INTERVAL_MS) / 1000}s`);
+    }
+  }
+};
+
+export const runE2ESession = async (projectRoot: string, options: E2EOptions): Promise<void> => {
   const portOffset = options.portOffset ?? 1000;
   const projectName = options.project ?? `mp1-test-${crypto.randomBytes(3).toString('hex')}`;
   const sessionFilePath = path.join(projectRoot, sessionFileName(portOffset));
@@ -309,7 +447,7 @@ export async function runE2ESession(projectRoot: string, options: E2EOptions): P
   // Print URLs
   const urls = getServiceUrls(services, portOffset);
   console.log('\nTest environment is ready!\n');
-  for (const [name, url] of Object.entries(urls)) {
+  for (const { name, url } of urls) {
     console.log(`  ${name}: ${url}`);
   }
   console.log('\nTo tear down: mpo test e2e --down\n');
@@ -321,7 +459,7 @@ export async function runE2ESession(projectRoot: string, options: E2EOptions): P
 
   // Run Playwright tests (discover app that has playwright.config)
   const e2eApp = await discoverE2EApp(projectRoot);
-  if (!e2eApp) {
+  if (e2eApp === null) {
     console.error('No E2E app found: no app under apps/ has playwright.config.ts or playwright.config.js.');
     await tearDown(projectRoot, sessionFilePath);
     process.exit(1);
@@ -329,7 +467,7 @@ export async function runE2ESession(projectRoot: string, options: E2EOptions): P
 
   try {
     const playwrightArgs = ['playwright', 'test'];
-    if (options.filter) {
+    if (options.filter !== undefined && options.filter !== '') {
       playwrightArgs.push(options.filter);
     }
 
@@ -355,160 +493,4 @@ export async function runE2ESession(projectRoot: string, options: E2EOptions): P
     // Always tear down after running tests
     await tearDown(projectRoot, sessionFilePath);
   }
-}
-
-async function tearDown(projectRoot: string, sessionFilePath: string): Promise<void> {
-  const spinner = yoctoSpinner({ text: 'Tearing down test environment...' }).start();
-  try {
-    const sessionData = JSON.parse(await fs.readFile(sessionFilePath, 'utf-8'));
-    const { projectName, composeFile, tmpDir } = sessionData;
-
-    await spawn('docker', ['compose', '-f', composeFile, '-p', projectName, 'down', '-v', '--remove-orphans'], {
-      stdio: 'pipe',
-      cwd: projectRoot,
-    });
-
-    // Clean up temp files
-    await fs.rm(tmpDir, { recursive: true, force: true });
-    await fs.rm(sessionFilePath, { force: true });
-
-    spinner.success('Test environment torn down');
-  } catch {
-    spinner.error('Failed to tear down (session may not exist)');
-    // Clean up session file even on failure
-    await fs.rm(sessionFilePath, { force: true }).catch(() => {});
-  }
-}
-
-function getServiceUrls(services: string[], portOffset: number): Record<string, string> {
-  const urls: Record<string, string> = {};
-
-  urls.Frontend = `http://localhost:${3000 + portOffset}`;
-
-  if (services.includes('keycloak')) {
-    urls.Keycloak = `http://localhost:${8080 + portOffset}/auth`;
-  }
-  if (services.includes('mailpit')) {
-    urls.Mailpit = `http://localhost:${8025 + portOffset}`;
-  }
-  if (services.includes('mariadb')) {
-    urls['Frappe (MariaDB)'] = `localhost:${3306 + portOffset}`;
-  }
-  if (services.includes('redis-cache')) {
-    urls['Redis Cache'] = `localhost:${6379 + portOffset}`;
-  }
-  if (services.includes('postgres')) {
-    urls.Postgres = `localhost:${5432 + portOffset}`;
-  }
-
-  return urls;
-}
-
-async function dirExists(p: string): Promise<boolean> {
-  try {
-    const stat = await fs.stat(p);
-    return stat.isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function fileExists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function sleep(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Poll services for readiness instead of relying on a fixed sleep.
- * Checks TCP connectivity for MariaDB, Redis, Postgres, and HTTP for Mailpit/Keycloak.
- */
-async function waitForServices(services: string[], portOffset: number): Promise<void> {
-  const maxRetries = 30;
-  const retryInterval = 2000;
-
-  const checks: { name: string; check: () => Promise<boolean> }[] = [];
-
-  for (const service of services) {
-    const ports = defaultPorts[service];
-    if (!ports) {
-      continue;
-    }
-
-    for (const portDef of ports) {
-      const hostPort = portDef.host + portOffset;
-
-      if (service === 'mailpit' && portDef.container === 8025) {
-        checks.push({
-          name: `${service}:${hostPort}`,
-          check: async () => await checkHttp(`http://localhost:${hostPort}/api/v1/info`),
-        });
-      } else if (service === 'keycloak') {
-        checks.push({
-          name: `${service}:${hostPort}`,
-          check: async () => await checkHttp(`http://localhost:${hostPort}/auth/realms/master`),
-        });
-      } else {
-        checks.push({
-          name: `${service}:${hostPort}`,
-          check: async () => await checkTcp('localhost', hostPort),
-        });
-      }
-    }
-  }
-
-  for (const { name, check } of checks) {
-    let ready = false;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        ready = await check();
-        if (ready) {
-          break;
-        }
-      } catch {
-        // not ready yet
-      }
-      await sleep(retryInterval);
-    }
-    if (!ready) {
-      console.warn(`Warning: ${name} did not become ready within ${(maxRetries * retryInterval) / 1000}s`);
-    }
-  }
-}
-
-async function checkTcp(host: string, port: number): Promise<boolean> {
-  const net = await import('node:net');
-  return await new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(2000);
-    socket.on('connect', () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.on('error', () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.on('timeout', () => {
-      socket.destroy();
-      resolve(false);
-    });
-    socket.connect(port, host);
-  });
-}
-
-async function checkHttp(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
+};

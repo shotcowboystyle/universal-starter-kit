@@ -64,7 +64,7 @@ export interface DescriptionListProps {
   compact?: boolean;
   /** Card frame (paints, so it earns the inset). */
   framed?: boolean;
-  /** Same 1px `$borderColor` rule at opacity 0.5 — never a lighter colour. */
+  /** Same 1px `$borderColor` rule at opacity 0.5 — never a lighter color. */
   quiet?: boolean;
   /**
    * Cap readable width. Pass `"fluid"` to opt out.

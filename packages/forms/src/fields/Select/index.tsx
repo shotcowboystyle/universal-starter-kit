@@ -1074,7 +1074,7 @@ const FloatingSelectCore = ({
   if (hasText(ariaLabel)) {
     boxEventProps['aria-label'] = ariaLabel;
   }
-  // A labelled trigger is already named: the sibling Label wires
+  // A labeled trigger is already named: the sibling Label wires
   // `aria-labelledby` onto this id itself, so naming it again here doubles the
   // spoken name. Standalone triggers (no label) still need one (axe button-name).
   else if (!(hasLabel === true && hasText(id)) && placeholder) {
@@ -1714,7 +1714,7 @@ const NativeSelectCore = ({
                 'aria-controls': open ? listboxId : undefined,
                 'aria-autocomplete': 'none',
                 // Standalone (no label): fall back to placeholder so the
-                // trigger still has a name (axe button-name). Labelled: the
+                // trigger still has a name (axe button-name). Labeled: the
                 // sibling Label wires `aria-labelledby` onto this id itself —
                 // naming it here too doubles the spoken name.
                 'aria-label': ariaLabel ?? (hasLabel ? undefined : placeholder),
@@ -1826,7 +1826,7 @@ export const Select = ({
   value,
   defaultValue,
   onChange,
-  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honoured; both callbacks fire from emitValueChange
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored; both callbacks fire from emitValueChange
   onValueChange,
   onBlur,
   options,

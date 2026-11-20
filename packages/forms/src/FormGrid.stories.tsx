@@ -160,11 +160,11 @@ export const LongErrors: Story = {
         <Input
           id="fge-a"
           label="With long error"
-          error="This validation message is extremely long and should wrap inside its own grid cell without breaking the neighbouring column alignment or overflowing the grid container"
+          error="This validation message is extremely long and should wrap inside its own grid cell without breaking the neighboring column alignment or overflowing the grid container"
         />
         <GridField
           id="fge-b"
-          label="Neighbour"
+          label="Neighbor"
         />
       </FormGrid>
     </YStack>

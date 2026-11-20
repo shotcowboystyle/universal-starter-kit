@@ -3,7 +3,7 @@
  *
  * card-layout.test.tsx already drives the sort menu through the card list and
  * proves the cycle reorders cards. What nothing pinned is the row itself: that
- * it is a labelled toolbar, that it disappears entirely when neither affordance
+ * it is a labeled toolbar, that it disappears entirely when neither affordance
  * is enabled (rather than rendering an empty bar), that each affordance can be
  * turned off independently, and that the trigger reports the ACTIVE sort so a
  * card list is never sorted invisibly.
@@ -48,7 +48,7 @@ const renderCards = (props: Partial<DataTableRootProps<Person>> = {}) =>
   );
 
 describe('DataTableCardControls', () => {
-  it('is a labelled toolbar above the card list', () => {
+  it('is a labeled toolbar above the card list', () => {
     renderCards({ enableSorting: true, enableFiltering: true });
     const toolbar = screen.getByRole('toolbar', { name: 'Table toolbar' });
     expect(toolbar).toBeTruthy();

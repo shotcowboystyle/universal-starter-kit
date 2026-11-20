@@ -57,7 +57,7 @@ const documentVersion = 1;
 const round2 = (value: number): number => {
   const rounded = Number(value.toFixed(2));
   // -0 serializes as `-0` and compares equal to 0, so two structurally equal
-  // documents could differ by a sign that means nothing. Normalise it away.
+  // documents could differ by a sign that means nothing. Normalize it away.
   return Object.is(rounded, -0) ? 0 : rounded;
 };
 

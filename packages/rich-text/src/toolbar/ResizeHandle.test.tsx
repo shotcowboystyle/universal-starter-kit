@@ -35,7 +35,7 @@ describe(ResizeHandle, () => {
     document.body.style.userSelect = '';
   });
 
-  it('exposes itself to assistive tech as a labelled separator', () => {
+  it('exposes itself to assistive tech as a labeled separator', () => {
     const { ref } = makeContainer(300);
     const { container } = renderWithProviders(<ResizeHandle containerRef={ref} />);
     const handle = grab(container);
@@ -62,7 +62,7 @@ describe(ResizeHandle, () => {
     expect(el.style.height).toBe('150px');
   });
 
-  it('honours an explicit minHeight over the default', () => {
+  it('honors an explicit minHeight over the default', () => {
     const { el, ref } = makeContainer(300);
     const { container } = renderWithProviders(
       <ResizeHandle

@@ -1,7 +1,7 @@
 /**
  * The `tamaguiConfig` toolbar global renders a story under the full
  * house config or its default subset. A subset fails quietly (a dropped theme
- * renders in its parent's colours), so the switch is only worth having if the
+ * renders in its parent's colors), so the switch is only worth having if the
  * dropped theme really falls back under it and comes back under full.
  */
 

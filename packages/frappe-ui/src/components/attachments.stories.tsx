@@ -105,7 +105,7 @@ const urlOf = (input: RequestInfo | URL): string => {
 
 // 1x1 PNG so the image thumbnail does not GET /files/diagram.png off the
 // Storybook origin (that 404 was the recorded fuzz FAIL). file_type is the
-// MIME the thumbnail recognises; file_name keeps the .png extension for the
+// MIME the thumbnail recognizes; file_name keeps the .png extension for the
 // type well. Same byte string as FrappeFileUpload.stories.
 const TINY_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';

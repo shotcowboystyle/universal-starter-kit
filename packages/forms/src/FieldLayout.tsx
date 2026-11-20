@@ -301,7 +301,7 @@ export const FieldLayout = ({
   }, [errorMessage]);
 
   // On web, tamagui's Label resolves `htmlFor` and PREPENDS its own id onto
-  // that control's `aria-labelledby` — so a labelled field is already wired
+  // that control's `aria-labelledby` — so a labeled field is already wired
   // and a control that also sets `aria-labelledby={`${id}-label`}` ends up
   // with the token twice and an accessible name spoken twice ("Birth Date
   // Birth Date"). Controls carry the field `id` and an `aria-label` fallback

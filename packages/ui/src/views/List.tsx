@@ -124,7 +124,7 @@ export const ListRowMeta = ({ children, width, color }: { children: ReactNode; w
 export const ListRow = ({ icon, title, subtitle, meta }: ListRowProps) => {
   const { knobProps } = useResolvedKnobs();
   const { selected, onAccent } = useListItemState();
-  // data-chrome family: textAccent = honour (F11). Same channel as house Text —
+  // data-chrome family: textAccent = honor (F11). Same channel as house Text —
   // componentColors.text.primary/muted pin $color/$color11 and ignore the knob.
   const ink = selected && hasInk(onAccent) ? onAccent : knobProps.textAccentColor;
   const iconSize = knobProps.controlIcon.width;

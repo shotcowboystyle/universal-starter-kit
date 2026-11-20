@@ -256,7 +256,7 @@ export const OVERLAY_ANCHOR_GAP = 4;
 
 /**
  * FloatingPanel ruling: COVER is the defining
- * behaviour of the FloatingPanel family: a panel attaches to the trigger it
+ * behavior of the FloatingPanel family: a panel attaches to the trigger it
  * was opened from and does not float clear of it. Floating 4px below is the
  * EXCEPTION, not the rule, and no member takes it unless explicitly ruled in.
  *

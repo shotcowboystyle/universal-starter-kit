@@ -38,7 +38,7 @@ export interface ConnectionPuckProps<N extends NodeKindDefs, E extends EdgeKindD
    * and this package cannot reach into it.
    */
   readonly nodeLabel?: (nodeId: string) => string | undefined;
-  /** Semantic intent, reaches the resolver, never a colour prop. */
+  /** Semantic intent, reaches the resolver, never a color prop. */
   readonly intent?: string;
 }
 

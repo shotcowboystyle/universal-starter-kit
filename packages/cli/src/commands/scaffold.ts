@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 
-import spawn from 'nano-spawn';
+import spawn, { SubprocessError } from 'nano-spawn';
 
 import { checkSourceAccess } from '../source';
 
@@ -10,9 +10,7 @@ import { cliRoot, readProvenance } from './provenance';
 import type { MpoProvenance } from './provenance';
 
 /** The scaffold itself: POSIX sh, runs standalone. The TS commands only call it. */
-export function scaffoldScript(): string {
-  return join(cliRoot(), 'scripts/scaffold.sh');
-}
+export const scaffoldScript = (): string => path.join(cliRoot(), 'scripts/scaffold.sh');
 
 export interface ScaffoldRequest {
   /** Path to a local clone or a git URL. */
@@ -40,12 +38,13 @@ export class ScaffoldError extends Error {
   readonly request: ScaffoldRequest;
   constructor(message: string, request: ScaffoldRequest) {
     super(message);
+    this.name = 'ScaffoldError';
     this.request = request;
   }
 }
 
 /** --into keeps every path the target already had; name them, since mpo update will not touch them. */
-function reportKept(stdout: string): void {
+const reportKept = (stdout: string): void => {
   const prefix = 'skipped (exists): ';
   const kept = stdout
     .split('\n')
@@ -55,13 +54,16 @@ function reportKept(stdout: string): void {
     return;
   }
   console.log(`\nKept ${kept.length} path(s) already here, pinned in .updateignore:`);
-  for (const path of kept) {
-    console.log(`  ${path}`);
+  for (const keptPath of kept) {
+    console.log(`  ${keptPath}`);
   }
-}
+};
 
 /** Run scaffold.sh and return the provenance it wrote. */
-export async function runScaffold(request: ScaffoldRequest): Promise<MpoProvenance> {
+/** Provenance of a fresh scaffold: it always records the source commit. */
+export type ScaffoldProvenance = MpoProvenance & { source: NonNullable<MpoProvenance['source']> };
+
+export const runScaffold = async (request: ScaffoldRequest): Promise<ScaffoldProvenance> => {
   await checkSourceAccess(request.source);
   const args = [scaffoldScript()];
   for (const app of request.apps) {
@@ -70,16 +72,16 @@ export async function runScaffold(request: ScaffoldRequest): Promise<MpoProvenan
   for (const service of request.services) {
     args.push('--service', service);
   }
-  if (request.mpoVersion) {
+  if (request.mpoVersion !== undefined && request.mpoVersion !== '') {
     args.push('--mpo-version', request.mpoVersion);
   }
   if (request.into) {
     args.push('--into');
   }
-  if (request.sourceUrl) {
+  if (request.sourceUrl !== undefined && request.sourceUrl !== '') {
     args.push('--source-url', request.sourceUrl);
   }
-  if (request.name) {
+  if (request.name !== undefined && request.name !== '') {
     args.push('--name', request.name);
   }
   args.push('--', request.source, request.ref, request.target);
@@ -88,11 +90,12 @@ export async function runScaffold(request: ScaffoldRequest): Promise<MpoProvenan
     const result = await spawn('sh', args, {
       stdio: request.verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
     });
-    stdout = result.stdout;
+    ({ stdout } = result);
   } catch (error) {
-    const stderr = ((error as { stderr?: string }).stderr ?? '').trim();
-    const detail = stderr.split('\n').filter(Boolean).pop() ?? (error as Error).message;
-    throw new ScaffoldError(detail.replace(/^scaffold: /, ''), request);
+    const stderr = error instanceof SubprocessError ? error.stderr.trim() : '';
+    const message = error instanceof Error ? error.message : String(error);
+    const detail = stderr.split('\n').findLast((line) => line !== '') ?? message;
+    throw new ScaffoldError(detail.replace(/^scaffold: /u, ''), request);
   }
   if (request.into && !request.verbose) {
     reportKept(stdout);
@@ -101,19 +104,19 @@ export async function runScaffold(request: ScaffoldRequest): Promise<MpoProvenan
   if (!provenance?.source) {
     throw new ScaffoldError(`scaffold.sh wrote no provenance into ${request.target}`, request);
   }
-  return provenance;
-}
+  return { ...provenance, source: provenance.source };
+};
 
 export interface TempScaffold {
   dir: string;
-  provenance: MpoProvenance;
+  provenance: ScaffoldProvenance;
   cleanup: () => void;
 }
 
 /** A scaffold in a temp dir (merge baselines). */
-export async function scaffoldToTemp(request: Omit<ScaffoldRequest, 'target' | 'into'>): Promise<TempScaffold> {
-  const parent = mkdtempSync(join(tmpdir(), 'mpo-scaffold-'));
-  const dir = join(parent, 'project');
+export const scaffoldToTemp = async (request: Omit<ScaffoldRequest, 'target' | 'into'>): Promise<TempScaffold> => {
+  const parent = mkdtempSync(path.join(tmpdir(), 'mpo-scaffold-'));
+  const dir = path.join(parent, 'project');
   const cleanup = () => {
     rmSync(parent, { recursive: true, force: true });
   };
@@ -124,18 +127,19 @@ export async function scaffoldToTemp(request: Omit<ScaffoldRequest, 'target' | '
     cleanup();
     throw error;
   }
-}
+};
 
 /**
  * One subtree of the monorepo at a ref, extracted into `dest` (the piece
  * templates of an older CLI version, for adopted-project merge bases).
  */
-export async function archiveSubtree(source: string, ref: string, subtree: string, dest: string): Promise<void> {
+export const archiveSubtree = async (source: string, ref: string, subtree: string, dest: string): Promise<void> => {
   await checkSourceAccess(source);
   const script = [
     'set -eu',
     'SOURCE="$1"; REF="$2"; SUBTREE="$3"; DEST="$4"',
     'if [ -d "$SOURCE" ]; then REPO="$SOURCE"; else',
+    // oxlint-disable-next-line eslint/no-template-curly-in-string -- shell parameter expansion, not a JS template
     '  REPO="$(mktemp -d "${TMPDIR:-/tmp}/mpo-archive.XXXXXX")"',
     '  trap \'rm -rf "$REPO"\' EXIT',
     '  git clone -q --depth 1 --no-checkout --branch "$REF" "$SOURCE" "$REPO"',
@@ -147,4 +151,4 @@ export async function archiveSubtree(source: string, ref: string, subtree: strin
   await spawn('sh', ['-c', script, 'sh', source, ref, subtree, dest], {
     stdio: ['ignore', 'ignore', 'pipe'],
   });
-}
+};

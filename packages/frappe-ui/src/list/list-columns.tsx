@@ -267,7 +267,7 @@ const LikeControl = ({
       <Text
         fontSize="$4"
         color={liked ? '$red10' : '$color8'}
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a glyph in a cross-platform Tamagui Text (no <img> on native), labelled via aria-label
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a glyph in a cross-platform Tamagui Text (no <img> on native), labeled via aria-label
         role="img"
         aria-label={likeLabel}>
         {liked ? '♥' : '♡'}

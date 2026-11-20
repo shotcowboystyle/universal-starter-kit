@@ -14,7 +14,7 @@
  * truth: `commit` always computes the next document and always calls
  * `onDocumentChange`; it only WRITES to local state when uncontrolled. A
  * controlled parent that ignores the callback simply sees nothing move, which
- * is the behaviour every controlled React input has.
+ * is the behavior every controlled React input has.
  *
  * Design: docs/design/node-graph-editor.md §4.5, §5.
  */

@@ -96,7 +96,7 @@ describe('export surface partition', () => {
   });
 });
 
-describe('semantic colour layer is importable by a stable name', () => {
+describe('semantic color layer is importable by a stable name', () => {
   // A token map whose own header says "use these instead of hardcoding
   // $color3, $color10" is only useful if a consumer can reach it without
   // deep-pathing into another package's file layout. `./src/*` is an escape

@@ -11,7 +11,7 @@ import type { FixedToolbarStoryArgs } from './FixedToolbar.stories';
 
 // Stand-ins for the catalog Button and Tooltip, as in fixedToolbar.spec.tsx
 // next to this one: the toolbar's contract is which controls exist and what
-// they are labelled, which the swap leaves intact.
+// they are labeled, which the swap leaves intact.
 vi.mock<object>(import('@repo/forms'), async (importOriginal) => ({
   ...(await importOriginal()),
   Button: (props: any) => (
@@ -100,7 +100,7 @@ describe('FixedToolbar stories', () => {
     expect(meta.title).toBe('Forms/RichTextEditor/FixedToolbar');
   });
 
-  it.each(Object.entries(stories))('%s mounts a labelled toolbar', (_name, story) => {
+  it.each(Object.entries(stories))('%s mounts a labeled toolbar', (_name, story) => {
     const { container } = mount(story);
     const toolbar = container.querySelector("[role='toolbar']");
     expect(toolbar).toBeTruthy();
@@ -163,7 +163,7 @@ describe('FixedToolbar stories', () => {
     expect(labels).not.toContain('Highlight Color');
   });
 
-  it("ErrorState still renders the full bar (the error is the rule's colour)", () => {
+  it("ErrorState still renders the full bar (the error is the rule's color)", () => {
     const { container } = mount(ErrorState);
     expect(labelsIn(container)).toContain('Bold');
     expect(container.querySelector("[role='toolbar']")).toBeTruthy();

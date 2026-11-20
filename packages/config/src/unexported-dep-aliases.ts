@@ -8,7 +8,7 @@ const PACKAGE_JSON = 'package.json';
  * Package subtrees that consumers deep-import but the publisher never declared
  * in its `exports` map.
  *
- * `one`'s `fork/SSRNavigationContainer` (every dist flavour plus its source)
+ * `one`'s `fork/SSRNavigationContainer` (every dist flavor plus its source)
  * imports three `@react-navigation/core` internals:
  *
  *   - `@react-navigation/core/lib/module/NavigationBuilderContext`

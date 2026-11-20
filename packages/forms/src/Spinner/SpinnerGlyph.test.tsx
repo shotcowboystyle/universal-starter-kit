@@ -6,7 +6,7 @@ import { renderWithProviders } from '@repo/test-utils';
  * knob; the glyph inside it — the two-circle arc that IS the spinner — had no
  * coverage. Two contracts live here: the arc is exactly 270 degrees of the
  * circumference on a faint full track, and `useSpinnerStroke` resolves a `$`
- * token through the theme while passing a literal colour straight through.
+ * token through the theme while passing a literal color straight through.
  */
 import { cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -79,7 +79,7 @@ describe('SpinnerGlyph — the arc', () => {
     expect(svg(large.container).getAttribute('width')).toBe('64');
   });
 
-  it('makes the track faint and the head solid, both in the requested colour', () => {
+  it('makes the track faint and the head solid, both in the requested color', () => {
     const { container } = renderWithProviders(
       <SpinnerGlyph
         color="#abcdef"
@@ -148,7 +148,7 @@ describe('SpinnerGlyph — the arc', () => {
 describe(useSpinnerStroke, () => {
   afterEach(cleanup);
 
-  it('passes a literal colour through untouched', () => {
+  it('passes a literal color through untouched', () => {
     const { container } = renderWithProviders(<Probe color="#ff0000" />);
     expect(stroke(container)).toBe('#ff0000');
     cleanup();
@@ -156,14 +156,14 @@ describe(useSpinnerStroke, () => {
     expect(stroke(named.container)).toBe('rebeccapurple');
   });
 
-  it('resolves a $ token to a concrete colour instead of leaking the token', () => {
+  it('resolves a $ token to a concrete color instead of leaking the token', () => {
     const { container } = renderWithProviders(<Probe color="$color" />);
     const value = stroke(container);
     expect(value).toBeTruthy();
     expect(value?.startsWith('$')).toBe(false);
   });
 
-  it('defaults to $color when no colour is given, and still resolves it', () => {
+  it('defaults to $color when no color is given, and still resolves it', () => {
     const explicit = renderWithProviders(<Probe color="$color" />);
     const explicitValue = stroke(explicit.container);
     cleanup();

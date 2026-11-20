@@ -60,7 +60,7 @@ export interface WheelProps<T = string | number> {
   /** Stretch inside a row of columns (time picker). */
   flex?: number;
   /**
-   * Fires once each time a different item crosses the centre band (drag,
+   * Fires once each time a different item crosses the center band (drag,
    * flick, or snap). Native wires this to a selection haptic.
    */
   onItemCross?: (value: T, index: number) => void;
@@ -224,7 +224,7 @@ const modIndex = (row: number, n: number): number => {
   return ((row % n) + n) % n;
 };
 
-/** Data index seated in the centre band for a scroll offset (wrapped when looping, clamped otherwise). */
+/** Data index seated in the center band for a scroll offset (wrapped when looping, clamped otherwise). */
 const liveIndexFor = (n: number, loopEnabled: boolean, scrollOffset: number, itemHeight: number): number => {
   if (n === 0) {
     return 0;
@@ -394,7 +394,7 @@ const useWheelMotion = <T,>({ items, value, onChange, onItemCross, geometry }: W
     if (item === undefined) {
       return;
     }
-    // oxlint-disable-next-line react-doctor/no-pass-live-state-to-parent -- onItemCross is an event the consumer asked for, fired when the centre row changes; it carries the item, not state to mirror
+    // oxlint-disable-next-line react-doctor/no-pass-live-state-to-parent -- onItemCross is an event the consumer asked for, fired when the center row changes; it carries the item, not state to mirror
     onItemCrossRef.current?.(getItemValue(item), liveDataIndex);
     fireSelectionHaptic();
   }, [liveDataIndex, items, n]);
@@ -999,7 +999,7 @@ interface WheelRowModel {
   content: ReactNode;
 }
 
-/** Virtual rows to paint: the whole circle neighbourhood when looping, else the visible window. */
+/** Virtual rows to paint: the whole circle neighborhood when looping, else the visible window. */
 const visibleRowsFor = (geometry: WheelGeometry, scrollOffset: number): { virtualRow: number; dataIndex: number }[] => {
   const { n, loopEnabled, itemHeight, paddingItems, containerHeight } = geometry;
   if (n === 0) {

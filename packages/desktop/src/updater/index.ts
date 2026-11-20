@@ -20,19 +20,19 @@ export interface UpdaterApi {
    * Check if an update is available
    * @returns UpdateInfo if update available, null otherwise
    */
-  checkForUpdates(): Promise<UpdateInfo | null>;
+  checkForUpdates: () => Promise<UpdateInfo | null>;
 
   /**
    * Download and install the latest update
    * @param onProgress Optional callback for download progress (0-100)
    * @returns true if update was installed, false if no update available
    */
-  downloadAndInstall(onProgress?: (progress: number) => void): Promise<boolean>;
+  downloadAndInstall: (onProgress?: (progress: number) => void) => Promise<boolean>;
 
   /**
    * Check if auto-updates are supported on this platform
    */
-  isSupported(): boolean;
+  isSupported: () => boolean;
 }
 
 // Default no-op implementation for web/mobile

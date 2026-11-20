@@ -57,11 +57,11 @@ export const HeadingEdge: Story = {
       <Heading level={args.level}>{args.children}</Heading>
       <Heading level={2}>{null}</Heading>
       <Heading level={2}>
-        A very long duplicate heading that keeps going far beyond a single line to prove wrapping behaviour holds for
+        A very long duplicate heading that keeps going far beyond a single line to prove wrapping behavior holds for
         headings too
       </Heading>
       <Heading level={2}>
-        A very long duplicate heading that keeps going far beyond a single line to prove wrapping behaviour holds for
+        A very long duplicate heading that keeps going far beyond a single line to prove wrapping behavior holds for
         headings too
       </Heading>
       <Heading level={3}>

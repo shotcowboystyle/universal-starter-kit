@@ -65,7 +65,7 @@ export const Empty: Story = {
 
 export const LongHeading: Story = {
   args: {
-    title: 'A very long section heading that keeps going well past a reasonable length to test wrapping behaviour',
+    title: 'A very long section heading that keeps going well past a reasonable length to test wrapping behavior',
   },
   render: (args) => (
     <YStack maxWidth={360}>

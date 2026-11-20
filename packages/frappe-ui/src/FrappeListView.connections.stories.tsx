@@ -4,8 +4,8 @@ import { useResolvedKnobs } from '@repo/theme';
 import { useState } from 'react';
 import { XStack, YStack } from 'tamagui';
 
-import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import type { FrappeConnection } from './frappe-connections';
 import { FrappeListView } from './FrappeListView';

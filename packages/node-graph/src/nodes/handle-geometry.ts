@@ -22,7 +22,7 @@
  *      `.react-flow__viewport`, whose transform carries the zoom, so a region
  *      declared 44 px renders 44 x zoom. On the iPhone 16e at zoom 0.377 that
  *      is 16.6 pt wide — a half-width of 8.3 pt — and a tap 18 pt off the
- *      painted centre panned the canvas instead of grabbing the port. Same miss
+ *      painted center panned the canvas instead of grabbing the port. Same miss
  *      on emulator-5592 at zoom 0.397. So the inset carries a 1/zoom term and
  *      the sheet reads the live zoom from `--mpo-graph-zoom`.
  *
@@ -193,14 +193,14 @@ export interface PortGeometry {
   readonly region: PortRect;
 }
 
-const centredOn = (cx: number, cy: number, side: number): PortRect => ({
+const centeredOn = (cx: number, cy: number, side: number): PortRect => ({
   x: cx - side / 2,
   y: cy - side / 2,
   width: side,
   height: side,
 });
 
-/** The port's centre: pinned to its own edge, and clamped along it. */
+/** The port's center: pinned to its own edge, and clamped along it. */
 const portCentre = (side: GraphPortSide, nodeWidth: number, nodeHeight: number, offset: number) => {
   const alongX = Math.min(Math.max(offset, 0), nodeWidth);
   const alongY = Math.min(Math.max(offset, 0), nodeHeight);
@@ -224,7 +224,7 @@ const portCentre = (side: GraphPortSide, nodeWidth: number, nodeHeight: number, 
  * not move. A single-size signature could not express the broken mechanism, and
  * a test that cannot express the bug cannot catch it.
  *
- * React Flow's own sheet centres a handle on the node edge — `left: 0` /
+ * React Flow's own sheet centers a handle on the node edge — `left: 0` /
  * `right: 0` with `translate(∓50%)` and `top: 50%` with `translateY(-50%)`
  * (style.css `.react-flow__handle-left` and friends) — so both rectangles are
  * concentric on that edge point rather than tangent to it.
@@ -240,5 +240,5 @@ export const portGeometry = (opts: {
 }): PortGeometry => {
   const { painted, hit, side, nodeWidth, nodeHeight, offset } = opts;
   const { cx, cy } = portCentre(side, nodeWidth, nodeHeight, offset);
-  return { box: centredOn(cx, cy, painted), region: centredOn(cx, cy, hit) };
+  return { box: centeredOn(cx, cy, painted), region: centeredOn(cx, cy, hit) };
 };

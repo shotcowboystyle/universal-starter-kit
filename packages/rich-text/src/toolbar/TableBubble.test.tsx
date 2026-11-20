@@ -100,7 +100,7 @@ const pressInMenu = (container: HTMLElement, label: string) => {
   const menu = container.querySelector('[data-testid="table-menu"]')!;
   const el = menu.querySelector(`[aria-label="${label}"]`);
   if (!el) {
-    throw new Error(`no menu item labelled "${label}"`);
+    throw new Error(`no menu item labeled "${label}"`);
   }
   fireEvent.click(el);
 };

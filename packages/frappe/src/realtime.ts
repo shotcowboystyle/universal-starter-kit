@@ -117,7 +117,7 @@ export interface RealtimeConfig {
    * the right place without needing a reverse proxy.
    *
    * When omitted the port from `baseURL` is used as-is, which is the correct
-   * behaviour behind a production reverse proxy (e.g. nginx) that maps
+   * behavior behind a production reverse proxy (e.g. nginx) that maps
    * `/socket.io` to the SocketIO backend.
    */
   socketPort?: number;

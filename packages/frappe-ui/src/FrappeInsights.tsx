@@ -93,7 +93,7 @@ type ThemeColors = Record<string, { val?: string } | undefined>;
 
 /**
  * The value last declared under `key`: a fresh-but-equal declaration keeps
- * the settled one's identity, so the sections' memoised data holds.
+ * the settled one's identity, so the sections' memoized data holds.
  */
 const useSettled = <T,>(value: T, key: string): T => {
   const [settled, setSettled] = useState({ key, value });
@@ -288,14 +288,14 @@ export const FrappeInsights = <TDoc extends { name: string; doctype: string }>(p
   const orderKey = JSON.stringify(orderBy ?? null);
   const rows = useMemo(
     () =>
-      // SAFETY: orderRows returns the given rows reordered, so they stay TDocs; orderKey is orderBy serialised above
+      // SAFETY: orderRows returns the given rows reordered, so they stay TDocs; orderKey is orderBy serialized above
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
       orderRows(readRows as never[], (JSON.parse(orderKey) as OrderSpec | null) ?? undefined) as TDoc[],
     [readRows, orderKey],
   );
   const read = facet ? facetRead(facet, doctype, connections ?? connectionsFromMeta(meta), limit) : undefined;
   const readKey = JSON.stringify(read ?? null);
-  // SAFETY: readKey is `read` serialised above; the facet read is plain data
+  // SAFETY: readKey is `read` serialized above; the facet read is plain data
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
   const facetQuery = useMemo(() => JSON.parse(readKey) as typeof read | null, [readKey]);
   const facetOptions = useMemo(() => ({ ...facetQuery?.options, enabled: Boolean(facetQuery?.ready) }), [facetQuery]);

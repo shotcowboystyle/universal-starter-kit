@@ -1,5 +1,5 @@
 /**
- * The native root honours the props the web root does (MPO-454).
+ * The native root honors the props the web root does (MPO-454).
  *
  * index.native.tsx handed useDataTable a subset of the web root's options
  * and never drew a bulk bar, so on iOS the backoffice list (infinite server

@@ -29,7 +29,7 @@ export const snapGuidesClassName = 'mp-graph-guides';
 export const snapGuideClassName = 'mp-graph-guide';
 
 /**
- * Flow units of slack around the box. The stroke is centred on the line, so a
+ * Flow units of slack around the box. The stroke is centered on the line, so a
  * box that ends exactly on it would clip half of it away; and at a pinched-out
  * zoom the painted stroke is wider than the flow units it sits in.
  */

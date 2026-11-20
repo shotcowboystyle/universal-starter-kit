@@ -32,7 +32,7 @@ describe(BoardForm, () => {
     vi.clearAllMocks();
   });
 
-  it('renders labelled title and description fields', () => {
+  it('renders labeled title and description fields', () => {
     renderForm();
     expect(screen.getByText(/boardTitleLabel/u)).toBeInTheDocument();
     expect(screen.getByText(/descriptionLabel/u)).toBeInTheDocument();

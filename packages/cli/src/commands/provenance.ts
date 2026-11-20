@@ -1,10 +1,21 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import type { InitAppPiece } from './pieces';
+import path from 'node:path';
 
 export const PROVENANCE_FILE = '.mpo.json';
+
+/**
+ * Pieces: additive fragment trees under templates/pieces/<piece>/ that an
+ * ADOPTED project (`mpo adopt`) hand-copied and wants `mpo update` to keep
+ * reconciling. A project from `mpo init` never needs them: apps/one already
+ * ships gnome/, tauri/, vscode/ and webext/, and frappe / keycloak are
+ * `--service` selections of the real apps. Keep sorted: pieces are recorded
+ * sorted in provenance and overlaid in this order.
+ */
+export const INIT_APP_PIECES = ['frappe', 'frappe-bench', 'gnome', 'keycloak', 'tauri', 'vscode', 'webext'] as const;
+export type InitAppPiece = (typeof INIT_APP_PIECES)[number];
+
+export const isInitAppPiece = (piece: string): piece is InitAppPiece =>
+  INIT_APP_PIECES.some((known) => known === piece);
 
 /**
  * What `mpo update` needs to rebuild the merge base of a project.
@@ -39,134 +50,171 @@ export interface MpoProvenance {
   reconciled?: boolean;
 }
 
-export function validateName(name: string): string {
+export const validateName = (name: string): string => {
   const trimmed = name.trim();
   if (!trimmed) {
     throw new Error('Project name is required');
   }
-  if (!/^[a-z][a-z0-9-]*$/.test(trimmed)) {
+  if (!/^[a-z][a-z0-9-]*$/u.test(trimmed)) {
     throw new Error(`Invalid project name "${trimmed}". Use lowercase letters, numbers, and hyphens (e.g. my-app).`);
   }
   return trimmed;
-}
+};
+
+/* oxlint-disable anti-slop/no-runtime-typeof, anti-slop/no-unknown-parameters, anti-slop/no-unknown-returns -- the JSON parse boundary for package.json and .mpo.json: untyped file contents are narrowed into typed values here and nowhere else */
+const readJson = (file: string): unknown => JSON.parse(readFileSync(file, 'utf-8'));
+
+/** An own field of a parsed JSON object (undefined for non-objects). */
+const field = (value: unknown, key: string): unknown =>
+  typeof value === 'object' && value !== null ? Object.getOwnPropertyDescriptor(value, key)?.value : undefined;
+
+const stringField = (value: unknown, key: string): string | undefined => {
+  const fieldValue = field(value, key);
+  return typeof fieldValue === 'string' ? fieldValue : undefined;
+};
+
+const strings = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+/* oxlint-enable anti-slop/no-runtime-typeof, anti-slop/no-unknown-parameters, anti-slop/no-unknown-returns */
+
+/** The `name` of `<dir>/package.json` as written (undefined when unreadable). */
+export const rawPackageJsonName = (dir: string): string | undefined => {
+  try {
+    return stringField(readJson(path.join(dir, 'package.json')), 'name');
+  } catch {
+    // Missing or malformed JSON reads as absent; callers treat that as "not recorded".
+    return undefined;
+  }
+};
 
 /** Root package.json name with any @scope/ prefix stripped (adopt derives the project name from it). */
-export function packageJsonName(projectDir: string): string | undefined {
+export const packageJsonName = (projectDir: string): string | undefined =>
+  rawPackageJsonName(projectDir)?.replace(/^@[^/]+\//u, '');
+
+export const cliRoot = (): string => path.resolve(import.meta.dirname, '../..');
+
+export const cliVersion = (): string | undefined => {
   try {
-    const pkg = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf-8')) as {
-      name?: string;
-    };
-    return pkg.name?.replace(/^@[^/]+\//u, '');
+    return stringField(readJson(path.join(cliRoot(), 'package.json')), 'version');
   } catch {
+    // Missing or malformed JSON reads as absent; callers treat that as "not recorded".
     return undefined;
   }
-}
-
-export function cliRoot(): string {
-  return resolve(import.meta.dirname, '../..');
-}
-
-export function cliVersion(): string | undefined {
-  try {
-    const pkg = JSON.parse(readFileSync(join(cliRoot(), 'package.json'), 'utf-8')) as {
-      version?: string;
-    };
-    return pkg.version;
-  } catch {
-    return undefined;
-  }
-}
+};
 
 /** `^x.y.z` for a bare version; explicit ranges pass through. */
-export function mpoRange(explicit: string | undefined, fallbackVersion = cliVersion()): string {
-  if (explicit) {
+export const mpoRange = (explicit: string | undefined, fallbackVersion = cliVersion()): string => {
+  if (explicit !== undefined && explicit !== '') {
     return explicit.startsWith('^') || explicit.startsWith('~') || explicit === '*' ? explicit : `^${explicit}`;
   }
-  return fallbackVersion ? `^${fallbackVersion}` : '^0.0.0';
-}
+  return fallbackVersion === undefined || fallbackVersion === '' ? '^0.0.0' : `^${fallbackVersion}`;
+};
 
-export function writeProvenance(targetDir: string, provenance: MpoProvenance): void {
-  const pieces = [...provenance.pieces].sort();
-  const record: Record<string, unknown> = provenance.source
-    ? {
-        cliVersion: provenance.cliVersion,
-        source: provenance.source,
-        apps: provenance.apps,
-        services: [...provenance.services].sort(),
-        pieces,
-      }
-    : {
-        template: provenance.template ?? 'none',
-        cliVersion: provenance.cliVersion,
-        name: provenance.name,
-        mpoVersion: provenance.mpoVersion ?? `^${provenance.cliVersion}`,
-        pieces,
-        ...(provenance.reconciled === false ? { reconciled: false } : {}),
-      };
-  writeFileSync(join(targetDir, PROVENANCE_FILE), `${JSON.stringify(record, null, 2)}\n`);
-}
+/** The JSON written to .mpo.json: a clone-derived record or an adopted / template-era one. */
+type ProvenanceRecord =
+  | Pick<MpoProvenance, 'cliVersion' | 'source' | 'apps' | 'services' | 'pieces'>
+  | (Pick<MpoProvenance, 'template' | 'cliVersion' | 'name' | 'mpoVersion' | 'pieces'> & { reconciled?: false });
+
+export const writeProvenance = (targetDir: string, provenance: MpoProvenance): void => {
+  const pieces = provenance.pieces.toSorted();
+  let record: ProvenanceRecord;
+  if (provenance.source) {
+    record = {
+      cliVersion: provenance.cliVersion,
+      source: provenance.source,
+      apps: provenance.apps,
+      services: provenance.services.toSorted(),
+      pieces,
+    };
+  } else {
+    record = {
+      template: provenance.template ?? 'none',
+      cliVersion: provenance.cliVersion,
+      name: provenance.name,
+      mpoVersion: provenance.mpoVersion ?? `^${provenance.cliVersion}`,
+      pieces,
+    };
+    if (provenance.reconciled === false) {
+      record.reconciled = false;
+    }
+  }
+  writeFileSync(path.join(targetDir, PROVENANCE_FILE), `${JSON.stringify(record, null, 2)}\n`);
+};
+
+/** Recorded pieces, sorted; a name this cli does not know fails loudly, as it would when rendered. */
+const recordedPieces = (names: string[]): InitAppPiece[] =>
+  names.toSorted().map((piece) => {
+    if (!isInitAppPiece(piece)) {
+      throw new Error(`Unknown piece "${piece}" recorded in ${PROVENANCE_FILE}`);
+    }
+    return piece;
+  });
 
 /**
  * Reads both shapes: the clone-derived record ({cliVersion, source, apps,
  * services, pieces}) and the older {template, name} record written by
  * `mpo adopt` and the retired template scaffolder.
  */
-export function readProvenance(projectDir: string): MpoProvenance | undefined {
-  const file = join(projectDir, PROVENANCE_FILE);
+export const readProvenance = (projectDir: string): MpoProvenance | undefined => {
+  const file = path.join(projectDir, PROVENANCE_FILE);
   if (!existsSync(file)) {
     return undefined;
   }
-  let raw: Record<string, unknown>;
+  let raw: unknown;
   try {
-    raw = JSON.parse(readFileSync(file, 'utf-8')) as Record<string, unknown>;
+    raw = readJson(file);
   } catch {
+    // Missing or malformed JSON reads as absent; callers treat that as "not recorded".
     return undefined;
   }
-  if (typeof raw.cliVersion !== 'string') {
+  const recordedCliVersion = stringField(raw, 'cliVersion');
+  if (recordedCliVersion === undefined) {
     return undefined;
   }
-  const strings = (value: unknown): string[] =>
-    Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-  const pieces = strings(raw.pieces).sort() as InitAppPiece[];
-  const source = raw.source as { sha?: unknown; url?: unknown } | undefined;
-  if (source && typeof source.sha === 'string') {
+  const pieces = recordedPieces(strings(field(raw, 'pieces')));
+  const source = field(raw, 'source');
+  const sha = stringField(source, 'sha');
+  if (sha !== undefined) {
+    const url = stringField(source, 'url');
     return {
-      cliVersion: raw.cliVersion,
-      source: {
-        sha: source.sha,
-        ...(typeof source.url === 'string' ? { url: source.url } : {}),
-      },
-      apps: strings(raw.apps),
-      services: strings(raw.services).sort(),
+      cliVersion: recordedCliVersion,
+      source: url === undefined ? { sha } : { sha, url },
+      apps: strings(field(raw, 'apps')),
+      services: strings(field(raw, 'services')).toSorted(),
       pieces,
     };
   }
-  const { template } = raw;
+  const template = field(raw, 'template');
   if (template !== 'none' && template !== 'universal' && template !== 'app') {
     // A clone-derived record without a sha cannot be rebuilt.
-    if (Array.isArray(raw.apps)) {
+    const apps = field(raw, 'apps');
+    if (Array.isArray(apps)) {
       return {
-        cliVersion: raw.cliVersion,
-        apps: strings(raw.apps),
-        services: strings(raw.services).sort(),
+        cliVersion: recordedCliVersion,
+        apps: strings(apps),
+        services: strings(field(raw, 'services')).toSorted(),
         pieces,
         template: 'universal',
-        name: strings(raw.apps)[0],
+        name: strings(apps)[0],
       };
     }
     return undefined;
   }
-  if (typeof raw.name !== 'string') {
+  const name = stringField(raw, 'name');
+  if (name === undefined) {
     return undefined;
   }
-  return {
-    cliVersion: raw.cliVersion,
-    apps: template === 'none' ? [] : [raw.name],
+  const provenance: MpoProvenance = {
+    cliVersion: recordedCliVersion,
+    apps: template === 'none' ? [] : [name],
     services: [],
     pieces,
     template,
-    name: raw.name,
-    mpoVersion: typeof raw.mpoVersion === 'string' ? raw.mpoVersion : `^${raw.cliVersion}`,
-    ...(raw.reconciled === false ? { reconciled: false } : {}),
+    name,
+    mpoVersion: stringField(raw, 'mpoVersion') ?? `^${recordedCliVersion}`,
   };
-}
+  if (field(raw, 'reconciled') === false) {
+    provenance.reconciled = false;
+  }
+  return provenance;
+};

@@ -13,8 +13,8 @@ import { initReactI18next } from 'react-i18next';
 import { Text } from 'tamagui';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { rosterFixtureData, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';
-import type { RosterPokemon } from '../tests/fixtures/pokemonRoster';
+import { rosterFixtureData, rosterPokemonMeta } from '../tests/fixtures/pokemon-roster';
+import type { RosterPokemon } from '../tests/fixtures/pokemon-roster';
 
 import type { FrappeConnection } from './frappe-connections';
 import { FrappeForm } from './FrappeForm';

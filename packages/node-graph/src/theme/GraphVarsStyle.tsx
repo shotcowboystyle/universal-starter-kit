@@ -40,7 +40,7 @@ export interface GraphVarsProps {
    * `vars` is derived from the envelope, so its revision is the authority on
    * whether anything moved, and a fresh `vars` object identity on every render
    * would otherwise re-serialize the whole sheet at 60 Hz during a drag.
-   * `graph-css.test.ts` pins that behaviour rather than leaving it as a comment.
+   * `graph-css.test.ts` pins that behavior rather than leaving it as a comment.
    */
   readonly revision: number;
   /** Scope selector. Defaults to the graph root class. */

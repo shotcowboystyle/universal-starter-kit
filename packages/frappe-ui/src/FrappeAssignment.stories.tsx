@@ -99,7 +99,7 @@ const assignmentMetaRaw = (name: string) => {
   };
 };
 
-// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serialisable mock envelope the stories answer with
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- any JSON-serializable mock envelope the stories answer with
 const jsonResponse = (body: unknown, status = 200): Response => Response.json(body, { status });
 
 const requestUrl = (input: RequestInfo | URL): string => {

@@ -15,7 +15,7 @@ import type React from 'react';
 import type { ComponentType } from 'react';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { registeredFieldtypesFromSource } from '../tests/registrySource';
+import { registeredFieldtypesFromSource } from '../tests/registry-source';
 
 import { childFieldsToColumns, fieldtypeToTableField, getFieldComponent, registerField } from './field-registry';
 import type { ChildTableFieldDef, FieldRenderProps } from './field-registry';
@@ -80,10 +80,11 @@ describe('fieldtypeToTableField (cell context)', () => {
 
   it('maps Rating to the frappe-ui Rating field (0–1 fraction contract)', () => {
     const render = customRenderOf(fieldtypeToTableField('Rating'));
-    const element = render(0.8, {}, () => {});
+    const fraction = 0.8;
+    const element = render(fraction, {}, () => {});
     expect(element.type).toBe(Rating);
-    // oxlint-disable-next-line sonarjs/no-floating-point-equality -- the adapter passes the value through untouched, so identity is the contract
-    expect(element.props.value).toBe(0.8);
+    // The adapter passes the value through untouched, so identity is the contract.
+    expect(element.props.value).toBe(fraction);
     expect(element.props.maxStars).toBeUndefined();
     expect(element.props.compact).toBe(true);
   });

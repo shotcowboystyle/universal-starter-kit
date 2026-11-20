@@ -127,7 +127,7 @@ const renderAtKnobs = (overrides: Partial<Knobs>) =>
 describe(FilterOperatorValueEditor, () => {
   describe('operator vocabulary', () => {
     it.each(fieldTypes)(
-      '%s: the Condition select offers exactly operatorsForFilterType, labelled via filterOperatorLabel',
+      '%s: the Condition select offers exactly operatorsForFilterType, labeled via filterOperatorLabel',
       async (fieldType) => {
         const { container } = renderEditor({ fieldType, options: statusOptions });
         expect(screen.getByText('Condition')).toBeInTheDocument();

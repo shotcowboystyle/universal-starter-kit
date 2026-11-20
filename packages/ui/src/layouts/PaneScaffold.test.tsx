@@ -22,7 +22,7 @@ const setViewportWidth = (width: number) => {
 };
 
 /**
- * Rail | (centre | inspector) — the three-region page the kit composes from
+ * Rail | (center | inspector) — the three-region page the kit composes from
  * two scaffolds. `sizeClass` is set on the OUTER one only, so this also
  * covers whether the class reaches the inner scaffold.
  */
@@ -31,7 +31,7 @@ const ThreeRegionPage = (props: Pick<PaneScaffoldProps, 'sizeClass'>) => (
     sizeClass={props.sizeClass}
     primary={<Paragraph>Rail</Paragraph>}
     secondary=<PaneScaffold
-      primary={<Paragraph>Centre</Paragraph>}
+      primary={<Paragraph>Center</Paragraph>}
       secondary={<Paragraph>Inspector</Paragraph>}
     />
   />
@@ -180,14 +180,14 @@ describe('PaneScaffold layouts', () => {
   });
 
   // Two scaffolds are how the kit builds three regions, and a phone
-  // rendered only the outer primary — the centre and inspector were unreachable.
+  // rendered only the outer primary — the center and inspector were unreachable.
   describe('PaneScaffold nesting', () => {
     it('renders all three regions at a 402pt viewport', () => {
       setViewportWidth(402);
       renderWithProviders(<ThreeRegionPage />);
 
       expect(screen.getByText('Rail')).toBeInTheDocument();
-      expect(screen.getByText('Centre')).toBeInTheDocument();
+      expect(screen.getByText('Center')).toBeInTheDocument();
       expect(screen.getByText('Inspector')).toBeInTheDocument();
 
       const scaffolds = screen.getAllByTestId('pane-scaffold');
@@ -204,7 +204,7 @@ describe('PaneScaffold layouts', () => {
       setViewportWidth(1440);
       renderWithProviders(<ThreeRegionPage sizeClass="compact" />);
 
-      expect(screen.getByText('Centre')).toBeInTheDocument();
+      expect(screen.getByText('Center')).toBeInTheDocument();
       expect(screen.getByText('Inspector')).toBeInTheDocument();
       for (const node of screen.getAllByTestId('pane-scaffold')) {
         expect(node).toHaveAttribute('data-pane-layout', 'stack');
@@ -356,7 +356,7 @@ describe('PaneScaffold layouts', () => {
       expect(sash).toHaveAttribute('aria-valuenow', '50');
     });
 
-    it('vertical honours the clamps: the default is clamped, Home / End land on min / max', () => {
+    it('vertical honors the clamps: the default is clamped, Home / End land on min / max', () => {
       const sash = renderSplit({
         orientation: 'vertical',
         paneFlex: [9, 1],

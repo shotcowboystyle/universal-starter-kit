@@ -19,7 +19,7 @@
 #                         ethereum frappe keycloak solana storybook
 #                         storybook-expo sui uxpin vocs
 #   --mpo-version <range> range written for @repo/* deps
-#                         (default: ^<version of public/cli in the source tree>)
+#                         (default: ^<version of packages/cli in the source tree>)
 #   --keep <dir>          keep a pruned top-level path (repeatable):
 #                         public agent-os .changeset docs deploy
 #   --into                target may already hold files: a path that already
@@ -209,8 +209,8 @@ git -C "$REPO" rev-parse --verify --quiet "$SHA:apps/one/package.json" >/dev/nul
     die "$SOURCE at $REF has no apps/one: not the universal-starter-kit monorepo"
 
 if [ -z "$MPO_VERSION" ]; then
-    MPO_VERSION="^$(git -C "$REPO" show "$SHA:public/cli/package.json" | sed -n 's/^  "version": "\([^"]*\)".*/\1/p' | head -n 1)"
-    [ "$MPO_VERSION" != "^" ] || die "could not read the CLI version from public/cli/package.json at $SHA"
+    MPO_VERSION="^$(git -C "$REPO" show "$SHA:packages/cli/package.json" | sed -n 's/^  "version": "\([^"]*\)".*/\1/p' | head -n 1)"
+    [ "$MPO_VERSION" != "^" ] || die "could not read the CLI version from packages/cli/package.json at $SHA"
 fi
 CLI_VERSION="${MPO_VERSION#[~^]}"
 
@@ -297,15 +297,15 @@ esac
 # The root AGENTS.md documents the monorepo; a project gets the consumer copy
 # at the same commit, so an mpo update merge base carries the copy its commit
 # shipped (a commit before the copy existed keeps the monorepo file).
-if git -C "$REPO" rev-parse --verify --quiet "$SHA:public/cli/templates/AGENTS.md" >/dev/null; then
-    git -C "$REPO" show "$SHA:public/cli/templates/AGENTS.md" >"$TREE/AGENTS.md"
+if git -C "$REPO" rev-parse --verify --quiet "$SHA:packages/cli/templates/AGENTS.md" >/dev/null; then
+    git -C "$REPO" show "$SHA:packages/cli/templates/AGENTS.md" >"$TREE/AGENTS.md"
 fi
 
 # Commits from MPO-343 to MPO-289 shipped a pnpmfile mapping @repo
 # to Pulp. The scaffold at one of them still carries it, so an mpo update whose
 # merge base is such a commit sees the file leave and removes it.
-if git -C "$REPO" rev-parse --verify --quiet "$SHA:public/cli/templates/pnpmfile.cjs" >/dev/null; then
-    git -C "$REPO" show "$SHA:public/cli/templates/pnpmfile.cjs" >"$TREE/.pnpmfile.cjs"
+if git -C "$REPO" rev-parse --verify --quiet "$SHA:packages/cli/templates/pnpmfile.cjs" >/dev/null; then
+    git -C "$REPO" show "$SHA:packages/cli/templates/pnpmfile.cjs" >"$TREE/.pnpmfile.cjs"
 fi
 if [ -f "$TREE/.pnpmfile.cjs" ] && [ -f "$TREE/pnpm-lock.yaml" ]; then
     node - "$TREE/.pnpmfile.cjs" "$TREE/pnpm-lock.yaml" <<'NODE'
@@ -668,8 +668,8 @@ fi
 # the same commit. A block between <!-- service:<app> --> and its closing
 # <!-- /service:<app> --> stays only when that service was kept, and a
 # no-service block only when it was not.
-if git -C "$REPO" rev-parse --verify --quiet "$SHA:public/cli/templates/README.md" >/dev/null; then
-    git -C "$REPO" show "$SHA:public/cli/templates/README.md" | awk -v kept=" $SERVICES " '
+if git -C "$REPO" rev-parse --verify --quiet "$SHA:packages/cli/templates/README.md" >/dev/null; then
+    git -C "$REPO" show "$SHA:packages/cli/templates/README.md" | awk -v kept=" $SERVICES " '
     /^<!-- \/(no-)?service:[a-z0-9-]+ -->$/ {
         skipping = 0
         next

@@ -151,7 +151,7 @@ describe('FileUpload size gate', () => {
  * back the raw key, so `t("Retry {{name}}", { name })` renders the accessible
  * name literally as `Retry {{name}}` rather than `Retry report.pdf`. Buttons
  * are therefore looked up by the stable half of the label, and the per-file
- * parameterisation is asserted separately (`ariaNames` below) so a dropped
+ * parameterization is asserted separately (`ariaNames` below) so a dropped
  * `aria-label` still fails. Recorded on MPO-123.
  */
 const buttonLabelled = (container: HTMLElement, prefix: string) =>

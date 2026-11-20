@@ -3,7 +3,7 @@
  *
  * `composeGetTheme` drops nullish consumer entries so a partial override does
  * not erase a framework derivation. It did nothing else, so a consumer
- * `getTheme` that returned a MISSPELLED colour handed the string straight to
+ * `getTheme` that returned a MISSPELLED color handed the string straight to
  * paint: `borderColor: "vaR(--x)"` is not nullish, survives the merge, reaches
  * CSS, resolves to nothing, and the element falls back to `currentColor`.
  * That is the same near-black-border failure `composeGetTheme` guards against, only
@@ -22,7 +22,7 @@ const TOKEN_REFERENCE = /^\$[\w.-]+$/u;
 const HEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
 /**
- * Every CSS colour FUNCTION, plus `var()`. Only the head is checked: the
+ * Every CSS color FUNCTION, plus `var()`. Only the head is checked: the
  * argument grammar is CSS's job and re-implementing it here would be a second
  * parser to keep in step with the spec.
  */
@@ -42,7 +42,7 @@ const KEYWORDS = new Set([
 ]);
 
 /**
- * The 148 CSS named colours. Spelled out rather than matched with `/^[a-z]+$/`
+ * The 148 CSS named colors. Spelled out rather than matched with `/^[a-z]+$/`
  * on purpose: a bare-word pattern accepts `reddish` and `bakcground`, which are
  * exactly the typos this check exists to catch.
  */
@@ -69,10 +69,10 @@ const NAMED_COLORS = new Set(
 );
 
 /**
- * True when a renderer can resolve `value` to a colour.
+ * True when a renderer can resolve `value` to a color.
  *
  * Numbers pass: a theme carries numeric values (z-index, opacity-ish steps)
- * that are not colours at all and are not this check's business.
+ * that are not colors at all and are not this check's business.
  */
 // oxlint-disable-next-line anti-slop/no-unknown-parameters -- this function is the validator for untrusted theme values
 export const isResolvableThemeValue = (value: unknown): boolean => {
@@ -114,8 +114,8 @@ export const assertResolvableThemeValues = (entries: Record<string, unknown>, th
     if (value != null && !isResolvableThemeValue(value)) {
       throw new Error(
         `getTheme returned an unresolvable value for "${key}" in theme "${themeName}": ` +
-          `${JSON.stringify(value)}. A theme value must be a $token, a hex colour, a CSS ` +
-          `colour function, a CSS-wide keyword or a named colour — anything else resolves to ` +
+          `${JSON.stringify(value)}. A theme value must be a $token, a hex color, a CSS ` +
+          `color function, a CSS-wide keyword or a named color — anything else resolves to ` +
           `nothing at paint and the element falls back to currentColor (10 B.3 item 3, MPO-23).`,
       );
     }

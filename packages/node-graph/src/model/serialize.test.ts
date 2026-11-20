@@ -17,7 +17,7 @@ import { parseDocument, serializeDocument } from './serialize';
 
 // Type aliases, not interfaces: an interface has no implicit index signature,
 // so `interface Nodes` does not satisfy `NodeKindDefs`. That is a TypeScript
-// rule about declaration merging, not a modelling choice, and it bites every
+// rule about declaration merging, not a modeling choice, and it bites every
 // consumer the same way — so the spec uses the shape a consumer must use.
 // oxlint-disable-next-line typescript/consistent-type-definitions -- must stay an alias: interfaces lack the implicit index signature the NodeKindDefs/EdgeKindDefs constraint needs
 type Nodes = {
@@ -296,7 +296,7 @@ describe('numbers', () => {
 
   it("leaves a consumer's own data numbers alone", () => {
     // Rounding a payload would silently corrupt it. Geometry is the package's
-    // to normalise; `data` is not.
+    // to normalize; `data` is not.
     const doc: GraphDocument<Nodes, Edges> = {
       version: 1,
       nodes: [{ id: 'n', kind: 'task', position: { x: 0, y: 0 }, data: { title: 't', retries: 1.23456 } }],

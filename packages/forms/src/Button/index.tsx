@@ -251,7 +251,7 @@ export const ButtonFrame = styled(View, {
   flexDirection: 'row',
   backgroundColor: BACKGROUND_TOKEN,
   // Every button carries a 1px
-  // border with a TRANSPARENT colour so filled and outlined share identical
+  // border with a TRANSPARENT color so filled and outlined share identical
   // box geometry — only the outlined variant paints `$borderColor`.
   borderColor: 'transparent',
   outlineWidth: 0,

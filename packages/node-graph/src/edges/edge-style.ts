@@ -87,7 +87,7 @@ export interface EdgeStyleInput {
 
 /**
  * `"$color9"` -> `"color9"`. The theme key, so a renderer can look the token up
- * without the appearance table ever holding a resolved colour — which is what
+ * without the appearance table ever holding a resolved color — which is what
  * keeps `edge-style.test.ts`'s hex ban meaningful.
  */
 export const themeTokenName = (stroke: string): string => (stroke.startsWith('$') ? stroke.slice(1) : stroke);

@@ -66,7 +66,7 @@ export const ShufflePanel = <TDoc extends { name?: string }>({
   return (
     <XStack
       id={id}
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <section> on native); the labelled role gives the landmark on web
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui stack (no <section> on native); the labeled role gives the landmark on web
       role="region"
       aria-label={label}
       {...knobProps.surface}

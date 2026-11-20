@@ -10,7 +10,7 @@
  *    takes the dragged selection's **union rect** and its **id set**, so a
  *    multi-select drag snaps the box and one delta moves every member (S6);
  *  - the spike compared origins only. This compares the nine line pairs
- *    (S4), so a node aligns to a neighbour's centre or far edge, which is what
+ *    (S4), so a node aligns to a neighbor's center or far edge, which is what
  *    makes the guides mean anything.
  *
  * The threshold arrives in FLOW units and is a screen distance divided by the
@@ -24,7 +24,7 @@ import type { SpatialHash } from './spatial-hash';
 /** Design §7.2: 8 on a mouse, 12 under a finger, both in SCREEN px. */
 export const defaultSnapThresholdPx = { fine: 8, coarse: 12 } as const;
 
-/** Design §7.2 S3. How far from the dragged box a neighbour may be and count. */
+/** Design §7.2 S3. How far from the dragged box a neighbor may be and count. */
 export const defaultCandidateRadius = 400;
 
 export interface PositionedNode {
@@ -41,10 +41,10 @@ export interface SnapGuide {
   readonly axis: SnapAxis;
   /** The flow coordinate of the line: an x for a vertical guide, a y for a horizontal one. */
   readonly position: number;
-  /** Where the line starts on the OTHER axis. Spans the moved rect and the neighbour. */
+  /** Where the line starts on the OTHER axis. Spans the moved rect and the neighbor. */
   readonly start: number;
   readonly end: number;
-  /** The neighbour it aligned to, so a story can name it and a test can assert it. */
+  /** The neighbor it aligned to, so a story can name it and a test can assert it. */
   readonly nodeId: NodeId;
   readonly movingLine: SnapLine;
   readonly candidateLine: SnapLine;
@@ -66,7 +66,7 @@ export interface SnapToAlignmentInput {
   readonly rect: Rect;
   /**
    * Live geometry. The index is the drag-start snapshot and only picks WHICH
-   * neighbours to consider; this map is what the arithmetic reads, so a node
+   * neighbors to consider; this map is what the arithmetic reads, so a node
    * that moved under a programmatic change is aligned to where it is now.
    */
   readonly nodes: ReadonlyMap<NodeId, PositionedNode>;
@@ -83,7 +83,7 @@ export interface SnapToAlignmentInput {
  *
  * A zoom of zero or less returns 0 rather than Infinity: React Flow clamps zoom
  * well above zero, but a threshold of Infinity would snap the node to the first
- * neighbour in the index and there would be no way to see why.
+ * neighbor in the index and there would be no way to see why.
  */
 export const alignmentThreshold = (options: { readonly thresholdScreenPx: number; readonly zoom: number }): number => {
   const { thresholdScreenPx, zoom } = options;

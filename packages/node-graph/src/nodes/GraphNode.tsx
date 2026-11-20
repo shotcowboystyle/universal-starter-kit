@@ -37,7 +37,7 @@ export interface GraphNodeProps {
   readonly title: string;
   readonly subtitle?: string;
   readonly ports?: readonly GraphNodePort[];
-  /** Semantic intent — reaches the resolver, never a colour prop. */
+  /** Semantic intent — reaches the resolver, never a color prop. */
   readonly intent?: string;
   readonly selected?: boolean;
   readonly dragging?: boolean;
@@ -156,7 +156,7 @@ export const GraphNode = ({
           carries the heading family, so spreading heading first and label
           second made the title paint the BODY face while the source read as if
           it painted the heading one. The rendered result was right — design §11
-          declares this ink honours `bodyFont` — but only by spread order, and a
+          declares this ink honors `bodyFont` — but only by spread order, and a
           reorder would have flipped a documented law silently. One fragment,
           one law. `GraphNode.test.tsx` pins that `headingFont` does not move it.
         */}

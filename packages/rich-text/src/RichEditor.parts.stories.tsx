@@ -101,7 +101,7 @@ export const MarkdownCapabilities: Story = {
   args: {
     capabilities: 'markdown',
     initialContent:
-      '## Markdown capabilities\n\nEditing constrained to **GFM**: no underline, colour or alignment.\n\n- [ ] Task lists work\n- Bullet lists too\n\n> Blockquotes round-trip.',
+      '## Markdown capabilities\n\nEditing constrained to **GFM**: no underline, color or alignment.\n\n- [ ] Task lists work\n- Bullet lists too\n\n> Blockquotes round-trip.',
   },
 };
 

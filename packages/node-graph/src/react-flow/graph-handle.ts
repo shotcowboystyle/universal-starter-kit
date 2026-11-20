@@ -59,7 +59,7 @@ export interface NodeGraphHandle {
    */
   setViewport: (x: number, y: number, zoom: number) => void;
   /**
-   * A synthesised two-finger pinch, dispatched on the PANE — which is the
+   * A synthesized two-finger pinch, dispatched on the PANE — which is the
    * element d3-zoom's touch listener is attached to, and which exists only in
    * the realm the canvas paints in.
    *

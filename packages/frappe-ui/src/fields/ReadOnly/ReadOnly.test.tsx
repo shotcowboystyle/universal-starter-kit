@@ -90,7 +90,7 @@ describe('ReadOnly formatting matrix', () => {
     expect(screen.getByText(formatNumericText(4, { precision: 0 }))).toBeTruthy();
   });
 
-  it('Float honours precision', () => {
+  it('Float honors precision', () => {
     renderWithProviders(
       <ReadOnly
         label="Rate"
@@ -190,7 +190,7 @@ describe('ReadOnly empty handling', () => {
     expect(result.container.textContent).toContain('-');
   });
 
-  it('honours a custom emptyText', () => {
+  it('honors a custom emptyText', () => {
     const result = renderWithProviders(
       <ReadOnly
         label="Ref"
@@ -251,7 +251,7 @@ describe('ReadOnly Color swatch', () => {
     expect(text.parentElement?.childElementCount).toBe(2);
   });
 
-  it('refuses a swatch for a value that is not a hex colour', () => {
+  it('refuses a swatch for a value that is not a hex color', () => {
     renderWithProviders(
       <ReadOnly
         label="Brand"

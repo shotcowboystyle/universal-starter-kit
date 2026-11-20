@@ -31,7 +31,7 @@ describe(isResolvableThemeValue, () => {
     ['var(--fb-wall)', 'var()'],
     ['transparent', 'keyword'],
     ['currentColor', 'keyword'],
-    ['rebeccapurple', 'named colour'],
+    ['rebeccapurple', 'named color'],
     [0.5, 'number'],
   ])('accepts %s (%s)', (value, _kind) => {
     expect(isResolvableThemeValue(value)).toBe(true);
@@ -42,7 +42,7 @@ describe(isResolvableThemeValue, () => {
     ['   ', 'whitespace'],
     ['undefined', 'the literal string undefined'],
     ['vaR(--x)', 'a misspelled function'],
-    ['reddish', 'a word that is not a colour'],
+    ['reddish', 'a word that is not a color'],
     ['bakcground', 'a typo'],
     ['$', 'a bare dollar'],
     [{}, 'an object'],

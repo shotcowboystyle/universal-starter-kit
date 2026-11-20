@@ -21,7 +21,7 @@ const meta: Meta<typeof SavedFilterDropdown> = {
     docs: {
       description: {
         component:
-          'Select over saved filter records. Global filters are labelled in the option ' +
+          'Select over saved filter records. Global filters are labeled in the option ' +
           'text. The empty list is a silent no-op so toolbars do not grow a dead trigger.',
       },
     },

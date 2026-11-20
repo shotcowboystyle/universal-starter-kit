@@ -170,8 +170,8 @@ describe('level of detail', () => {
       expect(reappeared, 'overview reappeared after detail at these zooms').toStrictEqual([]);
     });
 
-    it('renders the full body rather than a grey box when the zoom is not a number', () => {
-      // Reachable from a store mid-initialization. A screen of grey rectangles
+    it('renders the full body rather than a gray box when the zoom is not a number', () => {
+      // Reachable from a store mid-initialization. A screen of gray rectangles
       // at unknown zoom gives the user no way back; a full body always does.
       expect(lodForZoom(Number.NaN)).toBe('detail');
       expect(lodForZoom(Number.POSITIVE_INFINITY)).toBe('detail');
@@ -255,8 +255,8 @@ describe('level of detail', () => {
 
     it('fades them with opacity rather than hiding them', () => {
       const { container } = renderNode('overview');
-      const portsStack = container.querySelector('[data-graph-node-ports]') as HTMLElement;
-      const childrenStack = container.querySelector('[data-graph-node-children]') as HTMLElement;
+      const portsStack = container.querySelector<HTMLElement>('[data-graph-node-ports]')!;
+      const childrenStack = container.querySelector<HTMLElement>('[data-graph-node-children]')!;
       for (const el of [portsStack, childrenStack]) {
         expect(declarationFor(el, 'opacity')).toBe('0');
         // `display: none` would collapse the box, which is the whole failure.
@@ -293,7 +293,7 @@ describe('level of detail', () => {
         };
         cleanup();
         // Swapping the body cannot move the node's box, so it cannot move an
-        // edge endpoint either. A "small grey rectangle" here would move every
+        // edge endpoint either. A "small gray rectangle" here would move every
         // endpoint on the canvas the moment a user zoomed out.
         expect(actual, `size ${size}`).toStrictEqual(expected);
       }

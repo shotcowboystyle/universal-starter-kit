@@ -85,7 +85,7 @@ interface ResolvedInk {
 
 const resolvedInk = (node: HTMLElement, scheme: string): ResolvedInk => {
   const token = /(?:^|\s)_col-(?<token>\w+)(?:\s|$)/u.exec(node.className)?.groups?.token;
-  expect(token, `reason carries a colour token class: ${node.className}`).toBeTruthy();
+  expect(token, `reason carries a color token class: ${node.className}`).toBeTruthy();
   const key = scopeThemeKey(node, scheme);
   const ink = houseThemes[key]?.[token!];
   expect(ink, `${key}.${token} resolves in the house themes`).toBeTruthy();

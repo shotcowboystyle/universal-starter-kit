@@ -5,10 +5,10 @@
  * What this locks: the house rule paints, at 1 CSS px, in $borderColor, in
  * both schemes, and cannot flex-grow (the raw primitive it
  * replaced declares `flex: 1`). Asserting a separator's height and never its
- * colour is how a transparent rule ships, so this spec asserts the painted
- * colour first.
+ * color is how a transparent rule ships, so this spec asserts the painted
+ * color first.
  *
- * Note: the ticket's "96 of 96 paint nothing" reading was a probe artefact — it
+ * Note: the ticket's "96 of 96 paint nothing" reading was a probe artifact — it
  * read borderTopWidth on a primitive that paints borderBottomWidth. See the
  * component header. The assertions below are unaffected: they are about what
  * the HOUSE rule paints, not about what the raw one did.
@@ -70,7 +70,7 @@ const declared = (el: HTMLElement, property: string): string[] => {
   return values;
 };
 
-/** Resolve a theme colour Variable to its raw value string. */
+/** Resolve a theme color Variable to its raw value string. */
 const themeColorVal = (scheme: 'light' | 'dark', key: string): string => {
   const themes = getConfig().themes as Record<string, Record<string, { val?: string }>>;
   const variable = themes[scheme]?.[key];
@@ -88,7 +88,7 @@ const isVisibleColor = (value: string): boolean => {
   return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/u.test(value);
 };
 
-describe('Separator — painted colour (the regression this component exists for)', () => {
+describe('Separator — painted color (the regression this component exists for)', () => {
   afterEach(cleanup);
 
   it('paints its 1px box with the $borderColor token, not a transparent box', () => {
@@ -100,9 +100,9 @@ describe('Separator — painted colour (the regression this component exists for
     expect(declared(separator, 'height')).toStrictEqual(['1px']);
   });
 
-  it('carries a visible $borderColor in BOTH schemes (token values are real colours)', () => {
+  it('carries a visible $borderColor in BOTH schemes (token values are real colors)', () => {
     // The component paints one token; the scheme resolves it. Prove the token
-    // itself is a visible colour on both sides so the indirection cannot hide
+    // itself is a visible color on both sides so the indirection cannot hide
     // a transparent value in either scheme.
     renderWithProviders(<Separator />);
     for (const scheme of ['light', 'dark'] as const) {
@@ -124,14 +124,14 @@ describe('Separator — painted colour (the regression this component exists for
   });
 });
 
-describe('Separator — quiet variant (opacity 0.5, never a lighter colour)', () => {
+describe('Separator — quiet variant (opacity 0.5, never a lighter color)', () => {
   afterEach(cleanup);
 
   it('dims with opacity 0.5 and keeps the exact same paint token', () => {
     const { container } = renderWithProviders(<Separator quiet />);
     const separator = getSeparator(container);
     expect(declared(separator, 'opacity')).toStrictEqual(['0.5']);
-    // Never a lighter colour: the paint token is unchanged from the default.
+    // Never a lighter color: the paint token is unchanged from the default.
     expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
   });
 

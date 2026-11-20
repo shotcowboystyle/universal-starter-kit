@@ -63,7 +63,7 @@ describe('ToolbarButton stories', () => {
     expect(meta.title).toBe('Forms/RichTextEditor/ToolbarButton');
   });
 
-  it.each(Object.entries(stories))('%s mounts at least one labelled control', (_name, story) => {
+  it.each(Object.entries(stories))('%s mounts at least one labeled control', (_name, story) => {
     const { container } = mount(story);
     const buttons = container.querySelectorAll("[role='button']");
     expect(buttons.length).toBeGreaterThan(0);

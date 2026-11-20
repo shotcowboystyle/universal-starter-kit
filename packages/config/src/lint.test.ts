@@ -131,7 +131,7 @@ const escapeRegistryTree = (heading: string, extraDir: string[], rows: [string, 
 const sizeEscapeTree = (rows: [string, string][]) =>
   escapeRegistryTree('## Size-recipe escapes', ['public', 'forms', 'src', 'Toolbar'], rows);
 
-const colourEscapeTree = (rows: [string, string][]) =>
+const colorEscapeTree = (rows: [string, string][]) =>
   escapeRegistryTree('## Colour-literal escapes', ['apps', 'demo', 'gnome'], rows);
 
 describe(resolveRoots, () => {
@@ -380,7 +380,7 @@ export type Events = GestureResponderEvent | LayoutChangeEvent;
     expect(runChecks(root).code).toBe(0);
   });
 
-  it("does not attribute a neighbouring import's names to react-native", () => {
+  it("does not attribute a neighboring import's names to react-native", () => {
     const root = rnwTree();
     writeFileSync(
       path.join(root, selectFile),
@@ -547,21 +547,21 @@ export const f = <XStack
   });
 });
 
-describe('colour-literal escape registry', () => {
+describe('color-literal escape registry', () => {
   const paint = 'apps/demo/gnome/gtk-paint.ts';
   const reason = 'GTK widget paint outside TamaguiProvider';
 
   it('fails a hex-escape whose file and reason are not a row, naming the file, line and reason', () => {
-    const root = colourEscapeTree([]);
+    const root = colorEscapeTree([]);
     writeFileSync(path.join(root, paint), `// hex-escape: ${reason}\nexport const bg = "#ffffff";\n`);
     const { code, messages } = runChecks(root);
     expect(code).toBe(1);
-    expect(messages).toContain('COLOUR-LITERAL ESCAPE REGISTRY');
+    expect(messages).toContain('COLOR-LITERAL ESCAPE REGISTRY');
     expect(messages).toContain(`${paint}:1 — undeclared escape "${reason}"`);
   });
 
   it('fails a hex-escape with no reason', () => {
-    const root = colourEscapeTree([]);
+    const root = colorEscapeTree([]);
     writeFileSync(path.join(root, paint), '// hex-escape:\nexport const bg = "#ffffff";\n');
     const { code, messages } = runChecks(root);
     expect(code).toBe(1);
@@ -569,7 +569,7 @@ describe('colour-literal escape registry', () => {
   });
 
   it('fails a declared row whose comment is gone', () => {
-    const root = colourEscapeTree([[paint, reason]]);
+    const root = colorEscapeTree([[paint, reason]]);
     writeFileSync(path.join(root, paint), 'export const bg = 1;\n');
     const { code, messages } = runChecks(root);
     expect(code).toBe(1);
@@ -577,7 +577,7 @@ describe('colour-literal escape registry', () => {
   });
 
   it('does not let a row for one file license the same reason in another', () => {
-    const root = colourEscapeTree([[paint, reason]]);
+    const root = colorEscapeTree([[paint, reason]]);
     writeFileSync(path.join(root, paint), `// hex-escape: ${reason}\n`);
     writeFileSync(path.join(root, 'apps', 'demo', 'Other.tsx'), `// hex-escape: ${reason}\n`);
     const { code, messages } = runChecks(root);
@@ -587,7 +587,7 @@ describe('colour-literal escape registry', () => {
   });
 
   it('passes a declared escape, and skips the check when the tree has no escape table', () => {
-    const root = colourEscapeTree([[paint, reason]]);
+    const root = colorEscapeTree([[paint, reason]]);
     writeFileSync(path.join(root, paint), `// hex-escape: ${reason}\nexport const bg = "#ffffff";\n`);
     expect(runChecks(root).code).toBe(0);
 

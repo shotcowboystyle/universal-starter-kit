@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -9,7 +9,7 @@ import { mpoRange, readProvenance, writeProvenance } from './provenance';
 describe('provenance', () => {
   let dir: string;
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'mpo-provenance-spec-'));
+    dir = mkdtempSync(path.join(tmpdir(), 'mpo-provenance-spec-'));
   });
 
   afterAll(() => {
@@ -24,14 +24,14 @@ describe('provenance', () => {
       services: ['keycloak', 'frappe'],
       pieces: [],
     });
-    expect(JSON.parse(readFileSync(join(dir, '.mpo.json'), 'utf-8'))).toEqual({
+    expect(JSON.parse(readFileSync(path.join(dir, '.mpo.json'), 'utf-8'))).toStrictEqual({
       cliVersion: '7.11.0',
       source: { sha: 'a'.repeat(40), url: 'https://example.com/mpo.git' },
       apps: ['shop', 'admin'],
       services: ['frappe', 'keycloak'],
       pieces: [],
     });
-    expect(readProvenance(dir)).toEqual({
+    expect(readProvenance(dir)).toStrictEqual({
       cliVersion: '7.11.0',
       source: { sha: 'a'.repeat(40), url: 'https://example.com/mpo.git' },
       apps: ['shop', 'admin'],
@@ -42,10 +42,10 @@ describe('provenance', () => {
 
   it('reads the template-era {template, name} record as one product app with no base', () => {
     writeFileSync(
-      join(dir, '.mpo.json'),
+      path.join(dir, '.mpo.json'),
       JSON.stringify({ template: 'universal', cliVersion: '7.7.1', name: 'wealthflow' }),
     );
-    expect(readProvenance(dir)).toEqual({
+    expect(readProvenance(dir)).toStrictEqual({
       cliVersion: '7.7.1',
       apps: ['wealthflow'],
       services: [],
@@ -58,7 +58,7 @@ describe('provenance', () => {
 
   it('reads an adopted record with its pieces sorted and the reconciled flag', () => {
     writeFileSync(
-      join(dir, '.mpo.json'),
+      path.join(dir, '.mpo.json'),
       JSON.stringify({
         template: 'none',
         cliVersion: '7.9.0',
@@ -68,7 +68,7 @@ describe('provenance', () => {
         reconciled: false,
       }),
     );
-    expect(readProvenance(dir)).toEqual({
+    expect(readProvenance(dir)).toStrictEqual({
       cliVersion: '7.9.0',
       apps: [],
       services: [],
@@ -81,9 +81,9 @@ describe('provenance', () => {
   });
 
   it('returns undefined for records it cannot use', () => {
-    writeFileSync(join(dir, '.mpo.json'), JSON.stringify({ template: 'universal' }));
+    writeFileSync(path.join(dir, '.mpo.json'), JSON.stringify({ template: 'universal' }));
     expect(readProvenance(dir)).toBeUndefined();
-    writeFileSync(join(dir, '.mpo.json'), 'not json');
+    writeFileSync(path.join(dir, '.mpo.json'), 'not json');
     expect(readProvenance(dir)).toBeUndefined();
   });
 

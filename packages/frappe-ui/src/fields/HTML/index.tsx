@@ -1,5 +1,5 @@
 /**
- * Frappe HTML field — sanitised read-only HTML in FieldLayout + cardSurface.
+ * Frappe HTML field — sanitized read-only HTML in FieldLayout + cardSurface.
  * Design-law: compose FieldLayout; inherit body metrics (no 14px / 1px fork).
  */
 import { FieldLayout, Skeleton, formCommonColors } from '@repo/forms';

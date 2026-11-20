@@ -708,19 +708,19 @@ export type { HeadingProps } from './Heading';
 // catalog part, and this one resolved to a raw primitive; and
 // the raw primitive is a `flex: 1` item, so the rule can absorb free space.
 // The house rule is a painted 1px line in $borderColor (measured law:
-// 1px never 0.5px; quiet = opacity 0.5, never a lighter colour) that cannot
+// 1px never 0.5px; quiet = opacity 0.5, never a lighter color) that cannot
 // flex-grow. The curated ./tamagui surface no longer exports the bare name;
 // raw stays reachable as TamaguiSeparator.
 //
 // Correction 2026-09-01: the ticket's "96 of 96 paint nothing" was a probe
-// artefact, not a defect — see ./Separator/index.tsx for the measurement.
+// artifact, not a defect — see ./Separator/index.tsx for the measurement.
 export { Separator } from './Separator';
 export type { SeparatorProps } from './Separator';
 
 export type { ImageProps } from './images/Image';
 export { Image } from './images/Image';
 
-// The semantic colour tiers and the section-heading metrics the catalog
+// The semantic color tiers and the section-heading metrics the catalog
 // paints with. Named exports, not a star, so the curated surface stays
 // explicit — these are token maps, not catalog parts: they render
 // nothing and a consumer spreads them onto its own frames exactly as the

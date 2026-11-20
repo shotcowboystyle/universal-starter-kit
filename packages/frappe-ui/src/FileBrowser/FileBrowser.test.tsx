@@ -232,8 +232,8 @@ describe(FileBrowser, () => {
           tileSize="md"
         />,
       );
-      const files = container.querySelector('[data-filebrowser-files]') as HTMLElement | null;
-      const grid = container.querySelector("[data-filebrowser-files-view='grid']") as HTMLElement | null;
+      const files = container.querySelector<HTMLElement>('[data-filebrowser-files]');
+      const grid = container.querySelector<HTMLElement>("[data-filebrowser-files-view='grid']");
       expect(files).toBeTruthy();
       expect(grid).toBeTruthy();
       expect(getComputedStyle(files!).flexBasis).toBe('auto');
@@ -287,7 +287,7 @@ describe(FileBrowser, () => {
       expect(container.querySelector("[data-filebrowser-tile-size='280']")).toBeNull();
     });
 
-    it('honours bulkBarPlacement, tableZebra, and selectedIds on the frame', () => {
+    it('honors bulkBarPlacement, tableZebra, and selectedIds on the frame', () => {
       const { container } = renderWithProviders(
         <FileBrowser
           files={FIXTURE}

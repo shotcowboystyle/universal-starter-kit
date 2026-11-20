@@ -44,7 +44,7 @@ describe('MinusRegular', () => {
     expect(stroke.length).toBeGreaterThan(0);
   });
 
-  it('keeps the stroke centred at supported sizes', () => {
+  it('keeps the stroke centered at supported sizes', () => {
     for (const size of [12, 16, 24, 48]) {
       const { container } = renderWithProviders(<MinusRegular size={size} />);
       const line = container.querySelector('line');

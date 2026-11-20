@@ -9,8 +9,8 @@
     "directory": "packages/cli"
   },
   "bin": {
-    "create-multiplatform-app": "./bin/createMultiplatformApp.mjs",
-    "mpo": "./bin/multiplatformOne.mjs"
+    "create-multiplatform-app": "./bin/create-multiplatform-app.mjs",
+    "mpo": "./bin/multiplatform-one.mjs"
   },
   "source": "src/index.ts",
   "files": [
@@ -30,9 +30,9 @@
       "types": "./types/index.d.ts",
       "import": "./lib/index.mjs"
     },
-    "./bin/multiplatformOne": {
-      "types": "./types/bin/multiplatformOne.d.ts",
-      "import": "./lib/bin/multiplatformOne.mjs"
+    "./bin/multiplatform-one": {
+      "types": "./types/bin/multiplatform-one.d.ts",
+      "import": "./lib/bin/multiplatform-one.mjs"
     },
     "./package.json": "./package.json"
   },

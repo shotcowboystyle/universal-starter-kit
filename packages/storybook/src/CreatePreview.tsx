@@ -294,8 +294,8 @@ const CanvasBackground = ({ children }: { children: ReactNode }) => {
       backgroundColor="$background"
       // Stable inner root for the theme-matrix capturer. `#storybook-root`
       // children include the Tamagui `<Theme>` host, which appears only
-      // when a colour global is set — capturing there reports a remount as
-      // geometry drift and a dead colour axis.
+      // when a color global is set — capturing there reports a remount as
+      // geometry drift and a dead color axis.
       id="mpo-matrix-root">
       {children}
     </YStack>
@@ -755,8 +755,8 @@ const FrameworkDecoratorInner = ({
           requireValue={false}
         />
         {/* Always wrap in Theme so the host node exists on the default
-              colour cell too. An empty colour global keeps the scheme
-              theme; a named colour is the Tamagui subtheme. */}
+              color cell too. An empty color global keeps the scheme
+              theme; a named color is the Tamagui subtheme. */}
         <Theme name={colorGlobal === '' ? resolvedScheme : colorGlobal}>
           <ColorChannelEmitter
             event={themeColorsChannelEvent}
@@ -888,7 +888,7 @@ export const createPreview = (options: CreatePreviewOptions): Preview => {
 
   // Color and scheme get initial values (always visible in toolbar).
   // All knob keys are declared (as undefined) so that Storybook's runtime
-  // recognises them when the ThemePanel calls updateGlobals(). The decorator
+  // recognizes them when the ThemePanel calls updateGlobals(). The decorator
   // falls through to preset → knob defaults when a value is undefined.
   const initialGlobals: Globals = {
     locale: config.get('I18N_DEFAULT_LANGUAGE', i18n.defaultLanguage),
@@ -921,7 +921,7 @@ export const createPreview = (options: CreatePreviewOptions): Preview => {
   // this one well-known global from the preview iframe instead of
   // spelunking Storybook internals; every value is URL-addressable via
   // `iframe.html?globals=scheme:dark;color:blue;preset:bold`. The empty
-  // string is the real default cell on both axes (no colour override /
+  // string is the real default cell on both axes (no color override /
   // the implicit default preset), so it is part of the axis, not padding.
   Object.defineProperty(globalThis, '__MPO_THEME_AXES__', {
     value: {

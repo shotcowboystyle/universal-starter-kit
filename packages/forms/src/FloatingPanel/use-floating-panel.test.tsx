@@ -5,7 +5,7 @@ import type { Knobs } from '@repo/theme';
  * The FloatingPanel family's anchoring and width contract (the
  * cover ruling).
  *
- * COVER is the defining behaviour: a panel attaches to the trigger it was
+ * COVER is the defining behavior: a panel attaches to the trigger it was
  * opened from and does not float clear of it. Before this landed, four
  * members took `OVERLAY_ANCHOR_GAP` and measured 3.96–4.00px of daylight
  * between trigger bottom and panel top.
@@ -192,7 +192,7 @@ describe('FloatingPanel width modes', () => {
  * EVERY stop — measured on origin/main 3bb889f32: trigger 5/9/16/50px,
  * panel 0px, in light and dark.
  *
- * These cases lock the three behaviours that fix depends on, so the zero
+ * These cases lock the three behaviors that fix depends on, so the zero
  * cannot come back: the anchor's own paint wins when it has one (the
  * Select/Combobox path, which was never broken), an unpainted anchor
  * descends to the box sharing its corner, and an anchor with nothing painted

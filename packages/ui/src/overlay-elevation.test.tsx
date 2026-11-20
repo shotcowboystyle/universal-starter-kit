@@ -135,7 +135,7 @@ describe('overlay elevation is a different distance off the surface', () => {
         </Preset>
       </Theme>,
     );
-    // Dark elevation tint: light-coloured shadow, never a black umbra.
+    // Dark elevation tint: light-colored shadow, never a black umbra.
     expect(paintedShadow('dialog')).toBe(dialogStopPaintDark);
     expect(paintedShadow('dialog')).not.toMatch(/rgba\(0,\s*0,\s*0/u);
     // resolveKnobs owns the dark ground: `overlayFill` steps the filled rest

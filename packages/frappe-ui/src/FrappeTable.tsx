@@ -144,7 +144,7 @@ export interface FrappeTableProps<TDoc extends { name: string; doctype: string }
    * host also carries (a corpus without the entry yields no menu);
    * otherwise it is a `frappe.desk.form.load.getdoctype` call. The
    * meta-derived menu offers the doctype's fields, including ones the
-   * server refuses to filter on, so a live app should pass the honoured
+   * server refuses to filter on, so a live app should pass the honored
    * set by hand. Passing it skips the meta read entirely, which also drops
    * title-field row labels back to the document name, unless the table
    * still reads meta for `rights`.

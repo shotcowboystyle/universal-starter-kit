@@ -90,7 +90,7 @@ describe('dagre adapter', () => {
       expect(result.positions.d.y).toBeGreaterThan(result.positions.b.y);
     });
 
-    it('honours `direction: LR` by ranking along x instead of y', () => {
+    it('honors `direction: LR` by ranking along x instead of y', () => {
       const result = headless(() => layoutWithDagre({ ...diamond(), options: { direction: 'LR' } }));
       expect(result.positions.b.x).toBeGreaterThan(result.positions.a.x);
       expect(result.positions.d.x).toBeGreaterThan(result.positions.b.x);
@@ -111,9 +111,9 @@ describe('dagre adapter', () => {
       );
     });
 
-    it("returns positions as TOP-LEFT, not dagre's centres", () => {
+    it("returns positions as TOP-LEFT, not dagre's centers", () => {
       // One node, no edges: dagre puts its CENTRE at (width/2, height/2), so a
-      // top-left result is the anchor exactly and a centre result is off by half
+      // top-left result is the anchor exactly and a center result is off by half
       // the box. The 2 px node makes the two answers unmistakable.
       const result = headless(() => layoutWithDagre({ nodes: [node('only', 100, 200, 2, 2)], edges: [] }));
       expect(result.positions.only).toStrictEqual({ x: 100, y: 200 });

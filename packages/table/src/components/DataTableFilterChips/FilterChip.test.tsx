@@ -2,7 +2,7 @@
  * FilterChip unit specs — the pill on its own, no DataTable around it.
  *
  * DataTableFilterChips.test.tsx drives the chip through the compound table and
- * proves the bar's behaviour. This file pins the chip's OWN contract, which the
+ * proves the bar's behavior. This file pins the chip's OWN contract, which the
  * bar cannot state: the `onPress`/no-`onPress` split (an editable chip is a
  * button, a display-only chip is not), that dismiss does not also fire the edit
  * press, and that Enter/Space activate both focusables.

@@ -9,7 +9,7 @@ interface ThemedIconProps {
 }
 
 /**
- * Theme-aware icon wrapper. Colour resolves theme key → caller colour →
+ * Theme-aware icon wrapper. Color resolves theme key → caller color →
  * scheme-aware `theme.color`. Never black / `#000` (CheckRegular /
  * MinusRegular contract: SVG defaults MUST NOT fall back to black).
  */

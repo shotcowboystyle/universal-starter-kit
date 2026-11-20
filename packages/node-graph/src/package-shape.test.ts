@@ -2,7 +2,7 @@
  * The package's own shape is load-bearing, so it is specced like code.
  *
  * Three of these four assertions are about a resolver nobody can see failing
- * until a bundle breaks: Metro picks the FIRST condition it recognises and
+ * until a bundle breaks: Metro picks the FIRST condition it recognizes and
  * never reconsiders `source` or `default` (MPO-185), and `./dom` has to stay
  * pinned to source on every condition because storybook-expo's
  * `resolveWorkspaceNativeMain` prefers `dist/esm/index.native.js` whenever it

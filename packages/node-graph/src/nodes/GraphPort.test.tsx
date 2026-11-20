@@ -224,7 +224,7 @@ describe('GraphPort component', () => {
       expect(disc.style.getPropertyValue('--mpo-graph-handle-inset')).toBe('');
     });
 
-    it("honours the borderWidth knob on the dot's ring", () => {
+    it("honors the borderWidth knob on the dot's ring", () => {
       const thin = renderPort({ side: 'right' }, { borderWidth: 'small' });
       const thinWidth = getComputedStyle(discOf(thin.container)).borderTopWidth;
       cleanup();
@@ -242,7 +242,7 @@ describe('GraphPort component', () => {
     });
 
     it('is a pseudo-element region, not element growth (§7.1 H2)', () => {
-      expect(afterRule![1]).toMatch(/content:\s*""\s*;/u);
+      expect(afterRule![1]).toMatch(/content:\s*(?:''|"")\s*;/u);
       expect(afterRule![1]).toMatch(/position:\s*absolute\s*;/u);
       // H7: the inset is COMPUTED from the three inputs and the live zoom.
       expect(afterRule![1]).toMatch(/inset:\s*calc\(/u);
@@ -275,7 +275,7 @@ describe('GraphPort component', () => {
    * THE endpoint test (task 3.4, design §7.1 H2).
    *
    * Every other assertion about the 44pt target passes under the BROKEN
-   * mechanism too. The painted centre is invariant under element growth; so is
+   * mechanism too. The painted center is invariant under element growth; so is
    * the `pointer-events: all` rule; so is the crowding cap. What element growth
    * changes, and nothing else here would notice, is the point React Flow draws
    * an edge TO — because `getEdgePosition` calls `getHandlePosition` with

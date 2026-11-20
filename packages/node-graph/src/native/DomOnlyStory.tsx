@@ -71,7 +71,7 @@ export const DomOnlyStory = ({ needs, readInstead }: DomOnlyStoryProps) => {
  *
  * It replaces the story rather than wrapping it: the point is that the tree
  * below must never be constructed, and a wrapper that rendered its child and
- * then apologised would still have thrown on the way.
+ * then apologized would still have thrown on the way.
  */
 export const domOnlyStoryDecorator = (props: DomOnlyStoryProps) =>
   function DomOnlyStoryGuard(Story: () => React.ReactElement) {

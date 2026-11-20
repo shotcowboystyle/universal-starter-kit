@@ -139,8 +139,8 @@ describe('GraphNode', () => {
             },
           );
           const frame = frameOf(container);
-          const painted = declarationFor(frame, 'border-top-left-radius');
-          expect(painted, `${borderRadius}/${space} paints no radius at all`).toBeDefined();
+          const painted = declarationFor(frame, 'border-top-left-radius') ?? '';
+          expect(painted, `${borderRadius}/${space} paints no radius at all`).not.toBe('');
           const reported = Number(frame.dataset.graphNodeRadius);
           // happy-dom does not resolve custom properties, so a token-valued
           // declaration reads back as `var(--t-radius-N)`. Decode it the same
@@ -156,7 +156,7 @@ describe('GraphNode', () => {
   });
 
   describe('no hex literal in any computed style', () => {
-    it('paints every colour through a token, at every radius stop and both intents', () => {
+    it('paints every color through a token, at every radius stop and both intents', () => {
       for (const borderRadius of radiusStops) {
         for (const intent of [undefined, 'error']) {
           const { container } = renderNode(
@@ -298,7 +298,7 @@ describe('GraphNode', () => {
     });
   });
 
-  describe('the title ink honours bodyFont, not headingFont (§11 fonts)', () => {
+  describe('the title ink honors bodyFont, not headingFont (§11 fonts)', () => {
     /**
      * Found by the MPO-191 knob fuzz, not by a spec. The title used to spread
      * `knobProps.heading` and then `knobProps.label`; `label` carries
@@ -309,7 +309,7 @@ describe('GraphNode', () => {
      *
      * What is asserted here is the PREMISE, not the paint. Tamagui emits no
      * `font-family` declaration on the text element under happy-dom at all
-     * (measured: the title's only classes are size, colour, weight and overflow —
+     * (measured: the title's only classes are size, color, weight and overflow —
      * the family is inherited from an ancestor `font_*` scope), so the rendered
      * law is checked in Chrome and recorded in
      * `docs/design/knob-fuzz-wave4-node-graph.md`. The premise — that `label` is

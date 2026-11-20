@@ -78,7 +78,7 @@ const meta: Meta<typeof ChartSurface> = {
     docs: {
       description: {
         component:
-          'The responsive SVG viewport every chart in this package draws into. It measures its own width through `onLayout` (ResizeObserver-backed on web) and hands children a pixel-space `{ width, height }`, so scales land on real device pixels: strokes stay crisp, nothing is stretched by `preserveAspectRatio`, and a 44px touch target really is 44px. `label` is the generated accessible summary and renders as `role="img"`, so the chart is one described image rather than a pile of unlabelled shapes. Pass an explicit `width` to bypass measurement for SSR, tests, and fixed layouts. The draw-in fade drops entirely at `animation="none"` or OS reduced motion.',
+          'The responsive SVG viewport every chart in this package draws into. It measures its own width through `onLayout` (ResizeObserver-backed on web) and hands children a pixel-space `{ width, height }`, so scales land on real device pixels: strokes stay crisp, nothing is stretched by `preserveAspectRatio`, and a 44px touch target really is 44px. `label` is the generated accessible summary and renders as `role="img"`, so the chart is one described image rather than a pile of unlabeled shapes. Pass an explicit `width` to bypass measurement for SSR, tests, and fixed layouts. The draw-in fade drops entirely at `animation="none"` or OS reduced motion.',
       },
     },
   },

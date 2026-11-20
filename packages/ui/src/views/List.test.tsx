@@ -132,8 +132,8 @@ describe('List suite', () => {
     });
   });
 
-  describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome honour)', () => {
-    it('changes title colour on a textAccent flip', () => {
+  describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome honor)', () => {
+    it('changes title color on a textAccent flip', () => {
       const high = titleColor('ink-high', 'high');
       const low = titleColor('ink-low', 'low');
       expect(high).not.toHaveLength(0);

@@ -176,7 +176,7 @@ export const ChipFrame = styled(View, {
   flexDirection: 'row',
   alignItems: 'center',
   ...chipFrameVariants.$3,
-  // Every variant carries the same 1px border and only the colour changes.
+  // Every variant carries the same 1px border and only the color changes.
   // Giving the border to `outline` alone made an outlined chip 2px taller
   // than a solid/subtle one at the same size token, so the moment the two
   // were composed side by side -- the Tags field puts its outlined "add"
@@ -542,7 +542,7 @@ export const Chip = ({
       // channel via the size variants above, not the layout space knob.
       borderColor={borderColor}
       // One box for every tone: the border is always painted and only its
-      // colour changes. Giving the width to outlined chips alone made them
+      // color changes. Giving the width to outlined chips alone made them
       // 2px taller than filled/subtle ones at the same size token, which is
       // visible the moment two tones share a row -- the Tags field puts its
       // outlined "add" trigger beside subtle tag chips.

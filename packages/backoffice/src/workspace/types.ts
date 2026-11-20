@@ -16,7 +16,7 @@ export interface WorkspaceShortcutRow {
   label: string;
   /** Optional list-view variant, e.g. "List" | "Tree" | "Report Builder". */
   doc_view?: string;
-  /** Frappe color name for the count pill, e.g. "Grey", "Blue". */
+  /** Frappe color name for the count pill, e.g. "Gray", "Blue". */
   color?: string;
   /** JSON filters for the live count, e.g. `{"status":"Open"}`. */
   stats_filter?: string;

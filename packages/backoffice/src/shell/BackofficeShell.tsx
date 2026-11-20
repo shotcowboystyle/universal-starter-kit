@@ -214,7 +214,7 @@ export const BackofficeShell = ({ children, activePath, onNavigate }: Backoffice
         {capabilities.awesomebar.enabled && (
           <XStack
             flex={1}
-            maxWidth={sizeRecipeEscape(560, 'awesomebar: caps the centred search field in the banner')}
+            maxWidth={sizeRecipeEscape(560, 'awesomebar: caps the centered search field in the banner')}
             minWidth={0}>
             <BackofficeAwesomebar focusRef={awesomebarRef} />
           </XStack>
