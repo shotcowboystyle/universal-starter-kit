@@ -11,7 +11,25 @@ const config: StorybookConfig = {
   typescript: {
     check: false,
   },
-  viteFinal: (viteConfig) => mergeConfig(viteConfig, createStorybookViteConfig()),
+  // The framework preset adds vite-tsconfig-paths, which crawls every tsconfig in the
+  // workspace and errors on the CLI's placeholder templates (packages/cli/templates).
+  // Workspace packages resolve via aliases and none declare tsconfig `paths`, so drop it.
+  viteFinal: (viteConfig) =>
+    mergeConfig(
+      {
+        ...viteConfig,
+        plugins: viteConfig.plugins?.filter(
+          (plugin) =>
+            !(
+              typeof plugin === 'object' &&
+              plugin !== null &&
+              'name' in plugin &&
+              plugin.name === 'vite-tsconfig-paths'
+            ),
+        ),
+      },
+      createStorybookViteConfig(),
+    ),
 };
 
 export default config;
