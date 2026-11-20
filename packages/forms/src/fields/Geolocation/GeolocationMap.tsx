@@ -25,7 +25,7 @@ const tileSrc = (zoom: number, x: number, y: number) => {
 
 /**
  * Web map surface — OSM tiles we own the projection of, so click-to-pick
- * (Frappe Desk / Leaflet, Google/Apple compact pickers) can commit through
+ * (like Leaflet or Google/Apple compact pickers) can commit through
  * the field's onChange path. The iframe embed could not report clicks.
  * Native interactive maps live in `GeolocationMap.native.tsx`.
  *

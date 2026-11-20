@@ -55,7 +55,7 @@ export interface GroupByConfig {
   aggregationField?: string;
 }
 
-/** One report record: Frappe rows are keyed by the report's own field names. */
+/** One report record: rows are keyed by the report's own field names. */
 export interface ReportRow {
   // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported API: report rows have no owner shape, the columns prop names the fields at runtime
   [field: string]: unknown;
@@ -1090,7 +1090,7 @@ const ReportRows = ({
 };
 
 /**
- * Generic report builder — Frappe Report View / Query Report chrome:
+ * Generic report builder — report view chrome:
  * column picker, group-by + aggregation, sortable headers, totals strip,
  * optional grouped chart, export. Rows are a stacked group
  * (CONTAINER-CLIP); selected = fill, keyboard focus = one inset ring.

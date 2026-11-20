@@ -12,7 +12,7 @@ consuming package's `dependencies`.
 ## What it owns
 
 - **Detection flags** — `isWeb`, `isNative`, `isIos`, `isAndroid`, `isServer`,
-  `isClient`, `isGnome`, `isTauri`, `isDesktop`, `isExpo`, `isNext`, `isStorybook`,
+  `isClient`, `isTauri`, `isDesktop`, `isExpo`, `isNext`, `isStorybook`,
   `isChrome`, `isFirefox`, `isWebExtension`, `isChromeExtension`,
   `isFirefoxExtension`, `isIframe`, `isTouchable`, `isWebTouchable`,
   `isWindowDefined`, … plus the full `platform` object (`platform.preciseName`)
@@ -28,16 +28,12 @@ consuming package's `dependencies`.
 ## Usage
 
 ```tsx
-import { isGnome, isNative, isServer, isTauri } from '@repo/platform';
+import { isNative, isServer, isTauri } from '@repo/platform';
 
 export function saveFile(contents: string) {
   if (isServer) return;
   if (isTauri) {
     // webview desktop path (optional integration)
-    return;
-  }
-  if (isGnome) {
-    // GTK desktop path (optional integration)
     return;
   }
   if (isNative) {

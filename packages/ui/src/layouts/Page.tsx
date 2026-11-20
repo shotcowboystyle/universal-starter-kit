@@ -170,7 +170,7 @@ const ScreenInner = ({
  * @example
  * <Screen>
  *   <PageHeader title="Items" subtitle="A list of items" />
- *   <FrappeImageView doctype="Item" />
+ *   <ItemGrid />
  * </Screen>
  */
 export const Screen = ({ compact, ...props }: ScreenProps) => {

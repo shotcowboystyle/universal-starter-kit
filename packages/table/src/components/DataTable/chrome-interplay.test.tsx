@@ -10,7 +10,7 @@
  * Plus the external-filter-authority arm: Search × injected filters ×
  * enableFiltering — `enableFiltering={false}` suppresses every filter entry
  * point while filters injected via `initialState.filters` keep applying and
- * cannot be mutated from table chrome (backoffice list contract, MOD-04).
+ * cannot be mutated from table chrome (external filter authority contract, MOD-04).
  */
 
 import { renderWithProviders } from '@repo/test-utils';

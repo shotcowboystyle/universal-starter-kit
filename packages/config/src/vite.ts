@@ -1000,10 +1000,10 @@ const defaultSsrConfig = (
 
 // Server defaults
 //
-// When the One app runs behind Frappe's dev proxy (port 8000 → 3000), the
-// browser page origin is :8000 but the vxrn HMR WebSocket lives on :3000.
-// Werkzeug (WSGI) can't proxy WebSocket upgrades, so we tell the HMR client
-// to connect directly when ONE_PORT is explicitly configured. Otherwise Vite
+// When the One app runs behind a dev proxy on another port, the browser page
+// origin is the proxy's but the vxrn HMR WebSocket lives on ONE_PORT. A proxy
+// that can't forward WebSocket upgrades would break HMR, so we tell the HMR
+// client to connect directly when ONE_PORT is explicitly configured. Otherwise Vite
 // derives the client port from its actual listener, including CLI --port.
 //
 // IMPORTANT: vxrn internally sets `hmr.path = '/__vxrnhmr'`.  We must

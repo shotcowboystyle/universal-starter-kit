@@ -4,15 +4,15 @@ import { formatServiceList, waitServices } from './wait';
 
 describe(formatServiceList, () => {
   it('returns single service as-is', () => {
-    expect(formatServiceList(['frappe'])).toBe('frappe');
+    expect(formatServiceList(['api'])).toBe('api');
   });
 
   it("joins two services with 'and'", () => {
-    expect(formatServiceList(['frappe', 'postgres'])).toBe('frappe and postgres');
+    expect(formatServiceList(['api', 'postgres'])).toBe('api and postgres');
   });
 
   it("joins three services with commas and 'and'", () => {
-    expect(formatServiceList(['frappe', 'postgres', 'keycloak'])).toBe('frappe, postgres and keycloak');
+    expect(formatServiceList(['api', 'postgres', 'keycloak'])).toBe('api, postgres and keycloak');
   });
 
   it('joins four services correctly', () => {

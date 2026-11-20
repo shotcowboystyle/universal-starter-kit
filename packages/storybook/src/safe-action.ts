@@ -7,7 +7,7 @@
  * synthetic events / elements are cyclic (element → props → children → …
  * fiber → stateNode closes the circle), so the send throws
  * `TypeError: Converting circular structure to JSON` as an uncaught pageerror
- * (seen in the DebugLayout and FrappeListView stories).
+ * (seen in the DebugLayout story).
  *
  * This wrapper sanitizes args before they reach the channel: cycles become
  * "[Circular]", React elements/fibers/DOM nodes become short summaries, and

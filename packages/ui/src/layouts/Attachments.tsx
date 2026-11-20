@@ -35,12 +35,11 @@ import { DialogContent, DialogOverlay } from '../surfaces';
 import { AsyncBoundary, resolveAsyncStatus } from './AsyncBoundary';
 
 // ---------------------------------------------------------------------------
-// Types  (generic -- no Frappe dependency)
+// Types
 // ---------------------------------------------------------------------------
 
 /**
  * Generic attachment item.
- * Replaces FrappeFile with a framework-agnostic type.
  */
 export interface AttachmentItem {
   /** Unique identifier */

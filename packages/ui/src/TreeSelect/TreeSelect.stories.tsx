@@ -40,7 +40,7 @@ const meta: Meta<typeof TreeSelect> = {
     docs: {
       description: {
         component:
-          'FloatingPanel whose body is a tree, for Link fields whose target DocType is a tree. Cover at OVERLAY_ATTACH_GAP 0; width mode at-least-trigger; caret expands, row pick commits.',
+          'FloatingPanel whose body is a tree, for link fields whose target records form a tree. Cover at OVERLAY_ATTACH_GAP 0; width mode at-least-trigger; caret expands, row pick commits.',
       },
     },
   },

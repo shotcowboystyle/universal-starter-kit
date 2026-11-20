@@ -363,8 +363,7 @@ export const InputWithLinkResolver = () => (
 InputWithLinkResolver.parameters = {
   docs: {
     description: {
-      story:
-        'When readOnly and linkResolver are provided, the value renders as a Link when linkResolver returns href. Frappe wrappers provide doctype-aware resolvers.',
+      story: 'When readOnly and linkResolver are provided, the value renders as a Link when linkResolver returns href.',
     },
   },
 };

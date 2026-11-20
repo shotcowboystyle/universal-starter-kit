@@ -91,7 +91,7 @@ const coerceDateInput = (value: DateInput): CoercedDate | null => {
  * Gantt bars, date axes) rather than merely formatted.
  *
  * A date-only string ("YYYY-MM-DD") is a calendar date carrying no timezone,
- * which is how Frappe sends `Date` fields. ECMA-262 parses that form as UTC
+ * which is how many backends send date-only fields. ECMA-262 parses that form as UTC
  * midnight, so every zone west of UTC reads it as the *previous* local day,
  * and no zone but UTC lands it on the local midnight that day-grid math tests
  * for. Those are built from local parts instead.
@@ -130,7 +130,7 @@ export const parseCalendarDate = (value: DateInput): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-/** Timezone-naive wire shapes: Frappe's `Date`, `Datetime` and `Time`. */
+/** Timezone-naive wire shapes: date-only, date-time and clock-time values. */
 // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- exported type name consumed through the package barrel; renaming it would break importers
 export type CalendarDateShape = 'date' | 'datetime' | 'time';
 
@@ -142,7 +142,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * timezone-naive wire string.
  *
  * `"date"` emits `YYYY-MM-DD`, `"datetime"` emits `YYYY-MM-DD HH:mm:ss`, and
- * `"time"` emits `HH:mm:ss` — the shapes Frappe stores, none of which carries
+ * `"time"` emits `HH:mm:ss` — common timezone-naive wire shapes, none of which carries
  * an offset. `toISOString()` renders the UTC instant instead, so it names the
  * wrong day whenever the value's local time of day sits across the UTC date
  * boundary, and shifts a wall clock by the whole offset. Reading such a string
@@ -256,7 +256,7 @@ export const formatRelativeTimestamp = (value: DateInput, now: number = Date.now
   return `${Math.max(1, yr)}y ago`;
 };
 
-/** Clock-time shape ("HH:MM" / "HH:MM:SS") — how Frappe `Time` values arrive. */
+/** Clock-time shape ("HH:MM" / "HH:MM:SS") — how clock-time wire values arrive. */
 export const CLOCK_TIME = /^(?<hour>\d{1,2}):(?<minute>\d{2})(?::(?<second>\d{2}))?$/u;
 
 export interface TimeOfDayFormatOptions {
@@ -270,7 +270,7 @@ export interface TimeOfDayFormatOptions {
 
 /**
  * Time-of-day register ("2:00 PM", or "2 PM" with `minutes: false` for
- * hour ticks) — calendar time grids, Frappe `Time` fields, and
+ * hour ticks) — calendar time grids, clock-time fields, and
  * "last updated" chrome. Accepts a clock-time string as well as a date,
  * and never emits seconds.
  */

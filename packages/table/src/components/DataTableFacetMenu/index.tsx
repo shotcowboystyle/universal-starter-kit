@@ -7,15 +7,14 @@
  * button's active state).
  *
  * Selection SEMANTICS are prop-owned (`selection`):
- *   - "replace" (default — desk list_sidebar_group_by parity): pressing a
+ *   - "replace" (default — group-by sidebar semantics): pressing a
  *     row replaces the facet's whole selection with that row; pressing the
  *     active row clears it (toggle off / replace).
  *   - "toggle": rows accumulate (multi-select); pressing an active row
  *     removes only that row.
  *
  * Purely presentational: options, counts, and active values arrive via
- * props (feed from `useFrappeFacets` in @repo/frappe-ui or any
- * host source) and the component reports the NEXT active set through
+ * props (from any host source) and the component reports the NEXT active set through
  * `onActiveValuesChange` — it holds no selection state of its own. The menu
  * stays open on selection (LC-21 COMPOSE, CheckboxItem class default) so
  * revalidated counts paint in place while the user composes.
@@ -52,7 +51,7 @@ export interface DataTableFacetMenuProps {
   options?: readonly DataTableFacetOption[];
   /** Values currently applied (highlighted / checked options). */
   activeValues?: readonly string[];
-  /** Press semantics (default "replace" — desk facet parity). */
+  /** Press semantics (default "replace"). */
   selection?: DataTableFacetSelection;
   /**
    * Fires with the NEXT active set (per `selection` semantics) and the
@@ -137,7 +136,7 @@ const DataTableFacetMenuComponent = ({
       if (selection === 'toggle') {
         next = isActive ? active.filter((value) => value !== option.value) : [...active, option.value];
       } else {
-        // "replace" — desk semantics: one active value per facet; pressing
+        // "replace": one active value per facet; pressing
         // the active row clears the facet.
         next = isActive ? [] : [option.value];
       }

@@ -40,8 +40,8 @@ describe(singletonDepAliases, () => {
 
   it('pins the tamagui theme record to one package directory', () => {
     // @tamagui/web owns the theme context. Two realpaths for it means two
-    // contexts: packages/frappe's story files import "tamagui" from a package
-    // with no copy of its own, so they reach the hoisted chain while every
+    // contexts: story files importing "tamagui" from a package with no copy
+    // of its own reach the hoisted chain while every
     // other importer reaches the pnpm store chain, and their components read
     // a context no provider ever wrote to — tamagui's `Missing theme.`.
     const aliases = singletonDepAliases(workspaceRoot);

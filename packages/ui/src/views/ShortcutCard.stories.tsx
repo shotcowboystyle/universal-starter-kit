@@ -1,5 +1,5 @@
 /**
- * ShortcutCard — Frappe workspace shortcut: label + nested count pill.
+ * ShortcutCard — workspace shortcut: label + nested count pill.
  */
 
 import { ShoppingCartIcon } from '@phosphor-icons/react';
@@ -18,7 +18,7 @@ const meta: Meta<typeof ShortcutCard> = {
     status: { type: 'stable' },
     docs: {
       description: {
-        component: 'Frappe workspace shortcut: label plus a nested count pill.',
+        component: 'Workspace shortcut: label plus a nested count pill.',
       },
     },
   },

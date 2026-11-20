@@ -1,9 +1,9 @@
 /**
- * DataTableDocumentList — subject-led document rows (desk List view).
+ * DataTableDocumentList — subject-led document rows (document List view).
  *
  * One horizontal row per document: checkbox | title + stacked meta | trailing
  * indicators | actions. No key-value labels, no card chrome, no grid headers,
- * no wrapping into a column grid (Polaris Index / Frappe list). Stacked-group
+ * no wrapping into a column grid (Polaris Index). Stacked-group
  * radius (LC-72): first row top corners, last row bottom, interiors square.
  * LC-71: selected = fill; keyboard ring rides the row when it is the tab stop.
  */

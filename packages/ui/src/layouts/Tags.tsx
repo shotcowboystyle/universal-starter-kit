@@ -23,12 +23,11 @@ import { withInterp } from '../shared/t';
 const AddTagTarget = styled(View, { name: 'AddTagTarget' });
 
 // ---------------------------------------------------------------------------
-// Types  (generic -- no Frappe dependency)
+// Types
 // ---------------------------------------------------------------------------
 
 /**
  * Generic tag item.
- * Replaces FrappeTag / FrappeTagLink with a framework-agnostic type.
  */
 export interface TagItem {
   /** Unique identifier for the tag */

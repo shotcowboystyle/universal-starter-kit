@@ -11,7 +11,7 @@ describe(createStorybookViteConfig, () => {
     // modules (components/src/charts), so vite's initial crawl missed them.
     // Mid-session discovery triggered a re-optimization that bumped every
     // optimized-dep ?v= hash and 504ed ("Outdated Optimize Dep") module
-    // graphs loaded before it — FrappeUI stories rendered blank.
+    // graphs loaded before it — stories rendered blank.
     expect(include).toContain('d3-shape');
     expect(include).toContain('d3-scale');
   });

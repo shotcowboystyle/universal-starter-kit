@@ -2,7 +2,7 @@
  * Model barrel — no React, no DOM, no `@xyflow`.
  *
  * Its own export condition (`@repo/node-graph/model`), so a
- * server, a CLI, a Frappe hook or the CI bench imports the model alone.
+ * server, a CLI or the CI bench imports the model alone.
  */
 
 export type {

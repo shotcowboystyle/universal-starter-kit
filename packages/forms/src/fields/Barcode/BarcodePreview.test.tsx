@@ -165,7 +165,7 @@ describe('BarcodePreview — qr format', () => {
     expect(qrMatrix!.children).toHaveLength(encodeQr('SKU-001234')!.size);
   });
 
-  it("draws QR for the Frappe fieldtype's qrcode token via the shared alias table", () => {
+  it('draws QR for the qrcode alias via the shared alias table', () => {
     const result = renderWithProviders(
       <BarcodePreview
         value="SKU-001234"

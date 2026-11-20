@@ -60,7 +60,7 @@ const countBy = (rows: Ticket[], pick: (row: Ticket) => string[]): DataTableFace
  * The intended composition: facet menus slot into the DataTableToolbar
  * action cluster (customActions) beside the Filter button, feeding the
  * host's own filter state — here the story filters the rows it hands the
- * table, the same shape a Frappe host gets from useFrappeFacets.
+ * table, the same shape a server-backed host would supply.
  */
 const InToolbarStory = () => {
   const [assignee, setAssignee] = useState<string[]>([]);
@@ -76,7 +76,7 @@ const InToolbarStory = () => {
     [assignee, statuses],
   );
 
-  // Desk parity: each facet's counts respect every OTHER facet's selection.
+  // Each facet's counts respect every OTHER facet's selection.
   const assigneeOptions = useMemo(
     () =>
       countBy(

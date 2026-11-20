@@ -43,7 +43,7 @@ export const Default = {
 };
 
 /**
- * Frappe Report View grouping: collapse/expand sections, aggregation, chart.
+ * Report grouping: collapse/expand sections, aggregation, chart.
  */
 export const Grouped = {
   render: () => (

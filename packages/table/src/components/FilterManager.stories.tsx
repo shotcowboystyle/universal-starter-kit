@@ -1,5 +1,5 @@
 /**
- * FilterManager — save-current-filters dialog. Frappe-free: the caller
+ * FilterManager — save-current-filters dialog. Backend-free: the caller
  * supplies the filter tuples and the save callback. Playground already
  * mounts this; the Kitchen Sink is story-driven, so this file is the
  * on-device page.

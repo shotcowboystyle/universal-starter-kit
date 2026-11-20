@@ -9,7 +9,6 @@ declare global {
 export type PlatformName =
   | 'ios'
   | 'android'
-  | 'gnome'
   | 'native'
   | 'tauri'
   | 'desktop'
@@ -33,9 +32,6 @@ type PlatformFlag = Exclude<keyof Platform, 'broadName' | 'preciseName'>;
 const platformOrder: { flag: PlatformFlag; name: PlatformName }[] = [
   { flag: 'isIos', name: 'ios' },
   { flag: 'isAndroid', name: 'android' },
-  // Gnome outranks Native: the GTK target reports isNative (it is not a
-  // browser) but "gnome" is the precise answer callers want.
-  { flag: 'isGnome', name: 'gnome' },
   { flag: 'isNative', name: 'native' },
   // Tauri outranks Desktop/Web the same way: the webview host reports isWeb
   // and isDesktop, but "tauri" is the precise answer.
@@ -66,7 +62,6 @@ export const platformBase = {
   isExpo: false,
   isFirefox: false,
   isFirefoxExtension: false,
-  isGnome: false,
   isIframe: false,
   isIos: false,
   isNative: false,
@@ -113,7 +108,6 @@ export interface Platform {
   isExpo: boolean;
   isFirefox: boolean;
   isFirefoxExtension: boolean;
-  isGnome: boolean;
   isIframe: boolean;
   isIos: boolean;
   isNative: boolean;

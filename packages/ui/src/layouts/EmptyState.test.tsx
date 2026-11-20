@@ -55,13 +55,13 @@ describe(EmptyState, () => {
       <EmptyState
         title="You can't create Pokemon"
         description={
-          'You are not permitted to access this resource. Login to access\nFunction frappe.desk.form.load.getdoctype is not whitelisted.\n'
+          'You are not permitted to access this resource. Login to access\nThe requested endpoint is not allowed for this role.\n'
         }
       />,
     );
     expect([...container.querySelectorAll('p')].map((node) => node.textContent)).toStrictEqual([
       'You are not permitted to access this resource. Login to access',
-      'Function frappe.desk.form.load.getdoctype is not whitelisted.',
+      'The requested endpoint is not allowed for this role.',
     ]);
   });
 });

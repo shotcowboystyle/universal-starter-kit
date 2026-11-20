@@ -89,11 +89,6 @@ export default defineConfig({
       rules: { 'sonarjs/function-name': ['error', { format: '^(?:[_a-z][a-zA-Z0-9]*|[A-Z][a-zA-Z0-9]*)$' }] },
     },
     {
-      // Mirrors the GTK Adw.NavigationView API (push_by_tag, get_navigation_stack, ...).
-      files: ['packages/router/src/seam/DomNavigationHost.tsx'],
-      rules: { 'sonarjs/function-name': ['error', { format: '^(?:[_a-z][a-zA-Z0-9_]*|[A-Z][a-zA-Z0-9]*)$' }] },
-    },
-    {
       // Next.js App Router special files are kebab-case: page, layout, not-found, global-error, route.
       files: ['apps/web/src/app/**'],
       rules: { 'unicorn/filename-case': ['error', { case: 'kebabCase' }] },

@@ -1,15 +1,14 @@
 // DOM navigation host — renders the route manifest as a stack of DOM
-// pages, one per route, driving the same seam the GTK host drives.
+// pages, one per route, driving the stack-navigation seam.
 //
-// The DOM equivalent of the GTK navigation host: every route
-// gets a permanent page wrapper (so the host stack and the seam mirror
+// Every route gets a permanent page wrapper (so the host stack and the seam mirror
 // stay aligned), the page's React CONTENT mounts on the route's first
 // visit (stackNavigator.isVisited) and stays mounted from then on —
 // backgrounded pages keep their state, the same lifecycle One gives stack
 // screens on web/native. Only the top-of-stack page is visible; the rest
 // are display:none.
 //
-// Usage (mirrors the GTK entries):
+// Usage:
 //
 //   stackNavigator.configure(ROUTES);            // before render
 //   <DomNavigationHost
@@ -18,8 +17,7 @@
 //   />
 //
 // Stack state flows host → seam: every adapter mutation calls
-// stackNavigator.syncFromHost(), exactly like the GTK pushed/popped/
-// replaced signal handlers.
+// stackNavigator.syncFromHost().
 //
 // Sizing needs no ceremony: the host fills a parent with a definite height
 // and otherwise sizes to the active page (`style` overrides either way).
@@ -32,8 +30,7 @@ import { RouteTagContext, stackNavigator, useNavState } from './navigator';
 import type { Href, NavStackAdapter, RouteDef } from './navigator';
 
 /** In-memory implementation of the host-stack protocol (the seam's
- *  NavStackAdapter mirrors Adw.NavigationView's method surface — see
- *  navigator.ts). */
+ *  NavStackAdapter — see navigator.ts). */
 // oxlint-disable-next-line react-doctor/only-export-components -- adapter and host are one unit; tests and entries import both from this module
 export class DomStackAdapter implements NavStackAdapter {
   private stack: string[];
@@ -44,7 +41,7 @@ export class DomStackAdapter implements NavStackAdapter {
     this.onChanged = onChanged;
   }
 
-  push_by_tag(tag: string): void {
+  pushByTag(tag: string): void {
     this.stack.push(tag);
     this.onChanged();
   }
@@ -58,7 +55,7 @@ export class DomStackAdapter implements NavStackAdapter {
     return true;
   }
 
-  pop_to_tag(tag: string): boolean {
+  popToTag(tag: string): boolean {
     const idx = this.stack.lastIndexOf(tag);
     if (idx === -1 || idx === this.stack.length - 1) {
       return false;
@@ -68,22 +65,13 @@ export class DomStackAdapter implements NavStackAdapter {
     return true;
   }
 
-  replace_with_tags(tags: string[]): void {
+  replaceWithTags(tags: string[]): void {
     this.stack = [...tags];
     this.onChanged();
   }
 
-  get_navigation_stack(): ReturnType<NavStackAdapter['get_navigation_stack']> {
-    const snapshot = this.stack;
-    return {
-      get_n_items: () => snapshot.length,
-      get_item: (index: number) => {
-        if (index < 0 || index >= snapshot.length) {
-          return null;
-        }
-        return { get_tag: () => snapshot[index] ?? null };
-      },
-    };
+  getStackTags(): string[] {
+    return [...this.stack];
   }
 }
 
@@ -93,7 +81,7 @@ export interface DomRouteEntry extends RouteDef {
 
 export interface DomNavigationHostProps {
   routes: DomRouteEntry[];
-  /** Restore a previous route on mount (e.g. from vscode.getState()) —
+  /** Restore a previous route on mount (e.g. from persisted state) —
    *  applied as a replace ABOVE the manifest root (see the replace
    *  semantics in navigator.ts), so a restored detail page keeps a working
    *  back affordance to the root instead of dead-ending. */

@@ -12,8 +12,7 @@
  * produced no bundle — measured shipping the Lookout iOS app, MPO-10).
  *
  * Because this package's barrel re-exports this module, ANY native consumer
- * that reaches the barrel — including anyone importing a single component
- * from @repo/frappe-ui — inherited that failure. Dropping the
+ * that reaches the barrel inherited that failure. Dropping the
  * import here takes mermaid off the native graph for all of them at once.
  *
  * The contract is unchanged: same exports, same result shape, and the same

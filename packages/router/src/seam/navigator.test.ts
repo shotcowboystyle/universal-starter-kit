@@ -85,8 +85,7 @@ describe('StackNavigator', () => {
   // above the manifest root there is nothing to discard, so replace lands the
   // target ABOVE the root like a push — cold deep links / initialHref restores
   // keep a working back affordance (react-navigation/expo-router synthesize
-  // the anchor route for deep links the same way; Adw.NavigationView's
-  // replace on an empty view is a push).
+  // the anchor route for deep links the same way).
   it('replace on a fresh stack layers above the root so back still works', () => {
     attachDomHost();
     stackNavigator.replace('/pokemon/mew');
@@ -100,20 +99,17 @@ describe('StackNavigator', () => {
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'home', depth: 1 });
   });
 
-  it('replace lays the root down even when the host stack is empty (GTK cold start)', () => {
-    // An Adw.NavigationView is empty until the first push; the mirror still
+  it('replace lays the root down even when the host stack is empty (cold start)', () => {
+    // A host stack can be empty until the first push; the mirror still
     // carries the configure()-seeded root. Replace must materialize BOTH the
     // root and the target on the host, not strand the target alone.
     const adapter = new DomStackAdapter('', () => {
       stackNavigator.syncFromHost();
     });
     stackNavigator.attach(adapter);
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(0);
+    expect(adapter.getStackTags()).toHaveLength(0);
     stackNavigator.replace('/pokemon/mew');
-    const model = adapter.get_navigation_stack();
-    expect(model.get_n_items()).toBe(2);
-    expect(model.get_item(0)?.get_tag()).toBe('home');
-    expect(model.get_item(1)?.get_tag()).toBe('pokemon-detail');
+    expect(adapter.getStackTags()).toStrictEqual(['home', 'pokemon-detail']);
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', canGoBack: true });
   });
 
@@ -140,8 +136,7 @@ describe('StackNavigator', () => {
   });
 
   it('replace dedupes a target that already sits in the back stack', () => {
-    // Every tag appears at most once in the host stack (Adw treats a
-    // duplicate page as a programming error) — replacing to a page that's
+    // Every tag appears at most once in the host stack — replacing to a page that's
     // already beneath pops the stack to a single occurrence of it.
     const adapter = attachDomHost();
     for (const href of ['/todos', '/pokemon/mew']) {
@@ -149,10 +144,7 @@ describe('StackNavigator', () => {
     }
     stackNavigator.replace('/todos');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'todos', depth: 2 });
-    const model = adapter.get_navigation_stack();
-    expect(model.get_n_items()).toBe(2);
-    expect(model.get_item(0)?.get_tag()).toBe('home');
-    expect(model.get_item(1)?.get_tag()).toBe('todos');
+    expect(adapter.getStackTags()).toStrictEqual(['home', 'todos']);
   });
 
   it('ignores navigation to routes outside the manifest', () => {
@@ -276,12 +268,12 @@ describe('StackNavigator', () => {
     stackNavigator.push('/pokemon/mew');
     await flush();
     expect(stackNavigator.loaderSnapshot('pokemon-detail')).toBe('doc:mew');
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(2);
+    expect(adapter.getStackTags()).toHaveLength(2);
 
     stackNavigator.push('/pokemon/ditto');
     await flush();
     // Host stack unchanged (param-only), loader data + params updated.
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(2);
+    expect(adapter.getStackTags()).toHaveLength(2);
     expect(stackNavigator.loaderSnapshot('pokemon-detail')).toBe('doc:ditto');
     expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'ditto' });
   });
@@ -296,8 +288,8 @@ describe('StackNavigator', () => {
 
   it('mirrors host-initiated stack changes through syncFromHost', () => {
     const adapter = attachDomHost();
-    // Host-side push (e.g. GTK header interaction) — not through the seam.
-    adapter.push_by_tag('todos');
+    // Host-side push (e.g. host chrome interaction) — not through the seam.
+    adapter.pushByTag('todos');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'todos', depth: 2 });
     expect(stackNavigator.isVisited('todos')).toBe(true);
     adapter.pop();

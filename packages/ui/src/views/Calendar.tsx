@@ -1752,8 +1752,8 @@ export const Calendar = ({
           // Custom renderers often return fragments/arrays; keep a stable key here.
           return <React.Fragment key={event.id}>{renderEvent(event)}</React.Fragment>;
         }
-        // Wrap custom content so it stays draggable (FrappeCalendar always
-        // bridges renderEvent, so drag must not depend on the default chip).
+        // Wrap custom content so it stays draggable (callers that always
+        // pass renderEvent must not lose drag to the default chip).
         return (
           <YStack
             key={event.id}

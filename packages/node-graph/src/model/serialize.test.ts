@@ -3,7 +3,7 @@
  * directions are pinned here.
  *
  * The failures this catches are the ones that only show up in production. A
- * document that round-trips through a Frappe field and comes back with its
+ * document that round-trips through a database field and comes back with its
  * viewport gone. A `parseDocument` that throws on a truncated string and takes
  * the WebView with it, which is design §4.6's whole reason for returning a
  * `Result`. And a serializer whose key order follows insertion order, which

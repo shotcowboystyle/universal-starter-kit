@@ -23,8 +23,7 @@ Peers (Tauri builds only, all optional): `@tauri-apps/api`,
 - **`updater`** — check/install app updates
 
 Each API is an interface plus a default implementation, so shared code (for
-example `@repo/frappe-ui`'s `FrappeForm` delete confirm) can
-import it unconditionally on every platform.
+example a delete confirm) can import it unconditionally on every platform.
 
 > **State of play.** Tauri is the one backend with a full implementation:
 > each API has a `.tauri` file (selected at build time in Tauri bundles) that
@@ -33,18 +32,12 @@ import it unconditionally on every platform.
 > webview has the browser modals.
 >
 > Outside Tauri: `dialog.message`, `.ask`, `.confirm` and `.prompt` are the
-> browser's modal globals and are therefore **web-only**. On GNOME they
-> **throw** a named error: GJS has no `window.confirm`, and neither silently
+> browser's modal globals and are therefore **web-only**. Where those globals
+> are missing they **throw** a named error: neither silently
 > returning `false` (a confirm button that appears broken) nor silently
 > returning `true` (a delete nobody agreed to) is a defensible default for a
 > confirmation. `dialog.open` and `.save` return `null` on both. `fs` and
 > `paths` report unsupported outside Tauri; `updater` is a no-op there.
->
-> The GNOME target has real GTK equivalents available (`Gtk.FileDialog`,
-> `Adw.AlertDialog`, `GLib.get_user_*_dir`); wiring them up as
-> `index.gnome.ts` files behind these same interfaces is the natural next
-> step — the interfaces exist precisely so that lands as an implementation
-> rather than an API change.
 
 ## What it must not do
 

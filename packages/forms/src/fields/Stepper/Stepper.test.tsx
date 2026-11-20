@@ -418,7 +418,7 @@ describe('Stepper currency', () => {
     expect(currencyInput(container).className).toMatch(/_ta-right/u);
   });
 
-  it('resolves a Frappe-style symbol to its glyph', () => {
+  it('resolves a bare currency symbol to its glyph', () => {
     const { container } = renderWithProviders(
       <Stepper
         aria-label="Price"

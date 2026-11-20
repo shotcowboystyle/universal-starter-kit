@@ -145,7 +145,7 @@ export const createDefaultThemeConfig = (options: CreateDefaultThemeConfigOption
   // NOTE: Previously this stripped themes in production client builds
   // (TAMAGUI_ENVIRONMENT=client && NODE_ENV=production) assuming CSS-only
   // theming. This optimization breaks builds served outside Tamagui's SSR
-  // pipeline (e.g. the Frappe SPA) where runtime JS themes are required.
+  // pipeline (e.g. a plain client-rendered SPA) where runtime JS themes are required.
   // Always keep themes to ensure TamaguiProvider has valid theme data.
   const themes = options.subset ? subsetThemes(builtThemes, options.subset) : builtThemes;
   return createThemeConfig(

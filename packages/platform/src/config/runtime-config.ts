@@ -43,7 +43,7 @@ export const publicConfigKeysEnvKey = 'VITE_MP_PUBLIC_CONFIG_KEYS';
 /**
  * Build-time env key carrying the JSON object of public config values
  * resolved from the BUILD environment. Still honored so apps that bake their
- * config in (native, GNOME, static web) keep working unchanged.
+ * config in (native, static web) keep working unchanged.
  */
 export const bakedConfigEnvKey = 'VITE_MP_CONFIG';
 

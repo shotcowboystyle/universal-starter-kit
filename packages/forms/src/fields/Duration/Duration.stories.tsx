@@ -209,7 +209,7 @@ export const WithSeconds: Story = {
 export const WithDays: Story = {
   args: {
     label: 'Resolution Time',
-    helperText: 'Days stay first-class (Frappe hide_days off)',
+    helperText: 'Days stay first-class (hideDays off)',
     value: 100_000,
     hideDays: false,
     showSeconds: true,

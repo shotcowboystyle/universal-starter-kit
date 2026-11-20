@@ -1,20 +1,18 @@
 // DOM one-shim — One's router API backed by the stack-navigation seam.
 //
 // Alias the `one` package to THIS module in a DOM target's vite config
-// (VS Code webview, webext views) and every consumer — feature screens,
+// (webext views) and every consumer — feature screens,
 // @package/layouts, the @repo/router facade (whose default
 // implementation re-exports from `one`) — rides the seam instead of One's
 // real router runtime, which needs an address bar + One server runtime
-// those hosts don't have. The GTK equivalent lives in
-// the GNOME `one` shim (it renders Link over a GTK pressable and
-// carries GJS probe instrumentation this DOM shim doesn't need).
+// those hosts don't have.
 //
 // Exports beyond the router hooks exist to satisfy module resolution for
 // everything the shared graph imports from `one`:
 //   - useUserScheme & friends re-export from @vxrn/color-scheme — One's
 //     own implementation IS that package, and it's browser-safe
 //     (localStorage + matchMedia).
-//   - LoadProgressBar/useMatches/Slot are inert placeholders: webview
+//   - LoadProgressBar/useMatches/Slot are inert placeholders: webext
 //     entries never mount One's root layout, but the barrels that reach
 //     them must still resolve.
 

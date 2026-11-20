@@ -1,5 +1,5 @@
 /**
- * TableInput — the table itself is a field (Frappe child-table contract).
+ * TableInput — the table itself is a field (child-table contract).
  *
  * Stories cover: controlled data flow (canonical onChange + deprecated
  * onDataChange alias + onCellChange), row add/remove with min/max limits,

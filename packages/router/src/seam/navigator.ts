@@ -2,26 +2,24 @@
 // navigation stack.
 //
 // Some delivery targets can't (or shouldn't) mount One's real router
-// runtime: GNOME/GJS (createApp.native → react-navigation →
-// react-native-screens fabric internals), VS Code webviews and web
-// extension pages (no address bar, no One server runtime). This module is
-// the replacement seam those targets share: a tiny route manifest + an
-// external nav store that MIRRORS a host navigation stack. A one-shim
-// (`./one-adapter` on DOM, `gnome/shims/one.ts` on GTK) backs
+// runtime: web extension pages have no address bar and no One server
+// runtime. This module is the replacement seam for such targets: a tiny
+// route manifest + an external nav store that MIRRORS a host navigation
+// stack. A one-shim (`./one-adapter`) backs
 // useRouter/Link/useParams/useLocalSearchParams/usePathname with this
 // store, so REAL feature screens navigate unmodified.
 //
-// Design (proven on GNOME first):
+// Design:
 //   - Every route in the manifest is one host page, addressed by its
 //     `tag`. Push/replace/back map onto the host adapter's
-//     push_by_tag / replace_with_tags / pop. Page SHELLS are permanent;
+//     pushByTag / replaceWithTags / pop. Page SHELLS are permanent;
 //     page CONTENT mounts on first visit (visitedTags — lazy mounting).
 //   - Routes may declare a `loader`; push/replace resolve it BEFORE the
 //     host action (the loader bridge), so a page's first paint has its
 //     loader data — the same ordering One guarantees on web.
 //   - The HOST is the source of truth for the STACK: every mutation lands
 //     as a host signal and the handler re-reads the host stack
-//     (syncFromHost). Host-initiated pops — GTK header back button, Esc,
+//     (syncFromHost). Host-initiated pops — a host back button, Esc,
 //     back swipe — flow through the exact same path, so the JS mirror
 //     can't drift.
 //   - Params are per-tag external-store snapshots (stable object identity
@@ -39,10 +37,9 @@
 //     there is nothing to discard, so replace lands the target ABOVE the
 //     root (like push). Cold deep links / initialHref restores therefore
 //     always leave a live back affordance — the same shape react-navigation/
-//     expo-router synthesize for deep links via the anchor/initial route,
-//     and Adw.NavigationView's replace on an empty view (which is a push).
-//     A tag appears at most once in the stack (Adw hard-errors on
-//     duplicates): replacing to a page already in the back stack pops to it.
+//     expo-router synthesize for deep links via the anchor/initial route.
+//     A tag appears at most once in the stack: replacing to a page already
+//     in the back stack pops to it.
 //
 // No host imports here: the adapter arrives duck-typed via attach(),
 // keeping this module loadable in any entry (single-screen entries pull
@@ -77,7 +74,7 @@ export interface RouteDef {
   pattern: string;
   /** Host page tag AND stable route id. */
   tag: string;
-  /** Page title (host chrome, e.g. the GTK header bar). */
+  /** Page title (host chrome, e.g. a header bar). */
   title: string;
   /** Optional data loader — resolved BEFORE the page mounts/shows (the
    *  loader bridge). Its result is what `useLoader` returns on this
@@ -100,18 +97,15 @@ export interface NavSnapshot {
 }
 
 /** Structural view of the host navigation stack — everything the seam
- *  calls. The method names deliberately mirror Adw.NavigationView so the
- *  GTK target passes its widget straight through; DOM hosts implement the
- *  same protocol over an array (see DomNavigationHost). */
+ *  calls. DOM hosts implement this protocol over an array (see
+ *  DomNavigationHost). */
 export interface NavStackAdapter {
-  push_by_tag: (tag: string) => void;
+  pushByTag: (tag: string) => void;
   pop: () => boolean;
-  pop_to_tag: (tag: string) => boolean;
-  replace_with_tags: (tags: string[]) => void;
-  get_navigation_stack: () => {
-    get_n_items: () => number;
-    get_item: (index: number) => { get_tag: () => string | null } | null;
-  };
+  popToTag: (tag: string) => boolean;
+  replaceWithTags: (tags: string[]) => void;
+  /** Current stack, root first. */
+  getStackTags: () => string[];
 }
 
 const compileRoute = (def: RouteDef): CompiledRoute => {
@@ -126,8 +120,7 @@ const compileRoute = (def: RouteDef): CompiledRoute => {
 };
 
 /** Minimal query parser — deliberately not URLSearchParams so this module
- *  has zero polyfill-order dependency (GJS entries load it before
- *  polyfills). Repeated keys become arrays. */
+ *  has zero polyfill-order dependency. Repeated keys become arrays. */
 const parseQuery = (query: string | undefined): NavParams => {
   const params = new Map<string, string | string[]>();
   if (query === undefined || query === '') {
@@ -255,8 +248,7 @@ export class StackNavigator {
 
   /** Resolve a route's loader WITHOUT navigating. For the initial page:
    *  entries can `await stackNavigator.preload("/")` during top-level await
-   *  (where GJS reliably drains promise jobs) so even the root page's first
-   *  paint has loader data. */
+   *  so even the root page's first paint has loader data. */
   async preload(href: Href): Promise<void> {
     const hit = this.match(href);
     if (!hit?.route.loader) {
@@ -271,8 +263,8 @@ export class StackNavigator {
     }
   }
 
-  /** Bind the live host stack (an Adw.NavigationView widget on GTK, a
-   *  DomStackAdapter on DOM targets). `initialHref` (state restore) applies
+  /** Bind the live host stack (a DomStackAdapter on DOM targets).
+   *  `initialHref` (state restore) applies
    *  as a replace BEFORE queued navigations flush: a deep link that arrived
    *  while unattached is fresher intent than a persisted route, so it lands
    *  on top. */
@@ -402,24 +394,23 @@ export class StackNavigator {
       if (this.stackTags.length <= 1) {
         // Fresh/empty stack: no navigation entry to discard — land above
         // the root like a push so back affordances survive. replace (not
-        // push_by_tag) also materializes the root on a host whose real
-        // stack is still empty (GTK cold start).
-        this.host.replace_with_tags([...this.stackTags, route.tag]);
+        // pushByTag) also materializes the root on a host whose real
+        // stack is still empty (cold start).
+        this.host.replaceWithTags([...this.stackTags, route.tag]);
         return;
       }
-      // A tag may appear only once (Adw hard-errors on duplicates): drop an
-      // existing occurrence of the target from the back stack.
+      // A tag may appear only once: drop an existing occurrence of the target from the back stack.
       const below = this.stackTags.slice(0, -1).filter((tag) => tag !== route.tag);
-      this.host.replace_with_tags([...below, route.tag]);
+      this.host.replaceWithTags([...below, route.tag]);
       return;
     }
     const idx = this.stackTags.indexOf(route.tag);
     if (idx === -1) {
-      this.host.push_by_tag(route.tag);
+      this.host.pushByTag(route.tag);
     } else if (idx < this.stackTags.length - 1) {
-      // Tag already in the nav stack — Adw treats re-push as a programming
-      // error. Interpret as "navigate back to it" (params above still apply).
-      this.host.pop_to_tag(route.tag);
+      // Tag already in the nav stack — re-pushing would duplicate it.
+      // Interpret as "navigate back to it" (params above still apply).
+      this.host.popToTag(route.tag);
     }
     // Already on top: param-only navigation, nothing to do on the host side.
   }
@@ -432,7 +423,7 @@ export class StackNavigator {
     // Supersede any in-flight loader navigation — its host action must not
     // land after this pop (navigate() re-checks navSeq after its await).
     this.navSeq += 1;
-    // The popped signal (same path as the GTK header back button / Esc /
+    // The popped signal (same path as a host back button / Esc /
     // back swipe) syncs the mirror.
     this.host.pop();
   };
@@ -453,20 +444,12 @@ export class StackNavigator {
     if (!this.host) {
       return;
     }
-    // Any landed stack mutation — seam- or host-initiated (GTK header back
+    // Any landed stack mutation — seam- or host-initiated (host back
     // button / Esc / swipe) — supersedes in-flight loader navigations.
     // Safe for the navigation that CAUSED this signal: its navSeq check
     // sits before its host action, never after.
     this.navSeq += 1;
-    const model = this.host.get_navigation_stack();
-    const tags: string[] = [];
-    const count = model.get_n_items();
-    for (let i = 0; i < count; i += 1) {
-      const tag = model.get_item(i)?.get_tag();
-      if (tag != null && tag !== '') {
-        tags.push(tag);
-      }
-    }
+    const tags = this.host.getStackTags().filter((tag) => tag !== '');
     if (tags.length > 0) {
       this.stackTags = tags;
     }
@@ -501,9 +484,8 @@ export class StackNavigator {
   }
 }
 
-/** The per-bundle navigator singleton. Every target build (GNOME entry,
- *  VS Code webview, webext view) is its own bundle, so module state is
- *  naturally per-target. */
+/** The per-bundle navigator singleton. Every target build (e.g. each webext
+ *  view) is its own bundle, so module state is naturally per-target. */
 export const stackNavigator = new StackNavigator();
 
 /** Set per page by the navigation host — useParams/useLocalSearchParams

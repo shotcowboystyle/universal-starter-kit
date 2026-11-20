@@ -87,7 +87,7 @@ const meta: Meta<typeof ImageField> = {
     docs: {
       description: {
         component:
-          'Frappe Attach Image: a preview frame that attaches, replaces, and accepts drops. Empty shows Add image; Remove is a sibling action (R11: never a status pip on the media). Keyboard focus rings the frame (LC-71), never the hidden file input. Radius on the tile is unclamped.',
+          'Image attachment: a preview frame that attaches, replaces, and accepts drops. Empty shows Add image; Remove is a sibling action (R11: never a status pip on the media). Keyboard focus rings the frame (LC-71), never the hidden file input. Radius on the tile is unclamped.',
       },
     },
   },

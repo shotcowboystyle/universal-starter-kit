@@ -17,8 +17,7 @@
  * (a generation counter drops stale in-flight responses).
  *
  * Framework-agnostic by design: `loadPage` is a plain async callback, so
- * adapters (e.g. FrappeTable in @repo/frappe-ui) supply their
- * own fetching without this package knowing about them.
+ * adapters supply their own fetching without this package knowing about them.
  */
 
 import type { ColumnFiltersState } from '@tanstack/react-table';

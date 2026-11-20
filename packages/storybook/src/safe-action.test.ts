@@ -38,7 +38,7 @@ describe('safeAction (cycle-safe Storybook action)', () => {
     expect(() => JSON.stringify(sanitized)).not.toThrow();
   });
 
-  it('summarizes React elements (the DebugLayout/FrappeListView pageerror shape)', () => {
+  it('summarizes React elements (the DebugLayout pageerror shape)', () => {
     // Synthetic press events reference the element graph: element → props →
     // children → … fiber → stateNode closes the circle.
     const element: FakeElement = { $$typeof: Symbol.for('react.element'), props: {} };

@@ -9,8 +9,8 @@
  * (`@repo/theme`, no-op in production builds).
  *
  * Registration is voluntary: raw `<H1>` tags dropped in by consumers are not
- * detected — the guardrail covers the catalog path (PageHeader, frappe-ui
- * Heading) where the level is known.
+ * detected — the guardrail covers the catalog path (PageHeader) where the
+ * level is known.
  *
  * The same scope carries the page chrome inset (`insetToken`) so PageHeader
  * can bleed its hairline to the column edges without a second context.

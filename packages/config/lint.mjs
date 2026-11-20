@@ -162,15 +162,6 @@ const CSS_IGNORE_PREFIXES = [
   path.join('keycloak', 'public', 'keycloakify-dev-resources'),
 ];
 
-/**
- * Paths inside ANY product app that are never scanned for .css: `mpo init`
- * renames the template app to each product app, so these cannot be pinned to
- * its name. Platform-forced: vscode webviews rewrite <link href> to
- * vscode-resource URIs and url() resolves relative to the emitted stylesheet —
- * inline <style> would resolve against vscode-webview:// instead.
- */
-const CSS_IGNORE_APP_FILES = new Set(['vscode/webview/fonts.css']);
-
 /** Generated Tamagui CSS extract filenames (not hand-authored app styles). */
 const GENERATED_CSS_NAMES = new Set(['tamagui.css', 'tamagui.content.css']);
 
@@ -285,9 +276,6 @@ const isCssIgnored = (absPath) => {
     return true;
   }
   const parts = rel.split(/[/\\]/u);
-  if (CSS_IGNORE_APP_FILES.has(parts.slice(1).join('/'))) {
-    return true;
-  }
   return GENERATED_CSS_NAMES.has(parts.at(-1) ?? '');
 };
 
@@ -1176,7 +1164,7 @@ const checkUndeclaredSizeRecipeEscapes = () => {
 
 /**
  * `no-hex-literals` covers apps/, packages/ and features/, and a
- * surface no theme token reaches (GTK widget CSS outside the provider, a
+ * surface no theme token reaches (a
  * content script on third-party pages, the badge API, Expo build config)
  * opts its file out with a `hex-escape: <reason>` comment. The comment alone
  * would let any file opt out, so every one must be a row in the spec's

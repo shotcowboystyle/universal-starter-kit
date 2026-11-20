@@ -1,8 +1,8 @@
 /**
  * The money column type end to end (MPO-252).
  *
- * A Frappe Currency field arrives as a decimal STRING, and before this the
- * kit had no type for that, so it fell to "text". Three consequences, all
+ * A currency field from a server arrives as a decimal STRING, and before
+ * this the kit had no type for that, so it fell to "text". Three consequences, all
  * asserted here: sorting was silently wrong ("9.00" above "10.00"), the
  * filter offered `contains` instead of `isGreaterThan`, and formatting could
  * only read a column-level currency constant even though a ledger mixes

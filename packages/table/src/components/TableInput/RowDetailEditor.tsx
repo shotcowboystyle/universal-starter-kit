@@ -1,6 +1,6 @@
 /**
- * RowDetailEditor — the child-table row opened as a form (Frappe's grid
- * row "Edit" form). The grid shows the list-view columns; the detail editor
+ * RowDetailEditor — the child-table row opened as a form (the grid
+ * row's "Edit" form). The grid shows the list-view columns; the detail editor
  * shows every `columns` entry for one row, full-size, in a dialog.
  *
  * Same staging contract as CellModalEditor (UX-023): the fields edit a draft

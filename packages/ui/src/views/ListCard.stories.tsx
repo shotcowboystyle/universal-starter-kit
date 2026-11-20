@@ -1,5 +1,5 @@
 /**
- * ListCard — Frappe link card / Polaris resource list / Grafana table-lite.
+ * ListCard — link card / Polaris resource list / Grafana table-lite.
  */
 
 import { action } from '@repo/storybook';

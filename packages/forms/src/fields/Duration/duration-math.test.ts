@@ -48,7 +48,7 @@ describe('durationMath', () => {
     expect(partsToSeconds({ days: 2, hours: 1, minutes: 0, seconds: 0 }, true)).toBe(3600);
   });
 
-  it('parses Frappe-style duration text, clock, and raw seconds', () => {
+  it('parses unit-suffixed duration text, clock, and raw seconds', () => {
     expect(parseDurationText('1d 2h 3m 4s')).toBe(93_784);
     expect(parseDurationText('01h 30m')).toBe(5400);
     expect(parseDurationText('1:30')).toBe(5400);

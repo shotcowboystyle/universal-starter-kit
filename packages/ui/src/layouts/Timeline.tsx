@@ -60,7 +60,7 @@ const ReplyPressTarget = styled(XStack, { name: 'ReplyPressTarget' });
 const TIMELINE_HEADING_TAGS = { 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 
 // ---------------------------------------------------------------------------
-// Types  (generic -- no Frappe dependency)
+// Types
 // ---------------------------------------------------------------------------
 
 /**
@@ -81,7 +81,6 @@ export type TimelineEntryType = 'comment' | 'version' | 'attachment' | 'assignme
 
 /**
  * Generic timeline entry.
- * Replaces FrappeComment / FrappeVersion with a framework-agnostic type.
  */
 export interface TimelineEntry {
   /** Unique identifier */
@@ -373,7 +372,7 @@ const flattenFeedItems = (
 };
 
 /**
- * GitHub/Primer + Frappe Desk spine: a flat 1px scheme-aware connector through
+ * GitHub/Primer spine: a flat 1px scheme-aware connector through
  * the avatar/badge column. First/last items clip the line to the node center
  * so the rail does not run off the stacked group (Primer `clipSidebar`).
  */
@@ -1543,7 +1542,7 @@ const TimelineContent = ({
 };
 
 /**
- * Timeline: a mixed activity feed in the GitHub/Frappe Desk mold. Comment
+ * Timeline: a mixed activity feed in the GitHub mold. Comment
  * entries render as conversation cards (avatar on a spine, display name,
  * relative time, body, Reply, one-level threaded replies); system events
  * (version/attachment/assignment/info) render as compact muted rows on the

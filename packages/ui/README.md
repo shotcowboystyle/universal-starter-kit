@@ -29,7 +29,7 @@ Requires `react` (and `react-native` / `react-dom` for the target platform) as p
 
 ## What it must not do
 
-- No Frappe or API assumptions — data-aware wrappers are out of scope here
+- No backend or API assumptions — data-aware wrappers are out of scope here
 - No form fields — fields, `Form`, and input parts live in `@repo/forms`
 - No data tables — data tables are out of scope for this package
 

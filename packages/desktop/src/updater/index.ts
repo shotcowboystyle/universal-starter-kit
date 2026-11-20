@@ -5,8 +5,7 @@
  * updates. The Tauri target implements it via tauri-plugin-updater (the
  * `.tauri` file next door). Everywhere else `isSupported()` returning false
  * is the honest answer — web and mobile get updates from the service worker
- * or the app store, and the GNOME target is installed by the system package
- * manager.
+ * or the app store.
  */
 
 export interface UpdateInfo {

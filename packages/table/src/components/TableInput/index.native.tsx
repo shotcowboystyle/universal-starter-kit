@@ -6,7 +6,7 @@
  *   from the same emit site (LC-14), `onCellChange` per-cell companion.
  * - Three-branch render: skeleton → standalone → form-integrated `<Field>`
  *   with `useFormField()` context resolution and resolved validators.
- * - No Frappe-style `idx` bookkeeping — array order is row order.
+ * - No `idx` bookkeeping — array order is row order.
  */
 
 import { TrashIcon, PlusIcon } from '@phosphor-icons/react';
@@ -73,7 +73,7 @@ export interface TableInputProps<TData extends DataTableData = DataTableData> {
   'aria-label'?: string;
   /**
    * Nested density (LC-73). Child tables sit on a form surface, so compact
-   * is the default — Frappe's grid is a dense in-list editor, not a page table.
+   * is the default — a child table is a dense in-form editor, not a page table.
    */
   compact?: boolean;
   /** Leading grab handle + keyboard reorder via kanbanDnd (web implements). */

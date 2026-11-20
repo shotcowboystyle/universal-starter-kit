@@ -54,7 +54,7 @@ export interface GanttSpanEdges {
 /**
  * Normalized paint edges for a task span.
  *
- * End dates at exact midnight are INCLUSIVE whole days (Frappe date fields
+ * End dates at exact midnight are INCLUSIVE whole days (date-only fields
  * parse to local midnight: a task `2026-03-10 → 2026-03-12` covers three
  * days, its bar's trailing edge at the start of the 13th). Ends with a
  * time-of-day are exact edges. Degenerate/inverted spans clamp to at least

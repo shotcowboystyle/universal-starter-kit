@@ -1,11 +1,11 @@
 /**
  * DataTableFilterButton — toolbar "Filter" affordance for filtering on ANY
- * field, including hidden / non-column fields (the anti-Frappe-desk surface).
+ * field, including hidden / non-column fields.
  *
  * Opens a FloatingPanel (anchored popover on desktop, sheet below 640 / native —
  * LC-06) with two stages:
  *   1. a SEARCHABLE field list, visible columns grouped first, then
- *      "More fields" (hidden/non-column) — scales to 50+ doctype fields
+ *      "More fields" (hidden/non-column) — scales to 50+ fields
  *   2. the SAME operator/value editor the column funnel uses (LC-16)
  *
  * Commit is LIVE (LC-21, no Apply button): picking field + operator + value

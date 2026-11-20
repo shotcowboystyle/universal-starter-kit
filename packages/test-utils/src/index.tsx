@@ -3,7 +3,7 @@
  *
  * @example
  * ```tsx
- * import { renderWithProviders, createFixture } from "@repo/test-utils";
+ * import { renderWithProviders } from "@repo/test-utils";
  *
  * test("renders user card", () => {
  *   const { getByText } = renderWithProviders(<UserCard name="Ada" />);
@@ -373,34 +373,6 @@ export const modelFirstFocusableShow = (): (() => void) => {
       delete proto.show;
     }
   };
-};
-
-// ─── Fixture Factories ───────────────────────────────────────────────────────
-
-/**
- * Generate a test fixture for a Frappe doctype with auto-generated name
- * and sensible defaults. Override any field via the overrides parameter.
- *
- * @example
- * ```ts
- * interface Task {
- *   name: string;
- *   subject: string;
- *   status: "Open" | "Working" | "Completed";
- * }
- *
- * const task = createFixture<Task>("Task", { subject: "Test task", status: "Open" });
- * // Returns: { name: "Task-xxxx", subject: "Test task", status: "Open" }
- * ```
- */
-export const createFixture = <T extends Record<string, unknown>>(doctype: string, overrides?: Partial<T>): T => {
-  // oxlint-disable-next-line sonarjs/pseudo-random -- throwaway fixture names; uniqueness only, not security
-  const suffix = Math.random().toString(36).slice(2, 6);
-  const base = { name: `${doctype}-${suffix}` } as unknown as T;
-  if (overrides) {
-    return { ...base, ...overrides };
-  }
-  return base;
 };
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────

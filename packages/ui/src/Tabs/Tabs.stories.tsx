@@ -17,7 +17,7 @@ const meta: Meta<typeof Tabs> = {
     docs: {
       description: {
         component:
-          "Themed app-level Tabs over the tamagui primitive. Underline (desk-style, default) and contained (segmented) variants, sliding intent-colored indicator, scrollable overflow with edge fades, lazy-mountable panels, full keyboard support (ArrowLeft/Right, Home/End). Frappe form layouts are tab-heavy — SchemaForm's tab layout is the follow-up consumer.",
+          'Themed app-level Tabs over the tamagui primitive. Underline (desk-style, default) and contained (segmented) variants, sliding intent-colored indicator, scrollable overflow with edge fades, lazy-mountable panels, full keyboard support (ArrowLeft/Right, Home/End).',
       },
     },
   },

@@ -9,7 +9,6 @@ export const {
   isExpo,
   isFirefox,
   isFirefoxExtension,
-  isGnome,
   isIframe,
   isIos,
   isNative,

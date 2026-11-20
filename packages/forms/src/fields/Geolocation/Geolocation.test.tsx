@@ -60,11 +60,11 @@ const typeSearch = (container: HTMLElement, text: string) => {
 };
 
 /**
- * Recorded stock-Frappe Geolocation value: what
- * `JSON.stringify(editableLayers.toGeoJSON())` writes for a circle marker at
+ * Recorded GeoJSON Geolocation value: what Leaflet's
+ * `JSON.stringify(layers.toGeoJSON())` writes for a circle marker at
  * 37.7749,-122.4194. GeoJSON order is [lng, lat].
  */
-const stockFrappePoint = JSON.stringify({
+const geoJsonPoint = JSON.stringify({
   type: 'FeatureCollection',
   features: [
     {
@@ -76,12 +76,11 @@ const stockFrappePoint = JSON.stringify({
 });
 
 /**
- * Stock Frappe's geolocation.js load path: JSON.parse then L.geoJSON. Compact
- * `{"lat","lng"}` parses as JSON but is not GeoJSON, so Leaflet adds nothing
- * and the desk field renders empty. A FeatureCollection with a Point is what
- * survives a round trip through both clients.
+ * A GeoJSON reader's load path: JSON.parse then L.geoJSON. Compact
+ * `{"lat","lng"}` parses as JSON but is not GeoJSON, so Leaflet adds nothing.
+ * A FeatureCollection with a Point is what a GeoJSON reader can read back.
  */
-const frappeGeoJsonReads = (value: string): { lat: number; lng: number } | null => {
+const geoJsonReads = (value: string): { lat: number; lng: number } | null => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -873,12 +872,12 @@ describe(Geolocation, () => {
     });
   });
 
-  describe('stock Frappe FeatureCollection', () => {
-    it('paints a recorded stock value instead of rendering empty', () => {
+  describe('GeoJSON FeatureCollection', () => {
+    it('paints a recorded GeoJSON value instead of rendering empty', () => {
       const result = renderWithProviders(
         <Geolocation
           label="Location"
-          value={stockFrappePoint}
+          value={geoJsonPoint}
           locationIcon={locationIcon}
         />,
       );
@@ -887,18 +886,18 @@ describe(Geolocation, () => {
       expect(result.container.querySelector("[data-testid='geolocation-map']")).not.toBeNull();
     });
 
-    it("a compact {lat,lng} write is invisible to Frappe's parser (negative control)", () => {
-      expect(frappeGeoJsonReads(JSON.stringify({ lat: 37.7749, lng: -122.4194 }))).toBeNull();
-      expect(frappeGeoJsonReads(stockFrappePoint)).toStrictEqual({ lat: 37.7749, lng: -122.4194 });
+    it('a compact {lat,lng} write is invisible to a GeoJSON parser (negative control)', () => {
+      expect(geoJsonReads(JSON.stringify({ lat: 37.7749, lng: -122.4194 }))).toBeNull();
+      expect(geoJsonReads(geoJsonPoint)).toStrictEqual({ lat: 37.7749, lng: -122.4194 });
     });
 
-    it("editing a stock value still reads in Frappe's parser and keeps properties", async () => {
+    it('editing a GeoJSON value still reads as GeoJSON and keeps properties', async () => {
       const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <Geolocation
           label="Location"
           locationIcon={locationIcon}
-          value={stockFrappePoint}
+          value={geoJsonPoint}
           onChange={onChange}
         />,
       );
@@ -914,19 +913,19 @@ describe(Geolocation, () => {
       });
       const [[written]] = onChange.mock.calls;
       expect(JSON.parse(written).type).toBe('FeatureCollection');
-      expect(frappeGeoJsonReads(written)).toStrictEqual({ lat: 12.34, lng: -122.4194 });
+      expect(geoJsonReads(written)).toStrictEqual({ lat: 12.34, lng: -122.4194 });
       expect(JSON.parse(written).features[0].properties).toStrictEqual({
         point_type: 'circle',
         radius: 10,
       });
     });
 
-    it('map pick on a stock value writes FeatureCollection, not compact latlng', () => {
+    it('map pick on a GeoJSON value writes FeatureCollection, not compact latlng', () => {
       const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <Geolocation
           label="Location"
-          value={stockFrappePoint}
+          value={geoJsonPoint}
           onChange={onChange}
           locationIcon={locationIcon}
         />,
@@ -949,7 +948,7 @@ describe(Geolocation, () => {
       expect(onChange).toHaveBeenCalledWith(expect.any(String));
       const [[written]] = onChange.mock.calls;
       expect(JSON.parse(written).type).toBe('FeatureCollection');
-      const read = frappeGeoJsonReads(written);
+      const read = geoJsonReads(written);
       expect(read).not.toBeNull();
       expect(read?.lat).not.toBeCloseTo(37.7749, 3);
     });

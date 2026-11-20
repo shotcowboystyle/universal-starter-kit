@@ -540,7 +540,6 @@ export const WithFiltering: Story = {
  * renders NO filter entry points — no toolbar Filter button, no column
  * funnels, no chips row — while the injected filters keep applying (rows
  * below are pre-filtered to status=active). Search and header sort stay.
- * The backoffice doctype list is the canonical consumer (MOD-04).
  */
 export const ExternallyFiltered: Story = {
   args: {
@@ -2999,7 +2998,7 @@ export const CardLayout: Story = {
 };
 
 /**
- * Subject-led document rows (desk List / Polaris Index): checkbox, title
+ * Subject-led document rows (Polaris Index): checkbox, title
  * with stacked meta, trailing status. Not a column grid.
  */
 const documentListColumns: DataTableColumn<Person>[] = [

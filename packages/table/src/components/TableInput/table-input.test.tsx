@@ -525,7 +525,7 @@ describe('ChildTable — field wrapper integration', () => {
   });
 });
 
-describe('TableInput — Frappe grid + LC-71', () => {
+describe('TableInput — grid keyboard + LC-71', () => {
   const keys = {
     key: '',
     shiftKey: false,
@@ -603,7 +603,7 @@ describe('TableInput — Frappe grid + LC-71', () => {
     ).toBeNull();
   });
 
-  it('Add Row lives inside the grid frame (Frappe grid-footer)', () => {
+  it('Add Row lives inside the grid frame (grid footer)', () => {
     const { container } = renderStandalone();
     const add = screen.getByRole('button', { name: 'Add Row' });
     const frame = container.querySelector('[aria-label="Table input"]')?.parentElement;

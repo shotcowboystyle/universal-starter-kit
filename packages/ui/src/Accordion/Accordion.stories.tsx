@@ -114,9 +114,7 @@ export const WithFormContent: Story = {
       onValueChange={action('onValueChange')}
       maxWidth={640}>
       <Accordion.Item value="contact">
-        <Accordion.Trigger description="Frappe Section Break: collapsible section with a form grid">
-          Contact information
-        </Accordion.Trigger>
+        <Accordion.Trigger description="Collapsible section with a form grid">Contact information</Accordion.Trigger>
         <Accordion.Content>
           <FormGrid columns={2}>
             <Input

@@ -1013,7 +1013,7 @@ export interface GeolocationProps {
   required?: boolean;
   size?: SizeTokens;
   id?: string;
-  /** JSON string: compact lat/lng or a stock Frappe FeatureCollection. */
+  /** JSON string: compact lat/lng or a GeoJSON FeatureCollection. */
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;

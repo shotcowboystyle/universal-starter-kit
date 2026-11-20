@@ -22,7 +22,7 @@ export const SKELETON_ROW_COUNT = 3;
 export const isEmptyRows = (value: unknown): boolean =>
   value === null || value === undefined || (Array.isArray(value) && value.length === 0);
 
-/** DOM hooks for Frappe-grid keyboard (Tab-on-last-adds-row, arrow between rows). */
+/** DOM hooks for grid keyboard (Tab-on-last-adds-row, arrow between rows). */
 export const childRowAttrs = {
   row: 'data-child-row',
   rowId: 'data-child-row-id',
@@ -36,7 +36,7 @@ export const childRowAttrs = {
 const STEPPER_FIELD = 'stepper';
 
 /**
- * Frappe grid_row.set_arrow_keys: Tab on the last data cell of the last row
+ * Grid keyboard: Tab on the last data cell of the last row
  * inserts a row; Up/Down move to the same column in the adjacent row.
  * Returns the action the grid should take, or null when the event is not ours
  * (textarea, stepper, open listbox, etc.).
@@ -94,8 +94,7 @@ export const childTableKeyAction = (
 };
 
 /**
- * Per-row cell visibility (Frappe child `depends_on`, evaluated by the
- * caller). True hides that cell's editor in the grid and its field in the
+ * Per-row cell visibility (a per-row rule evaluated by the caller). True hides that cell's editor in the grid and its field in the
  * row detail editor.
  */
 export type ChildCellHidden<TData extends DataTableData = DataTableData> = (

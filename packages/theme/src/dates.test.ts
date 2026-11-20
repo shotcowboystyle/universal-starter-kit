@@ -132,7 +132,7 @@ describe('formatTimeOfDay (time-of-day register)', () => {
     expect(formatTimeOfDay(new Date(2026, 7, 12, 14, 0), { ...enUS, minutes: false })).toBe('2 PM');
   });
 
-  it('accepts a clock-time string — the wire format Frappe Time fields send', () => {
+  it('accepts a clock-time string — a clock-time wire value', () => {
     expect(formatTimeOfDay('14:30', enUS)).toBe('2:30 PM');
     expect(formatTimeOfDay('14:30:00', enUS)).toBe('2:30 PM');
   });
@@ -411,7 +411,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
   });
 
   it('serializes the input shapes the call sites hand it', () => {
-    // A Date — what every replaced copy took.
+    // A Date.
     expect(at(picked)).toBe('2026-08-15');
     expect(at(picked, 'datetime')).toBe('2026-08-15 14:30:05');
     expect(at(picked, 'time')).toBe('14:30:05');
@@ -428,144 +428,52 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// The consolidation: one body where there were eight
-// ---------------------------------------------------------------------------
-
-/**
- * Each replaced copy's string-building body, pasted VERBATIM from the tree
- * before this change. The point is not that they look alike — it is that the
- * canonical helper emits the same bytes for the same input, so repointing the
- * call sites moved no behavior.
- */
-const COPIES = {
-  // public/frappe-ui/src/fields/Date/wire.ts — toFrappeDateValue
-  'frappe-ui wire.ts': (date: Date, format: string) => {
-    const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    const timePart = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    if (format === 'time') {
-      return timePart;
-    }
-    if (format === 'datetime') {
-      return `${datePart} ${timePart}`;
-    }
-    return datePart;
-  },
-  // public/frappe-ui/src/FrappeCalendar.tsx — toFrappeFieldValue
-  'frappe-ui FrappeCalendar.tsx': (next: Date, format: string) => {
-    const datePart = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-    if (format === 'datetime') {
-      return `${datePart} ${pad(next.getHours())}:${pad(next.getMinutes())}:${pad(next.getSeconds())}`;
-    }
-    return datePart;
-  },
-  // public/frappe-ui/src/FrappeGantt.tsx — toFrappeFieldValue (identical body)
-  'frappe-ui FrappeGantt.tsx': (next: Date, format: string) => {
-    const datePart = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-    if (format === 'datetime') {
-      return `${datePart} ${pad(next.getHours())}:${pad(next.getMinutes())}:${pad(next.getSeconds())}`;
-    }
-    return datePart;
-  },
-  // public/frappe-ui/src/FrappeReportView.tsx — toFrappeDate
-  'frappe-ui FrappeReportView.tsx': (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  },
-  // admin app CalendarView.tsx — toFrappeDateValue
-  'backoffice CalendarView.tsx': (date: Date, format: string) => {
-    const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    if (format !== 'datetime') {
-      return datePart;
-    }
-    return `${datePart} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-  },
-  // admin app dashboard-data.tsx — isoDate
-  'backoffice dashboard-data.tsx': (date: Date) =>
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-  // admin app formLayout.ts — todayISO / nowTime
-  'backoffice formLayout.ts': (moment: Date, format: string) => {
-    if (format === 'time') {
-      const hours = String(moment.getHours()).padStart(2, '0');
-      const minutes = String(moment.getMinutes()).padStart(2, '0');
-      const seconds = String(moment.getSeconds()).padStart(2, '0');
-      return `${hours}:${minutes}:${seconds}`;
-    }
-    const month = String(moment.getMonth() + 1).padStart(2, '0');
-    const day = String(moment.getDate()).padStart(2, '0');
-    return `${moment.getFullYear()}-${month}-${day}`;
-  },
-  // admin app quickEntryPlan.ts — todayISO
-  'backoffice quickEntryPlan.ts': (moment: Date) => {
-    const month = String(moment.getMonth() + 1).padStart(2, '0');
-    const day = String(moment.getDate()).padStart(2, '0');
-    return `${moment.getFullYear()}-${month}-${day}`;
-  },
-  // public/components/src/views/Calendar.tsx — formatDateKey
-  'components Calendar.tsx': (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  },
-} satisfies Record<string, (date: Date, format: string) => string>;
-
-/** Which shapes each copy could emit — nothing is claimed beyond that. */
-const COPY_FORMATS: Record<keyof typeof COPIES, readonly ('date' | 'datetime' | 'time')[]> = {
-  'frappe-ui wire.ts': ['date', 'datetime', 'time'],
-  'frappe-ui FrappeCalendar.tsx': ['date', 'datetime'],
-  'frappe-ui FrappeGantt.tsx': ['date', 'datetime'],
-  'frappe-ui FrappeReportView.tsx': ['date'],
-  'backoffice CalendarView.tsx': ['date', 'datetime'],
-  'backoffice dashboard-data.tsx': ['date'],
-  'backoffice formLayout.ts': ['date', 'time'],
-  'backoffice quickEntryPlan.ts': ['date'],
-  'components Calendar.tsx': ['date'],
-};
-
-describe('formatCalendarDate is byte-identical to the copies it replaced', () => {
-  // Every Date the copies could be handed: instants either side of the UTC
-  // date boundary, a midnight, a zero-padding case, and the unpadded-year
-  // quirk all nine shared (`${getFullYear()}` never pads below 1000).
-  const SAMPLES = [
-    new Date(INSTANT_A),
-    new Date(INSTANT_B),
-    new Date(2026, 7, 15, 0, 0, 0),
-    new Date(2026, 0, 5, 9, 8, 7),
-    new Date(2026, 11, 31, 23, 59, 59),
-    (() => {
-      const early = new Date(2026, 2, 10);
-      early.setFullYear(99);
-      return early;
-    })(),
+describe('formatCalendarDate output shapes', () => {
+  // Wall-clock samples built INSIDE each zone, so their local parts — and the
+  // expected bytes — are the same everywhere. Instants straddling the UTC date
+  // boundary are covered by the LOCAL_READINGS cases above.
+  const CASES = [
+    {
+      make: () => new Date(2026, 7, 15, 0, 0, 0),
+      date: '2026-08-15',
+      datetime: '2026-08-15 00:00:00',
+      time: '00:00:00',
+    },
+    {
+      make: () => new Date(2026, 0, 5, 9, 8, 7),
+      date: '2026-01-05',
+      datetime: '2026-01-05 09:08:07',
+      time: '09:08:07',
+    },
+    {
+      make: () => new Date(2026, 11, 31, 23, 59, 59),
+      date: '2026-12-31',
+      datetime: '2026-12-31 23:59:59',
+      time: '23:59:59',
+    },
+    {
+      // The year is not padded below 1000.
+      make: () => {
+        const early = new Date(2026, 2, 10);
+        early.setFullYear(99);
+        return early;
+      },
+      date: '99-03-10',
+      datetime: '99-03-10 00:00:00',
+      time: '00:00:00',
+    },
   ];
 
-  it.each(Object.entries(COPIES))('%s', (name, copy) => {
-    const disagreements: unknown[] = [];
+  it('emits the date, datetime and time shapes from local parts in every timezone', () => {
     for (const timeZone of ZONES) {
-      for (const sample of SAMPLES) {
-        for (const format of COPY_FORMATS[name as keyof typeof COPIES]) {
-          inZone(timeZone, () => {
-            const was = copy(sample, format);
-            const current = formatCalendarDate(sample, format);
-            if (was !== current) {
-              disagreements.push({ timeZone, format, was, now: current });
-            }
-          });
-        }
+      for (const { make, ...expected } of CASES) {
+        expect({
+          timeZone,
+          date: inZone(timeZone, () => formatCalendarDate(make(), 'date')),
+          datetime: inZone(timeZone, () => formatCalendarDate(make(), 'datetime')),
+          time: inZone(timeZone, () => formatCalendarDate(make(), 'time')),
+        }).toStrictEqual({ timeZone, ...expected });
       }
     }
-    expect(disagreements).toStrictEqual([]);
-  });
-
-  it('the samples are discriminating — a UTC rendering would fail this', () => {
-    // Guards the loop above: if every sample landed on the same day in every
-    // zone, "byte-identical" would be true of a broken helper too.
-    const disagreements = ZONES.flatMap((timeZone) =>
-      SAMPLES.filter((sample) => inZone(timeZone, () => formatCalendarDate(sample)) !== isoDay(sample)),
-    );
-    expect(disagreements.length).toBeGreaterThan(0);
   });
 });

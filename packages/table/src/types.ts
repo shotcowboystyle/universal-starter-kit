@@ -280,8 +280,8 @@ export interface TableFilter {
 
 /**
  * A field the table can filter on, declared SEPARATELY from visible columns.
- * Lets consumers expose hidden / non-column data keys (e.g. every Frappe
- * doctype field) to the toolbar filter surface. `id` is the row-data key.
+ * Lets consumers expose hidden / non-column data keys (e.g. every field of
+ * a server-side record) to the toolbar filter surface. `id` is the row-data key.
  */
 export interface FilterableField {
   id: string;
@@ -481,7 +481,7 @@ export interface DataTableProps<TData extends DataTableData = DataTableData> {
    * semantics as a filter/sort change made through the table's own chrome
    * (page resets to 0) — WITHOUT a remount. This is the keep-rows-and-
    * reconcile contract for screens where an outer surface owns filtering
-   * (backoffice list chrome): rows stay rendered while the new query
+   * (e.g. a list screen with its own filter chrome): rows stay rendered while the new query
    * resolves; no teardown, no skeleton flash, no scroll reset. Content is
    * compared deeply, so unstable array identities are safe; internal chrome
    * changes (header sort clicks) are not overridden unless the adopted
@@ -524,8 +524,8 @@ export interface DataTableProps<TData extends DataTableData = DataTableData> {
    * card-layout "Add Filter" control.
    *
    * `false` is the chrome-suppression contract for screens where an OUTER
-   * surface is the single filtering authority (e.g. the backoffice list
-   * chrome): the table renders no filter entry points, but filters injected
+   * surface is the single filtering authority (e.g. a list screen with its
+   * own filter chrome): the table renders no filter entry points, but filters injected
    * through `initialState.filters` / the state channel still apply — they
    * pre-filter client-side data and map to server params under
    * `manualFiltering` — and no table chrome can mutate them (the search
@@ -835,8 +835,8 @@ export interface UseDataTableReturn<TData extends DataTableData = DataTableData>
 /**
  * Filter-editor / comparison type for a column.
  *
- * `"money"` (MPO-252) is a decimal STRING, not a number: a Frappe Currency
- * field arrives as "-455.87" because a float would round it. It sorts and
+ * `"money"` (MPO-252) is a decimal STRING, not a number: a currency field
+ * from a server arrives as "-455.87" because a float would round it. It sorts and
  * filters through the exact BigInt helpers in utils/money.ts, so `"9.00"`
  * orders BELOW `"10.00"` — which the `"text"` fallback got backwards, in
  * silence, on every amount column in the kit.

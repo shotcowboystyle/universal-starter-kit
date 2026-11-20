@@ -42,9 +42,8 @@ const PACKAGE_JSON = 'package.json';
  * store `tamagui` -> store `@tamagui/core` -> store `@tamagui/web`; five took
  * the hoisted `node_modules/tamagui`, which has no nested node_modules and so
  * walks up to the hoisted `@tamagui/core` and `@tamagui/web`. Those five were
- * packages/frappe's story files — the only modules in the repo that import
- * `tamagui` from a package with no copy of its own — and their 14 stories were
- * the 14 that threw `Missing theme.` on storybook-static while rendering on
+ * story files in a package with no `tamagui` copy of its own, and their
+ * stories threw `Missing theme.` on storybook-static while rendering on
  * dev. The theme provider is mounted from the store record; their `Button`,
  * `Text` and `YStack` read the hoisted record's context, which no provider
  * ever wrote to.

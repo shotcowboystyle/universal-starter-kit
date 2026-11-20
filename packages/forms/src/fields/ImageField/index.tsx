@@ -1,5 +1,5 @@
 /**
- * ImageField — Frappe Attach Image: one preview frame that attaches, replaces,
+ * ImageField — image attachment: one preview frame that attaches, replaces,
  * and drops; Remove is a sibling action. Keyboard ring on the frame
  * (outer painted box) and a second ring on Remove — never on the hidden input.
  *
@@ -70,7 +70,7 @@ export interface ImageFieldProps {
   showRemove?: boolean;
   /** Placeholder text when no image. Empty string hides the caption. */
   placeholder?: string;
-  /** How the preview fits the frame (Frappe Attach Image uses contain for logos). */
+  /** How the preview fits the frame (use contain for logos). */
   objectFit?: ObjectFit;
   /** When true, renders a skeleton placeholder instead of the image field */
   skeleton?: boolean;

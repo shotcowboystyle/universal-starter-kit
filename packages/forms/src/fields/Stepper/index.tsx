@@ -140,7 +140,7 @@ export type StepperProps<
      */
     buttonPosition?: StepperButtonPosition;
     /**
-     * ISO 4217 code or Frappe-style symbol. Writes the currency glyph beside
+     * ISO 4217 code or a currency symbol (e.g. `₹`). Writes the currency glyph beside
      * the value on the locale's side and puts the value on the numeric
      * (end) alignment.
      */

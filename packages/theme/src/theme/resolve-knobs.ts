@@ -100,7 +100,7 @@ const borderWidthMap = {
 // Delivery is a class + mounted stylesheet (cornerSmoothing.ts) because
 // Tamagui strips unknown keys from the `style` prop (skipProps) but merges
 // `className`. Native resolves to `round` for now (SquircleView adoption is
-// phase 2); GTK has no corner-shape equivalent and stays on the plain arc.
+// phase 2).
 const cornerSmoothingStyle: Partial<Record<CornerSmoothing, { className: string }>> = isWeb
   ? { smooth: { className: cornerSmoothClassName } }
   : {};

@@ -132,7 +132,7 @@ const sizeEscapeTree = (rows: [string, string][]) =>
   escapeRegistryTree('## Size-recipe escapes', ['public', 'forms', 'src', 'Toolbar'], rows);
 
 const colorEscapeTree = (rows: [string, string][]) =>
-  escapeRegistryTree('## Colour-literal escapes', ['apps', 'demo', 'gnome'], rows);
+  escapeRegistryTree('## Colour-literal escapes', ['apps', 'demo', 'canvas'], rows);
 
 describe(resolveRoots, () => {
   it('defaults apps/features/public roots under root', () => {
@@ -443,22 +443,6 @@ export const here = path.dirname(fileURLToPath(import.meta.url));
 });
 
 describe('a scaffolded project, where the template app is renamed and public/ is pruned', () => {
-  it('passes the vscode webview fonts.css in a product app that is not called one', () => {
-    const root = makeTree();
-    mkdirSync(path.join(root, 'apps', 'demo', 'vscode', 'webview'), { recursive: true });
-    writeFileSync(path.join(root, 'apps', 'demo', 'vscode', 'webview', 'fonts.css'), '@font-face {}\n');
-    expect(runChecks(root).code).toBe(0);
-  });
-
-  it('still fails any other .css in that vscode webview', () => {
-    const root = makeTree();
-    mkdirSync(path.join(root, 'apps', 'demo', 'vscode', 'webview'), { recursive: true });
-    writeFileSync(path.join(root, 'apps', 'demo', 'vscode', 'webview', 'app.css'), 'body {}\n');
-    const { code, messages: errors } = runChecks(root);
-    expect(code).toBe(1);
-    expect(errors).toMatch(/apps\/demo\/vscode\/webview\/app\.css/u);
-  });
-
   it('skips the transition check, and says so, when the animation registry is not in the tree', () => {
     const root = makeTree();
     writeFileSync(
@@ -548,8 +532,8 @@ export const f = <XStack
 });
 
 describe('color-literal escape registry', () => {
-  const paint = 'apps/demo/gnome/gtk-paint.ts';
-  const reason = 'GTK widget paint outside TamaguiProvider';
+  const paint = 'apps/demo/canvas/canvas-paint.ts';
+  const reason = 'canvas paint outside TamaguiProvider';
 
   it('fails a hex-escape whose file and reason are not a row, naming the file, line and reason', () => {
     const root = colorEscapeTree([]);

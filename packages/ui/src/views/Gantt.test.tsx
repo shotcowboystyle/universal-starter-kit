@@ -84,7 +84,7 @@ describe('Gantt suite', () => {
     });
 
     describe(normalizeSpanEdges, () => {
-      it('treats midnight ends as inclusive whole days (Frappe date fields)', () => {
+      it('treats midnight ends as inclusive whole days (date-only fields)', () => {
         const { startEdge, endEdge } = normalizeSpanEdges({ start: mar(10), end: mar(12) });
         expect(startEdge).toStrictEqual(mar(10));
         expect(endEdge).toStrictEqual(mar(13));

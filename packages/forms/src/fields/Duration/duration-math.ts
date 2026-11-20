@@ -45,7 +45,7 @@ export const partsToSeconds = (parts: DurationParts, hideDays: boolean): number 
   return days * 86_400 + hours * 3600 + minutes * 60 + seconds;
 };
 
-/** Frappe-style "1d 2h 3m 4s", clock "1:30" / "1:30:00", or raw seconds. */
+/** Unit-suffixed "1d 2h 3m 4s", clock "1:30" / "1:30:00", or raw seconds. */
 export const parseDurationText = (text: string): number | null => {
   const trimmed = text.trim().toLowerCase();
   if (!trimmed) {

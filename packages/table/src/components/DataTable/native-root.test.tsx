@@ -2,7 +2,7 @@
  * The native root honors the props the web root does (MPO-454).
  *
  * index.native.tsx handed useDataTable a subset of the web root's options
- * and never drew a bulk bar, so on iOS the backoffice list (infinite server
+ * and never drew a bulk bar, so on iOS a server-backed list (infinite server
  * mode, rows only through `loadPage`) showed "No data available", and
  * checked rows offered no Export CSV. These specs render the native root
  * itself: the suite runs on web, so `react-native` resolves to

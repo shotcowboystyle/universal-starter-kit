@@ -1,5 +1,5 @@
 /**
- * ChildTable — FieldLayout wrapper around TableInput (Frappe child-table field).
+ * ChildTable — FieldLayout wrapper around TableInput (child-table form field).
  *
  * Stories cover the forms field contract D/R/E/Q/S/C: disabled, read-only,
  * error, required, skeleton, compact — plus standalone onChange and form bind.

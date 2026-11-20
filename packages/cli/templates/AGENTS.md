@@ -46,8 +46,6 @@ stack-navigation seam (`@repo/router/seam`).
 | `@repo/forms`      | Fields, Form, InputParts, field contracts, form color ramps                              |
 | `@repo/table`      | DataTable, cells, filters, URL table state                                               |
 
-`table` and `forms` know nothing of Frappe.
-
 ### Import rules (enforced)
 
 1. **No raw `tamagui`** in `apps/`, `features/` or `packages/`: import
@@ -57,7 +55,7 @@ stack-navigation seam (`@repo/router/seam`).
    goes through Tamagui + knobs.
 3. **No hex color literals in `apps/`, `packages/` or `features/`**: use
    theme tokens (`$color10`, semantic ramps, knob recipes). A file no token
-   reaches (GTK widget CSS, a content script, Expo build config) opts out with
+   reaches (a content script, Expo build config) opts out with
    a `// hex-escape: <reason>` comment that says why.
 
 Run: `pnpm lint` (oxlint + `scripts/lint-conventions.mjs`).
@@ -112,12 +110,11 @@ Rules:
 - `@repo/table` is framework-agnostic display/filter/sort/paginate.
 - Cell editors larger than the anchor use popover (web) / sheet (native); never
   grow the row. Editor popups dismiss only on dismissal intent.
-- Frappe integration does not belong in `table`.
 - Child-table / TableInput follow the same field `onChange` contract as forms.
 
 ## Screen data states
 
-Every screen-level data fetch, not only Frappe, MUST render loading, empty,
+Every screen-level data fetch MUST render loading, empty,
 error and ready through `AsyncBoundary`, `EmptyState` and `Skeleton` from
 `@repo/ui`. A bare
 `error ? <Paragraph color="$color11">` branch is a defect. Empty ≠ error ≠

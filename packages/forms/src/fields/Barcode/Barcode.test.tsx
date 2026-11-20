@@ -207,7 +207,7 @@ describe(Barcode, () => {
       expect(result.container.querySelector('canvas')).toBeNull();
     });
 
-    it('draws QR for the Frappe fieldtype qrcode token', () => {
+    it('draws QR for the qrcode alias', () => {
       const result = renderWithProviders(
         <Barcode
           label="QR"

@@ -163,8 +163,6 @@ Optional link rendering when displaying values:
 
 When `linkResolver` returns a non-null href, the value renders as `<Link href={...}>`. In edit mode, normal input is shown. Link behavior applies in readOnly/display mode.
 
-**Frappe:** Schema mapping (doctype → linkResolver) belongs in an optional integration layer. Core forms stay doctype-agnostic.
-
 ## Package Structure
 
 ```text

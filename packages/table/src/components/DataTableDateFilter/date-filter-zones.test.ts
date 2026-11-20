@@ -4,8 +4,7 @@
  *
  * Every fixture elsewhere in this folder stamps rows with `toISOString()`, so
  * both sides of every comparison were full instants and the filter looked
- * correct. A Frappe `Date` column — and any CSV, API or fixture that stores a
- * calendar day — sends bare `YYYY-MM-DD`, which ECMA-262 parses as UTC
+ * correct. Any CSV, API or fixture that stores a calendar day sends bare `YYYY-MM-DD`, which ECMA-262 parses as UTC
  * midnight. The relative windows (`isToday`, `isThisWeek`, …) are built from
  * LOCAL parts, so the two sides disagreed by a day and the filter dropped or
  * admitted a whole day of rows.
@@ -66,7 +65,7 @@ const LOCAL_TODAY = {
   },
 } satisfies Record<string, Record<(typeof ZONES)[number], string>>;
 
-/** Rows are bare calendar days, the shape a Frappe `Date` column sends. */
+/** Rows are bare calendar days, the shape a date-only column sends. */
 const DATE_ONLY_ROWS = ['2026-08-13', '2026-08-14', '2026-08-15', '2026-08-16'].map((day) => ({
   id: day,
   due: day,

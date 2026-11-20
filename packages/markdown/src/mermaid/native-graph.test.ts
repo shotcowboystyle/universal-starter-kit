@@ -9,8 +9,7 @@
  * `one build --platform ios` outright with no bundle at all.
  *
  * The blast radius is the whole workspace: this package's barrel re-exports
- * ./mermaid, so any native consumer that reaches the barrel — including
- * anyone importing one component from @repo/frappe-ui — used to
+ * ./mermaid, so any native consumer that reaches the barrel used to
  * inherit the failure.
  *
  * The rule this pins: for every module in src/, the tier a native bundler

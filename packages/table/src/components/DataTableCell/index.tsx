@@ -1415,7 +1415,7 @@ export const DataTableCell = ({
 
     // ─── Text inputs ──────────────────────────────────────────
     case 'textarea': {
-      // LC-06 / Airtable expand / Frappe Text Editor: multiline text is
+      // LC-06 / Airtable expand: multiline text is
       // taller than the row. Face is a single-line FieldDisplay; the editor
       // opens in the modal (web) / sheet (native) so the anchor row never
       // grows. Staging matches the other compose editors (Done / Cancel).

@@ -1,5 +1,5 @@
 /**
- * Row-selection semantics (desk-parity audit fix).
+ * Row-selection semantics (audit fix).
  *
  * The audit finding: list-row selection toggles rendered as anonymous
  * pressables — no role=checkbox, no aria-checked, invisible to AT and

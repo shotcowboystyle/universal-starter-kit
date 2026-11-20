@@ -174,8 +174,8 @@ const addPackageAliases = (aliases: Record<string, string>, pkgDir: string, mani
  * source. Without this, packages whose exports point at dist (e.g. table)
  * resolve to stale builds that can reference since-moved dependencies.
  *
- * Shared by the web-extension and vscode-webview target configs (the
- * pattern originated in apps/webext).
+ * Used by the web-extension target config (the pattern originated in
+ * apps/webext).
  */
 export const workspaceSourceAliases = (workspaceRoot?: string) => {
   const root = workspaceRoot ?? lookupProjectRoot();

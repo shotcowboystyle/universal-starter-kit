@@ -10,7 +10,7 @@
 - **🔍 Advanced Filtering** - query builder with 20+ operators
 - **🔗 URL State Management** - Bookmarkable/shareable table states
 - **🌍 Universal Compatibility** - Works with any React router or framework
-- **📱 Cross-Platform** - Web, React Native, Tauri, GNOME, and more
+- **📱 Cross-Platform** - Web, React Native, Tauri, and more
 - **⚡ Performance** - Server/client-side filtering and pagination
 - **🎨 Beautiful UI** - Built with Tamagui for consistent design
 - **♿ Accessible** - WCAG 2.1 AA compliant
@@ -64,12 +64,9 @@ function UserTable() {
 
 ## 📦 Package Boundaries
 
-| Package           | Responsibility                                                                                                                                                                           |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@repo/table`     | Framework-agnostic table: display, filter, sort, paginate, virtualize, resize, pin, expand, keyboard nav. No Frappe or API assumptions.                                                  |
-| `@repo/frappe-ui` | Frappe integration: FrappeTable wraps DataTable, fetches from Frappe, maps to DataTable props. Uses `manualFiltering`, `manualPagination`, `manualSorting` when `serverSide` is enabled. |
-
-**Dependency direction**: frappe-ui → table. Table does not depend on frappe-ui or frappe.
+| Package       | Responsibility                                                                                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `@repo/table` | Framework-agnostic table: display, filter, sort, paginate, virtualize, resize, pin, expand, keyboard nav. No backend or API assumptions. |
 
 ---
 
@@ -84,7 +81,6 @@ Works with **any React framework** and **all platforms**:
 | **Next.js App Router** | `createUrlStrategy.nextJs()`      | ✅ Full Support |
 | **React Native**       | `syncWithUrl={false}`             | ✅ Full Support |
 | **Tauri**              | `createUrlStrategy.universal()`   | ✅ Full Support |
-| **GNOME (GTK/GJS)**    | `syncWithUrl={false}`             | ✅ Full Support |
 | **Vanilla React**      | `createUrlStrategy.universal()`   | ✅ Full Support |
 | **Any Router**         | `createUrlStrategy.custom()`      | ✅ Full Support |
 
@@ -912,7 +908,7 @@ const availableColumns = [
 // Web: URL updates automatically
 // /users?page=2&pageSize=50&filters=name:contains:john&sort=name:asc
 
-// React Native / GNOME: State persists in memory
+// React Native: State persists in memory
 // Tauri: State syncs with IPC if needed
 
 <DataTable
@@ -1218,7 +1214,7 @@ import { useUrlState } from '@repo/router';
 
 ### What We Have
 
-- **Native Cross-Platform Support** - Works on Web, React Native, Tauri, GNOME without changes
+- **Native Cross-Platform Support** - Works on Web, React Native, Tauri without changes
 - **URL State Strategy Pattern** - Pluggable routing integration (OneStack, React Router, Next.js)
 - **Forms Integration** - Deep integration with @repo/forms
 - **Universal Router Compatibility** - Works with any React routing solution

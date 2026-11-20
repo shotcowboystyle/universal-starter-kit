@@ -1,13 +1,11 @@
 /**
  * Geolocation value formats.
  *
- * Stock Frappe stores the Geolocation fieldtype as a GeoJSON FeatureCollection
- * STRING — `geolocation.js` does
- * `set_value(JSON.stringify(this.editableLayers.toGeoJSON()))`, where Leaflet's
- * `toGeoJSON()` emits `[lng, lat]` coordinate pairs.
- *
- * This repo's field stores the compact `{"lat":n,"lng":n}` object. Both are read
- * here so a doc created in stock Frappe renders instead of coming up empty.
+ * Two formats are accepted: this repo's compact `{"lat":n,"lng":n}` object, and
+ * a GeoJSON FeatureCollection STRING (e.g. what Leaflet's
+ * `JSON.stringify(layers.toGeoJSON())` writes), whose coordinate pairs are
+ * `[lng, lat]`. Both are read here so a GeoJSON value renders instead of coming
+ * up empty.
  * `detectGeoFormat` reports which format a stored value used, so the write path
  * can persist back in the format the doc arrived in.
  */
@@ -89,8 +87,8 @@ const pointCoordinates = (feature: GeoJsonFeature): [number, number] | null => {
 };
 
 /**
- * Pull the first Point geometry out of a stock Frappe FeatureCollection.
- * Frappe also stores Polygon/LineString features (drawn shapes); those carry no
+ * Pull the first Point geometry out of a GeoJSON FeatureCollection.
+ * A collection may also hold Polygon/LineString features (drawn shapes); those carry no
  * single coordinate for our lat/lng field, so they are skipped rather than
  * approximated.
  */
@@ -139,13 +137,13 @@ const isPointFeature = (feature: GeoJsonFeature): boolean => feature.geometry?.t
  * Serialize coordinates back to disk in the format the document arrived in.
  *
  * `latlng` emits this repo's compact `{"lat":n,"lng":n}`. `featurecollection`
- * emits a stock-Frappe GeoJSON FeatureCollection with `[lng, lat]` ordering, so
- * `geolocation.js` reads the edit back.
+ * emits a GeoJSON FeatureCollection with `[lng, lat]` ordering, so GeoJSON
+ * readers get the edit back.
  *
  * `previous` (the value being replaced) is preserved as far as it can be: the
- * first Point feature is moved in place and keeps its `properties` (Frappe
- * writes `point_type`/`radius` there for circles), and any Polygon/LineString
- * features the user drew in Frappe survive a coordinate edit untouched. With no
+ * first Point feature is moved in place and keeps its `properties` (e.g.
+ * `point_type`/`radius` for circles), and any Polygon/LineString features in
+ * the collection survive a coordinate edit untouched. With no
  * Point feature to move, one is appended with the empty `properties` a plain
  * `L.marker` serializes to.
  */

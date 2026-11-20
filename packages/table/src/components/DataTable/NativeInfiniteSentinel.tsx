@@ -2,8 +2,8 @@
  * Native load-more trigger for DataTable's infinite mode.
  *
  * Web watches its sentinel with an IntersectionObserver. React Native has
- * none, and the table never sees its host's scroll events: the backoffice
- * list scrolls the whole screen in a ScrollView the table sits inside. So
+ * none, and the table never sees its host's scroll events: a host may
+ * scroll the whole screen in a ScrollView the table sits inside. So
  * the sentinel asks where it is on screen, on a short interval while more
  * pages exist, and fires once it comes within `leadPx` of the window's
  * bottom edge, the same lead web gives its observer.

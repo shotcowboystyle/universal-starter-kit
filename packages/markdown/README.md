@@ -27,7 +27,7 @@ Requires `react` and `react-native` (or react-native-web) as peers.
 ## What it must not do
 
 - No rich-text _editing_ — the editor lives in `@repo/rich-text`
-- No app-specific content or Frappe assumptions
+- No app-specific content
 
 ## Usage
 

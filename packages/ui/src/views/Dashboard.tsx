@@ -146,7 +146,7 @@ export interface ProgressConfig {
 }
 
 /**
- * Frappe workspace shortcut: label + nested count pill.
+ * Workspace shortcut: label + nested count pill.
  */
 export interface ShortcutConfig {
   id: string;
@@ -158,7 +158,7 @@ export interface ShortcutConfig {
 }
 
 /**
- * Frappe link card / Polaris resource list / Grafana table-lite.
+ * Link card / Polaris resource list / Grafana table-lite.
  */
 export interface DashboardListItem {
   id: string;
@@ -181,7 +181,7 @@ export type DashboardWidgetType = DashboardMetricWidgetType | DashboardLinkWidge
 /**
  * Dashboard widget configuration.
  *
- * Catalog (Frappe workspace + Grafana-lite + Polaris metrics):
+ * Catalog (workspace + Grafana-lite + Polaris metrics):
  * number card (`kpi`), plot (`chart`), bar gauge (`progress`), shortcut,
  * link list, and an escape hatch (`custom`).
  */
@@ -350,7 +350,7 @@ export const resolveTrendColor = (
 };
 
 /**
- * KPI card — Frappe number card + Grafana Stat + Polaris metric.
+ * KPI card — number card + Grafana Stat + Polaris metric.
  * Nested icon well and trend pill use `nestedControl`; the value
  * never takes `sizeToken` as fontSize (that token is a control height).
  */

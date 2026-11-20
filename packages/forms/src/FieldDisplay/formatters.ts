@@ -1,10 +1,9 @@
 /**
  * Shared read-only value formatters.
  *
- * FieldDisplay (table cells) and frappe-ui's ReadOnly field both format
- * through these so the same value renders identically in a table read cell
- * and a Frappe read-only field. Keep formatting logic here, not inline in
- * either component.
+ * FieldDisplay (table cells) and read-only field displays format through
+ * these so the same value renders identically everywhere. Keep formatting
+ * logic here, not inline in a component.
  */
 
 import { formatAbsoluteDate, formatCurrency, formatNumber } from '@repo/theme';
@@ -76,7 +75,7 @@ export interface NumericFormatOptions {
 /**
  * Read-only numeric cells speak the house number registers (render
  * channel): the same figure reads identically in a table cell, a KPI tile
- * and a group aggregate. `precision` pins the fraction digits a Frappe field
+ * and a group aggregate. `precision` pins the fraction digits a field
  * declares; the register owns everything else.
  */
 export const formatNumericText = (num: number, options: NumericFormatOptions = {}): string => {

@@ -81,7 +81,7 @@ describe(Duration, () => {
       expect(parts.seconds).toBe(40);
     });
 
-    it('parses Frappe-style duration text', () => {
+    it('parses unit-suffixed duration text', () => {
       expect(parseDurationText('1d 2h 3m 4s')).toBe(93_784);
       expect(parseDurationText('01h 30m')).toBe(5400);
       expect(parseDurationText('1:30')).toBe(5400);
@@ -135,7 +135,7 @@ describe(Duration, () => {
         />,
       );
       expect(result.container.querySelector('input')).toBeNull();
-      const skeleton = result.container.querySelector('[data-duration-skeleton]') as HTMLElement;
+      const skeleton = result.container.querySelector<HTMLElement>('[data-duration-skeleton]')!;
       expect(skeleton).toBeTruthy();
       const expected = getFieldHeight('$4');
       const height = skeletonWidthOrHeight(skeleton, 'height');
@@ -237,8 +237,8 @@ describe(Duration, () => {
           value={3600}
         />,
       );
-      const box = result.container.querySelector('[data-duration-box]') as HTMLElement;
-      const row = result.container.querySelector('[data-duration-row]') as HTMLElement;
+      const box = result.container.querySelector<HTMLElement>('[data-duration-box]')!;
+      const row = result.container.querySelector<HTMLElement>('[data-duration-row]')!;
       expect(box).toBeTruthy();
       expect(row).toBeTruthy();
       expect(getComputedStyle(box).justifyContent).toMatch(/flex-start|start/u);
@@ -253,8 +253,8 @@ describe(Duration, () => {
           value={3600}
         />,
       );
-      const box = result.container.querySelector('[data-duration-box]') as HTMLElement;
-      const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLElement;
+      const box = result.container.querySelector<HTMLElement>('[data-duration-box]')!;
+      const hours = result.container.querySelector<HTMLElement>('input[aria-label="Hours"]')!;
       expect(box).toBeTruthy();
       expect(hours).toBeTruthy();
       const recipeHeight = sizeRecipeForToken('$3').height;
@@ -339,8 +339,8 @@ describe(Duration, () => {
           value={3600}
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      const hours = result.container.querySelector<HTMLInputElement>('input[aria-label="Hours"]')!;
       expect(box).toBeTruthy();
       expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(hours)).toBe(true);
@@ -374,7 +374,7 @@ describe(Duration, () => {
           onChange={onChange}
         />,
       );
-      const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
+      const hours = result.container.querySelector<HTMLInputElement>('input[aria-label="Hours"]')!;
       fireEvent.keyDown(hours, { key: 'ArrowUp' });
       expect(onChange).toHaveBeenCalledWith(7200);
     });
@@ -388,7 +388,7 @@ describe(Duration, () => {
           onChange={onChange}
         />,
       );
-      const minutes = result.container.querySelector('input[aria-label="Min"]') as HTMLInputElement;
+      const minutes = result.container.querySelector<HTMLInputElement>('input[aria-label="Min"]')!;
       act(() => {
         fireEvent.change(minutes, { target: { value: '90' } });
         // oxlint-disable-next-line github/no-blur -- the test exercises the blur-commit path itself
@@ -397,7 +397,7 @@ describe(Duration, () => {
       expect(onChange).toHaveBeenCalledWith(5400);
     });
 
-    it('pastes Frappe-style text into the whole value', () => {
+    it('pastes unit-suffixed text into the whole value', () => {
       const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration
@@ -406,7 +406,7 @@ describe(Duration, () => {
           onChange={onChange}
         />,
       );
-      const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
+      const hours = result.container.querySelector<HTMLInputElement>('input[aria-label="Hours"]')!;
       fireEvent.paste(hours, {
         clipboardData: { getData: () => '1h 30m' },
       } as unknown as ClipboardEvent);

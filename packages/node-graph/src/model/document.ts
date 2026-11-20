@@ -1,8 +1,8 @@
 /**
  * The document. Types only — no React, no DOM, no `@xyflow`, no runtime.
  *
- * Design §4.1 and §4.2. This is what a server, a CLI, a Frappe hook or the CI
- * bench imports when it wants the shape of a graph and nothing else.
+ * Design §4.1 and §4.2. This is what a server, a CLI or the CI bench
+ * imports when it wants the shape of a graph and nothing else.
  */
 
 /**

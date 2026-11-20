@@ -1,11 +1,11 @@
 /**
  * DataTableDocumentList — subject-led document rows for `layout="list"`.
  *
- * This is the desk List view, not a grid and not cards. Each document gets one
+ * This is a document List view, not a grid and not cards. Each document gets one
  * horizontal row: checkbox, then a title with its meta stacked underneath in
  * muted text, then a trailing indicator cluster, then actions. No column
  * headers, no key-value labels, no card frame, and no wrapping into a column
- * grid (Polaris Index / Frappe list).
+ * grid (Polaris Index).
  *
  * Slots are assigned by column, not by position: `meta.role` of `title`,
  * `indicator`, `actions` or `hidden` decides, and status-shaped ids

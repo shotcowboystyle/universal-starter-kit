@@ -378,12 +378,12 @@ describe('no-hex-literals comments and palette', () => {
 
 describe('no-hex-literals hex-escape comment', () => {
   it('errors on a hex in apps/ when the file carries no hex-escape comment', () => {
-    expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
+    expect(reportsFor('apps/one/canvas/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
   });
 
   it('skips the file whose line comment writes a reason', () => {
-    const text = '// hex-escape: GTK widget paint outside TamaguiProvider\nexport const bg = "#ffffff";\n';
-    expect(reportsFor('apps/one/gnome/gtk-paint.ts', text)).toStrictEqual([]);
+    const text = '// hex-escape: canvas paint outside TamaguiProvider\nexport const bg = "#ffffff";\n';
+    expect(reportsFor('apps/one/canvas/canvas-paint.ts', text)).toStrictEqual([]);
   });
 
   it('does not take a comment with no reason, a JSDoc line or a backticked mention as the marker', () => {

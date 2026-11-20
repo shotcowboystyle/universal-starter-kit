@@ -385,7 +385,7 @@ export const applyReorder = <T>(items: readonly T[], from: number, to: number): 
   return next;
 };
 
-/** Frappe child-table `idx`: 1-based, rewritten after a committed reorder. */
+/** Child-table row `idx`: 1-based, rewritten after a committed reorder. */
 export const renumberIdx = <T extends { idx?: number }>(items: readonly T[]): T[] =>
   items.map((item, i) => ({ ...item, idx: i + 1 }));
 

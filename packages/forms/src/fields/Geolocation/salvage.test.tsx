@@ -232,7 +232,7 @@ describe('Geolocation salvage regressions', () => {
   });
 
   it.each(['Helsinki', '60.16952, 24.93545'])(
-    'preserves Frappe features when picking %s and pans the controlled map',
+    'preserves GeoJSON features when picking %s and pans the controlled map',
     async (query) => {
       const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
@@ -446,7 +446,7 @@ describe('Geolocation salvage regressions', () => {
     expect(onChange).toHaveBeenLastCalledWith('');
   });
 
-  it('Locate retains the stock Frappe shape and existing features', async () => {
+  it('Locate retains the GeoJSON shape and existing features', async () => {
     vi.stubGlobal('navigator', {
       geolocation: {
         getCurrentPosition: (onPosition: PositionCallback) => {

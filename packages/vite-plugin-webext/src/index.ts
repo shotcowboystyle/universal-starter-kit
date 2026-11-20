@@ -1,7 +1,6 @@
 // Vite config factories for the web-extension target of a One platform app.
 //
-// The target lives INSIDE the product app (apps/<name>/webext/) — the same
-// pattern as the GNOME target's vite.config.gnome*.ts — and produces a
+// The target lives INSIDE the product app (apps/<name>/webext/) and produces a
 // loadable MV3 extension staging dir:
 //
 //   <stagingDir>/manifest.json

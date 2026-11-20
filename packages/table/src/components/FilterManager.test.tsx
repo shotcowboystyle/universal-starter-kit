@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FilterManager } from './FilterManager';
 
 describe(FilterManager, () => {
-  it('renders with generic filter definitions (no Frappe metadata)', () => {
+  it('renders with generic filter definitions', () => {
     const genericFilters: [string, string, any][] = [
       ['name', 'contains', 'Pika'],
       ['type', 'is', 'Electric'],
@@ -59,11 +59,11 @@ describe(FilterManager, () => {
     expect(getByText('Apply filters to save them')).toBeDefined();
   });
 
-  it('accepts canCreateGlobal prop without Frappe-specific config', () => {
+  it('accepts canCreateGlobal prop', () => {
     const genericFilters: [string, string, any][] = [['field1', 'equals', 'value1']];
     const onSave = vi.fn<(filterName: string, isGlobal: boolean) => void>();
 
-    // Should render without errors — no Frappe provider needed
+    // Should render without errors
     const { getByText } = renderWithProviders(
       <FilterManager
         currentFilters={genericFilters}

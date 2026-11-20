@@ -2,8 +2,8 @@
  * Web barrel.
  *
  * The model half is NOT re-exported here. It has its own condition
- * (`@repo/node-graph/model`) so a server, a CLI, a Frappe hook or
- * the CI bench can import it without React or `@xyflow` — re-exporting it from
+ * (`@repo/node-graph/model`) so a server, a CLI or the CI bench can
+ * import it without React or `@xyflow` — re-exporting it from
  * this file would defeat that by making one import pull the whole editor.
  *
  * `css/graph.css` is imported by `NodeGraphWeb`, so a consumer of `NodeGraph`

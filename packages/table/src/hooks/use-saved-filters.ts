@@ -26,7 +26,7 @@ export interface ParsedFilter {
 /**
  * Generic storage adapter for saved filters.
  * Implement this interface to connect to any persistence backend
- * (REST API, localStorage, IndexedDB, Frappe, etc.).
+ * (REST API, localStorage, IndexedDB, etc.).
  */
 export interface SavedFiltersStorage {
   /** Load all saved filters for a given context */
@@ -65,7 +65,7 @@ const parseRawFilter = (filter: SavedFilter): ParsedFilter | null => {
       filter_name: String(filter.filter_name ?? ''),
       // oxlint-disable-next-line typescript/no-unnecessary-type-conversion -- storage adapters return untyped records at runtime; coerce at this parse boundary
       for_user: String(filter.for_user ?? ''),
-      // SAFETY: saved filter payloads are Frappe-style [field, operator, value] tuples written by saveFilter
+      // SAFETY: saved filter payloads are [field, operator, value] tuples written by saveFilter
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tuple elements are not validated individually; consumers treat them as opaque filter triples
       filters: Array.isArray(filterArray) ? (filterArray as [string, string, unknown][]) : [],
       isGlobal: filter.for_user == null || filter.for_user === '',

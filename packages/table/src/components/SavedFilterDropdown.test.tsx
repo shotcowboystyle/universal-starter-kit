@@ -78,7 +78,7 @@ describe(SavedFilterDropdown, () => {
     expect(container.querySelector('button')).toBeDefined();
   });
 
-  it('accepts onDeleteFilter callback without Frappe dependency', () => {
+  it('accepts onDeleteFilter callback', () => {
     const onSelect = vi.fn<(filter: ParsedFilter | null) => void>();
     const onDelete = vi.fn<(filterName: string) => void>();
 
@@ -90,7 +90,7 @@ describe(SavedFilterDropdown, () => {
       />,
     );
 
-    // Should render without errors — no Frappe provider required
+    // Should render without errors
     expect(container.querySelector('button')).toBeDefined();
   });
 

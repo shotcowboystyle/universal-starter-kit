@@ -10,7 +10,7 @@ Design: `docs/design/node-graph-editor.md`. Build plan:
 ## Layout
 
 - `src/model/` — no React, no DOM, no `@xyflow`. Its own export condition, so a
-  server, a CLI, a Frappe hook or the CI bench can import it alone.
+  server, a CLI or the CI bench can import it alone.
 - `src/react-flow/xy.ts` — **the only `@xyflow` import site**, enforced by
   `no-restricted-imports` in `oxlintrc.json`.
 - `src/knobs/`, `src/theme/` — the knob envelope and the `--xy-*` token bridge.

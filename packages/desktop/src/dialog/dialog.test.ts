@@ -95,12 +95,11 @@ describe('dialog web stubs', () => {
 });
 
 /**
- * GJS's `window` is a react-gnome polyfill stub with none of the modal
- * globals on it. Reproduce that shape rather than deleting `window`, because
- * `typeof window !== "undefined"` is true on GNOME and a guard written only
- * against a missing `window` would sail straight past it.
+ * A stub `window` with none of the modal globals on it. Reproduce that shape
+ * rather than deleting `window`, because a guard written only against a
+ * missing `window` would sail straight past it.
  */
-describe('dialog defaults on a platform with no modal globals (GJS)', () => {
+describe('dialog defaults on a platform with no modal globals', () => {
   beforeEach(() => {
     for (const name of ['alert', 'confirm', 'prompt'] as const) {
       vi.stubGlobal(name, null);
@@ -112,7 +111,7 @@ describe('dialog defaults on a platform with no modal globals (GJS)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('still has a window, exactly as GNOME does', () => {
+  it('still has a window', () => {
     expect(window).not.toBeTypeOf('undefined');
   });
 
@@ -130,9 +129,9 @@ describe('dialog defaults on a platform with no modal globals (GJS)', () => {
     await expect(call()).rejects.toThrow(new RegExp(`dialog\\.${api} needs window\\.(?:alert|confirm|prompt)`, 'u'));
   });
 
-  it('names the package and points at the GNOME backend that would fix it', async () => {
+  it('names the package and says the defaults are web-only', async () => {
     await expect(dialog.confirm('delete?')).rejects.toThrow(/@repo\/desktop/u);
-    await expect(dialog.confirm('delete?')).rejects.toThrow(/index\.gnome\.ts/u);
+    await expect(dialog.confirm('delete?')).rejects.toThrow(/web-only/u);
   });
 
   it('leaves open and save working, since their default is an honest null', async () => {

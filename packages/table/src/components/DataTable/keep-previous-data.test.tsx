@@ -1,8 +1,8 @@
 /**
  * keepPreviousData — a refetch must not blank the body.
  *
- * TanStack Query's placeholderData / keepPreviousData, AG Grid's delta
- * row-data, and Frappe Desk's list all keep the last painted rows on
+ * TanStack Query's placeholderData / keepPreviousData and AG Grid's delta
+ * row-data both keep the last painted rows on
  * screen while the next query is in flight. The only in-flight chrome
  * allowed is a toolbar spinner (aria-busy). Skeleton, empty-state, and
  * a covering overlay are first-load only.

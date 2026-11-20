@@ -44,29 +44,23 @@ export interface DialogApi {
  * globals, so they are **web-only** — not the "safe default every platform
  * gets" the docs used to claim.
  *
- * GJS is the case that matters: react-gnome's polyfills define a stub
- * `window` with no `alert`, `confirm` or `prompt` on it, so these used to
- * dereference `undefined` and throw a bare `TypeError` from inside a shared
- * package, at whatever unrelated call site happened to trigger a confirm.
+ * On a runtime whose `window` lacks `alert`, `confirm` or `prompt`, these
+ * would dereference `undefined` and throw a bare `TypeError` from inside a
+ * shared package, at whatever unrelated call site triggered a confirm.
  * Failing with a named error that says which platform is missing which
  * capability is strictly better than that, and better than the other
  * tempting option — quietly returning `false` — because a delete confirm
  * that silently answers "no" looks like a broken button, while one that
  * silently answers "yes" deletes something nobody confirmed.
- *
- * The real fix is `dialog/index.gnome.ts` on `Adw.AlertDialog`, resolved by
- * the `.gnome.*` extensions the GNOME vite config registers. Until then this
- * throws, loudly, on GNOME.
  */
 const browserWindow = (name: 'alert' | 'confirm' | 'prompt', api: string): Window => {
-  // `typeof` because GJS may not declare `window` at all; a bare reference would throw.
+  // `typeof` because a non-browser runtime may not declare `window` at all; a bare reference would throw.
   const target = typeof window === 'undefined' ? undefined : window;
-  // The DOM typings say these globals always exist; the GJS stub window proves otherwise.
+  // The DOM typings say these globals always exist; a stub window may lack them.
   if (target?.[name] == null) {
     throw new TypeError(
       `@repo/desktop: dialog.${api} needs window.${name}, which this platform does not have. ` +
-        `The dialog defaults are the browser's modal globals and are web-only; GNOME needs an Adw.AlertDialog ` +
-        `backend in dialog/index.gnome.ts.`,
+        `The dialog defaults are the browser's modal globals and are web-only.`,
     );
   }
   return target;

@@ -1,5 +1,5 @@
 /**
- * Document-list slot taxonomy (Polaris Index / Frappe list, not a grid).
+ * Document-list slot taxonomy (Polaris Index, not a grid).
  *
  * A list row is subject-led: title + stacked muted meta, then a trailing
  * indicator cluster and actions. Remaining columns never lay out as equal

@@ -69,12 +69,12 @@ describe('formatCurrency (money register)', () => {
   });
 
   it('keeps the grouped register when a bad code makes Intl throw', () => {
-    // A Frappe field can hand over a malformed code; the money register must
+    // A data source can hand over a malformed code; the money register must
     // still group ("EUROS1,500.00", never a bare "1500").
     expect(formatCurrency(1500, { ...enUS, currency: 'EUROS' })).toBe('EUROS1,500.00');
   });
 
-  it('honors an explicit precision from a Frappe field', () => {
+  it('honors an explicit precision', () => {
     expect(formatCurrency(1500.456, { ...enUS, symbol: '$', precision: 3 })).toBe('$1,500.456');
   });
 
@@ -117,7 +117,7 @@ describe('currencyAffix (money editor glyph)', () => {
     expect(currencyAffix('EUR', 'de-DE')).toStrictEqual({ glyph: '€', position: 'trailing' });
   });
 
-  it('resolves a Frappe-style symbol through its code', () => {
+  it('resolves a bare symbol through its code', () => {
     expect(currencyAffix('₹', 'en-IN')).toStrictEqual({ glyph: '₹', position: 'leading' });
   });
 

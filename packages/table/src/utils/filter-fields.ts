@@ -1,5 +1,5 @@
 /**
- * Filter-field model — the Frappe-agnostic backbone for filtering on fields
+ * Filter-field model — the backend-agnostic backbone for filtering on fields
  * that are NOT visible columns (owner ask: "filter on columns that are not
  * visible").
  *
@@ -8,7 +8,7 @@
  * (visible columns first, then "More fields"), and `applyFiltersToData`
  * applies the advanced-filter model client-side against ANY row key — column
  * or not. Server-side tables (manualFiltering) skip the client pass and map
- * the same TableFilter[] to their own query params (frappe-ui does this).
+ * the same TableFilter[] to their own query params.
  *
  * One implementation per concept (LC-16): the operator vocabulary here is the
  * SAME set the ColumnHeaderFilter funnel uses — the funnel imports these maps

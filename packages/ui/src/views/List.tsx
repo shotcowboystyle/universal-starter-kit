@@ -438,9 +438,8 @@ interface ListHeightOptions {
  *
  * The hug height tracks the MEASURED content size once FlashList reports
  * it: an estimate-derived hug slices the last rows mid-row whenever rows
- * render taller than the estimate (measured overB 122/148 on
- * FrappeList/FrappeListView). The estimate is only the
- * pre-measure first paint.
+ * render taller than the estimate (measured overB 122/148). The estimate
+ * is only the pre-measure first paint.
  */
 const resolveListHeight = ({ heightProp, hasMore, estimateSize, measuredContentHeight, count }: ListHeightOptions) => {
   if (heightProp !== undefined) {

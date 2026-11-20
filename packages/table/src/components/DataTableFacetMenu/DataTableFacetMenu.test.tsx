@@ -142,7 +142,7 @@ describe(DataTableFacetMenu, () => {
     });
   });
 
-  describe('replace selection (desk facet semantics)', () => {
+  describe('replace selection', () => {
     it('replaces the selection with the pressed option', async () => {
       const onActiveValuesChange = vi.fn<(next: string[], pressed: DataTableFacetOption) => void>();
       const utils = renderWithProviders(

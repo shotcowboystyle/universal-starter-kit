@@ -245,7 +245,7 @@ export interface GanttTaskSpan {
   id?: string;
   /** Span start date. Absent = open at the start. */
   start?: Date;
-  /** Span end date (midnight ends are inclusive whole days — Frappe date fields). Absent = open at the end. */
+  /** Span end date (midnight ends are inclusive whole days — date-only fields). Absent = open at the end. */
   end?: Date;
   /**
    * Explicit bar color (hex/rgb/token). Passes through untouched — the
@@ -255,8 +255,8 @@ export interface GanttTaskSpan {
   /** Semantic bar intent rendered via the theme ramps. */
   intent?: GanttBarIntent;
   /**
-   * Optional completion 0–100. Paints a darker overlay on the bar (Frappe
-   * Gantt / MS Project progress). Omitted or 0 shows an empty bar. Ignored
+   * Optional completion 0–100. Paints a darker overlay on the bar (MS
+   * Project-style progress). Omitted or 0 shows an empty bar. Ignored
    * on an open-ended span.
    */
   progress?: number;
@@ -456,7 +456,7 @@ const clampProgress = (value: number | undefined): number | null => {
   return Math.min(100, Math.max(0, value));
 };
 
-/** Month bands for the dual-level axis (Frappe Gantt upper header). */
+/** Month bands for the dual-level axis (upper header). */
 const monthBands = (
   range: GanttRange,
   pxPerDay: number,
@@ -755,7 +755,7 @@ export const GanttView = ({
   const height = heightProp ?? steps.height;
   // Row paint is the press target: never below 44px, even at compact.
   const rowHeight = Math.max(MIN_PRESS_TARGET, steps.rowHeight);
-  // Dual-level axis (month band + day numbers) — Frappe Gantt upper/lower header.
+  // Dual-level axis (month band + day numbers) — upper/lower header.
   const { axisHeight } = steps;
   const pxPerDay = steps.pxPerDay[zoom];
   const { space } = knobProps;

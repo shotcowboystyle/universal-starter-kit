@@ -13,7 +13,6 @@ const makePlatform = (overrides: Partial<Platform> = {}): Platform => ({
   isExpo: false,
   isFirefox: false,
   isFirefoxExtension: false,
-  isGnome: false,
   isIframe: false,
   isIos: false,
   isNative: false,
@@ -42,10 +41,6 @@ describe(getPreciseName, () => {
 
   it('returns "android" when isAndroid is the most precise', () => {
     expect(getPreciseName(makePlatform({ isAndroid: true, isNative: true }))).toBe('android');
-  });
-
-  it('returns "gnome" for the GTK desktop target', () => {
-    expect(getPreciseName(makePlatform({ isGnome: true, isDesktop: true, isNative: true }))).toBe('gnome');
   });
 
   it('returns "tauri" for desktop Tauri apps', () => {

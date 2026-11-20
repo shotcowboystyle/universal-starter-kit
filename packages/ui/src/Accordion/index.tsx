@@ -335,8 +335,7 @@ const AccordionItem = forwardRef<TamaguiElement, AccordionItemProps>(function Ac
   const open = openValues.includes(value);
   const disabled = rootDisabled === true ? true : disabledProp;
 
-  // Stable ids for aria wiring (React.useId is stable across renders —
-  // the FrappeUI Heading unstable-id failure mode does not apply).
+  // Stable ids for aria wiring (React.useId is stable across renders).
   const uid = useId();
   const itemCtx = useMemo<AccordionItemCtxValue>(
     () => ({

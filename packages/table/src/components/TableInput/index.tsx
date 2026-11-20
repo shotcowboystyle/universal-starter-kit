@@ -15,7 +15,7 @@
  *   without `onChange` (see the UncontrolledStatic story).
  *
  * Row identity: added rows get a collision-free generated `id`. TableInput
- * reorders through the shared kanbanDnd machine (`enableReorder`); Frappe
+ * reorders through the shared kanbanDnd machine (`enableReorder`);
  * `idx` renumbering is the ChildTable layer (MPO-22), not this field.
  * `rowDetail` opens one row as a form over `detailColumns` (RowDetailEditor);
  * `isCellHidden` blanks a cell per row, and the caller owns the rule.
@@ -656,7 +656,7 @@ export interface TableInputProps<TData extends DataTableData = DataTableData> {
   'aria-label'?: string;
   /**
    * Nested density (LC-73). Child tables sit on a form surface, so compact
-   * is the default — Frappe's grid is a dense in-list editor, not a page table.
+   * is the default — a child table is a dense in-form editor, not a page table.
    */
   compact?: boolean;
   /**

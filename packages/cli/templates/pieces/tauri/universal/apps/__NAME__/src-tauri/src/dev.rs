@@ -454,8 +454,8 @@ p{margin:.8rem 0;font-size:.95rem;color:rgb(153,153,153)}
 
         #[test]
         fn request_path_keeps_the_query() {
-            let url: Url = "http://localhost:3456/backoffice?tab=1".parse().unwrap();
-            assert_eq!(request_path(&url), "/backoffice?tab=1");
+            let url: Url = "http://localhost:3456/settings?tab=1".parse().unwrap();
+            assert_eq!(request_path(&url), "/settings?tab=1");
             let root: Url = "http://localhost:3456".parse().unwrap();
             assert_eq!(request_path(&root), "/");
         }

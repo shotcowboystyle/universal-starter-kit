@@ -79,7 +79,7 @@ export interface ListPageLayoutProps extends ScreenProps, TemplateHeaderProps {
  *
  * @example
  * <ListPageLayout title="Pokemon" actions={<ViewSwitcher … />}>
- *   <FrappeListView doctype="Pokemon" flex={1} />
+ *   <PokemonList flex={1} />
  * </ListPageLayout>
  */
 export const ListPageLayout = ({
@@ -135,7 +135,7 @@ export interface DetailPageLayoutProps extends ScreenProps, TemplateHeaderProps 
  *   toolbarTrailing={<Button theme="accent">Edit</Button>}
  *   aside={<Timeline … />}
  * >
- *   <FrappeForm doctype="Pokemon" name={id} />
+ *   <PokemonForm id={id} />
  * </DetailPageLayout>
  */
 export const DetailPageLayout = ({

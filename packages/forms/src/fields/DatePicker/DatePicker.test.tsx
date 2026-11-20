@@ -307,7 +307,7 @@ describe('DatePicker', () => {
       );
       expect(getDisplayInput(result.container)?.value ?? '').toBe('');
 
-      // Late seed: the upstream doc value (frappe wire string) arrives after
+      // Late seed: the upstream doc value (ISO date string) arrives after
       // first paint.
       result.rerender(
         <DatePicker

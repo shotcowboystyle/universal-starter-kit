@@ -45,7 +45,7 @@ export class Config implements IConfig {
     this._config = {
       // 1. BUILD time: public config baked into the bundle via VITE_MP_CONFIG.
       //    Kept first (and kept working) so apps that bake their config in —
-      //    native, GNOME, static web — are unchanged.
+      //    native, static web — are unchanged.
       ...reduceConfig(bakedPublicConfig()),
       // 2. RUNTIME: the public payload the SSR document published into the
       //    browser (see runtime-config.ts). Wins over the bake so a redeployed

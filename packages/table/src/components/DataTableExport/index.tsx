@@ -197,7 +197,7 @@ const guardCsvInjection = (raw: unknown, value: string): string => {
   return value;
 };
 
-// Web-only download. Native/GTK have no Blob-URL download path (MPO-22);
+// Web-only download. Native has no Blob-URL download path (MPO-22);
 // throw so the inline alert fires instead of a silent console.warn no-op.
 const assertWebFileDownload = (): void => {
   if (

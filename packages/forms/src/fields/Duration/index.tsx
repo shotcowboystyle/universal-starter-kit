@@ -439,7 +439,7 @@ export interface DurationProps {
   showSeconds?: boolean;
   /**
    * Hide the days segment and fold days into hours (default true).
-   * Pass `false` for Frappe-parity day + hour + minute entry.
+   * Pass `false` for day + hour + minute entry.
    */
   hideDays?: boolean;
   /** Quick-select presets. Pass [] to hide. */

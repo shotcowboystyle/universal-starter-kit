@@ -44,7 +44,7 @@ export interface CurrencyFormatOptions extends NumberFormatOptions {
   /** ISO 4217 code, e.g. "USD" — renders through Intl's currency style. */
   currency?: string;
   /**
-   * Currency symbol as handed over by Frappe-style adapters. Resolved to an
+   * Currency symbol (e.g. "$", "₹") as some data sources supply it. Resolved to an
    * ISO code when known, otherwise prefixed literally.
    */
   symbol?: string;
@@ -59,7 +59,7 @@ export interface CurrencyFormatOptions extends NumberFormatOptions {
 
 export type PercentFormatOptions = NumberFormatOptions;
 
-/** Frappe adapters hand over a symbol; Intl's currency style wants a code. */
+/** Data sources may supply a symbol; Intl's currency style wants a code. */
 const CURRENCY_SYMBOL_TO_CODE = new Map([
   ['$', 'USD'],
   ['€', 'EUR'],
@@ -93,7 +93,7 @@ export interface CurrencyAffix {
 
 /**
  * The glyph a money field writes beside its amount ("$", "€", "₹"), and on
- * which side, for a code or a Frappe-style symbol. The money register's own
+ * which side, for a code or a bare symbol. The money register's own
  * placement, so an editor and `formatCurrency` agree. A symbol with no known
  * code comes back as itself, leading.
  */
@@ -197,7 +197,7 @@ export const formatCurrency = (value: NumberInput, options: CurrencyFormatOption
   const code = currency ?? resolveCurrencyCode(symbol);
   const useGrouping = grouping ?? true;
   if (code !== undefined && code !== '') {
-    // A malformed code from a Frappe field must not cost the whole money
+    // A malformed code from the data source must not cost the whole money
     // register: fall back to the grouped register with the label prefixed
     // rather than letting Intl's throw leak a bare `String(num)`.
     const styled = tryFormatWith(coerced.num, { ...digits, useGrouping, style: 'currency', currency: code }, locale);

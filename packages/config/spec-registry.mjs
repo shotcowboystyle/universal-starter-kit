@@ -172,7 +172,7 @@ export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) =>
 /**
  * Files exempt from `mpo-conventions/no-hex-literals`: one `{ file, reason }`
  * per row, matched verbatim against the file's `hex-escape:` comment. These
- * are surfaces no theme token reaches (GTK widget CSS outside the provider, a
+ * are surfaces no theme token reaches (a
  * content script on third-party pages, the browser badge API, native build
  * config).
  *
