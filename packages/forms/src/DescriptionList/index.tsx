@@ -14,25 +14,17 @@
  */
 
 import { useResolvedKnobs } from '@repo/theme';
-import {
-  Children,
-  isValidElement,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-} from 'react';
+import { Children, isValidElement, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactElement, ReactNode } from 'react';
+import type { TamaguiElement } from 'tamagui';
 import { Text, View, XStack, YStack, isWeb } from 'tamagui';
 
 import { Button } from '../Button';
-import { LABEL_COLUMN_MAX_CH, LABEL_COLUMN_WIDTH } from '../fieldDefaults';
-import { DescriptionListSlotProvider, FieldDisplay, type FieldDisplayType } from '../FieldDisplay';
+import { LABEL_COLUMN_MAX_CH, LABEL_COLUMN_WIDTH } from '../field-defaults';
+import { DescriptionListSlotProvider, FieldDisplay } from '../FieldDisplay';
+import type { FieldDisplayProps, FieldDisplayType } from '../FieldDisplay';
+import { formReadableMaxWidth } from '../form-spacing';
 import { FORM_GRID_COLLAPSE_WIDTH } from '../FormGrid';
-import { formReadableMaxWidth } from '../formSpacing';
 import { t } from '../shared/t';
 
 export type DescriptionListPlacement = 'side' | 'top';
@@ -41,9 +33,9 @@ export interface DescriptionListItem {
   term: ReactNode;
   /** FieldDisplay type — every typed value mounts FieldDisplay. */
   field?: FieldDisplayType;
-  value?: any;
-  fieldProps?: Record<string, any>;
-  linkedValue?: any;
+  value?: unknown;
+  fieldProps?: FieldDisplayProps['fieldProps'];
+  linkedValue?: unknown;
   /** Opt-in ellipsis for identifier-class values (DG-OVF). */
   truncate?: boolean;
   /** Optional per-row Change action. */
@@ -72,7 +64,7 @@ export interface DescriptionListProps {
   compact?: boolean;
   /** Card frame (paints, so it earns the inset). */
   framed?: boolean;
-  /** Same 1px `$borderColor` rule at opacity 0.5 — never a lighter colour. */
+  /** Same 1px `$borderColor` rule at opacity 0.5 — never a lighter color. */
   quiet?: boolean;
   /**
    * Cap readable width. Pass `"fluid"` to opt out.
@@ -84,11 +76,9 @@ export interface DescriptionListProps {
   testID?: string;
 }
 
-function purposeMaxCh(): number {
-  return LABEL_COLUMN_MAX_CH;
-}
+const purposeMaxCh = (): number => LABEL_COLUMN_MAX_CH;
 
-function labelColumnGridTrack(width: string): string {
+const labelColumnGridTrack = (width: string): string => {
   const prefix = 'min(max-content,';
   if (width.startsWith(prefix) && width.endsWith(')')) {
     const inner = width.slice(prefix.length, -1).trim();
@@ -97,9 +87,9 @@ function labelColumnGridTrack(width: string): string {
     }
   }
   return width;
-}
+};
 
-function listItemRhythm(density: string) {
+const listItemRhythm = (density: string) => {
   const compact = density === 'compact';
   return {
     compact,
@@ -108,9 +98,12 @@ function listItemRhythm(density: string) {
     stackGap: compact ? 4 : '$2',
     minHeight: compact ? 39 : 45,
   } as const;
-}
+};
 
-function resolvePlacement(prop: DescriptionListPlacement | undefined, knobPlacement: string): DescriptionListPlacement {
+const resolvePlacement = (
+  prop: DescriptionListPlacement | undefined,
+  knobPlacement: string,
+): DescriptionListPlacement => {
   if (prop === 'side' || prop === 'top') {
     return prop;
   }
@@ -118,22 +111,21 @@ function resolvePlacement(prop: DescriptionListPlacement | undefined, knobPlacem
     return knobPlacement;
   }
   return 'side';
-}
+};
 
-function rowHasAction(row: DescriptionListItem): boolean {
-  return typeof row.onChange === 'function';
-}
+const rowHasAction = (row: DescriptionListItem): boolean => row.onChange != null;
 
-function itemsFromChildren(children: ReactNode | undefined): DescriptionListItem[] {
+const itemsFromChildren = (children: ReactNode | undefined): DescriptionListItem[] => {
   if (children == null) {
     return [];
   }
+  // oxlint-disable-next-line react/no-react-children -- toArray is the only API that flattens arrays/fragments and drops null/boolean children
   return Children.toArray(children).flatMap((child) => {
-    if (!isValidElement(child)) {
+    if (!isValidElement<DescriptionListItem>(child)) {
       return [];
     }
-    const props = child.props as DescriptionListItem;
-    if (props.hidden) {
+    const { props } = child;
+    if (props.hidden === true) {
       return [];
     }
     if (props.term == null) {
@@ -141,27 +133,28 @@ function itemsFromChildren(children: ReactNode | undefined): DescriptionListItem
     }
     return [props];
   });
-}
+};
+
+const RULE_GRID_STYLE = { gridColumn: '1 / -1' } satisfies CSSProperties;
 
 /** House Separator recipe — 1px filled `$borderColor`. */
-function ListRule({ quiet }: { quiet?: boolean }) {
-  return (
-    <View
-      role="separator"
-      data-mpo-description-list-rule=""
-      height={1}
-      backgroundColor="$borderColor"
-      opacity={quiet ? 0.5 : 1}
-      alignSelf="stretch"
-      flexGrow={0}
-      flexShrink={0}
-      width="100%"
-      {...(isWeb ? { style: { gridColumn: '1 / -1' } as CSSProperties } : undefined)}
-    />
-  );
-}
+const ListRule = ({ quiet }: { quiet?: boolean }) => (
+  <View
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui View is cross-platform; a literal <hr> does not exist on native
+    role="separator"
+    data-mpo-description-list-rule=""
+    height={1}
+    backgroundColor="$borderColor"
+    opacity={quiet ? 0.5 : 1}
+    alignSelf="stretch"
+    flexGrow={0}
+    flexShrink={0}
+    width="100%"
+    {...(isWeb ? { style: RULE_GRID_STYLE } : undefined)}
+  />
+);
 
-function TermText({ children }: { children: ReactNode }) {
+const TermText = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -177,39 +170,83 @@ function TermText({ children }: { children: ReactNode }) {
       {children}
     </Text>
   );
+};
+
+const ChangeAction = ({ onChange, label }: { onChange: () => void; label?: string }) => (
+  <View
+    data-mpo-description-list-action=""
+    alignItems="flex-start"
+    justifyContent="flex-end">
+    <Button
+      nested
+      outlined
+      onPress={onChange}>
+      {label ?? t('Change')}
+    </Button>
+  </View>
+);
+
+const ValueSlot = ({ row }: { row: DescriptionListItem }) => (
+  <View
+    data-mpo-description-list-value=""
+    minWidth={0}
+    width="100%">
+    {row.children ?? (
+      <FieldDisplay
+        field={row.field ?? 'input'}
+        value={row.value}
+        fieldProps={row.fieldProps}
+        linkedValue={row.linkedValue}
+        chromeless
+        align="left"
+        truncate={row.truncate}
+      />
+    )}
+  </View>
+);
+
+interface RowStyles {
+  row?: CSSProperties;
+  term?: CSSProperties;
+  value?: CSSProperties;
+  action?: CSSProperties;
 }
 
-function ChangeAction({ onChange, label }: { onChange: () => void; label?: string }) {
-  return (
-    <View data-mpo-description-list-action="" alignItems="flex-start" justifyContent="flex-end">
-      <Button nested outlined onPress={onChange}>
-        {label ?? t('Change')}
-      </Button>
-    </View>
-  );
-}
+const NO_ROW_STYLES: RowStyles = {};
 
-function ValueSlot({ row }: { row: DescriptionListItem }) {
-  return (
-    <View data-mpo-description-list-value="" minWidth={0} width="100%">
-      {row.children != null ? (
-        row.children
-      ) : (
-        <FieldDisplay
-          field={row.field ?? 'input'}
-          value={row.value}
-          fieldProps={row.fieldProps}
-          linkedValue={row.linkedValue}
-          chromeless
-          align="left"
-          truncate={row.truncate}
-        />
-      )}
-    </View>
-  );
-}
+const webRowStyles = (stacked: boolean, hasActionColumn: boolean): RowStyles => {
+  if (!stacked) {
+    return {
+      row: { display: 'grid', gridTemplateColumns: 'subgrid', gridColumn: '1 / -1' },
+      action: { justifySelf: 'end' },
+    };
+  }
+  const columns = hasActionColumn ? 'minmax(0,1fr) max-content' : 'minmax(0,1fr)';
+  return {
+    row: { display: 'grid', gridTemplateColumns: columns },
+    term: { gridColumn: '1', gridRow: '1' },
+    value: { gridColumn: '1 / -1', gridRow: '2' },
+    action: { gridColumn: '2', gridRow: '1', justifySelf: 'end' },
+  };
+};
 
-function DescriptionListRowView({
+const renderRowAction = (row: DescriptionListItem, hasActionColumn: boolean, stacked: boolean): ReactElement | null => {
+  const handleChange = row.onChange;
+  if (handleChange != null) {
+    return (
+      <ChangeAction
+        onChange={handleChange}
+        label={row.changeLabel}
+      />
+    );
+  }
+  if (hasActionColumn && isWeb && !stacked) {
+    return <View data-mpo-description-list-action="" />;
+  }
+  return null;
+};
+
+const DescriptionListRowView = ({
   row,
   stacked,
   hasActionColumn,
@@ -223,79 +260,63 @@ function DescriptionListRowView({
   rhythm: ReturnType<typeof listItemRhythm>;
   showRule: boolean;
   quiet?: boolean;
-}) {
-  const action = rowHasAction(row) ? (
-    <ChangeAction onChange={row.onChange!} label={row.changeLabel} />
-  ) : hasActionColumn && isWeb && !stacked ? (
-    <View data-mpo-description-list-action="" />
-  ) : null;
+}) => {
+  const action = renderRowAction(row, hasActionColumn, stacked);
+  const styles = isWeb ? webRowStyles(stacked, hasActionColumn) : NO_ROW_STYLES;
+  const termStyle = styles.term;
+  const valueStyle = styles.value;
+  const actionStyle = styles.action;
 
-  const rowStyle: CSSProperties | undefined = isWeb
-    ? stacked
-      ? {
-          display: 'grid',
-          gridTemplateColumns: hasActionColumn ? 'minmax(0,1fr) max-content' : 'minmax(0,1fr)',
-          columnGap: undefined,
-          rowGap: undefined,
-        }
-      : {
-          display: 'grid',
-          gridTemplateColumns: 'subgrid',
-          gridColumn: '1 / -1',
-        }
-    : undefined;
-
-  const termStyle: CSSProperties | undefined = isWeb
-    ? stacked
-      ? { gridColumn: '1', gridRow: '1' }
-      : undefined
-    : undefined;
-  const valueStyle: CSSProperties | undefined = isWeb
-    ? stacked
-      ? { gridColumn: '1 / -1', gridRow: '2' }
-      : undefined
-    : undefined;
-  const actionStyle: CSSProperties | undefined = isWeb
-    ? stacked
-      ? { gridColumn: '2', gridRow: '1', justifySelf: 'end' }
-      : { justifySelf: 'end' }
-    : undefined;
-
-  const body = stacked ? (
-    <>
-      <View style={termStyle}>
-        <TermText>{row.term}</TermText>
-      </View>
-      {action ? <View style={actionStyle}>{action}</View> : null}
-      <View style={valueStyle} paddingTop={rhythm.stackGap as never}>
-        <ValueSlot row={row} />
-      </View>
-    </>
-  ) : isWeb ? (
-    <>
-      <View style={termStyle}>
-        <TermText>{row.term}</TermText>
-      </View>
-      <View style={valueStyle}>
-        <ValueSlot row={row} />
-      </View>
-      {action ? <View style={actionStyle}>{action}</View> : null}
-    </>
-  ) : (
-    <XStack alignItems="flex-start" width="100%" gap={rhythm.columnGap as never}>
-      <View
-        minWidth={0}
-        maxWidth={`${purposeMaxCh()}ch` as never}
-        flexShrink={0}
-        width={`${purposeMaxCh()}ch` as never}>
-        <TermText>{row.term}</TermText>
-      </View>
-      <View flex={1} minWidth={0}>
-        <ValueSlot row={row} />
-      </View>
-      {action}
-    </XStack>
-  );
+  const renderBody = () => {
+    if (stacked) {
+      return (
+        <>
+          <View style={termStyle}>
+            <TermText>{row.term}</TermText>
+          </View>
+          {action ? <View style={actionStyle}>{action}</View> : null}
+          <View
+            style={valueStyle}
+            paddingTop={rhythm.stackGap}>
+            <ValueSlot row={row} />
+          </View>
+        </>
+      );
+    }
+    if (isWeb) {
+      return (
+        <>
+          <View style={termStyle}>
+            <TermText>{row.term}</TermText>
+          </View>
+          <View style={valueStyle}>
+            <ValueSlot row={row} />
+          </View>
+          {action ? <View style={actionStyle}>{action}</View> : null}
+        </>
+      );
+    }
+    return (
+      <XStack
+        alignItems="flex-start"
+        width="100%"
+        gap={rhythm.columnGap}>
+        <View
+          minWidth={0}
+          maxWidth={`${purposeMaxCh()}ch`}
+          flexShrink={0}
+          width={`${purposeMaxCh()}ch`}>
+          <TermText>{row.term}</TermText>
+        </View>
+        <View
+          flex={1}
+          minWidth={0}>
+          <ValueSlot row={row} />
+        </View>
+        {action}
+      </XStack>
+    );
+  };
 
   return (
     <>
@@ -303,19 +324,19 @@ function DescriptionListRowView({
       <YStack
         data-mpo-description-list-row=""
         data-has-change={rowHasAction(row) ? 'true' : 'false'}
-        paddingVertical={rhythm.padV as never}
+        paddingVertical={rhythm.padV}
         minHeight={rhythm.minHeight}
-        columnGap={rhythm.columnGap as never}
+        columnGap={rhythm.columnGap}
         width="100%"
         minWidth={0}
-        style={rowStyle}>
-        {body}
+        style={styles.row}>
+        {renderBody()}
       </YStack>
     </>
   );
-}
+};
 
-function DescriptionListWeb({
+const DescriptionListWeb = ({
   rows,
   stacked,
   hasAction,
@@ -337,14 +358,12 @@ function DescriptionListWeb({
   size: string;
   placement: DescriptionListPlacement;
   framed: boolean;
-}) {
+}) => {
   // Write tracks after commit: React's style setter (and invalid `min()`
   // track syntax) otherwise leave a one-column computed grid.
-  const columns = stacked
-    ? undefined
-    : hasAction
-      ? `${labelColumnGridTrack(labelColumnWidth)} minmax(0, 1fr) max-content`
-      : `${labelColumnGridTrack(labelColumnWidth)} minmax(0, 1fr)`;
+  const labelTrack = labelColumnGridTrack(labelColumnWidth);
+  const sideColumns = hasAction ? `${labelTrack} minmax(0, 1fr) max-content` : `${labelTrack} minmax(0, 1fr)`;
+  const columns = stacked ? undefined : sideColumns;
   const listRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -352,10 +371,10 @@ function DescriptionListWeb({
     if (!el) {
       return;
     }
-    if (columns) {
-      el.style.setProperty('grid-template-columns', columns);
-    } else {
+    if (columns === undefined) {
       el.style.removeProperty('grid-template-columns');
+    } else {
+      el.style.setProperty('grid-template-columns', columns);
     }
   }, [columns]);
 
@@ -379,6 +398,7 @@ function DescriptionListWeb({
       style={style}>
       {rows.map((row, index) => (
         <DescriptionListRowView
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- rows carry no stable id (term is a ReactNode) and are positional
           key={index}
           row={row}
           stacked={stacked}
@@ -390,56 +410,54 @@ function DescriptionListWeb({
       ))}
     </div>
   );
-}
+};
 
 interface HostLayoutEvent {
   nativeEvent: { layout: { width: number } };
 }
 
-function useContainerWide(enabled: boolean): {
-  ref: Ref<unknown>;
-  wide: boolean;
-  onLayout: ((event: HostLayoutEvent) => void) | undefined;
-} {
-  const ref = useRef<HTMLDivElement>(null);
+const observeWidth = (el: HTMLElement, onWidth: (width: number) => void): (() => void) => {
+  onWidth(el.getBoundingClientRect().width);
+
+  if (typeof ResizeObserver === 'undefined') {
+    const onResize = () => {
+      onWidth(el.getBoundingClientRect().width);
+    };
+    // oxlint-disable-next-line github/prefer-observers -- this is the fallback for hosts without ResizeObserver
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+    };
+  }
+
+  const ro = new ResizeObserver((entries) => {
+    onWidth(entries[0]?.contentRect.width ?? el.getBoundingClientRect().width);
+  });
+  ro.observe(el);
+  return () => {
+    ro.disconnect();
+  };
+};
+
+const useContainerWide = (enabled: boolean) => {
+  const ref = useRef<TamaguiElement>(null);
   // Web assumes wide until measured (desktop stories). Native assumes stacked
   // until onLayout — phones sit under the 480 collapse.
   const [wide, setWide] = useState(isWeb);
 
   useLayoutEffect(() => {
-    if (!isWeb || !enabled) {
-      return;
+    let cleanup: (() => void) | undefined;
+    if (isWeb && enabled) {
+      const el = ref.current;
+      if (el instanceof HTMLElement) {
+        cleanup = observeWidth(el, (width) => {
+          setWide(width >= FORM_GRID_COLLAPSE_WIDTH);
+        });
+      } else {
+        setWide(true);
+      }
     }
-    const el = ref.current;
-    if (!el) {
-      setWide(true);
-      return;
-    }
-
-    const update = (width: number) => {
-      setWide(width >= FORM_GRID_COLLAPSE_WIDTH);
-    };
-
-    update(el.getBoundingClientRect().width);
-
-    if (typeof ResizeObserver === 'undefined') {
-      const onResize = () => {
-        update(el.getBoundingClientRect().width);
-      };
-      window.addEventListener('resize', onResize);
-      return () => {
-        window.removeEventListener('resize', onResize);
-      };
-    }
-
-    const ro = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? el.getBoundingClientRect().width;
-      update(width);
-    });
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-    };
+    return cleanup;
   }, [enabled]);
 
   const onLayout =
@@ -450,9 +468,9 @@ function useContainerWide(enabled: boolean): {
       : undefined;
 
   return { ref, wide, onLayout };
-}
+};
 
-export function DescriptionList({
+export const DescriptionList = ({
   items,
   children,
   placement: placementProp,
@@ -462,13 +480,13 @@ export function DescriptionList({
   maxWidth = formReadableMaxWidth,
   labelColumnWidth = LABEL_COLUMN_WIDTH,
   testID,
-}: DescriptionListProps) {
+}: DescriptionListProps) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const placement = resolvePlacement(placementProp, knobProps.fieldLabelPlacement);
   const rhythm = listItemRhythm(knobProps.density);
   const rows = useMemo(() => {
     const fromItems = (items ?? []).filter((row) => !row.hidden);
-    if (fromItems.length) {
+    if (fromItems.length > 0) {
       return fromItems;
     }
     return itemsFromChildren(children);
@@ -509,6 +527,7 @@ export function DescriptionList({
           minWidth={0}>
           {rows.map((row, index) => (
             <DescriptionListRowView
+              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- rows carry no stable id (term is a ReactNode) and are positional
               key={index}
               row={row}
               stacked={stacked}
@@ -531,7 +550,7 @@ export function DescriptionList({
 
   return (
     <YStack
-      ref={ref as never}
+      ref={ref}
       data-mpo-description-list-host=""
       data-testid={testID}
       onLayout={onLayout}
@@ -549,11 +568,9 @@ export function DescriptionList({
       {list}
     </YStack>
   );
-}
+};
 
-export function DescriptionListRow(_props: DescriptionListRowProps): ReactElement | null {
-  return null;
-}
+export const DescriptionListRow = (_props: DescriptionListRowProps): ReactElement | null => null;
 
 DescriptionList.Row = DescriptionListRow;
 

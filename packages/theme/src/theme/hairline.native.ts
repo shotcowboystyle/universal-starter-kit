@@ -40,4 +40,6 @@ export const hairline = {
 export const hairlineFallbackCss = '';
 
 /** Web-only fallback mount — no-op on native. */
-export function ensureHairlineFallback(): void {}
+export const ensureHairlineFallback = (): void => {
+  // Native has no stylesheet to mount.
+};

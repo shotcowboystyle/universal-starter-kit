@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef } from 'react';
  * Copy confirm channel. Success is a page toast; errors
  * never toast. The glyph does not flip — notify() is the one confirm.
  */
-import { copyToClipboard } from '../hooks/useClipboard';
+import { copyToClipboard } from '../hooks/use-clipboard';
 
 import { notify } from './notify';
 import { dismissFeedbackByRegion } from './store';
@@ -12,7 +12,7 @@ import { dismissFeedbackByRegion } from './store';
 export const COPY_OK = 'Copied to clipboard.';
 export const COPY_FAIL = 'Copy failed.';
 
-export function reportCopy(ok: boolean, options?: { region?: string }): void {
+export const reportCopy = (ok: boolean, options?: { region?: string }): void => {
   const region = options?.region;
   if (region != null) {
     dismissFeedbackByRegion(region);
@@ -22,16 +22,25 @@ export function reportCopy(ok: boolean, options?: { region?: string }): void {
     return;
   }
   notify({ severity: 'error', scope: 'field', region, body: COPY_FAIL });
-}
+};
 
-export async function copyAndNotify(text: string, options?: { region?: string }): Promise<boolean> {
-  const ok = await copyToClipboard(text).catch(() => false);
+const copyQuietly = async (text: string): Promise<boolean> => {
+  try {
+    return await copyToClipboard(text);
+  } catch {
+    // Safe to continue: a failed clipboard write is reported via notify as COPY_FAIL.
+    return false;
+  }
+};
+
+export const copyAndNotify = async (text: string, options?: { region?: string }): Promise<boolean> => {
+  const ok = await copyQuietly(text);
   reportCopy(ok, options);
   return ok;
-}
+};
 
 /** Keeps copy failures beside their owner, including asynchronous clipboard results. */
-export function useCopyFeedback() {
+export const useCopyFeedback = () => {
   const region = useId();
   const mounted = useRef(true);
   useEffect(() => {
@@ -51,11 +60,11 @@ export function useCopyFeedback() {
   );
   const copy = useCallback(
     async (text: string) => {
-      const ok = await copyToClipboard(text).catch(() => false);
+      const ok = await copyQuietly(text);
       report(ok);
       return ok;
     },
     [report],
   );
   return { region, report, copy };
-}
+};

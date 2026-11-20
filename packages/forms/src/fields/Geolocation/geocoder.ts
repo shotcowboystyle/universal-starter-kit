@@ -11,10 +11,10 @@
  * This file is the seam and nothing else: no provider, no endpoint, no
  * transport. A provider is whatever a consumer writes against `Geocoder` —
  * an offline gazetteer, their own backend proxy holding a commercial key, or
- * a self-hosted geocoder. See `geocoderSeam.test.tsx` for both shapes.
+ * a self-hosted geocoder. See `geocoder-seam.test.test.tsx` for both shapes.
  */
 
-import type { GeoValue } from './geoValue';
+import type { GeoValue } from './geo-value';
 
 export interface GeocodeResult {
   lat: number;
@@ -42,29 +42,23 @@ export interface Geocoder {
   reverseGeocode: ReverseGeocodeFn;
 }
 
-const LAT_LNG_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+const LAT_LNG_PAIR = /^\s*(?<lat>-?\d+(?:\.\d+)?)\s*,\s*(?<lng>-?\d+(?:\.\d+)?)\s*$/u;
 
-export function clampLat(val: number): number {
-  return Math.max(-90, Math.min(90, val));
-}
+export const clampLat = (val: number): number => Math.max(-90, Math.min(90, val));
 
-export function clampLng(val: number): number {
-  return Math.max(-180, Math.min(180, val));
-}
+export const clampLng = (val: number): number => Math.max(-180, Math.min(180, val));
 
 /** Quiet mono disclosure / cell fallback — five decimals, board media-13. */
-export function formatCoordPair(lat: number, lng: number): string {
-  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-}
+export const formatCoordPair = (lat: number, lng: number): string => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
 /** Expert path through the same search input: a typed `lat, lng` pair. */
-export function parseLatLngPair(text: string): GeoValue | null {
+export const parseLatLngPair = (text: string): GeoValue | null => {
   const match = LAT_LNG_PAIR.exec(text);
   if (!match) {
     return null;
   }
-  const lat = Number.parseFloat(match[1]);
-  const lng = Number.parseFloat(match[2]);
+  const lat = Number(match.groups?.lat);
+  const lng = Number(match.groups?.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return null;
   }
@@ -72,19 +66,18 @@ export function parseLatLngPair(text: string): GeoValue | null {
     return null;
   }
   return { lat, lng };
-}
+};
 
-export function formatPlace(result: Pick<GeocodeResult, 'label' | 'description'>): string {
-  return result.description ? `${result.label}, ${result.description}` : result.label;
-}
+export const formatPlace = (result: Pick<GeocodeResult, 'label' | 'description'>): string =>
+  result.description !== undefined && result.description !== ''
+    ? `${result.label}, ${result.description}`
+    : result.label;
 
-export function resolveGeocoder(input: {
+export const resolveGeocoder = (input: {
   geocode?: GeocodeFn;
   reverseGeocode?: ReverseGeocodeFn;
   geocoder?: Geocoder;
-}): { geocode?: GeocodeFn; reverseGeocode?: ReverseGeocodeFn } {
-  return {
-    geocode: input.geocode ?? input.geocoder?.geocode,
-    reverseGeocode: input.reverseGeocode ?? input.geocoder?.reverseGeocode,
-  };
-}
+}): Partial<Geocoder> => ({
+  geocode: input.geocode ?? input.geocoder?.geocode,
+  reverseGeocode: input.reverseGeocode ?? input.geocoder?.reverseGeocode,
+});

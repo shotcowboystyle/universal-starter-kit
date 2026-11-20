@@ -8,9 +8,10 @@ import { TamaguiProvider, createTamagui } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
-import { Progress, type ProgressIntent } from './index';
+import { Progress } from './index';
+import type { ProgressIntent } from './index';
 
 // The stock @tamagui/config themes used by renderWithProviders have no
 // error/warning/success/accent sub-themes and no accentBackground token, so
@@ -25,53 +26,94 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-function renderWithHouseThemes(ui: ReactElement) {
-  return render(
-    <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
+const renderWithHouseThemes = (ui: ReactElement) =>
+  render(
+    <TamaguiProvider
+      config={houseConfig}
+      defaultTheme="light"
+      disableInjectCSS>
       {ui}
     </TamaguiProvider>,
   );
-}
 
-function getIndicator(container: Element): Element | null {
-  return container.querySelector("[role='progressbar'] .is_ProgressIndicator");
-}
+const getIndicator = (container: Element): Element | null =>
+  container.querySelector("[role='progressbar'] .is_ProgressIndicator");
 
 /**
  * First three numeric groups (h, s, l) of an hsla() string — the digit
  * prefix Tamagui embeds in the atomic class it generates for a concrete
  * color value (e.g. hsla(358, 75%, 59%, 1) → `_bg-hsla3587559<hash>`).
  */
-function hslDigits(hsla: string): string {
-  return (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
-}
+const tableCellValue = { inTableCell: true, isHeader: false, editable: false };
 
-describe('Progress', () => {
+const must = <T,>(value: T | null | undefined): T => {
+  if (value == null) {
+    throw new Error('expected value to be present');
+  }
+  return value;
+};
+
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/gu) ?? []).slice(0, 3).join('');
+
+describe(Progress, () => {
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<Progress label="Loading" name="p" value={50} />);
+      const result = renderWithProviders(
+        <Progress
+          label="Loading"
+          name="p"
+          value={50}
+        />,
+      );
       expect(result.findTextElement('Loading')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<Progress label="Required" name="req" value={0} required />);
+      const result = renderWithProviders(
+        <Progress
+          label="Required"
+          name="req"
+          value={0}
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      const result = renderWithProviders(<Progress label="Progress" name="p" value={75} helperText="75% complete" />);
+      const result = renderWithProviders(
+        <Progress
+          label="Progress"
+          name="p"
+          value={75}
+          helperText="75% complete"
+        />,
+      );
       expect(result.findTextElement('75% complete')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<Progress label="Loading" name="l" value={0} skeleton />);
+      const result = renderWithProviders(
+        <Progress
+          label="Loading"
+          name="l"
+          value={0}
+          skeleton
+        />,
+      );
       const progressbar = result.container.querySelector("[role='progressbar']");
       expect(progressbar).toBeNull();
     });
 
     it('renders progress bar element', () => {
-      const result = renderWithProviders(<Progress label="Progress" name="p" value={40} />);
+      const result = renderWithProviders(
+        <Progress
+          label="Progress"
+          name="p"
+          value={40}
+        />,
+      );
       const progressbar = result.container.querySelector("[role='progressbar']");
       expect(progressbar).toBeTruthy();
     });
@@ -80,8 +122,14 @@ describe('Progress', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { progress: 0 } }} submitText="Submit">
-          <Progress name="progress" label="Progress" value={50} />
+        <Form
+          formOptions={{ defaultValues: { progress: 0 } }}
+          submitText="Submit">
+          <Progress
+            name="progress"
+            label="Progress"
+            value={50}
+          />
         </Form>,
       );
       expect(result.findTextElement('Progress')).toBeDefined();
@@ -90,9 +138,15 @@ describe('Progress', () => {
 
   describe('intent', () => {
     it('default keeps the gray form ramp: no intent theme scope, no intent fill token', () => {
-      const { container } = renderWithHouseThemes(<Progress label="Default" name="d" value={50} />);
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const { container } = renderWithHouseThemes(
+        <Progress
+          label="Default"
+          name="d"
+          value={50}
+        />,
+      );
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       expect(indicator).toBeTruthy();
       // No intent sub-theme scope anywhere inside the bar
       for (const scope of ['.t_accent', '.t_error', '.t_warning', '.t_success']) {
@@ -106,9 +160,16 @@ describe('Progress', () => {
     });
 
     it("accent fills from the base theme's $accentBackground without a sub-theme scope", () => {
-      const { container } = renderWithHouseThemes(<Progress label="Accent" name="a" value={50} intent="accent" />);
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const { container } = renderWithHouseThemes(
+        <Progress
+          label="Accent"
+          name="a"
+          value={50}
+          intent="accent"
+        />,
+      );
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       // Accent rides the base theme (the "accent" sub-theme is the SOLID
       // ramp — wrong for a fill), so no t_accent scope is emitted.
       expect(bar.querySelector('.t_accent')).toBeNull();
@@ -120,10 +181,15 @@ describe('Progress', () => {
       "%s rides its hue sub-theme: t_<intent> scope + the hue's $color9 solid fill",
       (intent) => {
         const { container } = renderWithHouseThemes(
-          <Progress label={intent} name={intent} value={50} intent={intent} />,
+          <Progress
+            label={intent}
+            name={intent}
+            value={50}
+            intent={intent}
+          />,
         );
-        const bar = container.querySelector("[role='progressbar']") as Element;
-        const indicator = getIndicator(container) as Element;
+        const bar = must(container.querySelector("[role='progressbar']"));
+        const indicator = must(getIndicator(container));
         // The Intent wrapper scopes the hue sub-theme around the indicator...
         expect(bar.querySelector(`.t_${intent}`)).toBeTruthy();
         // ...and the fill is the hue sub-theme's $color9 — captured as a
@@ -141,9 +207,15 @@ describe('Progress', () => {
     );
 
     it('default render is unchanged under the standard test providers', () => {
-      const { container } = renderWithProviders(<Progress label="Plain" name="plain" value={40} />);
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const { container } = renderWithProviders(
+        <Progress
+          label="Plain"
+          name="plain"
+          value={40}
+        />,
+      );
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       expect(indicator).toBeTruthy();
       // No intent scope and no Theme wrapper beyond Tamagui's own
       // ProgressIndicator component-theme span.
@@ -156,7 +228,12 @@ describe('Progress', () => {
 
   describe('value pairing and clamp', () => {
     it('shows a percent beside a labeled track', () => {
-      const { container } = renderWithProviders(<Progress label="Upload" value={65} />);
+      const { container } = renderWithProviders(
+        <Progress
+          label="Upload"
+          value={65}
+        />,
+      );
       expect(container.textContent).toContain('65%');
     });
 
@@ -166,39 +243,87 @@ describe('Progress', () => {
     });
 
     it('hides the percent when showValue is false', () => {
-      const { container } = renderWithProviders(<Progress label="Upload" value={65} showValue={false} />);
+      const { container } = renderWithProviders(
+        <Progress
+          label="Upload"
+          value={65}
+          showValue={false}
+        />,
+      );
       expect(container.textContent ?? '').not.toContain('65%');
     });
 
     it('clamps negative, overflow, and non-finite values', () => {
-      const neg = renderWithProviders(<Progress label="N" value={-10} max={100} />);
+      const neg = renderWithProviders(
+        <Progress
+          label="N"
+          value={-10}
+          max={100}
+        />,
+      );
       expect(neg.container.querySelector("[role='progressbar']")?.getAttribute('aria-valuenow')).toBe('0');
 
-      const over = renderWithProviders(<Progress label="O" value={150} max={100} />);
+      const over = renderWithProviders(
+        <Progress
+          label="O"
+          value={150}
+          max={100}
+        />,
+      );
       expect(over.container.querySelector("[role='progressbar']")?.getAttribute('aria-valuenow')).toBe('100');
 
-      const nan = renderWithProviders(<Progress label="X" value={Number.NaN} max={100} />);
+      const nan = renderWithProviders(
+        <Progress
+          label="X"
+          value={Number.NaN}
+          max={100}
+        />,
+      );
       expect(nan.container.querySelector("[role='progressbar']")?.getAttribute('aria-valuenow')).toBe('0');
 
-      const badMax = renderWithProviders(<Progress label="M" value={40} max={0} />);
+      const badMax = renderWithProviders(
+        <Progress
+          label="M"
+          value={40}
+          max={0}
+        />,
+      );
       expect(badMax.container.querySelector("[role='progressbar']")?.getAttribute('aria-valuemax')).toBe('100');
       expect(badMax.container.querySelector("[role='progressbar']")?.getAttribute('aria-valuenow')).toBe('40');
     });
 
     it('exposes aria-readonly when readOnly', () => {
-      const { container } = renderWithProviders(<Progress label="Locked" value={50} readOnly />);
+      const { container } = renderWithProviders(
+        <Progress
+          label="Locked"
+          value={50}
+          readOnly
+        />,
+      );
       expect(container.querySelector("[role='progressbar']")?.getAttribute('aria-readonly')).toBe('true');
     });
 
     it('string error replaces helper; boolean error is silent but invalid', () => {
       const withCopy = renderWithProviders(
-        <Progress label="Upload" value={30} error="Must finish" helperText="keep going" />,
+        <Progress
+          label="Upload"
+          value={30}
+          error="Must finish"
+          helperText="keep going"
+        />,
       );
       expect(withCopy.container.textContent).toContain('Must finish');
       expect(withCopy.container.textContent).not.toContain('keep going');
       expect(withCopy.container.querySelector("[role='progressbar']")?.getAttribute('aria-invalid')).toBe('true');
 
-      const flag = renderWithProviders(<Progress label="Upload" value={30} error helperText="keep going" />);
+      const flag = renderWithProviders(
+        <Progress
+          label="Upload"
+          value={30}
+          error
+          helperText="keep going"
+        />,
+      );
       // Boolean error has no copy — helper stays (FieldLayout only replaces
       // the slot when `error` is a non-empty string).
       expect(flag.container.textContent).toContain('keep going');
@@ -206,7 +331,13 @@ describe('Progress', () => {
     });
 
     it('rounds fractional values for aria-valuenow and the paired percent', () => {
-      const { container } = renderWithProviders(<Progress label="Frac" value={33.333} max={100} />);
+      const { container } = renderWithProviders(
+        <Progress
+          label="Frac"
+          value={33.333}
+          max={100}
+        />,
+      );
       expect(container.querySelector("[role='progressbar']")?.getAttribute('aria-valuenow')).toBe('33');
       expect(container.textContent).toContain('33%');
     });
@@ -214,8 +345,14 @@ describe('Progress', () => {
 
   describe('onChange contract', () => {
     it('accepts onChange without throwing on a display-only field', () => {
-      const onChange = vi.fn();
-      const { container } = renderWithProviders(<Progress label="Upload" value={40} onChange={onChange} />);
+      const onChange = vi.fn<(value: number) => void>();
+      const { container } = renderWithProviders(
+        <Progress
+          label="Upload"
+          value={40}
+          onChange={onChange}
+        />,
+      );
       expect(container.querySelector("[role='progressbar']")).toBeTruthy();
       expect(onChange).not.toHaveBeenCalled();
     });
@@ -224,8 +361,12 @@ describe('Progress', () => {
   describe('table cell chromeless', () => {
     it('drops FieldLayout chrome and the paired percent inside a cell', () => {
       const { container } = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>
-          <Progress label="Upload" value={65} helperText="hidden in cells" />
+        <TableCellContext.Provider value={tableCellValue}>
+          <Progress
+            label="Upload"
+            value={65}
+            helperText="hidden in cells"
+          />
         </TableCellContext.Provider>,
       );
       expect(container.textContent ?? '').not.toContain('Upload');
@@ -236,8 +377,11 @@ describe('Progress', () => {
 
     it('still pairs the percent when showValue is forced in a cell', () => {
       const { container } = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>
-          <Progress value={65} showValue />
+        <TableCellContext.Provider value={tableCellValue}>
+          <Progress
+            value={65}
+            showValue
+          />
         </TableCellContext.Provider>,
       );
       expect(container.textContent).toContain('65%');
@@ -246,52 +390,78 @@ describe('Progress', () => {
 
   describe('knobs', () => {
     it('zeroes the size-variant minWidth so the track fills the cell (no 220px floor)', () => {
-      const { container } = renderWithProviders(<Progress label="Fill" value={50} />);
-      const bar = container.querySelector("[role='progressbar']") as HTMLElement;
-      expect(bar).toBeTruthy();
+      const { container } = renderWithProviders(
+        <Progress
+          label="Fill"
+          value={50}
+        />,
+      );
+      const bar = container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       expect(getComputedStyle(bar).minWidth).toBe('0px');
     });
 
     it('goes square at borderRadius none (R-SCALE, Axiom 3)', () => {
       const { container } = renderWithProviders(
         <Preset overrides={{ borderRadius: 'none' }}>
-          <Progress label="Square" value={50} />
+          <Progress
+            label="Square"
+            value={50}
+          />
         </Preset>,
       );
-      const bar = container.querySelector("[role='progressbar']") as HTMLElement;
-      expect(bar).toBeTruthy();
+      const bar = container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       // jsdom cannot cascade Tamagui class CSS — read the atomic radius class
       // (Button / FieldDisplay precedent): t-radius-0 is the none token.
-      const radiusAtoms = String(bar.className || '')
-        .split(' ')
-        .filter((c) => c.startsWith('_btlr-'));
+      const radiusAtoms = bar.className.split(' ').filter((c) => c.startsWith('_btlr-'));
       expect(radiusAtoms).toContain('_btlr-t-radius-0');
       expect(radiusAtoms).not.toContain('_btlr-100000px');
     });
 
     it('skeleton track height matches the live 0.25× size formula, not a 6px leftover', () => {
-      const live = renderWithProviders(<Progress label="Upload" value={50} />);
-      const bar = live.container.querySelector("[role='progressbar']") as HTMLElement;
+      const live = renderWithProviders(
+        <Progress
+          label="Upload"
+          value={50}
+        />,
+      );
+      const bar = live.container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       const liveHeight = getComputedStyle(bar).height;
 
-      const skel = renderWithProviders(<Progress label="Upload" skeleton />);
+      const skel = renderWithProviders(
+        <Progress
+          label="Upload"
+          skeleton
+        />,
+      );
       expect(skel.container.querySelector("[role='progressbar']")).toBeNull();
       const bones = [...skel.container.querySelectorAll('div')].filter(
         (el) => getComputedStyle(el).height === liveHeight && el !== skel.container,
       );
-      expect(Number.parseFloat(liveHeight)).toBeGreaterThan(6);
+      expect(Number(liveHeight.replace(/px$/u, ''))).toBeGreaterThan(6);
       expect(bones.length).toBeGreaterThan(0);
     });
 
     it('stops indicator motion when animation is none', () => {
       const { container } = renderWithProviders(
         <Preset overrides={{ animation: 'none' }}>
-          <Progress label="Still" value={40} />
+          <Progress
+            label="Still"
+            value={40}
+          />
         </Preset>,
       );
       const indicator = getIndicator(container) as HTMLElement;
       expect(indicator).toBeTruthy();
-      expect(Array.from(indicator.classList)).toContain('_transition-none');
+      expect([...indicator.classList]).toContain('_transition-none');
     });
   });
 });

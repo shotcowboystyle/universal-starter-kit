@@ -1,38 +1,45 @@
 import { renderWithProviders as render } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 import NewTaskDialog from '@/components/kanban/task/NewTaskDialog';
+import { useCreateTask } from '@/lib/api/tasks/queries';
 
 // Create hoisted mock for useWorkspaceStore
+interface TestStore {
+  addTask: Mock;
+  projects: object[];
+}
+
 const { mockUseWorkspaceStore, mockGetState } = vi.hoisted(() => {
-  const mockGetState = vi.fn();
-  const mockUseWorkspaceStore = Object.assign(vi.fn(), {
-    getState: mockGetState,
+  const getState = vi.fn<() => TestStore>();
+  const useStore = Object.assign(vi.fn<(selector?: (state: TestStore) => object) => object>(), {
+    getState,
   });
-  return { mockUseWorkspaceStore, mockGetState };
+  return { mockUseWorkspaceStore: useStore, mockGetState: getState };
 });
 
-vi.mock('@/lib/api/tasks/queries', () => ({
-  useCreateTask: vi.fn(),
+vi.mock(import('@/lib/api/tasks/queries'), () => ({
+  useCreateTask: vi.fn<typeof useCreateTask>(),
 }));
 
-vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: mockUseWorkspaceStore,
+vi.mock(import('@/stores/workspace-store'), () => ({
+  useWorkspaceStore: mockUseWorkspaceStore as never,
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as never,
 }));
 
-vi.mock('sonner', () => ({
+vi.mock(import('sonner'), () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+    success: vi.fn<(message: string) => void>(),
+    error: vi.fn<(message: string) => void>(),
+  } as never,
 }));
 
-vi.mock('@/components/kanban/task/TaskForm', () => ({
+vi.mock(import('@/components/kanban/task/TaskForm'), () => ({
   TaskForm: ({ children, onSubmit, onCancel }: any) => (
     <form
       data-testid="task-form"
@@ -47,32 +54,35 @@ vi.mock('@/components/kanban/task/TaskForm', () => ({
         });
       }}>
       {children}
-      <button type="button" onClick={onCancel} data-testid="cancel-btn">
+      <button
+        type="button"
+        onClick={onCancel}
+        data-testid="cancel-btn">
         Cancel
       </button>
-      <button type="submit" data-testid="submit-btn">
+      <button
+        type="submit"
+        data-testid="submit-btn">
         Submit
       </button>
     </form>
   ),
 }));
 
-describe('NewTaskDialog', () => {
+describe(NewTaskDialog, () => {
   const mockProjectId = 'project-1';
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { useCreateTask } = await import('@/lib/api/tasks/queries');
-
     vi.mocked(useCreateTask).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({ _id: 'task-1' }),
-      mutate: vi.fn(),
+      mutateAsync: vi.fn<() => Promise<{ _id: string }>>().mockResolvedValue({ _id: 'task-1' }),
+      mutate: vi.fn<() => void>(),
       isPending: false,
     } as any);
 
     const store = {
-      addTask: vi.fn().mockResolvedValue('task-1'),
+      addTask: vi.fn<() => Promise<string>>().mockResolvedValue('task-1'),
       projects: [
         {
           _id: 'project-1',
@@ -86,7 +96,7 @@ describe('NewTaskDialog', () => {
     };
 
     // Setup the mock implementation
-    mockUseWorkspaceStore.mockImplementation((selector?: any) => (selector ? selector(store) : store));
+    mockUseWorkspaceStore.mockImplementation((selector) => (selector === undefined ? store : selector(store)));
     mockGetState.mockReturnValue(store);
   });
 
@@ -129,12 +139,16 @@ describe('NewTaskDialog', () => {
       );
     });
     expect(toast.success).toHaveBeenCalledWith('createSuccess');
-    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('closes the dialog on cancel', async () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('cancel-btn'));
-    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument();
+    });
   });
 });

@@ -1,96 +1,45 @@
 import type { Href } from '@repo/router';
-import type { FieldApi } from '@tanstack/form-core';
-import type { FormApi } from '@tanstack/react-form';
+import type { AnyFormApi } from '@tanstack/react-form';
 import type { ReactNode } from 'react';
+
+import type { FieldValidators } from './shared/utils';
 
 // ---------------------------------------------------------------------------
 // Link resolver types
 // ---------------------------------------------------------------------------
 
 /** Resolves a field value to a Link href. Returns null for no link. */
-export type LinkResolver = (value: unknown) => Href | null;
+export type LinkResolver<TValue = unknown> = (value: TValue) => Href | null;
 
 /** Resolves a ChildTable cell value to a Link href. Per-column. */
-export type ChildTableLinkResolver<TRow> = (value: unknown, row: TRow, rowIndex: number) => Href | null;
+export type ChildTableLinkResolver<TRow, TValue = unknown> = (
+  value: TValue,
+  row: TRow,
+  rowIndex: number,
+) => Href | null;
 
 // ---------------------------------------------------------------------------
 // Compatibility types for TanStack Form v1
 // ---------------------------------------------------------------------------
 
-/**
- * Compatibility type for Validator which doesn't exist in v1.
- * Using `any` because TanStack Form's validator types are complex and require flexibility.
- */
-export type Validator<_TData, _TError = unknown> = any;
+/** Compatibility type for Validator which doesn't exist in v1: a sync validator returning an error or undefined, or no validator. */
+export type Validator<TData, TError = unknown> = ((args: { value: TData }) => TError | undefined) | undefined;
 
-/**
- * Simplified FieldApi type that covers the most common use cases.
- * TanStack Form v1 has 23 generic parameters on FieldApi, making it impractical
- * to fully type in most situations. This simplified version captures the
- * essential API surface for field components.
- */
-export type AnyFieldApi<TValue = unknown> = FieldApi<
-  Record<string, unknown>, // TParentData
-  string, // TName
-  TValue, // TData
-  undefined, // TOnMount
-  undefined, // TOnChange
-  undefined, // TOnChangeAsync
-  undefined, // TOnBlur
-  undefined, // TOnBlurAsync
-  undefined, // TOnSubmit
-  undefined, // TOnSubmitAsync
-  undefined, // TOnDynamic
-  undefined, // TOnDynamicAsync
-  undefined, // TFormOnMount
-  undefined, // TFormOnChange
-  undefined, // TFormOnChangeAsync
-  undefined, // TFormOnBlur
-  undefined, // TFormOnBlurAsync
-  undefined, // TFormOnSubmit
-  undefined, // TFormOnSubmitAsync
-  undefined, // TFormOnDynamic
-  undefined, // TFormOnDynamicAsync
-  undefined, // TFormOnServer
-  unknown // TParentSubmitMeta
->;
+export type { AnyFieldApi, AnyFormApi } from '@tanstack/react-form';
 
 /**
  * Minimal form interface that captures the essential methods used by field components.
  * This avoids the complex generic variance issues with FormApi's 12+ type parameters.
  */
-export interface MinimalFormApi<TData = Record<string, unknown>> {
+export interface MinimalFormApi<TData = object> {
   store?: {
     state?: {
       values?: TData;
     };
   };
   getFieldMeta?: (fieldName: string) => { errors?: readonly (string | undefined)[] } | undefined;
-  setFieldValue?: (field: string, value: unknown) => void;
+  setFieldValue?: (field: string, value: TData[keyof TData]) => void;
 }
-
-/**
- * AnyFormApi accepts any FormApi instance regardless of validator configuration.
- *
- * TanStack Form's FormApi has 12+ type parameters for validators, and TypeScript's
- * variance rules make it impossible to create a permissive type using `unknown`.
- * Using `any` for validator parameters is the only way to accept forms with any
- * validator configuration while maintaining the TData type parameter for type safety.
- */
-export type AnyFormApi<TData = Record<string, unknown>> = FormApi<
-  TData,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any,
-  any
->;
 
 /**
  * Type-safe field state from TanStack Form FieldApi.
@@ -121,19 +70,19 @@ export interface SimpleFieldApi<TValue = unknown> {
 }
 
 export interface FieldComponentProps<
-  _TParentData = Record<string, unknown>,
+  _TParentData = object,
   TName extends string = string,
-  _TFieldValidator = any,
-  _TFormValidator = any,
+  _TFieldValidator = unknown,
+  _TFormValidator = unknown,
   TData = unknown,
 > {
   children?: ReactNode;
-  form?: FormApi<any, any, any, any, any, any, any, any, any, any, any, any>;
+  form?: AnyFormApi;
   mode?: 'value' | 'array';
   name?: TName;
   defaultValue?: TData;
   preserveValue?: boolean;
-  validators?: any;
+  validators?: FieldValidators;
 }
 
 // ---------------------------------------------------------------------------

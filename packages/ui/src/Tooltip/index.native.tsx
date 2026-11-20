@@ -8,18 +8,16 @@
  */
 
 import { zIndex } from '@repo/forms';
-import { OVERLAY_ANCHOR_GAP, useResolvedKnobs, warnTooltipOnDisabled } from '@repo/theme';
+import { OVERLAY_ANCHOR_GAP, useResolvedKnobs } from '@repo/theme';
 import React from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import {
-  Tooltip as TamaguiTooltip,
-  TooltipGroup as TamaguiTooltipGroup,
-  Portal,
-  useTheme,
-  type GetProps,
-} from 'tamagui';
+import type { GestureResponderEvent } from 'react-native';
+import { Tooltip as TamaguiTooltip, TooltipGroup as TamaguiTooltipGroup, Portal, useTheme } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
-import { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './nativePress';
+import { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './native-press';
+import type { NativeTooltipPressHandlers } from './native-press';
 import {
   TooltipArrow,
   TooltipContent,
@@ -29,11 +27,12 @@ import {
   resolveThemeColor,
   resolveTooltipPadRecipe,
   resolveTooltipSizeRecipe,
+  warnIfTriggerDisabled,
   wrapTooltipContent,
-  type TooltipProps,
-} from './tooltipShared';
+} from './tooltip-shared';
+import type { TooltipProps, TooltipTriggerProps } from './tooltip-shared';
 
-export type { TooltipProps, TooltipSizeRecipe } from './tooltipShared';
+export type { TooltipProps, TooltipSizeRecipe } from './tooltip-shared';
 export {
   tooltipSizeRecipes,
   tooltipPadRecipes,
@@ -49,13 +48,42 @@ export {
   TooltipContent,
   TooltipArrow,
   TooltipText,
-} from './tooltipShared';
-export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './nativePress';
-export type { NativeTooltipPressHandlers } from './nativePress';
+} from './tooltip-shared';
+export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './native-press';
+export type { NativeTooltipPressHandlers } from './native-press';
 
-type PressHandler = ((event: unknown) => void) | undefined;
+type PressHandler = (event: GestureResponderEvent) => void;
 
-export function Tooltip({
+interface NativeTriggerProps extends TooltipTriggerProps {
+  delayLongPress?: number;
+  onPressIn?: PressHandler;
+  onPressOut?: PressHandler;
+  onLongPress?: PressHandler;
+}
+
+const withPressHandlers = (children: ReactNode, press: NativeTooltipPressHandlers, delay: number): ReactNode => {
+  if (!React.isValidElement<NativeTriggerProps>(children)) {
+    return children;
+  }
+  // oxlint-disable-next-line react/no-clone-element -- Trigger asChild does not forward press handlers, so the press session is layered onto the caller's element while keeping its props, key and ref
+  return React.cloneElement(children, {
+    delayLongPress: delay,
+    onPressIn: (event: GestureResponderEvent) => {
+      children.props.onPressIn?.(event);
+      press.pressIn();
+    },
+    onPressOut: (event: GestureResponderEvent) => {
+      children.props.onPressOut?.(event);
+      press.pressOut();
+    },
+    onLongPress: (event: GestureResponderEvent) => {
+      children.props.onLongPress?.(event);
+      press.longPress();
+    },
+  });
+};
+
+export const Tooltip = ({
   children,
   content,
   placement = 'top',
@@ -63,7 +91,7 @@ export function Tooltip({
   disabled = false,
   open: openProp,
   onOpenChange: onOpenChangeProp,
-}: TooltipProps) {
+}: TooltipProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Tooltip' });
   const theme = useTheme();
   const surfaceFill = resolveThemeColor(theme.color1, '$color1');
@@ -72,7 +100,8 @@ export function Tooltip({
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : uncontrolledOpen;
-  const [outsideArmed, setOutsideArmed] = React.useState(false);
+  const [armed, setArmed] = React.useState(false);
+  const outsideArmed = open && armed;
 
   const setOpen = React.useCallback(
     (next: boolean) => {
@@ -96,47 +125,21 @@ export function Tooltip({
   );
 
   React.useEffect(() => {
-    if (!open) {
-      setOutsideArmed(false);
-      return;
-    }
     const arm = setTimeout(() => {
-      setOutsideArmed(true);
+      setArmed(open);
     }, 50);
     return () => {
       clearTimeout(arm);
+      setArmed(false);
     };
   }, [open]);
 
-  if (React.isValidElement(children)) {
-    const childProps = (children as React.ReactElement<Record<string, unknown>>).props;
-    const childDisabled =
-      childProps.disabled === true || childProps['aria-disabled'] === true || childProps['aria-disabled'] === 'true';
-    warnTooltipOnDisabled({
-      component: 'Tooltip',
-      childDisabled,
-    });
-  }
+  warnIfTriggerDisabled(children);
 
-  const trigger = React.isValidElement(children)
-    ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-        delayLongPress: delay,
-        onPressIn: (event: unknown) => {
-          (children.props as { onPressIn?: PressHandler }).onPressIn?.(event);
-          press.pressIn();
-        },
-        onPressOut: (event: unknown) => {
-          (children.props as { onPressOut?: PressHandler }).onPressOut?.(event);
-          press.pressOut();
-        },
-        onLongPress: (event: unknown) => {
-          (children.props as { onLongPress?: PressHandler }).onLongPress?.(event);
-          press.longPress();
-        },
-      })
-    : children;
+  const trigger = withPressHandlers(children, press, delay);
 
   if (disabled) {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- wraps ReactNode children into an element; returning ReactNode directly would type the component as returning a Promise
     return <>{children}</>;
   }
 
@@ -169,8 +172,8 @@ export function Tooltip({
         <TamaguiTooltip.Trigger asChild>{trigger}</TamaguiTooltip.Trigger>
         <TooltipContent
           {...elevated}
-          paddingHorizontal={pad.paddingHorizontal as never}
-          paddingVertical={pad.paddingVertical as never}
+          paddingHorizontal={pad.paddingHorizontal}
+          paddingVertical={pad.paddingVertical}
           maxWidth={sizeRecipe.maxWidth}
           transition={knobProps.transition}
           role="tooltip"
@@ -197,7 +200,7 @@ export function Tooltip({
       </TamaguiTooltip>
     </>
   );
-}
+};
 
 Tooltip.Content = TooltipContent;
 Tooltip.Arrow = TooltipArrow;

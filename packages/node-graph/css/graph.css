@@ -1,0 +1,171 @@
+/*
+ * @repo/node-graph — the published stylesheet.
+ *
+ * Declared as `exports["./css/graph.css"]`. A consumer imports it once, beside
+ * `@xyflow/react/dist/style.css`.
+ *
+ * This is the only hand-written React Flow CSS in the package.
+ * `checkGraphVarsCoverage()` in public/config/lint.mjs fails `pnpm lint` on a
+ * `.react-flow__` selector anywhere else under a public package's src, so paint
+ * that is not a `--xy-*` variable has to land here, in one file a reviewer can
+ * read whole.
+ *
+ * Nothing below is COLOR. Color is the var layer in src/theme/graph-vars.ts
+ * and never appears in this file. What is here is the dash keyframes, the touch
+ * rules, and the port hit region — three sections, each appended by the task
+ * that owns it (1.10, 1.7, 1.9). Every future addition APPENDS.
+ */
+
+/*
+ * The marching dash on `error` and `conditional` edges.  (task 1.10)
+ *
+ * 10 is the sum of the longest dash pattern in design §4.4 plus its gap
+ * (`6 4`), so one iteration advances by exactly one period and the march has no
+ * visible seam. `resolveEdgeStyle` sets `animation: none` when the animation
+ * knob is `"none"`, which is also what the OS reduced-motion setting forces
+ * through `useResolvedKnobs`.
+ */
+@keyframes mp-graph-dash {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/*
+ * Four rules that decide whether a graph is usable with a finger.  (task 1.7)
+ *
+ * `touch-action: none` — the pane owns pan and pinch. Without it the browser
+ * claims the gesture first and d3-zoom sees nothing, which is the whole canvas
+ * dead to touch.
+ * `-webkit-touch-callout: none` — iOS otherwise raises the share/copy callout
+ * on a long press, and long press is the lasso gesture (design 7.3).
+ * `user-select: none` — a drag across nodes otherwise starts a text selection,
+ * and the selection rectangle and the text selection fight.
+ * `overscroll-behavior: none` — a pan that reaches the edge otherwise becomes
+ * the page's pull-to-refresh or back-swipe, and the graph jumps away.
+ */
+.mp-graph,
+.mp-graph .react-flow__pane,
+.mp-graph .react-flow__viewport,
+.mp-graph .react-flow__node {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+/* A node's own chrome may still overflow (design 7.1 H6), so the root must not clip it. */
+.mp-graph .react-flow__node {
+  overflow: visible;
+}
+
+/* Alignment guides (design 7.2 S10): ONE svg inside the viewport transform,
+   at most two lines in it. The layer is a coordinate space, not a box, so it
+   is zero-sized and unclipped and the lines carry flow coordinates. */
+.mp-graph .mp-graph-guides {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Color comes from the mpo-owned var layer, never a literal.
+   `non-scaling-stroke` is what keeps a hairline a hairline: without it the
+   viewport transform multiplies the stroke and a 4x zoom paints a 2px bar. */
+.mp-graph .mp-graph-guide {
+  fill: none;
+  stroke: var(--mpo-graph-guide-color, currentColor);
+  stroke-width: var(--mpo-graph-guide-width, 0.5px);
+  vector-effect: non-scaling-stroke;
+}
+
+/* Design 7.2 S11: motion settings fade the guide. They never stop the snap. */
+.mp-graph .mp-graph-guides[data-animated='true'] .mp-graph-guide {
+  /* The var is a complete `transition` shorthand ("all ease-in 100ms", or
+     "none" when the animation knob is off), so it is used whole. */
+  transition: var(--mpo-graph-transition, none);
+}
+
+/* ── The port: painted dot ─────────────────────────────────────────────── */
+
+.mp-graph .react-flow__handle.mp-graph-port {
+  /**
+   * The containing block for its OWN hit region.
+   *
+   * React Flow declares the identical `position: absolute` on
+   * `.react-flow__handle` (style.css:245, an unscoped class selector), so this
+   * cannot fight it — it is the same value, restated so the region does not
+   * depend on another package's sheet having been imported. Measured in
+   * Chrome with that sheet absent: the handle computed `position: static`, the
+   * `::after` resolved against the nearest positioned ANCESTOR instead of the
+   * dot, and a 44 px region rendered as 80 px — exactly the click-stealing H3
+   * exists to prevent.
+   *
+   * What this does NOT restate is the edge placement
+   * (`.react-flow__handle-left` and friends). Those stay upstream's, so a
+   * consumer must load `@xyflow/react/dist/style.css` — the design assumes it
+   * throughout §6.2, and `NodeGraphWeb` imports it in task 1.11.
+   */
+  position: absolute;
+  width: var(--mpo-graph-handle-size);
+  height: var(--mpo-graph-handle-size);
+  /**
+   * §11 Radius, GraphPort disc: `ignore`. A square port reads as a resize
+   * grip, so the circle IS the part's identity and it survives every stop,
+   * `borderRadius: none` included.
+   */
+  border-radius: 50%;
+  box-sizing: border-box;
+  /* §11 Elevation, GraphPort: `ignore`. Ports never cast a shadow. */
+  box-shadow: none;
+}
+
+/* ── The port: 44pt hit region ─────────────────────────────────────────── */
+
+.mp-graph .react-flow__handle.mp-graph-port::after {
+  content: '';
+  position: absolute;
+  /**
+   * NEGATIVE, so the region grows OUTWARD from the painted disc. A
+   * pseudo-element changes neither `getBoundingClientRect()` nor
+   * `getDimensions()`, which is what `handleBounds` reads, so the rendered
+   * edge endpoint stays where the 8 px dot put it (design §7.1 H2).
+   *
+   * The `/ var(--mpo-graph-zoom)` term is H7, and it is the milestone-6 fix.
+   * Every element a node owns lives inside `.react-flow__viewport`, whose
+   * transform carries the zoom, so a region declared 44 px renders 44 x zoom
+   * SCREEN px. Measured on the iPhone 16e at zoom 0.377: 16.6 pt wide, a
+   * half-width of 8.3 pt against a demanded 18, and a tap 18 pt off the painted
+   * center PANNED the canvas. Dividing the hit by the live zoom makes the
+   * rendered region 44 screen px at every zoom.
+   *
+   * `--mpo-graph-zoom` is written on the canvas root by `GraphZoomVar` on every
+   * viewport change and inherits down; the `1` fallback is what a port rendered
+   * OUTSIDE a canvas gets, which is the `NodeGraph/GraphPort` stories.
+   *
+   * `--mpo-graph-handle-border` is added back for the reason `portRegionInset`
+   * has always added it back: an absolutely positioned pseudo-element insets
+   * from its parent's PADDING box, and the dot is `box-sizing: border-box` with
+   * a knob-driven ring, so a 44 asked for rendered as 42.
+   *
+   * This expression is `portRegionInsetAtZoom` in `nodes/handle-geometry.ts`,
+   * written twice because one side is CSS. `GraphPort.test.tsx` reads this rule
+   * text and holds the two to the same arithmetic.
+   */
+  inset: calc(
+    (var(--mpo-graph-handle-size) - var(--mpo-graph-handle-hit) / var(--mpo-graph-zoom, 1)) / 2 -
+      var(--mpo-graph-handle-border, 0px)
+  );
+  border-radius: 50%;
+  /**
+   * REQUIRED. `.react-flow__handle` is `pointer-events: none` (React Flow's
+   * own style.css:247) and only gains `all` under `.connectingfrom` /
+   * `.connectionindicator` (:256-262). A pseudo-element inherits that `none`
+   * and receives nothing without this line — the region would be invisible
+   * AND dead, which is the failure mode that looks like it works.
+   */
+  pointer-events: all;
+}

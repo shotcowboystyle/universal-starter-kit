@@ -27,7 +27,10 @@ const sampleTokens: HighlightLine[] = [
 ];
 
 const SampleHighlightedCode = (props: Omit<ComponentProps<typeof HighlightedCode>, 'tokens'>) => (
-  <HighlightedCode tokens={sampleTokens} {...props} />
+  <HighlightedCode
+    tokens={sampleTokens}
+    {...props}
+  />
 );
 
 const meta: Meta<typeof HighlightedCode> = {
@@ -44,7 +47,10 @@ type Story = StoryObj<typeof HighlightedCode>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack padding="$4" backgroundColor="$color2" borderRadius="$3">
+    <YStack
+      padding="$4"
+      backgroundColor="$color2"
+      borderRadius="$3">
       <SampleHighlightedCode />
     </YStack>
   ),
@@ -52,7 +58,10 @@ export const Default: Story = {
 
 export const WithLineNumbers: Story = {
   render: () => (
-    <YStack padding="$4" backgroundColor="$color2" borderRadius="$3">
+    <YStack
+      padding="$4"
+      backgroundColor="$color2"
+      borderRadius="$3">
       <SampleHighlightedCode showLineNumbers />
     </YStack>
   ),
@@ -60,15 +69,24 @@ export const WithLineNumbers: Story = {
 
 export const WithHighlightedLines: Story = {
   render: () => (
-    <YStack padding="$4" backgroundColor="$color2" borderRadius="$3">
-      <SampleHighlightedCode highlightLines={[1]} showLineNumbers />
+    <YStack
+      padding="$4"
+      backgroundColor="$color2"
+      borderRadius="$3">
+      <SampleHighlightedCode
+        highlightLines={[1]}
+        showLineNumbers
+      />
     </YStack>
   ),
 };
 
 export const Loading: Story = {
   render: () => (
-    <YStack padding="$4" backgroundColor="$color2" borderRadius="$3">
+    <YStack
+      padding="$4"
+      backgroundColor="$color2"
+      borderRadius="$3">
       <HighlightedCode tokens={null}>Loading code...</HighlightedCode>
     </YStack>
   ),

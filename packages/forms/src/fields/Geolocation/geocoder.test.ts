@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { parseGeoValue, formatGeoValue } from './geo-value';
+import type { GeocodeFn, ReverseGeocodeFn } from './geocoder';
 import { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
-import { parseGeoValue, formatGeoValue } from './geoValue';
 
 describe('geocoder seam helpers', () => {
   it('parses and serializes the lat/lng JSON value', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(parseGeoValue(undefined)).toBeNull();
     expect(parseGeoValue('')).toBeNull();
     expect(parseGeoValue('{')).toBeNull();
-    expect(parseGeoValue(JSON.stringify({ lat: 60.16952, lng: 24.93545 }))).toEqual({
+    expect(parseGeoValue(JSON.stringify({ lat: 60.16952, lng: 24.93545 }))).toStrictEqual({
       lat: 60.16952,
       lng: 24.93545,
     });
@@ -22,8 +24,8 @@ describe('geocoder seam helpers', () => {
   });
 
   it('parses a typed lat, lng pair and rejects out-of-range', () => {
-    expect(parseLatLngPair('60.169, 24.935')).toEqual({ lat: 60.169, lng: 24.935 });
-    expect(parseLatLngPair('  -33.8,  151.2 ')).toEqual({ lat: -33.8, lng: 151.2 });
+    expect(parseLatLngPair('60.169, 24.935')).toStrictEqual({ lat: 60.169, lng: 24.935 });
+    expect(parseLatLngPair('  -33.8,  151.2 ')).toStrictEqual({ lat: -33.8, lng: 151.2 });
     expect(parseLatLngPair('mannerheim')).toBeNull();
     expect(parseLatLngPair('91, 0')).toBeNull();
     expect(parseLatLngPair('0, 200')).toBeNull();
@@ -41,9 +43,9 @@ describe('geocoder seam helpers', () => {
   });
 
   it('resolveGeocoder prefers explicit props over a geocoder object', () => {
-    const geocode = vi.fn();
-    const reverseGeocode = vi.fn();
-    const other = { geocode: vi.fn(), reverseGeocode: vi.fn() };
+    const geocode = vi.fn<GeocodeFn>();
+    const reverseGeocode = vi.fn<ReverseGeocodeFn>();
+    const other = { geocode: vi.fn<GeocodeFn>(), reverseGeocode: vi.fn<ReverseGeocodeFn>() };
     const resolved = resolveGeocoder({ geocode, reverseGeocode, geocoder: other });
     expect(resolved.geocode).toBe(geocode);
     expect(resolved.reverseGeocode).toBe(reverseGeocode);

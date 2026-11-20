@@ -29,13 +29,21 @@ type Story = StoryObj<typeof DestructiveAction>;
 export const Severities: Story = {
   name: 'Severity tiers',
   render: () => (
-    <YStack gap="$4" padding="$4" maxWidth={480}>
+    <YStack
+      gap="$4"
+      padding="$4"
+      maxWidth={480}>
       <Paragraph size="$3">
         low = no confirm / no danger · medium = ConfirmDialog + danger · high = typed ConfirmDialog + danger
       </Paragraph>
       <ActionBar
         align="start"
-        primary=<DestructiveAction severity="low" verb="Remove" noun="tag" onAction={() => action('low-remove')()} />
+        primary=<DestructiveAction
+          severity="low"
+          verb="Remove"
+          noun="tag"
+          onAction={() => action('low-remove')()}
+        />
       />
       <ActionBar
         align="start"
@@ -64,19 +72,41 @@ export const Severities: Story = {
 export const ActionBarOnePrimary: Story = {
   name: 'ActionBar + verb/noun',
   render: () => (
-    <YStack gap="$4" padding="$4" maxWidth={520}>
+    <YStack
+      gap="$4"
+      padding="$4"
+      maxWidth={520}>
       <Paragraph size="$3">One primary per region; labels from verb + noun.</Paragraph>
       <ActionBar
         id="form-actions"
-        cancel=<Button actionRole="chrome" verb="Cancel" />
-        secondary=<Button actionRole="secondary" verb="Save" noun="draft" outlined />
-        primary=<Button accent verb="Publish" noun="post" />
+        cancel=<Button
+          actionRole="chrome"
+          verb="Cancel"
+        />
+        secondary=<Button
+          actionRole="secondary"
+          verb="Save"
+          noun="draft"
+          outlined
+        />
+        primary=<Button
+          accent
+          verb="Publish"
+          noun="post"
+        />
       />
       <ActionBar
         id="row-actions"
         align="end"
-        secondary=<Button actionRole="secondary" verb="Edit" />
-        primary=<DestructiveAction verb="Delete" noun="row" onAction={() => action('delete-row')()} />
+        secondary=<Button
+          actionRole="secondary"
+          verb="Edit"
+        />
+        primary=<DestructiveAction
+          verb="Delete"
+          noun="row"
+          onAction={() => action('delete-row')()}
+        />
       />
     </YStack>
   ),
@@ -92,7 +122,9 @@ export const TwoPrimariesWarn: Story = {
     },
   },
   render: () => (
-    <ActionBar id="bad-region" padding="$4">
+    <ActionBar
+      id="bad-region"
+      padding="$4">
       <Button accent>Save</Button>
       <Button accent>Publish</Button>
     </ActionBar>

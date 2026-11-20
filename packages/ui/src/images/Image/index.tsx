@@ -1,13 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Image as TamaguiImage } from 'tamagui';
 
-import { ImageFrame, mediaFillProps, type ImageStatus } from './ImageFrame';
-import { isThumbnailSize, useResolvedImageSource } from './shared';
+import { ImageFrame } from './ImageFrame';
+import {
+  hasThumbnailSize,
+  isEmptyImage,
+  isNumber,
+  resolveObjectFit,
+  mediaFillProps,
+  useImageStatus,
+  useResolvedImageSource,
+} from './shared';
 import type { ImageProps } from './types';
 
 export type { ImageProps } from './types';
 
-export function Image({
+export const Image = ({
   alt = '',
   blurRadius: _blurRadius,
   capInsets: _capInsets,
@@ -26,6 +34,7 @@ export function Image({
   progressiveRenderingEnabled: _progressiveRenderingEnabled,
   referrerPolicy,
   resizeMethod: _resizeMethod,
+  // oxlint-disable-next-line typescript/no-deprecated -- `source` is still a supported input (RN-style assets); useResolvedImageSource normalizes it with `src`
   source: sourceProp,
   src,
   srcSet,
@@ -51,35 +60,35 @@ export function Image({
   aspectRatio,
   borderRadius,
   ...props
-}: ImageProps) {
+}: ImageProps) => {
   const { source, resolvedSrc } = useResolvedImageSource(sourceProp, src);
-  const hasSource = Boolean(resolvedSrc) || typeof source === 'number';
-  const thumbnail = size != null && (isThumbnailSize(size) || typeof size === 'number');
+  const hasSource = Boolean(resolvedSrc) || isNumber(source);
+  const thumbnail = hasThumbnailSize(size);
   const isFramed = framed ?? thumbnail;
-  const objectFit = objectFitProp ?? (fill || thumbnail ? 'cover' : undefined);
+  const objectFit = resolveObjectFit(objectFitProp, fill || thumbnail);
   const loading = priority ? 'eager' : (loadingProp ?? 'lazy');
 
-  const [status, setStatus] = useState<ImageStatus>(() => (hasSource ? 'loading' : 'error'));
-  useEffect(() => {
-    setStatus(hasSource ? 'loading' : 'error');
-  }, [hasSource, resolvedSrc]);
+  const [status, setStatus] = useImageStatus(hasSource, resolvedSrc);
 
   const handleLoad = useCallback(
     (event?: Parameters<NonNullable<ImageProps['onLoad']>>[0]) => {
       setStatus('loaded');
       onLoad?.(event);
     },
-    [onLoad],
+    [onLoad, setStatus],
   );
   const handleError = useCallback(
     (error: Parameters<NonNullable<ImageProps['onError']>>[0]) => {
       setStatus('error');
       onError?.(error);
     },
-    [onError],
+    [onError, setStatus],
   );
 
-  if (!hasSource && !isFramed && fallback == null && !fill && size == null) {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type, anti-slop/no-known-value-widening -- handlers are RN-shaped (ImageProps) but the underlying <img>/RN Image events differ; no shared event type exists to key this by
+  const loadHandlers: Record<string, unknown> = { onError: handleError, onLoad: handleLoad };
+
+  if (isEmptyImage({ hasSource, isFramed, fallback, fill, size })) {
     return null;
   }
 
@@ -113,10 +122,9 @@ export function Image({
           decoding={decoding}
           fetchPriority={priority ? 'high' : undefined}
           loading={loading}
-          objectFit={objectFit}
+
           objectPosition={objectPosition}
-          onError={handleError as never}
-          onLoad={handleLoad as never}
+          {...loadHandlers}
           onLoadEnd={onLoadEnd}
           onLoadStart={onLoadStart}
           onProgress={onProgress}
@@ -137,4 +145,4 @@ export function Image({
       ) : null}
     </ImageFrame>
   );
-}
+};

@@ -1,16 +1,18 @@
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
-import { type Popover, useProps } from 'tamagui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { useProps } from 'tamagui';
+import type { Popover } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { DatePickerFieldValueSync } from './fieldValueSync';
+import { DatePickerFieldValueSync } from './FieldValueSync';
 import {
   CalendarDays,
   CalendarHeader,
@@ -34,10 +36,11 @@ export type { ViewMode } from './parts';
 // ---------------------------------------------------------------------------
 
 export type DatePickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default mirrors FormFieldProps/FieldComponentProps; untyped forms have no owner shape
+  TParentData = Record<string, unknown>,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 > = Omit<
   FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
@@ -45,7 +48,10 @@ export type DatePickerProps<
   // YStackProps; this field exposes a canonical value callback instead.
   'children' | 'field' | 'onChange'
 > &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: Parameters<typeof useResolvedValidators>[1];
     readOnly?: boolean;
     placeholder?: string;
     format?: string;
@@ -82,20 +88,18 @@ interface DayGridProps {
   maxDate?: Date;
 }
 
-function DayGrid({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) {
-  return (
-    <CalendarDays
-      calendarData={calendarData}
-      minDate={minDate}
-      maxDate={maxDate}
-      isSelected={(day) => isSameDay(selectedDate, day)}
-      onSelect={onSelectDate}
-      onToday={() => {
-        onSelectDate(new Date());
-      }}
-    />
-  );
-}
+const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => (
+  <CalendarDays
+    calendarData={calendarData}
+    minDate={minDate}
+    maxDate={maxDate}
+    isSelected={(day) => isSameDay(selectedDate, day)}
+    onSelect={onSelectDate}
+    onToday={() => {
+      onSelectDate(new Date());
+    }}
+  />
+);
 
 // ---------------------------------------------------------------------------
 // CalendarBody — orchestrates day/month/year views
@@ -111,7 +115,7 @@ interface CalendarBodyProps {
   maxDate?: Date;
 }
 
-function CalendarBody({
+const CalendarBody = ({
   displayDate,
   selectedDate,
   onSelectDate,
@@ -119,7 +123,7 @@ function CalendarBody({
   onSetDisplayDate,
   minDate,
   maxDate,
-}: CalendarBodyProps) {
+}: CalendarBodyProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const calendarData = useCalendarData(displayDate);
   const [yearPageStart, setYearPageStart] = useState(() => calendarData.year - (calendarData.year % yearPageSize));
@@ -161,28 +165,29 @@ function CalendarBody({
       </CalendarPanelFrame>
     </CalendarViewSwitcher>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function DatePicker<
+export const DatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     value: controlledValue,
     onChange,
+    // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored until removed
     onValueChange,
     form,
-    inputProps: _inputProps,
     placeholder = t('Select date'),
-    format: _format = 'MM/DD/YYYY',
     minDate,
     maxDate,
     disabled,
@@ -201,7 +206,6 @@ export function DatePicker<
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
@@ -215,6 +219,7 @@ export function DatePicker<
     if (controlledValue === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
     setSelectedDate(coerceToDate(controlledValue));
   }, [controlledValue]);
   // Axiom 11 VALUE IS DATA: the calendar opens at the selected value's
@@ -228,14 +233,16 @@ export function DatePicker<
     popoverRef.current?.close();
   }, []);
 
+  // oxlint-disable-next-line react-doctor/no-effect-chain -- closes the popover whenever a value lands, including external field-value syncs
   useEffect(() => {
     if (selectedDate) {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates, react/set-state-in-effect -- closes the popover whenever a value lands, including external field-value syncs
       closePopover();
     }
   }, [selectedDate, closePopover]);
 
   const handleDateSelect = useCallback(
-    (date: Date, fieldChange?: (value: any) => void) => {
+    (date: Date, fieldChange?: (value: Date | null) => void) => {
       if (minDate && date < minDate) {
         return;
       }
@@ -255,7 +262,7 @@ export function DatePicker<
   );
 
   const handleClearDate = useCallback(
-    (fieldChange?: (value: any) => void) => {
+    (fieldChange?: (value: Date | null) => void) => {
       setSelectedDate(null);
       setDisplayDate(new Date());
       fieldChange?.(null);
@@ -265,7 +272,7 @@ export function DatePicker<
     [setDisplayDate, onChange, onValueChange],
   );
 
-  const calendarContent = (fieldChange?: (value: any) => void) => (
+  const calendarContent = (fieldChange?: (value: Date | null) => void) => (
     <CalendarBody
       displayDate={displayDate}
       selectedDate={selectedDate}
@@ -279,11 +286,7 @@ export function DatePicker<
     />
   );
 
-  const renderPopover = (
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (value: any) => void,
-  ) => {
+  const renderPopover = (hasError = false, blurHandler?: () => void, fieldChange?: (value: Date | null) => void) => {
     if (readOnly) {
       return (
         <InputParts.Box>
@@ -291,7 +294,7 @@ export function DatePicker<
             value={formatDateDisplay(selectedDate)}
             readOnly
             aria-readonly="true"
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
             placeholder={placeholder}
           />
@@ -325,8 +328,9 @@ export function DatePicker<
         // "Date, Jul 15 2026": VO gets the field name + current value on the
         // native trigger (the web trigger announces via aria on the Area).
         triggerA11y={{
-          label: (typeof label === 'string' && label) || t('Date'),
-          value: formatDateDisplay(selectedDate) || placeholder,
+          // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode label has no discriminant; only a string is usable as an a11y name
+          label: typeof label === 'string' && label !== '' ? label : t('Date'),
+          value: formatDateDisplay(selectedDate) === '' ? placeholder : formatDateDisplay(selectedDate),
           hint: helperText,
         }}
         trigger={
@@ -344,17 +348,20 @@ export function DatePicker<
               }
               setOpen(true);
             }}
-            error={!!hasError}
+            error={hasError}
             id={id}
-            // Labelled: FieldLayout's Label wires `aria-labelledby` onto this
+            // Labeled: FieldLayout's Label wires `aria-labelledby` onto this
             // id itself — naming it here too doubles the spoken name.
             aria-label={hasLabel ? undefined : t('Date')}
             aria-describedby={
-              [helperText && id ? `${id}-description` : undefined, hasError && id ? `${id}-error` : undefined]
+              [
+                helperText != null && helperText !== '' && id ? `${id}-description` : undefined,
+                hasError && id ? `${id}-error` : undefined,
+              ]
                 .filter(Boolean)
                 .join(' ') || undefined
             }
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
           />
         }
@@ -370,13 +377,21 @@ export function DatePicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -391,7 +406,7 @@ export function DatePicker<
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderPopover(!!errorProp)}</InputParts>
+        <InputParts size={size ?? knobProps.sizeToken}>{renderPopover(Boolean(errorProp))}</InputParts>
       </FieldLayout>
     );
   }
@@ -411,7 +426,10 @@ export function DatePicker<
           <>
             {/* Form branch displays from `selectedDate` — keep it synced to
                 the live field value (late seeds / programmatic updates). */}
-            <DatePickerFieldValueSync value={field.state.value} onSync={setSelectedDate} />
+            <DatePickerFieldValueSync
+              value={field.state.value}
+              onSync={setSelectedDate}
+            />
             <FieldLayout
               id={id}
               label={label}
@@ -423,9 +441,9 @@ export function DatePicker<
               knobProps={knobProps}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={size ?? knobProps.sizeToken}>
                 {renderPopover(
-                  !!resolvedError,
+                  Boolean(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}
@@ -436,7 +454,7 @@ export function DatePicker<
       }}
     </Field>
   );
-}
+};
 
 // Re-export new picker variants
 export { MultiDatePicker } from './MultiDatePicker';

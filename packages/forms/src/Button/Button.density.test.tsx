@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The density knob and the `compact` PROP must land the
  * SAME padX. Height stays 44 at both stops — density moves space, not size.
  *
@@ -18,71 +18,78 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button, buttonDensityFamily, resolveButtonSizeRecipe } from './index';
 
-afterEach(cleanup);
-
 const sizes = ['$2', '$3', '$4'] as const;
 
 /** Last `_pl-Npx` / `_pr-Npx` class wins (paddingHorizontal expands to both). */
-function paddingPxFromClass(el: HTMLElement): number | null {
+const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const m = c.match(/^_p[lr]-(\d+)px$/);
+  for (const c of el.className.split(/\s+/u)) {
+    const m = /^_p[lr]-(?<px>\d+)px$/u.exec(c);
     if (m) {
-      found = Number(m[1]);
+      found = Number(m.groups?.px);
     }
   }
   return found;
-}
+};
 
-function gapPxFromClass(el: HTMLElement): number | null {
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const m = c.match(/^_gap-(\d+)px$/);
+const gapPxFromClass = (el: HTMLElement): number | null => {
+  for (const c of el.className.split(/\s+/u)) {
+    const m = /^_gap-(?<px>\d+)px$/u.exec(c);
     if (m) {
-      return Number(m[1]);
+      return Number(m.groups?.px);
     }
   }
   return null;
-}
+};
 
-function renderProp(size: (typeof sizes)[number]) {
+const renderProp = (size: (typeof sizes)[number]) => {
   renderWithProviders(
-    <Button compact size={size} icon={<span>i</span>}>
+    <Button
+      compact
+      size={size}
+      icon={<span>i</span>}>
       Save
     </Button>,
   );
   return screen.getByRole('button');
-}
+};
 
-function renderKnob(size: (typeof sizes)[number]) {
+const renderKnob = (size: (typeof sizes)[number]) => {
   renderWithProviders(
     <Preset overrides={{ density: 'compact' }}>
-      <Button size={size} icon={<span>i</span>}>
+      <Button
+        size={size}
+        icon={<span>i</span>}>
         Save
       </Button>
     </Preset>,
   );
   return screen.getByRole('button');
-}
+};
 
-function renderComfortable(size: (typeof sizes)[number]) {
+const renderComfortable = (size: (typeof sizes)[number]) => {
   renderWithProviders(
-    <Button size={size} icon={<span>i</span>}>
+    <Button
+      size={size}
+      icon={<span>i</span>}>
       Save
     </Button>,
   );
   return screen.getByRole('button');
-}
+};
 
 describe('Button density knob = compact PROP', () => {
+  afterEach(cleanup);
+
   it('compact PROP and density:compact knob land the SAME padX', () => {
     const viaProp = renderProp('$4');
     const propPad = paddingPxFromClass(viaProp);
-    expect(viaProp.getAttribute('data-mp-density')).toBe('compact');
+    expect(viaProp.dataset.mpDensity).toBe('compact');
     expect(propPad).toBe(16);
     cleanup();
 
     const viaKnob = renderKnob('$4');
-    expect(viaKnob.getAttribute('data-mp-density')).toBe('compact');
+    expect(viaKnob.dataset.mpDensity).toBe('compact');
     expect(paddingPxFromClass(viaKnob)).toBe(propPad);
     expect(paddingPxFromClass(viaKnob)).toBe(16);
   });
@@ -99,26 +106,26 @@ describe('Button density knob = compact PROP', () => {
 
   it('height stays 44 at comfortable and compact density stops', () => {
     const comfortable = renderComfortable('$4');
-    expect(comfortable.getAttribute('data-mp-button-height')).toBe('44');
-    expect(comfortable.className).toMatch(/_h-44px/);
+    expect(comfortable.dataset.mpButtonHeight).toBe('44');
+    expect(comfortable.className).toMatch(/_h-44px/u);
     expect(paddingPxFromClass(comfortable)).toBe(18);
     cleanup();
 
     const viaKnob = renderKnob('$4');
-    expect(viaKnob.getAttribute('data-mp-button-height')).toBe('44');
-    expect(viaKnob.className).toMatch(/_h-44px/);
+    expect(viaKnob.dataset.mpButtonHeight).toBe('44');
+    expect(viaKnob.className).toMatch(/_h-44px/u);
     cleanup();
 
     const viaProp = renderProp('$4');
-    expect(viaProp.getAttribute('data-mp-button-height')).toBe('44');
-    expect(viaProp.className).toMatch(/_h-44px/);
+    expect(viaProp.dataset.mpButtonHeight).toBe('44');
+    expect(viaProp.className).toMatch(/_h-44px/u);
   });
 
   it('density never changes the painted height at any size step', () => {
     for (const size of sizes) {
-      const relaxed = renderComfortable(size).getAttribute('data-mp-button-height');
+      const relaxed = renderComfortable(size).dataset.mpButtonHeight;
       cleanup();
-      const tight = renderKnob(size).getAttribute('data-mp-button-height');
+      const tight = renderKnob(size).dataset.mpButtonHeight;
       cleanup();
       expect(tight, `height at ${size}`).toBe(relaxed);
     }
@@ -126,6 +133,8 @@ describe('Button density knob = compact PROP', () => {
 });
 
 describe('Button density comes from the recipe family', () => {
+  afterEach(cleanup);
+
   it('density picks the family, it does not subtract from the recipe', () => {
     expect(buttonDensityFamily('control', true)).toBe('controlCompact');
     expect(buttonDensityFamily('control', false)).toBe('control');

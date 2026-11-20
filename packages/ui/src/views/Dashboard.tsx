@@ -1,18 +1,23 @@
 import { formatCurrency, formatNumber, formatPercent, useResolvedKnobs } from '@repo/theme';
-import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Text, XStack, YStack, isWeb, type YStackProps, H2, H3, H4, H5, H6 } from 'tamagui';
+import React, { useCallback, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, XStack, YStack, isWeb, H2, H3, H4, H5, H6 } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { BarChart } from '../charts/BarChart';
 import { ChartDataView } from '../charts/ChartDataView';
 import { LineChart } from '../charts/LineChart';
 import { PieChart } from '../charts/PieChart';
 import { Sparkline } from '../charts/Sparkline';
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { Meter } from '../Meter';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 import { Card } from '../surfaces';
+
+import { webOnlyProps } from './dom-interop';
+import { hasNode, isNonEmpty, isString, orDefault } from './guards';
 
 /**
  * Card sub-titles read at the ONE
@@ -22,7 +27,7 @@ import { Card } from '../surfaces';
 const SECTION_HEADING_TAGS = { 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 export type CardHeadingLevel = 2 | 3 | 4 | 5 | 6;
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -31,12 +36,12 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
-}
+};
 
-function trendFill(color: string): string {
+const trendFill = (color: string): string => {
   if (color === componentColors.semantic.success) {
     return '$green4';
   }
@@ -44,9 +49,9 @@ function trendFill(color: string): string {
     return '$red4';
   }
   return '$color4';
-}
+};
 
-function trendInk(color: string): string {
+const trendInk = (color: string): string => {
   // Step 11 clears the page, but falls below AA on the status pill's step 4 wash.
   if (color === componentColors.semantic.success) {
     return '$green12';
@@ -55,7 +60,7 @@ function trendInk(color: string): string {
     return '$red12';
   }
   return color;
-}
+};
 
 // ============================================================================
 // Types
@@ -141,7 +146,7 @@ export interface ProgressConfig {
 }
 
 /**
- * Frappe workspace shortcut: label + nested count pill.
+ * Workspace shortcut: label + nested count pill.
  */
 export interface ShortcutConfig {
   id: string;
@@ -153,7 +158,7 @@ export interface ShortcutConfig {
 }
 
 /**
- * Frappe link card / Polaris resource list / Grafana table-lite.
+ * Link card / Polaris resource list / Grafana table-lite.
  */
 export interface DashboardListItem {
   id: string;
@@ -168,16 +173,21 @@ export interface ListConfig {
   items: DashboardListItem[];
 }
 
+type DashboardMetricWidgetType = 'kpi' | 'chart' | 'progress';
+type DashboardLinkWidgetType = 'shortcut' | 'list' | 'custom';
+
+export type DashboardWidgetType = DashboardMetricWidgetType | DashboardLinkWidgetType;
+
 /**
  * Dashboard widget configuration.
  *
- * Catalog (Frappe workspace + Grafana-lite + Polaris metrics):
+ * Catalog (workspace + Grafana-lite + Polaris metrics):
  * number card (`kpi`), plot (`chart`), bar gauge (`progress`), shortcut,
  * link list, and an escape hatch (`custom`).
  */
 export interface DashboardWidget {
   id: string;
-  type: 'kpi' | 'chart' | 'custom' | 'progress' | 'shortcut' | 'list';
+  type: DashboardWidgetType;
   colSpan?: number;
   rowSpan?: number;
   kpiConfig?: KPICardConfig;
@@ -212,7 +222,7 @@ export interface DashboardProps extends Omit<YStackProps, 'children'> {
    * Failed load. Wins over empty widgets; KPI/count chrome
    * in `chrome` is suppressed on failure.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Message when widgets array is empty. */
@@ -223,7 +233,7 @@ export interface DashboardProps extends Omit<YStackProps, 'children'> {
 // Shared card chrome
 // ============================================================================
 
-function useWidgetChrome(onPress?: YStackProps['onPress']) {
+const useWidgetChrome = (onPress?: YStackProps['onPress']) => {
   const resolved = useResolvedKnobs();
   const { knobProps, control } = resolved;
   const nested = splitNestedControl(knobProps.nestedControl);
@@ -238,9 +248,9 @@ function useWidgetChrome(onPress?: YStackProps['onPress']) {
       }
     : undefined;
   return { knobProps, control, nested, interactive };
-}
+};
 
-function NestedIconWell({
+const NestedIconWell = ({
   color,
   box,
   px,
@@ -252,22 +262,20 @@ function NestedIconWell({
   px: number;
   radius: object;
   children: ReactNode;
-}) {
-  return (
-    <YStack
-      {...box}
-      {...radius}
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor={(color || '$accentBackground') as any}
-      overflow="hidden"
-      data-nested-px={px}>
-      {children}
-    </YStack>
-  );
-}
+}) => (
+  <YStack
+    {...box}
+    {...radius}
+    alignItems="center"
+    justifyContent="center"
+    backgroundColor={orDefault(color, '$accentBackground')}
+    overflow="hidden"
+    data-nested-px={px}>
+    {children}
+  </YStack>
+);
 
-function TrendPill({
+const TrendPill = ({
   symbol,
   value,
   color,
@@ -281,29 +289,31 @@ function TrendPill({
   px: number;
   radius: object;
   label: object;
-}) {
-  return (
-    <XStack
-      height={px}
-      minHeight={px}
-      maxHeight={px}
-      paddingHorizontal="$2"
-      alignItems="center"
-      gap="$1"
-      backgroundColor={trendFill(color)}
-      {...radius}
-      data-nested-px={px}>
-      <Text {...label} color={trendInk(color)}>
-        {symbol}
+}) => (
+  <XStack
+    height={px}
+    minHeight={px}
+    maxHeight={px}
+    paddingHorizontal="$2"
+    alignItems="center"
+    gap="$1"
+    backgroundColor={trendFill(color)}
+    {...radius}
+    data-nested-px={px}>
+    <Text
+      {...label}
+      color={trendInk(color)}>
+      {symbol}
+    </Text>
+    {value != null && value !== '' && (
+      <Text
+        {...label}
+        color={trendInk(color)}>
+        {value}
       </Text>
-      {value != null && value !== '' && (
-        <Text {...label} color={trendInk(color)}>
-          {value}
-        </Text>
-      )}
-    </XStack>
-  );
-}
+    )}
+  </XStack>
+);
 
 // ============================================================================
 // KPI Card Component
@@ -324,11 +334,12 @@ export interface KPICardProps extends Omit<YStackProps, 'children'> {
  * secondary text, so the caller hands over `knobProps.textAccentColor` —
  * a static tier here could not see the `textAccent` knob.
  */
-export function resolveTrendColor(
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
+export const resolveTrendColor = (
   trend: TrendDirection | undefined,
   goodDirection: KPICardConfig['goodDirection'],
   neutral: string,
-): string {
+): string => {
   if (!trend || trend === 'neutral') {
     return neutral;
   }
@@ -336,14 +347,14 @@ export function resolveTrendColor(
     return neutral;
   }
   return trend === goodDirection ? componentColors.semantic.success : componentColors.semantic.error;
-}
+};
 
 /**
- * KPI card — Frappe number card + Grafana Stat + Polaris metric.
+ * KPI card — number card + Grafana Stat + Polaris metric.
  * Nested icon well and trend pill use `nestedControl`; the value
  * never takes `sizeToken` as fontSize (that token is a control height).
  */
-export function KPICard({ config, ...stackProps }: KPICardProps) {
+export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
   const { t } = useTranslation();
   const { onPress: consumerOnPress, ...cardProps } = stackProps;
   const onPress = Object.hasOwn(stackProps, 'onPress') ? consumerOnPress : config.onClick;
@@ -351,12 +362,16 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
   const { px, box } = nested;
   const [dataActionSize, setDataActionSize] = useState({ width: 0, height: 44 });
   const [dataHeaderHeight, setDataHeaderHeight] = useState(44);
-  const hasDataView = Boolean(config.sparkline?.length);
+  const { sparkline } = config;
+  const hasDataView = Boolean(sparkline?.length);
+  const showTrend =
+    config.trend !== undefined ||
+    (config.trendValue !== undefined && config.trendValue !== '' && config.trendValue !== 0);
   const formatMetric = useCallback(
     (num: number) => {
       if (config.format === 'currency') {
         return formatCurrency(num, {
-          symbol: config.currencySymbol || '$',
+          symbol: orDefault(config.currencySymbol, '$'),
           fractionDigits: 'auto',
         });
       }
@@ -368,7 +383,7 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
     [config.format, config.currencySymbol],
   );
   const formattedValue = useMemo(
-    () => (typeof config.value === 'string' ? config.value : formatMetric(config.value)),
+    () => (isString(config.value) ? config.value : formatMetric(config.value)),
     [config.value, formatMetric],
   );
 
@@ -400,29 +415,51 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
               }
             : undefined
         }>
-        <Text {...knobProps.label} color={knobProps.textAccentColor} flex={1}>
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}
+          flex={1}>
           {config.title}
         </Text>
-        {config.icon ? (
-          <NestedIconWell color={config.color} box={box} px={px} radius={knobProps.borderRadius}>
+        {hasNode(config.icon) ? (
+          <NestedIconWell
+            color={config.color}
+            box={box}
+            px={px}
+            radius={knobProps.borderRadius}>
             {config.icon}
           </NestedIconWell>
         ) : null}
         {hasDataView ? (
-          <YStack width={dataActionSize.width} height={dataActionSize.height} pointerEvents="none" />
+          <YStack
+            width={dataActionSize.width}
+            height={dataActionSize.height}
+            pointerEvents="none"
+          />
         ) : null}
       </XStack>
 
-      <Text fontSize="$8" color="$color" {...knobProps.heading}>
+      <Text
+        fontSize="$8"
+        color="$color"
+        {...knobProps.heading}>
         {formattedValue}
       </Text>
 
       {config.sparkline && config.sparkline.length > 0 ? (
-        <Sparkline data={config.sparkline} height={px} title={config.title} valueFormatter={formatMetric} />
+        <Sparkline
+          data={config.sparkline}
+          height={px}
+          title={config.title}
+          valueFormatter={formatMetric}
+        />
       ) : null}
 
-      {(config.trend || config.trendValue) && (
-        <XStack gap="$2" alignItems="center" flexWrap="wrap">
+      {showTrend && (
+        <XStack
+          gap="$2"
+          alignItems="center"
+          flexWrap="wrap">
           <TrendPill
             symbol={trendSymbol}
             value={config.trendValue}
@@ -432,7 +469,9 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
             label={knobProps.label}
           />
           {config.previousValue !== undefined && (
-            <Text {...knobProps.label} color={knobProps.textAccentColor}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
               {t('vs {{previousValue}}', { previousValue: formatMetric(config.previousValue) })}
             </Text>
           )}
@@ -440,17 +479,29 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
       )}
     </>
   );
-  if (!hasDataView) {
+  if (!hasDataView || sparkline === undefined) {
     return (
-      <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...interactive} {...stackProps}>
+      <Card
+        width="100%"
+        elevation={knobProps.elevation}
+        {...knobProps.surface}
+        {...interactive}
+        {...stackProps}>
         {content}
       </Card>
     );
   }
   return (
-    <ChartDataView data={config.sparkline!} title={config.title} valueFormatter={formatMetric}>
+    <ChartDataView
+      data={sparkline}
+      title={config.title}
+      valueFormatter={formatMetric}>
       {({ action }) => (
-        <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...cardProps}>
+        <Card
+          width="100%"
+          elevation={knobProps.elevation}
+          {...knobProps.surface}
+          {...cardProps}>
           <YStack position="relative">
             <YStack
               {...knobProps.gap}
@@ -494,7 +545,7 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
       )}
     </ChartDataView>
   );
-}
+};
 // ============================================================================
 // Chart Card Component
 // ============================================================================
@@ -526,61 +577,86 @@ export interface ChartCardProps extends Omit<YStackProps, 'children'> {
  * categorical palette. Explicit `config.colors` / per-point `color`
  * values are data and pass through untouched (Axiom 11).
  */
-export function ChartCard({ config, colors, headingLevel = 2, ...stackProps }: ChartCardProps) {
+export const ChartCard = ({ config, colors, headingLevel = 2, ...stackProps }: ChartCardProps) => {
   const { knobProps } = useResolvedKnobs();
   const HeadingTag = SECTION_HEADING_TAGS[headingLevel];
   const dataColors = config.colors ?? colors;
   const showXAxis = config.showLabels !== false;
 
+  const renderChart = () => {
+    if (config.type === 'pie') {
+      return (
+        <PieChart
+          data={config.data}
+          height={config.height}
+          donut={0.5}
+          colors={dataColors}
+          showLegend={config.showLegend}
+          title={config.title}
+        />
+      );
+    }
+    if (config.type === 'line') {
+      return (
+        <LineChart
+          data={config.data}
+          title={config.title}
+          height={config.height}
+          color={dataColors?.[0]}
+          showPoints
+          showXAxis={showXAxis}
+          showYAxis={false}
+        />
+      );
+    }
+    return (
+      <BarChart
+        data={config.data}
+        title={config.title}
+        height={config.height}
+        colors={dataColors}
+        showXAxis={showXAxis}
+        showYAxis={false}
+      />
+    );
+  };
+
   const renderCard = (action?: ReactNode) => (
-    <YStack {...knobProps.gap} width="100%" {...stackProps}>
-      <XStack alignItems="center" justifyContent="space-between" {...knobProps.gap}>
-        <HeadingTag flex={1} minWidth={0} margin={0} {...knobProps.heading} {...sectionHeading}>
+    <YStack
+      {...knobProps.gap}
+      width="100%"
+      {...stackProps}>
+      <XStack
+        alignItems="center"
+        justifyContent="space-between"
+        {...knobProps.gap}>
+        <HeadingTag
+          flex={1}
+          minWidth={0}
+          margin={0}
+          {...knobProps.heading}
+          {...sectionHeading}>
           {config.title}
         </HeadingTag>
         {action}
       </XStack>
-      <Card elevation={knobProps.elevation} {...knobProps.surface}>
-        {config.type === 'pie' ? (
-          <PieChart
-            data={config.data}
-            height={config.height}
-            donut={0.5}
-            colors={dataColors}
-            showLegend={config.showLegend}
-            title={config.title}
-          />
-        ) : config.type === 'line' ? (
-          <LineChart
-            data={config.data}
-            title={config.title}
-            height={config.height}
-            color={dataColors?.[0]}
-            showPoints
-            showXAxis={showXAxis}
-            showYAxis={false}
-          />
-        ) : (
-          <BarChart
-            data={config.data}
-            title={config.title}
-            height={config.height}
-            colors={dataColors}
-            showXAxis={showXAxis}
-            showYAxis={false}
-          />
-        )}
+      <Card
+        elevation={knobProps.elevation}
+        {...knobProps.surface}>
+        {renderChart()}
       </Card>
     </YStack>
   );
   return config.type === 'pie' && config.showLegend !== false ? (
     renderCard()
   ) : (
-    <ChartDataView data={config.data} title={config.title}>
+    <ChartDataView
+      data={config.data}
+      title={config.title}>
       {({ action }) => renderCard(action)}
     </ChartDataView>
   );
-}
+};
 
 // ============================================================================
 // Progress / Shortcut / List widgets
@@ -590,14 +666,18 @@ export interface ProgressCardProps extends Omit<YStackProps, 'children'> {
   config: ProgressConfig;
 }
 
-export function ProgressCard({ config, ...stackProps }: ProgressCardProps) {
+export const ProgressCard = ({ config, ...stackProps }: ProgressCardProps) => {
   const { knobProps } = useWidgetChrome();
-  const max = config.max && config.max > 0 ? config.max : 100;
+  const max = config.max !== undefined && config.max > 0 ? config.max : 100;
   const pct = Math.max(0, Math.min(100, (config.value / max) * 100));
   const label = config.format === 'number' ? formatNumber(config.value) : formatPercent(Math.round(pct));
 
   return (
-    <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...stackProps}>
+    <Card
+      width="100%"
+      elevation={knobProps.elevation}
+      {...knobProps.surface}
+      {...stackProps}>
       <Meter
         label={config.title}
         value={config.value}
@@ -609,13 +689,13 @@ export function ProgressCard({ config, ...stackProps }: ProgressCardProps) {
       />
     </Card>
   );
-}
+};
 
 export interface ShortcutCardProps extends Omit<YStackProps, 'children'> {
   config: ShortcutConfig;
 }
 
-export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
+export const ShortcutCard = ({ config, ...stackProps }: ShortcutCardProps) => {
   const { knobProps, nested, interactive } = useWidgetChrome(config.onClick);
   const { px, box, hitSlop } = nested;
 
@@ -627,13 +707,23 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
       {...interactive}
       hitSlop={config.onClick ? hitSlop : undefined}
       {...stackProps}>
-      <XStack alignItems="center" {...knobProps.gap}>
-        {config.icon ? (
-          <NestedIconWell color={config.color} box={box} px={px} radius={knobProps.borderRadius}>
+      <XStack
+        alignItems="center"
+        {...knobProps.gap}>
+        {hasNode(config.icon) ? (
+          <NestedIconWell
+            color={config.color}
+            box={box}
+            px={px}
+            radius={knobProps.borderRadius}>
             {config.icon}
           </NestedIconWell>
         ) : null}
-        <Text {...knobProps.body} fontWeight="600" flex={1} numberOfLines={1}>
+        <Text
+          {...knobProps.body}
+          fontWeight="600"
+          flex={1}
+          numberOfLines={1}>
           {config.title}
         </Text>
         {config.count != null && config.count !== '' ? (
@@ -648,7 +738,9 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
             backgroundColor="$color4"
             {...knobProps.borderRadius}
             data-nested-px={px}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
               {config.count}
             </Text>
           </XStack>
@@ -656,74 +748,98 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
       </XStack>
     </Card>
   );
-}
+};
 
 export interface ListCardProps extends Omit<YStackProps, 'children'> {
   config: ListConfig;
   headingLevel?: CardHeadingLevel;
 }
 
-export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardProps) {
+export const ListCard = ({ config, headingLevel = 2, ...stackProps }: ListCardProps) => {
   const { knobProps, nested, control } = useWidgetChrome();
   const { px, hitSlop } = nested;
   const HeadingTag = SECTION_HEADING_TAGS[headingLevel];
 
   return (
-    <YStack {...knobProps.gap} width="100%" {...stackProps}>
-      <HeadingTag margin={0} {...knobProps.heading} {...sectionHeading}>
+    <YStack
+      {...knobProps.gap}
+      width="100%"
+      {...stackProps}>
+      <HeadingTag
+        margin={0}
+        {...knobProps.heading}
+        {...sectionHeading}>
         {config.title}
       </HeadingTag>
-      <Card elevation={knobProps.elevation} {...knobProps.surface}>
-        {config.items.map((item) => (
-          <XStack
-            key={item.id}
-            height={px}
-            minHeight={px}
-            maxHeight={px}
-            alignItems="center"
-            justifyContent="space-between"
-            {...knobProps.gap}
-            data-nested-px={px}
-            cursor={item.onClick ? 'pointer' : undefined}
-            hitSlop={item.onClick ? hitSlop : undefined}
-            hoverStyle={item.onClick ? control.hoverKnobProps : undefined}
-            pressStyle={item.onClick ? control.pressKnobProps : undefined}
-            focusVisibleStyle={item.onClick ? control.focusVisibleKnobProps : undefined}
-            onPress={item.onClick}
-            role={item.onClick ? 'button' : undefined}>
-            <Text {...knobProps.label} flex={1} numberOfLines={1}>
-              {item.label}
-            </Text>
-            {item.meta ? (
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
-                {item.meta}
+      <Card
+        elevation={knobProps.elevation}
+        {...knobProps.surface}>
+        {config.items.map((item) => {
+          const handlePress = item.onClick;
+          return (
+            <XStack
+              key={item.id}
+              height={px}
+              minHeight={px}
+              maxHeight={px}
+              alignItems="center"
+              justifyContent="space-between"
+              {...knobProps.gap}
+              data-nested-px={px}
+              cursor={item.onClick ? 'pointer' : undefined}
+              hitSlop={item.onClick ? hitSlop : undefined}
+              hoverStyle={item.onClick ? control.hoverKnobProps : undefined}
+              pressStyle={item.onClick ? control.pressKnobProps : undefined}
+              focusVisibleStyle={item.onClick ? control.focusVisibleKnobProps : undefined}
+              onPress={handlePress}
+              role={item.onClick ? 'button' : undefined}>
+              <Text
+                {...knobProps.label}
+                flex={1}
+                numberOfLines={1}>
+                {item.label}
               </Text>
-            ) : null}
-          </XStack>
-        ))}
+              {isNonEmpty(item.meta) ? (
+                <Text
+                  {...knobProps.label}
+                  color={knobProps.textAccentColor}>
+                  {item.meta}
+                </Text>
+              ) : null}
+            </XStack>
+          );
+        })}
       </Card>
     </YStack>
   );
-}
+};
 
-function DefaultWidget({ widget }: { widget: DashboardWidget }) {
+// oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise in React 19's types; this component is synchronous
+const DefaultWidget = ({ widget }: { widget: DashboardWidget }) => {
   switch (widget.type) {
-    case 'kpi':
+    case 'kpi': {
       return widget.kpiConfig ? <KPICard config={widget.kpiConfig} /> : null;
-    case 'chart':
+    }
+    case 'chart': {
       return widget.chartConfig ? <ChartCard config={widget.chartConfig} /> : null;
-    case 'progress':
+    }
+    case 'progress': {
       return widget.progressConfig ? <ProgressCard config={widget.progressConfig} /> : null;
-    case 'shortcut':
+    }
+    case 'shortcut': {
       return widget.shortcutConfig ? <ShortcutCard config={widget.shortcutConfig} /> : null;
-    case 'list':
+    }
+    case 'list': {
       return widget.listConfig ? <ListCard config={widget.listConfig} /> : null;
-    case 'custom':
+    }
+    case 'custom': {
       return widget.content ?? null;
-    default:
+    }
+    default: {
       return null;
+    }
   }
-}
+};
 
 // ============================================================================
 // Main Dashboard Component
@@ -746,7 +862,7 @@ function DefaultWidget({ widget }: { widget: DashboardWidget }) {
  * />
  * ```
  */
-export function Dashboard({
+export const Dashboard = ({
   widgets,
   renderWidget,
   title,
@@ -759,22 +875,34 @@ export function Dashboard({
   onRetry,
   emptyMessage: emptyMessageProp,
   ...stackProps
-}: DashboardProps) {
+}: DashboardProps) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No widgets to display');
   const { knobProps } = useResolvedKnobs();
   const gap = gapProp ?? 16;
+  const hasError = Boolean(error);
+
+  // CSS grid props are web-only and absent from the RN-flavored View type;
+  // Tamagui forwards them to the DOM.
+  const gridProps = isWeb
+    ? webOnlyProps({ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` })
+    : { marginHorizontal: -gap / 2 };
 
   const header =
-    title || description ? (
+    isNonEmpty(title) || isNonEmpty(description) ? (
       <YStack {...knobProps.gap}>
-        {title && (
-          <H3 margin={0} {...knobProps.heading}>
+        {isNonEmpty(title) && (
+          <H3
+            margin={0}
+            {...knobProps.heading}>
             {title}
           </H3>
         )}
-        {description && (
-          <Text {...knobProps.body} {...knobProps.label} color={knobProps.textAccentColor}>
+        {isNonEmpty(description) && (
+          <Text
+            {...knobProps.body}
+            {...knobProps.label}
+            color={knobProps.textAccentColor}>
             {description}
           </Text>
         )}
@@ -783,11 +911,14 @@ export function Dashboard({
 
   return (
     <ScrollView>
-      <YStack {...(paddingProp != null ? { padding: paddingProp } : knobProps.panelPadding)} gap={gap} {...stackProps}>
+      <YStack
+        {...(paddingProp == null ? knobProps.panelPadding : { padding: paddingProp })}
+        gap={gap}
+        {...stackProps}>
         {header}
         <AsyncBoundary
-          loading={!error && isLoading && widgets.length === 0}
-          empty={!error && widgets.length === 0}
+          loading={!hasError && isLoading && widgets.length === 0}
+          empty={!hasError && widgets.length === 0}
           error={error}
           onRetry={onRetry}
           layout="dashboard"
@@ -795,16 +926,9 @@ export function Dashboard({
           <XStack
             flexWrap="wrap"
             gap={gap}
-            {...(isWeb
-              ? // CSS grid props are web-only and absent from the RN-flavored
-                // View type; Tamagui forwards them to the DOM (house Record cast).
-                ({
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                } as Record<string, unknown>)
-              : { marginHorizontal: -gap / 2 })}>
+            {...gridProps}>
             {widgets.map((widget) => {
-              const span = Math.min(widget.colSpan || 1, columns);
+              const span = Math.min(widget.colSpan === undefined || widget.colSpan === 0 ? 1 : widget.colSpan, columns);
               const widthPercent = (span / columns) * 100;
               const adjustedWidth = `calc(${widthPercent}% - ${gap}px)`;
 
@@ -815,7 +939,7 @@ export function Dashboard({
                   {...(isWeb
                     ? { gridColumn: `span ${span}`, minWidth: 0, width: '100%' }
                     : {
-                        width: adjustedWidth as any,
+                        width: adjustedWidth,
                         minWidth: 200,
                         marginHorizontal: gap / 2,
                         marginBottom: gap,
@@ -829,7 +953,7 @@ export function Dashboard({
       </YStack>
     </ScrollView>
   );
-}
+};
 
 // ============================================================================
 // Utility Functions
@@ -838,7 +962,8 @@ export function Dashboard({
 /**
  * Calculate trend direction based on current and previous values.
  */
-export function calculateTrend(current: number, previous: number): TrendDirection {
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
+export const calculateTrend = (current: number, previous: number): TrendDirection => {
   if (current > previous) {
     return 'up';
   }
@@ -846,36 +971,36 @@ export function calculateTrend(current: number, previous: number): TrendDirectio
     return 'down';
   }
   return 'neutral';
-}
+};
 
 /**
  * Calculate percentage change between two values.
  */
-export function calculatePercentageChange(current: number, previous: number): string {
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
+export const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) {
     return current > 0 ? '+100%' : '0%';
   }
   const change = ((current - previous) / previous) * 100;
   const sign = change >= 0 ? '+' : '';
   return `${sign}${change.toFixed(1)}%`;
-}
+};
 
 /**
  * Aggregate data for charts.
  */
-export function aggregateData<T>(
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
+export const aggregateData = <T,>(
   data: T[],
   groupByField: keyof T,
   valueField: keyof T,
   operation: 'count' | 'sum' | 'avg' = 'count',
-): ChartDataPoint[] {
+): ChartDataPoint[] => {
   const groups: Record<string, number[]> = {};
 
   for (const item of data) {
     const key = String(item[groupByField]);
-    if (!groups[key]) {
-      groups[key] = [];
-    }
+    groups[key] ??= [];
 
     if (operation === 'count') {
       groups[key].push(1);
@@ -888,18 +1013,22 @@ export function aggregateData<T>(
   return Object.entries(groups).map(([label, values]) => {
     let value: number;
     switch (operation) {
-      case 'count':
+      case 'count': {
         value = values.length;
         break;
-      case 'sum':
+      }
+      case 'sum': {
         value = values.reduce((a, b) => a + b, 0);
         break;
-      case 'avg':
+      }
+      case 'avg': {
         value = values.reduce((a, b) => a + b, 0) / values.length;
         break;
-      default:
+      }
+      default: {
         value = values.length;
+      }
     }
     return { label, value };
   });
-}
+};

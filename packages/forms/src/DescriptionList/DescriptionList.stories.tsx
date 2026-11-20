@@ -4,7 +4,8 @@ import { Paragraph, YStack } from 'tamagui';
 import { FormGrid } from '../FormGrid';
 import { FormSection, FormSectionStack } from '../FormSection';
 
-import { DescriptionList, type DescriptionListItem } from './index';
+import { DescriptionList } from './index';
+import type { DescriptionListItem } from './index';
 
 const meta: Meta<typeof DescriptionList> = {
   title: 'Forms/DescriptionList',
@@ -27,12 +28,18 @@ const meta: Meta<typeof DescriptionList> = {
 export default meta;
 type Story = StoryObj<typeof DescriptionList>;
 
+const HOSTNAME_VALUE = 'compose01.hel1.hetzner';
+
+const noopChange = () => {
+  // Story stub: the Change action only needs to render.
+};
+
 const HOST: DescriptionListItem[] = [
   {
     term: 'Hostname',
     field: 'input',
-    value: 'compose01.hel1.hetzner',
-    onChange: () => undefined,
+    value: HOSTNAME_VALUE,
+    onChange: noopChange,
   },
   {
     term: 'Status',
@@ -44,7 +51,7 @@ const HOST: DescriptionListItem[] = [
     term: 'Region',
     field: 'input',
     value: 'hel1 · Helsinki',
-    onChange: () => undefined,
+    onChange: noopChange,
   },
   { term: 'Instance ID', field: 'input', value: 'i-0f9c2a7d44e1b6c83' },
   {
@@ -54,7 +61,7 @@ const HOST: DescriptionListItem[] = [
     fieldProps: { currency: 'EUR', precision: 2 },
   },
   { term: 'Created', field: 'datepicker', value: new Date(2025, 6, 1) },
-  { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: () => undefined },
+  { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: noopChange },
   {
     term: 'Notes',
     field: 'textarea',
@@ -69,28 +76,52 @@ const HOST: DescriptionListItem[] = [
 ];
 
 export const Default: Story = {
-  render: (args) => <DescriptionList {...args} items={HOST} />,
+  render: (args) => (
+    <DescriptionList
+      {...args}
+      items={HOST}
+    />
+  ),
 };
 
 export const Anatomy: Story = {
   name: 'Anatomy — term · value · Change',
-  render: (args) => <DescriptionList {...args} items={HOST} />,
+  render: (args) => (
+    <DescriptionList
+      {...args}
+      items={HOST}
+    />
+  ),
 };
 
 export const SideDefault: Story = {
   name: 'Side (record register)',
-  render: () => <DescriptionList placement="side" items={HOST.map(({ onChange: _onChange, ...row }) => row)} />,
+  render: () => (
+    <DescriptionList
+      placement="side"
+      items={HOST.map(({ onChange: _onChange, ...row }) => row)}
+    />
+  ),
 };
 
 export const TopPlacement: Story = {
   name: 'Top — fieldLabelPlacement=top',
-  render: () => <DescriptionList placement="top" items={HOST} />,
+  render: () => (
+    <DescriptionList
+      placement="top"
+      items={HOST}
+    />
+  ),
 };
 
 export const CollapseNarrow: Story = {
   name: 'Container under 480 auto-stacks',
   render: () => (
-    <YStack width={280} borderWidth={1} borderColor="$borderColor" padding="$3">
+    <YStack
+      width={280}
+      borderWidth={1}
+      borderColor="$borderColor"
+      padding="$3">
       <DescriptionList
         placement="side"
         maxWidth="fluid"
@@ -98,8 +129,8 @@ export const CollapseNarrow: Story = {
           {
             term: 'Hostname',
             field: 'input',
-            value: 'compose01.hel1.hetzner',
-            onChange: () => undefined,
+            value: HOSTNAME_VALUE,
+            onChange: noopChange,
           },
           {
             term: 'Status',
@@ -125,7 +156,11 @@ export const RecordPage: Story = {
     <FormGrid columns={2}>
       <FormSectionStack>
         <FormSection label="Host">
-          <DescriptionList maxWidth="fluid" placement="side" items={HOST.slice(0, 6)} />
+          <DescriptionList
+            maxWidth="fluid"
+            placement="side"
+            items={HOST.slice(0, 6)}
+          />
         </FormSection>
       </FormSectionStack>
       <FormSectionStack>
@@ -161,7 +196,7 @@ export const RecordPage: Story = {
             maxWidth="fluid"
             placement="side"
             items={[
-              { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: () => undefined },
+              { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: noopChange },
               {
                 term: 'Team',
                 field: 'combobox',
@@ -188,11 +223,21 @@ export const RecordPage: Story = {
 
 export const FramedAndQuiet: Story = {
   render: () => (
-    <YStack gap="$5" maxWidth={560}>
+    <YStack
+      gap="$5"
+      maxWidth={560}>
       <Paragraph size="$2">Framed — Card paints, so it earns the inset</Paragraph>
-      <DescriptionList framed placement="side" items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)} />
+      <DescriptionList
+        framed
+        placement="side"
+        items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)}
+      />
       <Paragraph size="$2">Quiet separators — 1px at opacity .5</Paragraph>
-      <DescriptionList quiet placement="side" items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)} />
+      <DescriptionList
+        quiet
+        placement="side"
+        items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)}
+      />
     </YStack>
   ),
 };
@@ -203,7 +248,7 @@ export const Slots: Story = {
     <DescriptionList
       placement="side"
       items={[
-        { term: 'Data', field: 'input', value: 'compose01.hel1.hetzner' },
+        { term: 'Data', field: 'input', value: HOSTNAME_VALUE },
         {
           term: 'Long Text',
           field: 'textarea',
@@ -235,5 +280,11 @@ export const Slots: Story = {
 };
 
 export const Compact: Story = {
-  render: () => <DescriptionList compact placement="side" items={HOST.slice(0, 3)} />,
+  render: () => (
+    <DescriptionList
+      compact
+      placement="side"
+      items={HOST.slice(0, 3)}
+    />
+  ),
 };

@@ -1,3 +1,10 @@
 {
-  "extends": "./tsconfig/base.json"
+  "extends": "./tsconfig/base.json",
+  // The root .mjs tools sit beside hand-written .d.mts twins, which shadow them in an
+  // `include` glob; listing them in `files` keeps them in the program so type-aware
+  // lint resolves their Node imports instead of seeing error types.
+  "compilerOptions": { "allowJs": true },
+  "files": ["drawing-registry.mjs", "lint.mjs", "oxlint.mjs", "spec-registry.mjs"],
+  "include": ["**/*"],
+  "exclude": ["node_modules"]
 }

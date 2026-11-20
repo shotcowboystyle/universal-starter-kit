@@ -8,15 +8,20 @@ import { SheetModal } from '../SheetModal';
 
 import { resetToasts } from './store';
 
-import { Toast, ToastViewport, showToast, useToast, type ToastIntent, type ToastShowOptions } from './index';
+import { Toast, ToastViewport, showToast, useToast } from './index';
+import type { ToastIntent, ToastShowOptions } from './index';
+
+const ALIGN_START = 'flex-start' as const;
+const SAVE_FAILED = 'Save failed';
+const REQUEST_REJECTED = 'The server rejected the request.';
 
 const intents: ToastIntent[] = ['accent', 'success', 'warning', 'error'];
 
 /** Clear the module-level toast store between stories. */
-function StoryReset() {
+const StoryReset = () => {
   useEffect(() => resetToasts, []);
   return null;
-}
+};
 
 const meta: Meta<ToastShowOptions> = {
   title: 'Components/Toast',
@@ -51,151 +56,177 @@ export default meta;
 
 type Story = StoryObj<ToastShowOptions>;
 
+const DefaultStory = (args: ToastShowOptions) => {
+  const toast = useToast();
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <Button
+        accent
+        onPress={() => {
+          action('show')(args);
+          toast.show({ ...args });
+        }}>
+        Show toast
+      </Button>
+      <ToastViewport />
+    </YStack>
+  );
+};
+
 export const Default: Story = {
   name: 'Main',
-  render: (args) => {
-    const toast = useToast();
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
-        <Button
-          accent
-          onPress={() => {
-            action('show')(args);
-            toast.show({ ...args });
-          }}>
-          Show toast
-        </Button>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+  render: (args) => <DefaultStory {...args} />,
+};
+
+const IntentsStory = () => {
+  const toast = useToast();
+  const copy: Record<ToastIntent, { title: string; description: string }> = {
+    accent: { title: 'Heads up', description: 'A new version is available.' },
+    success: { title: 'Saved', description: 'Customer record updated.' },
+    warning: { title: 'Storage almost full', description: 'You are at 90% of your quota.' },
+    error: { title: SAVE_FAILED, description: REQUEST_REJECTED },
+  };
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        {intents.map((intent) => (
+          <Button
+            key={intent}
+            onPress={() => toast.show({ intent, ...copy[intent] })}>
+            {intent}
+          </Button>
+        ))}
+      </XStack>
+      <ToastViewport />
+    </YStack>
+  );
 };
 
 export const Intents: Story = {
-  render: () => {
-    const toast = useToast();
-    const copy: Record<ToastIntent, { title: string; description: string }> = {
-      accent: { title: 'Heads up', description: 'A new version is available.' },
-      success: { title: 'Saved', description: 'Customer record updated.' },
-      warning: { title: 'Storage almost full', description: 'You are at 90% of your quota.' },
-      error: { title: 'Save failed', description: 'The server rejected the request.' },
-    };
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
-          {intents.map((intent) => (
-            <Button key={intent} onPress={() => toast.show({ intent, ...copy[intent] })}>
-              {intent}
-            </Button>
-          ))}
-        </XStack>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+  render: () => <IntentsStory />,
+};
+
+const WithActionStory = () => {
+  const toast = useToast();
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <Button
+        onPress={() =>
+          toast.show({
+            title: 'Message archived',
+            description: 'The conversation was moved to the archive.',
+            intent: 'success',
+            action: {
+              label: 'Undo',
+              altText: 'Undo archiving the message',
+              onPress: () => action('undo')(),
+            },
+          })
+        }>
+        Archive message
+      </Button>
+      <ToastViewport />
+    </YStack>
+  );
 };
 
 export const WithAction: Story = {
-  render: () => {
-    const toast = useToast();
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
+  render: () => <WithActionStory />,
+};
+
+const StackingStory = () => {
+  const toast = useToast();
+  const counter = useRef(0);
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <XStack gap="$2">
         <Button
-          onPress={() =>
+          onPress={() => {
+            counter.current += 1;
+            const n = counter.current;
             toast.show({
-              title: 'Message archived',
-              description: 'The conversation was moved to the archive.',
-              intent: 'success',
-              action: {
-                label: 'Undo',
-                altText: 'Undo archiving the message',
-                onPress: () => action('undo')(),
-              },
-            })
-          }>
-          Archive message
+              title: `Toast #${n}`,
+              description: 'Each show() stacks a new toast.',
+              intent: intents[n % intents.length],
+            });
+          }}>
+          Add toast
         </Button>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+        <Button
+          onPress={() => {
+            toast.dismissAll();
+          }}>
+          Dismiss all
+        </Button>
+      </XStack>
+      <ToastViewport />
+    </YStack>
+  );
 };
 
 export const Stacking: Story = {
-  render: () => {
-    const toast = useToast();
-    const counter = useRef(0);
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
-        <XStack gap="$2">
-          <Button
-            onPress={() => {
-              counter.current += 1;
-              const n = counter.current;
-              toast.show({
-                title: `Toast #${n}`,
-                description: 'Each show() stacks a new toast.',
-                intent: intents[n % intents.length],
-              });
-            }}>
-            Add toast
-          </Button>
-          <Button
-            onPress={() => {
-              toast.dismissAll();
-            }}>
-            Dismiss all
-          </Button>
-        </XStack>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+  render: () => <StackingStory />,
 };
 
 /**
  * Expiry policy specimen: the plain failure toast expires at the 12s error
  * ceiling; the `sticky` one never expires and keeps its forced dismiss (X).
  */
+const ErrorExpiryStory = () => {
+  const toast = useToast();
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        <Button
+          error
+          onPress={() =>
+            toast.show({
+              title: SAVE_FAILED,
+              description: 'Expires on its own at the 12s ceiling.',
+              intent: 'error',
+            })
+          }>
+          Failure (auto-expires)
+        </Button>
+        <Button
+          error
+          onPress={() =>
+            toast.show({
+              title: 'Connection lost',
+              description: 'Retrying in the background. Sticky: stays until dismissed.',
+              intent: 'error',
+              sticky: true,
+            })
+          }>
+          Sticky failure
+        </Button>
+      </XStack>
+      <ToastViewport />
+    </YStack>
+  );
+};
+
 export const ErrorExpiry: Story = {
-  render: () => {
-    const toast = useToast();
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
-          <Button
-            error
-            onPress={() =>
-              toast.show({
-                title: 'Save failed',
-                description: 'Expires on its own at the 12s ceiling.',
-                intent: 'error',
-              })
-            }>
-            Failure (auto-expires)
-          </Button>
-          <Button
-            error
-            onPress={() =>
-              toast.show({
-                title: 'Connection lost',
-                description: 'Retrying in the background. Sticky: stays until dismissed.',
-                intent: 'error',
-                sticky: true,
-              })
-            }>
-            Sticky failure
-          </Button>
-        </XStack>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+  render: () => <ErrorExpiryStory />,
 };
 
 /**
@@ -205,103 +236,119 @@ export const ErrorExpiry: Story = {
  * and only the toast card itself is ever interactive — sheet controls and
  * scrim taps beside a toast keep working.
  */
-export const StickyErrorOverSheet: Story = {
-  render: () => {
-    const toast = useToast();
-    const [sheetOpen, setSheetOpen] = useState(false);
-    const [presses, setPresses] = useState(0);
-    return (
-      <YStack gap="$4" alignItems="flex-start">
-        <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
+const StickyErrorOverSheetStory = () => {
+  const toast = useToast();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [presses, setPresses] = useState(0);
+  return (
+    <YStack
+      gap="$4"
+      alignItems={ALIGN_START}>
+      <StoryReset />
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        <Button
+          error
+          onPress={() => {
+            toast.show({
+              title: 'Connection lost',
+              description: 'Sticky failure stays visible under the sheet.',
+              intent: 'error',
+              sticky: true,
+            });
+            toast.show({
+              title: 'Draft saved',
+              description: 'Stacked success toast.',
+              intent: 'success',
+            });
+          }}>
+          Show stacked toasts
+        </Button>
+        <Button
+          accent
+          onPress={() => {
+            setSheetOpen(true);
+          }}
+          data-testid="open-sheet">
+          Open sheet
+        </Button>
+      </XStack>
+      <SheetModal
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        snapPoint={70}>
+        <YStack
+          gap="$3"
+          padding="$4"
+          alignItems={ALIGN_START}>
+          <Text fontWeight="600">Modal sheet above the toasts</Text>
           <Button
-            error
             onPress={() => {
-              toast.show({
-                title: 'Connection lost',
-                description: 'Sticky failure stays visible under the sheet.',
-                intent: 'error',
-                sticky: true,
-              });
-              toast.show({
-                title: 'Draft saved',
-                description: 'Stacked success toast.',
-                intent: 'success',
-              });
-            }}>
-            Show stacked toasts
-          </Button>
-          <Button
-            accent
-            onPress={() => {
-              setSheetOpen(true);
+              setPresses((n) => n + 1);
             }}
-            data-testid="open-sheet">
-            Open sheet
+            data-testid="sheet-counter">
+            Sheet button pressed {presses} times
           </Button>
-        </XStack>
-        <SheetModal open={sheetOpen} onOpenChange={setSheetOpen} snapPoint={70}>
-          <YStack gap="$3" padding="$4" alignItems="flex-start">
-            <Text fontWeight="600">Modal sheet above the toasts</Text>
-            <Button
-              onPress={() => {
-                setPresses((n) => n + 1);
-              }}
-              data-testid="sheet-counter">
-              Sheet button pressed {presses} times
-            </Button>
-          </YStack>
-        </SheetModal>
-        <ToastViewport />
-      </YStack>
-    );
-  },
+        </YStack>
+      </SheetModal>
+      <ToastViewport />
+    </YStack>
+  );
+};
+
+export const StickyErrorOverSheet: Story = {
+  render: () => <StickyErrorOverSheetStory />,
 };
 
 /** Viewport board: toasts are mounted, not behind a click — shooter finds [data-testid=toast]. */
+const ViewportPopulatedStory = () => {
+  useEffect(() => {
+    resetToasts();
+    showToast({
+      title: 'Document saved',
+      description: 'Your changes were written to the server.',
+      intent: 'accent',
+      sticky: true,
+      action: { label: 'Undo', onPress: () => action('undo')() },
+    });
+    showToast({
+      title: 'Customer record updated',
+      intent: 'success',
+      sticky: true,
+    });
+    showToast({
+      title: 'Storage almost full',
+      description: 'You are at 90% of your quota.',
+      intent: 'warning',
+      sticky: true,
+    });
+    showToast({
+      title: SAVE_FAILED,
+      description: REQUEST_REJECTED,
+      intent: 'error',
+      sticky: true,
+      action: { label: 'Retry', onPress: () => action('retry')() },
+    });
+  }, []);
+  return (
+    <YStack minHeight={280}>
+      <StoryReset />
+      <ToastViewport />
+    </YStack>
+  );
+};
+
 export const ViewportPopulated: Story = {
-  render: () => {
-    useEffect(() => {
-      resetToasts();
-      showToast({
-        title: 'Document saved',
-        description: 'Your changes were written to the server.',
-        intent: 'accent',
-        sticky: true,
-        action: { label: 'Undo', onPress: () => action('undo')() },
-      });
-      showToast({
-        title: 'Customer record updated',
-        intent: 'success',
-        sticky: true,
-      });
-      showToast({
-        title: 'Storage almost full',
-        description: 'You are at 90% of your quota.',
-        intent: 'warning',
-        sticky: true,
-      });
-      showToast({
-        title: 'Save failed',
-        description: 'The server rejected the request.',
-        intent: 'error',
-        sticky: true,
-        action: { label: 'Retry', onPress: () => action('retry')() },
-      });
-    }, []);
-    return (
-      <YStack minHeight={280}>
-        <StoryReset />
-        <ToastViewport />
-      </YStack>
-    );
-  },
+  render: () => <ViewportPopulatedStory />,
 };
 
 /** Static presentational surfaces (no viewport machinery) for visual QA. */
 export const AllIntentsStatic: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={400}>
+    <YStack
+      gap="$3"
+      maxWidth={400}>
       <Text fontWeight="600">Standalone controlled toasts</Text>
       <Toast
         title="Heads up"
@@ -323,13 +370,16 @@ export const AllIntentsStatic: Story = {
         onDismiss={() => action('dismiss')('warning')}
       />
       <Toast
-        title="Save failed"
-        description="The server rejected the request."
+        title={SAVE_FAILED}
+        description={REQUEST_REJECTED}
         intent="error"
         action={{ label: 'Retry', onPress: () => action('retry')() }}
         onDismiss={() => action('dismiss')('error')}
       />
-      <Toast title="Title only, not dismissible" intent="accent" />
+      <Toast
+        title="Title only, not dismissible"
+        intent="accent"
+      />
       <Toast
         compact
         title="Draft discarded"

@@ -1,11 +1,13 @@
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import { FOCUS_RING_HALO_OFFSET, useResolvedKnobs } from '@repo/theme';
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { Anchor, H4, Paragraph, YStack, isWeb } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
-import { focusFieldTarget } from './hooks/useFocusManagement';
-import { formCommonColors } from './shared/colorRamps';
-import { warnBannedErrorWords as warnBannedErrorWordsShared } from './shared/devWarn';
+import { focusFieldTarget } from './hooks/use-focus-management';
+import { formCommonColors } from './shared/color-ramps';
+import { warnBannedErrorWords as warnBannedErrorWordsShared } from './shared/dev-warn';
 import { t } from './shared/t';
 
 /** Structured field error. */
@@ -43,95 +45,113 @@ export interface ErrorSummaryProps {
 }
 
 /** Flatten structured / string errors into display copy. */
-export function formatFieldError(error: FieldErrorMessage): string {
+// oxlint-disable-next-line react-doctor/only-export-components -- public helper co-located with ErrorSummary; consumers import both from './ErrorSummary'
+export const formatFieldError = (error: FieldErrorMessage): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- FieldErrorMessage is string | object with no discriminant field
   if (typeof error === 'string') {
     return error;
   }
   const problem = error.problem?.trim() ?? '';
-  const action = error.action?.trim();
-  if (problem && action) {
+  const action = error.action?.trim() ?? '';
+  if (problem !== '' && action !== '') {
     return `${problem} ${action}`;
   }
-  return problem || action || '';
-}
+  return problem === '' ? action : problem;
+};
+
+/** Structural check: an object carrying a `problem` key is treated as a StructuredFieldError. */
+const isStructuredFieldError = (value: unknown): value is StructuredFieldError =>
+  typeof value === 'object' && value !== null && 'problem' in value;
 
 /** Normalize unknown validator return values into FieldErrorMessage. */
-export function normalizeFieldError(raw: unknown): FieldErrorMessage | undefined {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, react-doctor/only-export-components -- parse boundary for untyped validator output; public helper that consumers import from './ErrorSummary' alongside the component
+export const normalizeFieldError = (raw: unknown): FieldErrorMessage | undefined => {
   if (raw == null || raw === false || raw === '') {
     return undefined;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this function is the boundary parser for untyped validator output
   if (typeof raw === 'string') {
     return raw;
   }
-  if (typeof raw === 'object' && raw !== null && 'problem' in raw) {
-    const problem = String((raw as StructuredFieldError).problem ?? '').trim();
-    if (!problem) {
+  if (isStructuredFieldError(raw)) {
+    const problem = raw.problem?.trim() ?? '';
+    if (problem === '') {
       return undefined;
     }
-    return raw as StructuredFieldError;
+    return raw;
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- legacy stringification of unexpected validator return values
   return String(raw);
-}
+};
 
 /**
  * DEV-only banned-word guard (blueprint `banned-error-word`).
  * Tree-shaken when `NODE_ENV === "production"`.
  */
-export function warnBannedErrorWords(message: string, fieldName?: string): void {
+// oxlint-disable-next-line react-doctor/only-export-components -- public helper co-located with ErrorSummary; consumers import both from './ErrorSummary'
+export const warnBannedErrorWords = (message: string, fieldName?: string): void => {
   warnBannedErrorWordsShared(message, {
     component: 'ErrorSummary',
     fieldName,
     id: fieldName,
   });
-}
+};
 
 type FieldMetaLike = { errors?: unknown[] } | undefined;
 
 /** Collect field errors from TanStack `state.fieldMeta` for ErrorSummary. */
-export function collectFormFieldErrors(
+// oxlint-disable-next-line react-doctor/only-export-components -- public helper co-located with ErrorSummary; consumers import both from './ErrorSummary'
+export const collectFormFieldErrors = (
   fieldMeta: Partial<Record<string, FieldMetaLike>> | null | undefined,
-): ErrorSummaryItem[] {
-  if (!fieldMeta) {
+): ErrorSummaryItem[] => {
+  if (fieldMeta == null) {
     return [];
   }
   const items: ErrorSummaryItem[] = [];
   for (const [name, meta] of Object.entries(fieldMeta)) {
     const error = normalizeFieldError(meta?.errors?.[0]);
-    if (!error) {
-      continue;
+    const message = error === undefined ? '' : formatFieldError(error);
+    if (error !== undefined && message !== '') {
+      warnBannedErrorWords(message, name);
+      items.push({ name, id: name, error });
     }
-    const message = formatFieldError(error);
-    if (!message) {
-      continue;
-    }
-    warnBannedErrorWords(message, name);
-    items.push({ name, id: name, error });
   }
   return items;
-}
+};
+
+/** The element field lookups run against: the given form, else the summary's own form, else the page. */
+const resolveFocusRoot = (formElement: HTMLElement | null | undefined, container: TamaguiElement | null) => {
+  if (formElement != null) {
+    return formElement;
+  }
+  const owningForm = container instanceof HTMLElement ? container.closest<HTMLFormElement>('form') : null;
+  return owningForm ?? (typeof document === 'undefined' ? null : document.body);
+};
 
 /**
  * Form-level error summary. Lists field errors with focusable
  * links, `role="alert"`, and moves keyboard focus onto itself when it appears.
  */
-export function ErrorSummary({
+export const ErrorSummary = ({
   errors,
   title = t('There is a problem'),
   disableAutoFocus = false,
   formElement,
   onFocusField,
-}: ErrorSummaryProps) {
+}: ErrorSummaryProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'ErrorSummary' });
   const headingId = useId();
-  const containerRef = useRef<HTMLElement | null>(null);
+  const containerRef = useRef<TamaguiElement>(null);
 
   useEffect(() => {
     if (disableAutoFocus || !isWeb || errors.length === 0) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const node = containerRef.current;
-    if (!node || typeof node.focus !== 'function') {
-      return;
+    if (node == null) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     // Defer so the alert is in the accessibility tree before focus moves.
     const timer = setTimeout(() => {
@@ -151,17 +171,14 @@ export function ErrorSummary({
       onFocusField?.(item);
       return;
     }
-    const root =
-      formElement ??
-      (containerRef.current?.closest?.('form') as HTMLElement | null) ??
-      (typeof document !== 'undefined' ? document.body : null);
+    const root = resolveFocusRoot(formElement, containerRef.current);
     focusFieldTarget(root, { id: item.id ?? item.name, name: item.name });
     onFocusField?.(item);
   };
 
   return (
     <YStack
-      ref={containerRef as any}
+      ref={containerRef}
       role="alert"
       aria-labelledby={headingId}
       tabIndex={-1}
@@ -183,26 +200,46 @@ export function ErrorSummary({
         outlineOffset: FOCUS_RING_HALO_OFFSET,
       }}
       data-testid="error-summary">
-      <YStack flexDirection="row" alignItems="center" gap="$2">
-        <WarningCircleIcon size={20} aria-hidden />
-        <H4 id={headingId} size="$4" color="$color12" fontWeight="700" margin={0}>
+      <YStack
+        flexDirection="row"
+        alignItems="center"
+        gap="$2">
+        <WarningCircleIcon
+          size={20}
+          aria-hidden
+        />
+        <H4
+          id={headingId}
+          size="$4"
+          color="$color12"
+          fontWeight="700"
+          margin={0}>
           {title}
         </H4>
       </YStack>
-      <YStack {...({ tag: 'ul' } as any)} gap="$1" paddingInlineStart="$1" margin={0}>
+      <YStack
+        {...{ tag: 'ul' }}
+        gap="$1"
+        paddingInlineStart="$1"
+        margin={0}>
         {errors.map((item) => {
           const message = item.label ?? formatFieldError(item.error);
           const targetId = item.id ?? item.name;
           return (
-            <YStack key={item.name} {...({ tag: 'li' } as any)}>
-              <Paragraph size="$3" color="$color12" {...(knobProps.body as Record<string, unknown>)}>
+            <YStack
+              key={item.name}
+              {...{ tag: 'li' }}>
+              <Paragraph
+                size="$3"
+                color="$color12"
+                {...knobProps.body}>
                 {isWeb ? (
                   <Anchor
                     href={`#${targetId}`}
                     color={formCommonColors.error}
                     textDecorationLine="underline"
                     cursor="pointer"
-                    onPress={(e: any) => {
+                    onPress={(e) => {
                       e?.preventDefault?.();
                       focusItem(item);
                     }}>
@@ -225,4 +262,4 @@ export function ErrorSummary({
       </YStack>
     </YStack>
   );
-}
+};

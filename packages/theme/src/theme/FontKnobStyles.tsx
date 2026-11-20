@@ -28,21 +28,21 @@
 import { getConfig } from '@tamagui/web';
 import { useEffect } from 'react';
 
-import { fontCategoryMetrics, flooredLineHeight } from './fontCategoryMetrics';
-import { fontCategoryStacks } from './fontCategoryStacks';
+import { fontCategoryMetrics, flooredLineHeight } from './font-category-metrics';
+import { fontCategoryStacks } from './font-category-stacks';
 import type { FontCategory } from './knobs';
 import { defaultKnobs } from './knobs';
-import { usePresetContext } from './PresetContext';
+import { usePresetContext } from './preset-context';
 
 const STYLE_TAG_ID = 'mp-font-knob-styles';
 
 /**
  * Re-exported so `@repo/theme` consumers keep the historical
- * import path. The table itself lives in `fontCategoryMetrics.ts` because
+ * import path. The table itself lives in `font-category-metrics.ts` because
  * `defaults/fonts.ts` bakes the same floors into the registered category
  * fonts and the two must not drift.
  */
-export { fontCategoryMetrics };
+export { fontCategoryMetrics } from './font-category-metrics';
 
 // Default leading for font-scoped text that carries no explicit lineHeight
 // (e.g. `Text fontFamily="$body" fontSize=…` renders `line-height: normal`
@@ -54,11 +54,11 @@ const DEFAULT_HEADING_LEADING_MIN = 1.25;
 const DEFAULT_BODY_LEADING_MIN = 1.5;
 
 /** Zero-specificity default line-height rule for one font scope. */
-function defaultLeadingRule(scope: 'heading' | 'body', category: FontCategory): string {
+const defaultLeadingRule = (scope: 'heading' | 'body', category: FontCategory): string => {
   const metrics = fontCategoryMetrics[category] ?? fontCategoryMetrics['sans-serif'];
   const ratio = Math.max(metrics[scope], scope === 'heading' ? DEFAULT_HEADING_LEADING_MIN : DEFAULT_BODY_LEADING_MIN);
   return `:where(:root .font_${scope}) { line-height: ${ratio}; }`;
-}
+};
 
 /** Numeric font tables for a purpose font, keyed WITHOUT the `$` prefix. */
 export interface FontScopeTables {
@@ -67,32 +67,73 @@ export interface FontScopeTables {
   letterSpacing?: Record<string, number>;
 }
 
+type RawFontTable = Record<string, number | { val?: number }>;
+
+interface RawFont {
+  family?: string | { val?: string };
+  size?: RawFontTable;
+  lineHeight?: RawFontTable;
+  letterSpacing?: RawFontTable;
+}
+
+/**
+ * Read a font registered in the Tamagui config (parsed form first, then the raw
+ * `fonts` map). Returns undefined outside a configured Tamagui runtime.
+ */
+const readRawFont = (key: string): RawFont | undefined => {
+  let config: ReturnType<typeof getConfig>;
+  try {
+    config = getConfig();
+  } catch {
+    return undefined;
+  }
+  // SAFETY: `fontsParsed` exists on the runtime Tamagui config but is missing from its public type.
+  const { fontsParsed } = config as { fontsParsed?: ReturnType<typeof getConfig>['fonts'] };
+  // SAFETY: Tamagui font objects carry the `family` / size tables read through RawFont.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Tamagui's font type is wider than the tables this module reads
+  return (fontsParsed?.[`$${key}`] ?? config.fonts?.[key]) as RawFont | undefined;
+};
+
+const unwrapFontNumber = (value: number | { val?: number }): number | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Tamagui font tables mix bare numbers and `{ val }` Variables
+  if (typeof value === 'number') {
+    return value;
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- untyped runtime config value, validated before use
+  return typeof value.val === 'number' ? value.val : undefined;
+};
+
+const unwrapFontTable = (table: RawFontTable | undefined): Record<string, number> | undefined => {
+  if (table === undefined) {
+    return undefined;
+  }
+  const out: Record<string, number> = {};
+  for (const [key, value] of Object.entries(table)) {
+    const num = unwrapFontNumber(value);
+    if (num !== undefined) {
+      out[key.replace(/^\$/u, '')] = num;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
+
 /**
  * Resolve the concrete font-family stack registered in the Tamagui config for
  * a font category. Returns undefined when the category font is not registered
  * (the caller then uses `fontCategoryStacks` so the knob still writes
  * `--f-family` — live SHC console had the style tag and skipped the family).
  */
-export function getConfiguredFontFamily(category: FontCategory): string | undefined {
-  let config: ReturnType<typeof getConfig> | undefined;
-  try {
-    config = getConfig();
-  } catch {
-    return undefined;
-  }
-  const fontsParsed = (config as { fontsParsed?: Record<string, unknown> }).fontsParsed;
-  const font = (fontsParsed?.[`$${category}`] ?? config.fonts?.[category]) as
-    | { family?: string | { val?: string } }
-    | undefined;
-  const family = font?.family;
+// oxlint-disable-next-line react-doctor/only-export-components -- exported for unit tests and the font-resolver injection point
+export const getConfiguredFontFamily = (category: FontCategory): string | undefined => {
+  const family = readRawFont(category)?.family;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Tamagui font family is either a string or a Variable-like `{ val }`
   if (typeof family === 'string') {
     return family;
   }
-  if (family && typeof family.val === 'string') {
-    return family.val;
-  }
-  return undefined;
-}
+  const value = family?.val;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- untyped runtime config value, validated before use
+  return typeof value === 'string' ? value : undefined;
+};
 
 /**
  * Read the numeric size/lineHeight/letterSpacing tables of the `$heading` /
@@ -101,55 +142,34 @@ export function getConfiguredFontFamily(category: FontCategory): string | undefi
  * Returns undefined outside a configured Tamagui runtime (unit tests, SSR
  * before setup) — callers then emit family-only overrides.
  */
-export function getConfiguredFontTables(scope: 'heading' | 'body'): FontScopeTables | undefined {
-  let config: ReturnType<typeof getConfig> | undefined;
-  try {
-    config = getConfig();
-  } catch {
+// oxlint-disable-next-line react-doctor/only-export-components -- exported for unit tests and the font-resolver injection point
+export const getConfiguredFontTables = (scope: 'heading' | 'body'): FontScopeTables | undefined => {
+  const font = readRawFont(scope);
+  if (font === undefined) {
     return undefined;
   }
-  const fontsParsed = (config as { fontsParsed?: Record<string, unknown> }).fontsParsed;
-  const font = (fontsParsed?.[`$${scope}`] ?? config.fonts?.[scope]) as
-    | Record<string, Record<string, number | { val?: number }> | undefined>
-    | undefined;
-  if (!font) {
+  const size = unwrapFontTable(font.size);
+  const lineHeight = unwrapFontTable(font.lineHeight);
+  if (size === undefined || lineHeight === undefined) {
     return undefined;
   }
-  const unwrap = (table: Record<string, number | { val?: number }> | undefined): Record<string, number> | undefined => {
-    if (!table) {
-      return undefined;
-    }
-    const out: Record<string, number> = {};
-    for (const [key, value] of Object.entries(table)) {
-      const num = typeof value === 'number' ? value : value && typeof value.val === 'number' ? value.val : undefined;
-      if (num !== undefined) {
-        out[key.replace(/^\$/, '')] = num;
-      }
-    }
-    return Object.keys(out).length > 0 ? out : undefined;
-  };
-  const size = unwrap(font.size);
-  const lineHeight = unwrap(font.lineHeight);
-  if (!size || !lineHeight) {
-    return undefined;
-  }
-  return { size, lineHeight, letterSpacing: unwrap(font.letterSpacing) };
-}
+  return { size, lineHeight, letterSpacing: unwrapFontTable(font.letterSpacing) };
+};
 
 /** Build the full override rule for one font scope (heading or body). */
-function buildScopeRule(
+const buildScopeRule = (
   scope: 'heading' | 'body',
   category: FontCategory,
   family: string,
   tables: FontScopeTables | undefined,
-): string {
+): string => {
   const metrics = fontCategoryMetrics[category];
   const decls = [`--f-family: ${family} !important`];
-  if (tables && metrics) {
+  if (tables !== undefined && metrics !== undefined) {
     const minRatio = metrics[scope];
     for (const [key, size] of Object.entries(tables.size)) {
-      const baseLineHeight = tables.lineHeight[key];
-      if (typeof baseLineHeight !== 'number') {
+      const baseLineHeight: number | undefined = tables.lineHeight[key];
+      if (baseLineHeight === undefined) {
         continue;
       }
       const floored = flooredLineHeight(size, baseLineHeight, minRatio);
@@ -157,7 +177,7 @@ function buildScopeRule(
         decls.push(`--f-lineHeight-${key}: ${floored}px !important`);
       }
     }
-    if (metrics.letterSpacing === 'neutral' && tables.letterSpacing) {
+    if (metrics.letterSpacing === 'neutral' && tables.letterSpacing !== undefined) {
       // Inter's tracking-by-size curve (negative display tracking AND
       // positive caption tracking) is Inter-specific: fixed-pitch faces must
       // keep their pitch and connected scripts break when tracked apart, so
@@ -170,7 +190,7 @@ function buildScopeRule(
     }
   }
   return `:root .font_${scope} { ${decls.join('; ')}; }`;
-}
+};
 
 /**
  * Build the CSS override for the current headingFont/bodyFont knob values.
@@ -179,34 +199,35 @@ function buildScopeRule(
  * and per-size overrides are added for non-default categories. Exported for
  * unit testing.
  */
-export function buildFontKnobCss(
+// oxlint-disable-next-line react-doctor/only-export-components -- exported for unit testing
+export const buildFontKnobCss = (
   headingFont: FontCategory,
   bodyFont: FontCategory,
   resolveFamily: (category: FontCategory) => string | undefined = getConfiguredFontFamily,
   resolveTables: (scope: 'heading' | 'body') => FontScopeTables | undefined = getConfiguredFontTables,
-): string {
+): string => {
   const rules: string[] = [defaultLeadingRule('heading', headingFont), defaultLeadingRule('body', bodyFont)];
   if (headingFont !== 'sans-serif') {
     const family = resolveFamily(headingFont) ?? fontCategoryStacks[headingFont];
-    if (family) {
+    if (family !== undefined && family !== '') {
       rules.push(buildScopeRule('heading', headingFont, family, resolveTables('heading')));
     }
   }
   if (bodyFont !== 'sans-serif') {
     const family = resolveFamily(bodyFont) ?? fontCategoryStacks[bodyFont];
-    if (family) {
+    if (family !== undefined && family !== '') {
       rules.push(buildScopeRule('body', bodyFont, family, resolveTables('body')));
     }
   }
   return rules.join('\n');
-}
+};
 
 /**
  * Mount ONCE near the root (inside the Preset/PresetContext provider). Reads
  * the active headingFont/bodyFont knobs and syncs a `<style>` override so all
  * `$heading`/`$body` text follows the knobs. Renders nothing.
  */
-export function FontKnobStyles() {
+export const FontKnobStyles = () => {
   const presetCtx = usePresetContext();
   const knobs = presetCtx ? { ...presetCtx.preset.knobs, ...presetCtx.overrides } : defaultKnobs;
   const headingFont = knobs.headingFont ?? defaultKnobs.headingFont;
@@ -217,15 +238,15 @@ export function FontKnobStyles() {
       return;
     }
     const css = buildFontKnobCss(headingFont, bodyFont);
-    let tag = document.getElementById(STYLE_TAG_ID) as HTMLStyleElement | null;
-    if (!css) {
+    let tag = document.querySelector<HTMLStyleElement>(`#${STYLE_TAG_ID}`);
+    if (css === '') {
       tag?.remove();
       return;
     }
-    if (!tag) {
+    if (tag === null) {
       tag = document.createElement('style');
       tag.id = STYLE_TAG_ID;
-      document.head.appendChild(tag);
+      document.head.append(tag);
     }
     if (tag.textContent !== css) {
       tag.textContent = css;
@@ -235,11 +256,11 @@ export function FontKnobStyles() {
   useEffect(
     () => () => {
       if (typeof document !== 'undefined') {
-        document.getElementById(STYLE_TAG_ID)?.remove();
+        document.querySelector(`#${STYLE_TAG_ID}`)?.remove();
       }
     },
     [],
   );
 
   return null;
-}
+};

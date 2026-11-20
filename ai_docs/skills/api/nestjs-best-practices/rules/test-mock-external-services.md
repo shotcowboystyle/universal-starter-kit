@@ -89,9 +89,7 @@ describe('WeatherService', () => {
   });
 
   it('should handle API timeout', async () => {
-    vi.spyOn(httpService, 'get').mockReturnValue(
-      throwError(() => new Error('ETIMEDOUT')),
-    );
+    vi.spyOn(httpService, 'get').mockReturnValue(throwError(() => new Error('ETIMEDOUT')));
 
     await expect(service.getWeather('NYC')).rejects.toThrow('Weather service unavailable');
   });
@@ -130,10 +128,7 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        { provide: getModelToken(User.name), useValue: MockUserModel },
-      ],
+      providers: [UsersService, { provide: getModelToken(User.name), useValue: MockUserModel }],
     }).compile();
 
     service = module.get(UsersService);

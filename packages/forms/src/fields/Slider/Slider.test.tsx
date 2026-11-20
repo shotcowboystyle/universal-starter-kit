@@ -1,5 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, resolveRadiusClass, type BorderRadius } from '@repo/theme';
+import { Preset, resolveRadiusClass } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- vi.spyOn needs the module namespace object to replace wasKeyboardFocus
 import * as Theme from '@repo/theme';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
@@ -24,17 +26,141 @@ import {
   hasMinStepsBetween,
   snapSliderValue,
   useSliderJumpMotion,
-} from './jumpMotion';
+} from './jump-motion';
+import type { SliderJumpMotionOptions } from './jump-motion';
 
 import { Slider } from './index';
+
+type SliderValues = number[];
+
+const DEFAULT_FORM_VALUE: SliderValues = [50];
+type SliderFormValues = Record<string, SliderValues>;
+
+const getThumb = (container: ParentNode) => container.querySelector<HTMLElement>('[role="slider"]');
+
+const ignoreSubmit = async (_value: SliderFormValues): Promise<void> => {};
+
+const FormExample = ({
+  defaultValue = DEFAULT_FORM_VALUE,
+  name = 'slider',
+  onSubmit = ignoreSubmit,
+}: {
+  defaultValue?: SliderValues;
+  name?: string;
+  onSubmit?: (value: SliderFormValues) => Promise<void> | void;
+}) => (
+  <Form
+    formOptions={{
+      defaultValues: {
+        [name]: defaultValue,
+      },
+    }}
+    onSubmit={async (value) => {
+      await onSubmit(value);
+    }}>
+    <Slider
+      label="Form Slider"
+      name={name}
+    />
+    <Button action="submit">Submit</Button>
+  </Form>
+);
+
+/** Controlled slider with the standard feedback loop (value + onChange echoing back). */
+const JumpExample = () => {
+  const [values, setValues] = useState([60]);
+  return (
+    // min > 0 so the degenerate unmeasured-layout pointer value stays truthy
+    <Slider
+      label="Jump"
+      name="jump"
+      value={values}
+      onChange={setValues}
+      min={10}
+      max={110}
+    />
+  );
+};
+
+const jumpOptions = (overrides: Partial<SliderJumpMotionOptions> = {}): SliderJumpMotionOptions => ({
+  enabled: true,
+  min: 0,
+  max: 100,
+  step: 1,
+  transitionToken: 'quick',
+  initialValues: [50],
+  getTrackWidth: () => 400,
+  thumbSize: 20,
+  ...overrides,
+});
+
+const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const satisfies readonly BorderRadius[];
+const RAIL_HEIGHT = 6;
+const THUMB_HEIGHT = getSliderThumbRenderSize('$1.5');
+
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- computed and inline lengths carry a "px" suffix, which Number() would turn into NaN
+const cssPx = (length: string): number => Number.parseFloat(length);
+
+const part = (container: HTMLElement, name: 'rail' | 'fill' | 'thumb'): HTMLElement => {
+  const el = container.querySelector<HTMLElement>(`[data-slider-part="${name}"]`);
+  expect(el, `missing data-slider-part=${name}`).toBeTruthy();
+  return el!;
+};
+
+/** The number at the end of a class atom's `px` tail, or NaN when it has none. */
+const atomPxValue = (atom: string): number => {
+  if (!atom.endsWith('px')) {
+    return Number.NaN;
+  }
+  const text = atom.slice(0, -2);
+  let start = text.length;
+  while (start > 0 && /[\d.]/u.test(text.charAt(start - 1))) {
+    start -= 1;
+  }
+  return start === text.length ? Number.NaN : Number(text.slice(start));
+};
+
+const paintedRadiusPx = (el: HTMLElement): number => {
+  const inline = el.style.borderRadius;
+  if (inline !== '') {
+    return cssPx(inline) || 0;
+  }
+  const computed = getComputedStyle(el).borderTopLeftRadius;
+  if (computed !== '') {
+    const n = cssPx(computed);
+    if (!Number.isNaN(n)) {
+      return n;
+    }
+  }
+  const atom = el.className.split(/\s+/u).find((c) => c.startsWith('_btlr-') || /^_br\d/u.test(c));
+  if (atom === undefined) {
+    return Number.NaN;
+  }
+  const px = atomPxValue(atom);
+  if (!Number.isNaN(px)) {
+    return px;
+  }
+  return atom.endsWith('-0') || atom === '_btlr-0' ? 0 : Number.NaN;
+};
+
+const getHorizontalTrack = (container: HTMLElement, thumb: Element) =>
+  [...container.querySelectorAll('[data-orientation="horizontal"]')].find(
+    (el) => el !== thumb && !el.contains(thumb),
+  ) as HTMLElement;
 
 /** The repo's `quick` motion token physics (theme animationConfig). */
 const QUICK_SPRING = { type: 'spring', damping: 20, mass: 1.2, stiffness: 250 } as const;
 
-describe('Slider', () => {
+describe(Slider, () => {
   describe('basic rendering', () => {
     it('should render slider control', () => {
-      const result = renderWithProviders(<Slider label="Basic Slider" name="basic" value={[50]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Basic Slider"
+          name="basic"
+          value={[50]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider).toBeDefined();
     });
@@ -43,7 +169,13 @@ describe('Slider', () => {
   describe('slider values and constraints', () => {
     it('should set min/max attributes', () => {
       const result = renderWithProviders(
-        <Slider label="Constrained Slider" name="constrained" value={[20]} min={10} max={90} />,
+        <Slider
+          label="Constrained Slider"
+          name="constrained"
+          value={[20]}
+          min={10}
+          max={90}
+        />,
       );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-valuemin')).toBe('10');
@@ -53,9 +185,15 @@ describe('Slider', () => {
 
   describe('value changes', () => {
     it('should call onValueChange callback', async () => {
-      const onValueChange = vi.fn();
+      const onValueChange = vi.fn<(values: SliderValues) => void>();
       const result = renderWithProviders(
-        <Slider label="Change Slider" name="change" value={[30]} onValueChange={onValueChange} />,
+        <Slider
+          label="Change Slider"
+          name="change"
+          value={[30]}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
       );
       const slider = result.container.querySelector('[role="slider"]');
       if (slider) {
@@ -63,18 +201,19 @@ describe('Slider', () => {
           fireEvent.keyDown(slider, { key: 'ArrowRight' });
         });
       }
-      expect(onValueChange).toHaveBeenCalled();
+      expect(onValueChange).toHaveBeenCalledWith([31]);
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias with the same payload', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(values: SliderValues) => void>();
+      const onValueChange = vi.fn<(values: SliderValues) => void>();
       const result = renderWithProviders(
         <Slider
           label="Canonical Slider"
           name="canonical"
           value={[30]}
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onValueChange={onValueChange}
         />,
       );
@@ -85,16 +224,23 @@ describe('Slider', () => {
           fireEvent.keyDown(slider, { key: 'ArrowRight' });
         });
       }
-      expect(onChange).toHaveBeenCalled();
-      expect(onValueChange).toHaveBeenCalled();
-      expect(onChange.mock.calls.length).toBe(onValueChange.mock.calls.length);
-      expect(onChange.mock.lastCall).toEqual(onValueChange.mock.lastCall);
+      expect(onChange).toHaveBeenCalledWith([31]);
+      expect(onValueChange).toHaveBeenCalledWith([31]);
+      expect(onChange).toHaveBeenCalledTimes(onValueChange.mock.calls.length);
+      expect(onChange.mock.lastCall).toStrictEqual(onValueChange.mock.lastCall);
     });
   });
 
   describe('styling and theming', () => {
     it('should render required label with asterisk', () => {
-      const result = renderWithProviders(<Slider label="Required Slider" name="required" value={[50]} required />);
+      const result = renderWithProviders(
+        <Slider
+          label="Required Slider"
+          name="required"
+          value={[50]}
+          required
+        />,
+      );
 
       const label = result.container.querySelector('label');
       expect(label).toBeDefined();
@@ -107,32 +253,20 @@ describe('Slider', () => {
     describe('without form context', () => {
       it('should render helper text without form context', () => {
         const result = renderWithProviders(
-          <Slider label="Standalone Slider" name="standalone" value={[40]} helperText="Move me" />,
+          <Slider
+            label="Standalone Slider"
+            name="standalone"
+            value={[40]}
+            helperText="Move me"
+          />,
         );
         expect(result.findTextElement('Move me')).toBeDefined();
       });
     });
 
     describe('with form context', () => {
-      const FormExample = ({ defaultValue = [50], name = 'slider', onSubmit = async (_value: any) => {} }) => {
-        return (
-          <Form
-            formOptions={{
-              defaultValues: {
-                [name]: defaultValue,
-              },
-            }}
-            onSubmit={async (value) => {
-              await onSubmit(value);
-            }}>
-            <Slider label="Form Slider" name={name} />
-            <Button action="submit">Submit</Button>
-          </Form>
-        );
-      };
-
       it('should render with form context and handle form submission', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: SliderFormValues) => void>();
         const result = renderWithProviders(
           <YStack>
             <FormExample onSubmit={onSubmit} />
@@ -152,10 +286,13 @@ describe('Slider', () => {
       });
 
       it('should handle form submission with changed slider value', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: SliderFormValues) => void>();
         const result = renderWithProviders(
           <YStack>
-            <FormExample defaultValue={[25]} onSubmit={onSubmit} />
+            <FormExample
+              defaultValue={[25]}
+              onSubmit={onSubmit}
+            />
           </YStack>,
         );
 
@@ -174,7 +311,7 @@ describe('Slider', () => {
 
     describe('with useForm hook directly', () => {
       it('should handle form submission with useForm', async () => {
-        const onSubmitMock = vi.fn();
+        const onSubmitMock = vi.fn<(value: { volume: SliderValues }) => void>();
         const TestComponent = () => {
           const form = useForm({
             defaultValues: {
@@ -187,7 +324,10 @@ describe('Slider', () => {
 
           return (
             <Form form={form}>
-              <Slider label="Volume Control" name="volume" />
+              <Slider
+                label="Volume Control"
+                name="volume"
+              />
               <Button action="submit">Save</Button>
             </Form>
           );
@@ -216,18 +356,30 @@ describe('Slider', () => {
     // slider must run controlled when an upstream value drives it — and
     // adopting a programmatic value must not emit onChange (a seeded
     // value is not a user edit).
-    const getThumb = (container: ParentNode) => container.querySelector('[role="slider"]');
-
     it('standalone controlled: a value arriving after mount renders, without onChange', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(values: SliderValues) => void>();
+      const onValueChange = vi.fn<(values: SliderValues) => void>();
       const result = renderWithProviders(
-        <Slider label="Progress" value={[25]} onChange={onChange} onValueChange={onValueChange} />,
+        <Slider
+          label="Progress"
+          value={[25]}
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
       );
       expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('25');
 
       // Late seed: the upstream doc value arrives after first paint.
-      result.rerender(<Slider label="Progress" value={[75]} onChange={onChange} onValueChange={onValueChange} />);
+      result.rerender(
+        <Slider
+          label="Progress"
+          value={[75]}
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
+      );
       await waitFor(() => {
         expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('75');
       });
@@ -236,22 +388,21 @@ describe('Slider', () => {
     });
 
     it('form-integrated: a field value set after mount renders, without onChange', async () => {
-      const onChange = vi.fn();
-      let formApi: { setFieldValue: (name: 'volume', value: number[]) => void } | undefined;
-      const TestComponent = () => {
-        const form = useForm({ defaultValues: { volume: [10] } });
-        formApi = form as unknown as typeof formApi;
-        return (
-          <Form form={form}>
-            <Slider label="Volume" name="volume" onChange={onChange} />
-          </Form>
-        );
-      };
-      const result = renderWithProviders(<TestComponent />);
+      const onChange = vi.fn<(values: SliderValues) => void>();
+      const { result: formHook } = renderHook(() => useForm({ defaultValues: { volume: [10] } }));
+      const result = renderWithProviders(
+        <Form form={formHook.current}>
+          <Slider
+            label="Volume"
+            name="volume"
+            onChange={onChange}
+          />
+        </Form>,
+      );
       expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('10');
 
       await act(async () => {
-        formApi?.setFieldValue('volume', [60]);
+        formHook.current.setFieldValue('volume', [60]);
       });
       await waitFor(() => {
         expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('60');
@@ -260,8 +411,14 @@ describe('Slider', () => {
     });
 
     it('uncontrolled standalone (defaultValue only) still moves on keyboard input', async () => {
-      const onChange = vi.fn();
-      const result = renderWithProviders(<Slider label="Free" defaultValue={[40]} onChange={onChange} />);
+      const onChange = vi.fn<(values: SliderValues) => void>();
+      const result = renderWithProviders(
+        <Slider
+          label="Free"
+          defaultValue={[40]}
+          onChange={onChange}
+        />,
+      );
       const thumb = getThumb(result.container);
       expect(thumb?.getAttribute('aria-valuenow')).toBe('40');
       await act(async () => {
@@ -279,7 +436,12 @@ describe('Slider', () => {
   describe('field integration', () => {
     it('should render error text when provided', () => {
       const result = renderWithProviders(
-        <Slider label="Errored Slider" name="errored" value={[10]} error="Invalid value" />,
+        <Slider
+          label="Errored Slider"
+          name="errored"
+          value={[10]}
+          error="Invalid value"
+        />,
       );
       expect(result.container.textContent).toContain('Invalid value');
     });
@@ -287,7 +449,13 @@ describe('Slider', () => {
 
   describe('slider orientation', () => {
     it('should render horizontal slider by default', () => {
-      const result = renderWithProviders(<Slider label="Orientation" name="orientation" value={[30]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Orientation"
+          name="orientation"
+          value={[30]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-orientation')).toBe('horizontal');
     });
@@ -295,7 +463,13 @@ describe('Slider', () => {
 
   describe('accessibility', () => {
     it('should expose slider role and value', () => {
-      const result = renderWithProviders(<Slider label="A11y Slider" name="a11y" value={[65]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="A11y Slider"
+          name="a11y"
+          value={[65]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider).toBeDefined();
       expect(slider?.getAttribute('aria-valuenow')).toBeDefined();
@@ -304,43 +478,63 @@ describe('Slider', () => {
 
   describe('value output', () => {
     it('renders the current value beside the track', () => {
-      const result = renderWithProviders(<Slider label="Volume" value={[64]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Volume"
+          value={[64]}
+        />,
+      );
       expect(result.container.textContent).toContain('64');
     });
 
     it('renders a range as min–max', () => {
-      const result = renderWithProviders(<Slider label="Price" value={[25, 75]} min={0} max={100} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Price"
+          value={[25, 75]}
+          min={0}
+          max={100}
+        />,
+      );
       expect(result.container.textContent).toContain('25–75');
     });
   });
 
   describe('keyboard ring', () => {
-    const getThumb = (container: ParentNode) => container.querySelector('[role="slider"]');
-
     it('paints the ring on keyboard focus and drops it on pointer-drag', async () => {
       const spy = vi.spyOn(Theme, 'wasKeyboardFocus').mockReturnValue(true);
       try {
-        const result = renderWithProviders(<Slider label="Ring" defaultValue={[40]} />);
+        const result = renderWithProviders(
+          <Slider
+            label="Ring"
+            defaultValue={[40]}
+          />,
+        );
         const thumb = getThumb(result.container);
         expect(thumb).toBeTruthy();
-        expect(thumb?.getAttribute('data-kb-focus')).toBeNull();
+        expect(thumb?.dataset.kbFocus).toBeUndefined();
 
         await act(async () => {
           fireEvent.focus(thumb!);
         });
-        expect(thumb?.getAttribute('data-kb-focus')).toBe('true');
+        expect(thumb?.dataset.kbFocus).toBe('true');
 
         await act(async () => {
           fireEvent.pointerDown(thumb!);
         });
-        expect(thumb?.getAttribute('data-kb-focus')).toBeNull();
+        expect(thumb?.dataset.kbFocus).toBeUndefined();
       } finally {
         spy.mockRestore();
       }
     });
 
     it('does not paint the ring on pointer-origin focus', async () => {
-      const result = renderWithProviders(<Slider label="Click" defaultValue={[40]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Click"
+          defaultValue={[40]}
+        />,
+      );
       const thumb = getThumb(result.container);
       expect(thumb).toBeTruthy();
       await act(async () => {
@@ -348,13 +542,19 @@ describe('Slider', () => {
         fireEvent.pointerDown(thumb!);
         fireEvent.focus(thumb!);
       });
-      expect(thumb?.getAttribute('data-kb-focus')).toBeNull();
+      expect(thumb?.dataset.kbFocus).toBeUndefined();
     });
   });
 
   describe('edge cases', () => {
     it('should render with boundary value', () => {
-      const result = renderWithProviders(<Slider label="Boundary" name="boundary" value={[0]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Boundary"
+          name="boundary"
+          value={[0]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-valuenow')).toBe('0');
     });
@@ -362,12 +562,19 @@ describe('Slider', () => {
 
   describe('disabled state', () => {
     it('should render disabled slider', () => {
-      const result = renderWithProviders(<Slider label="Disabled Slider" name="disabled" value={[30]} disabled />);
-      const slider = result.container.querySelector('[role="slider"]');
+      const result = renderWithProviders(
+        <Slider
+          label="Disabled Slider"
+          name="disabled"
+          value={[30]}
+          disabled
+        />,
+      );
+      const slider = result.container.querySelector<HTMLElement>('[role="slider"]');
       expect(slider).toBeDefined();
       const disabledMarker =
         slider?.getAttribute('aria-disabled') === 'true' ||
-        slider?.hasAttribute('data-disabled') ||
+        slider?.dataset.disabled !== undefined ||
         Boolean(slider?.closest('[data-disabled]'));
       expect(disabledMarker).toBeTruthy();
     });
@@ -376,7 +583,12 @@ describe('Slider', () => {
   describe('form validation', () => {
     it('should handle validation errors', () => {
       const result = renderWithProviders(
-        <Slider label="Required Slider" name="required" value={[0]} error="Slider value is required" />,
+        <Slider
+          label="Required Slider"
+          name="required"
+          value={[0]}
+          error="Slider value is required"
+        />,
       );
 
       // Check for error text in the container
@@ -389,9 +601,21 @@ describe('Slider', () => {
     it('should render multiple slider instances', () => {
       const result = renderWithProviders(
         <YStack>
-          <Slider label="S1" name="s1" value={[10]} />
-          <Slider label="S2" name="s2" value={[20]} />
-          <Slider label="S3" name="s3" value={[30]} />
+          <Slider
+            label="S1"
+            name="s1"
+            value={[10]}
+          />
+          <Slider
+            label="S2"
+            name="s2"
+            value={[20]}
+          />
+          <Slider
+            label="S3"
+            name="s3"
+            value={[30]}
+          />
         </YStack>,
       );
       const sliders = result.container.querySelectorAll('[role="slider"]');
@@ -403,7 +627,11 @@ describe('Slider', () => {
     it('should render inside constrained width', () => {
       const result = renderWithProviders(
         <div style={{ width: 200 }}>
-          <Slider label="Responsive Slider" name="responsive" value={[50]} />
+          <Slider
+            label="Responsive Slider"
+            name="responsive"
+            value={[50]}
+          />
         </div>,
       );
       const slider = result.container.querySelector('[role="slider"]');
@@ -455,11 +683,11 @@ describe('Slider', () => {
 
       it("adjusts values with tamagui's snap/sort/min-steps semantics (a11y actions)", () => {
         // increment/decrement step math used by onAccessibilityAction
-        expect(getNextSortedValues([50], snapSliderValue(50 + 1, 0, 100, 1), 0)).toEqual([51]);
-        expect(getNextSortedValues([100], snapSliderValue(100 + 1, 0, 100, 1), 0)).toEqual([100]);
-        expect(getNextSortedValues([0], snapSliderValue(0 - 1, 0, 100, 1), 0)).toEqual([0]);
+        expect(getNextSortedValues([50], snapSliderValue(50 + 1, 0, 100, 1), 0)).toStrictEqual([51]);
+        expect(getNextSortedValues([100], snapSliderValue(100 + 1, 0, 100, 1), 0)).toStrictEqual([100]);
+        expect(getNextSortedValues([0], snapSliderValue(0 - 1, 0, 100, 1), 0)).toStrictEqual([0]);
         // range: adjusting the min thumb past the max re-sorts (tamagui semantics)
-        expect(getNextSortedValues([75, 75], snapSliderValue(76, 0, 100, 1), 0)).toEqual([75, 76]);
+        expect(getNextSortedValues([75, 75], snapSliderValue(76, 0, 100, 1), 0)).toStrictEqual([75, 76]);
         // min-steps rejection mirrors tamagui updateValues
         expect(hasMinStepsBetween([70, 75], 10)).toBe(false);
         expect(hasMinStepsBetween([60, 75], 10)).toBe(true);
@@ -510,28 +738,16 @@ describe('Slider', () => {
     });
 
     describe('native FLIP lifecycle (hook)', () => {
-      const options = (overrides: Record<string, unknown> = {}) => ({
-        enabled: true,
-        min: 0,
-        max: 100,
-        step: 1,
-        transitionToken: 'quick',
-        initialValues: [50],
-        getTrackWidth: () => 400,
-        thumbSize: 20,
-        ...overrides,
-      });
-
       afterEach(() => {
         vi.useRealTimers();
       });
 
       it('track press applies the FLIP delta instantly, glides next frame, then clears', () => {
         vi.useFakeTimers();
-        const { result } = renderHook(() => useSliderJumpMotion(options() as any));
+        const { result } = renderHook(() => useSliderJumpMotion(jumpOptions()));
 
         // mount: no transform residue, no armed token
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
 
@@ -540,14 +756,16 @@ describe('Slider', () => {
         });
         // phase "apply": layout snaps to 25, transform holds the old visual
         // position (base + delta) with an instant per-property transition
-        const baseX = getThumbBaseX(25, 20); // -7.5
+        // baseX is -7.5
+        const baseX = getThumbBaseX(25, 20);
+        // delta is 97.5
         const delta = getJumpDelta(50, 25, {
           min: 0,
           max: 100,
           trackWidth: 400,
           thumbSize: 20,
-        }); // 97.5
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        });
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: baseX + delta,
         });
@@ -556,7 +774,7 @@ describe('Slider', () => {
         act(() => {
           vi.advanceTimersByTime(16);
         });
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: { x: 'quick' },
           x: baseX,
         });
@@ -571,27 +789,27 @@ describe('Slider', () => {
         act(() => {
           vi.advanceTimersByTime(NATIVE_JUMP_SETTLE_MS);
         });
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
 
       it('drag sessions never arm the transform tween', () => {
-        const { result } = renderHook(() => useSliderJumpMotion(options() as any));
+        const { result } = renderHook(() => useSliderJumpMotion(jumpOptions()));
         act(() => {
           result.current.onDragStart();
           result.current.onInternalValueChange([51]);
           result.current.onInternalValueChange([55]);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
 
       it('demotes to a 1:1 drag when the pointer keeps moving after a track press', () => {
         vi.useFakeTimers();
-        const { result } = renderHook(() => useSliderJumpMotion(options() as any));
+        const { result } = renderHook(() => useSliderJumpMotion(jumpOptions()));
         act(() => {
           result.current.onTrackPress(25);
         });
@@ -606,58 +824,57 @@ describe('Slider', () => {
           result.current.onInternalValueChange([31]);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
 
       it('grabbing the thumb mid-glide cancels the tween immediately', () => {
         vi.useFakeTimers();
-        const { result } = renderHook(() => useSliderJumpMotion(options() as any));
+        const { result } = renderHook(() => useSliderJumpMotion(jumpOptions()));
         act(() => {
           result.current.onTrackPress(25);
         });
         act(() => {
-          vi.advanceTimersByTime(16); // phase "animate"
+          // phase "animate"
+          vi.advanceTimersByTime(16);
         });
-        expect(result.current.getThumbMotionProps(0).transition).toEqual({ x: 'quick' });
+        expect(result.current.getThumbMotionProps(0).transition).toStrictEqual({ x: 'quick' });
         act(() => {
           result.current.onDragStart();
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
 
       it('skips no-op, unmeasured, disabled, and min-steps-rejected presses', () => {
         // same value → no visual distance → no session
-        const { result: samePress } = renderHook(() => useSliderJumpMotion(options() as any));
+        const { result: samePress } = renderHook(() => useSliderJumpMotion(jumpOptions()));
         act(() => {
           samePress.current.onTrackPress(50);
         });
         expect(samePress.current.flip).toBeNull();
 
         // track not measured yet → no session
-        const { result: unmeasured } = renderHook(() =>
-          useSliderJumpMotion(options({ getTrackWidth: () => 0 }) as any),
-        );
+        const { result: unmeasured } = renderHook(() => useSliderJumpMotion(jumpOptions({ getTrackWidth: () => 0 })));
         act(() => {
           unmeasured.current.onTrackPress(25);
         });
         expect(unmeasured.current.flip).toBeNull();
 
         // disabled (web / vertical / rtl) → inert, component owns transitions
-        const { result: disabled } = renderHook(() => useSliderJumpMotion(options({ enabled: false }) as any));
+        const { result: disabled } = renderHook(() => useSliderJumpMotion(jumpOptions({ enabled: false })));
         act(() => {
           disabled.current.onTrackPress(25);
         });
         expect(disabled.current.flip).toBeNull();
-        expect(disabled.current.getThumbMotionProps(0)).toEqual({});
+        expect(disabled.current.getThumbMotionProps(0)).toStrictEqual({});
 
         // tamagui rejects updates violating minStepsBetweenThumbs → no motion
         const { result: minSteps } = renderHook(() =>
-          useSliderJumpMotion(options({ initialValues: [20, 30], minStepsBetweenThumbs: 15 }) as any),
+          useSliderJumpMotion(jumpOptions({ initialValues: [20, 30], minStepsBetweenThumbs: 15 })),
         );
         act(() => {
           minSteps.current.onTrackPress(26);
@@ -667,26 +884,27 @@ describe('Slider', () => {
 
       it('scopes the session strictly to the thumb whose value jumped', () => {
         vi.useFakeTimers();
-        const { result } = renderHook(() => useSliderJumpMotion(options({ initialValues: [20, 80] }) as any));
+        const { result } = renderHook(() => useSliderJumpMotion(jumpOptions({ initialValues: [20, 80] })));
         act(() => {
           result.current.onTrackPress(40);
         });
         const context = { min: 0, max: 100, trackWidth: 400, thumbSize: 20 };
         expect(result.current.flip?.movedIndex).toBe(0);
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: getThumbBaseX(40, 20) + getJumpDelta(20, 40, context),
         });
         // Non-target thumb: NO override at all, in either phase — it can
         // neither shift when the session arms nor pop back at release (the
         // sweep measured a +2.5pt session shift from the old base-x pin).
-        expect(result.current.getThumbMotionProps(1)).toEqual({
+        expect(result.current.getThumbMotionProps(1)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
         act(() => {
-          vi.advanceTimersByTime(16); // phase "animate"
+          // phase "animate"
+          vi.advanceTimersByTime(16);
         });
-        expect(result.current.getThumbMotionProps(1)).toEqual({
+        expect(result.current.getThumbMotionProps(1)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
         expect(result.current.getThumbMotionProps(1).x).toBeUndefined();
@@ -695,13 +913,15 @@ describe('Slider', () => {
       it('holds the override past the fixed window until the spring has settled', () => {
         vi.useFakeTimers();
         const { result } = renderHook(() =>
-          useSliderJumpMotion(options({ resolveAnimationConfig: () => QUICK_SPRING }) as any),
+          useSliderJumpMotion(jumpOptions({ resolveAnimationConfig: () => QUICK_SPRING })),
         );
         act(() => {
-          result.current.onTrackPress(90); // 50 → 90, |delta| = 156px
+          // 50 → 90, |delta| = 156px
+          result.current.onTrackPress(90);
         });
         act(() => {
-          vi.advanceTimersByTime(16); // promote to "animate" (spring starts)
+          // promote to "animate" (spring starts)
+          vi.advanceTimersByTime(16);
         });
         const delta = getJumpDelta(50, 90, { min: 0, max: 100, trackWidth: 400, thumbSize: 20 });
         const settleMs = getJumpSettleMs(QUICK_SPRING, delta);
@@ -717,7 +937,7 @@ describe('Slider', () => {
           vi.advanceTimersByTime(settleMs - NATIVE_JUMP_SETTLE_MS);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -725,30 +945,35 @@ describe('Slider', () => {
       it('re-anchors a re-tap mid-glide to the in-flight position (no teleport)', () => {
         vi.useFakeTimers();
         const { result } = renderHook(() =>
-          useSliderJumpMotion(options({ resolveAnimationConfig: () => QUICK_SPRING }) as any),
+          useSliderJumpMotion(jumpOptions({ resolveAnimationConfig: () => QUICK_SPRING })),
         );
         act(() => {
-          result.current.onTrackPress(25); // 50 → 25
+          // 50 → 25
+          result.current.onTrackPress(25);
         });
         act(() => {
-          vi.advanceTimersByTime(16); // spring starts
+          // spring starts
+          vi.advanceTimersByTime(16);
         });
         act(() => {
           result.current.onInternalValueChange([25]);
         });
         act(() => {
-          vi.advanceTimersByTime(100); // mid-flight
+          // mid-flight
+          vi.advanceTimersByTime(100);
         });
         act(() => {
-          result.current.onTrackPress(75); // re-tap while still gliding
+          // re-tap while still gliding
+          result.current.onTrackPress(75);
         });
         const context = { min: 0, max: 100, trackWidth: 400, thumbSize: 20 };
         const inFlightResidual = getSpringResidualPx(QUICK_SPRING, getJumpDelta(50, 25, context), 100);
-        expect(Math.abs(inFlightResidual)).toBeGreaterThan(1); // genuinely mid-flight
+        // genuinely mid-flight
+        expect(Math.abs(inFlightResidual)).toBeGreaterThan(1);
         expect(result.current.flip?.phase).toBe('apply');
         // the new session pins the thumb where it visually IS (old-session
         // residual folded in), not where the old glide would have ended
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: getThumbBaseX(75, 20) + getJumpDelta(25, 75, context) + inFlightResidual,
         });
@@ -757,9 +982,15 @@ describe('Slider', () => {
 
     describe('native a11y (web guard)', () => {
       it('web thumbs carry no native accessibility props and keep per-thumb aria labels', () => {
-        const result = renderWithProviders(<Slider label="Guard" name="guard" value={[25, 75]} />);
-        const thumbs = Array.from(result.container.querySelectorAll('[role="slider"]'));
-        expect(thumbs.length).toBe(2);
+        const result = renderWithProviders(
+          <Slider
+            label="Guard"
+            name="guard"
+            value={[25, 75]}
+          />,
+        );
+        const thumbs = [...result.container.querySelectorAll('[role="slider"]')];
+        expect(thumbs).toHaveLength(2);
         for (const thumb of thumbs) {
           // native-only props must never leak into the web DOM (byte-identical)
           expect(thumb.hasAttribute('accessibilitylabel')).toBe(false);
@@ -773,49 +1004,14 @@ describe('Slider', () => {
     });
 
     describe('BINARY radius', () => {
-      const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const satisfies readonly BorderRadius[];
-      const RAIL_HEIGHT = 6;
-      const THUMB_HEIGHT = getSliderThumbRenderSize('$1.5');
-
-      function part(container: HTMLElement, name: 'rail' | 'fill' | 'thumb'): HTMLElement {
-        const el = container.querySelector(`[data-slider-part="${name}"]`);
-        expect(el, `missing data-slider-part=${name}`).toBeTruthy();
-        return el as HTMLElement;
-      }
-
-      function paintedRadiusPx(el: Element): number {
-        const inline = (el as HTMLElement).style.borderRadius;
-        if (inline) {
-          return Number.parseFloat(inline) || 0;
-        }
-        const computed = getComputedStyle(el).borderTopLeftRadius;
-        if (computed && computed !== '') {
-          const n = Number.parseFloat(computed);
-          if (!Number.isNaN(n)) {
-            return n;
-          }
-        }
-        const atom = String((el as HTMLElement).className || '')
-          .split(/\s+/)
-          .find((c) => c.startsWith('_btlr-') || /^_br\d/.test(c));
-        if (!atom) {
-          return Number.NaN;
-        }
-        const px = atom.match(/(\d+(?:\.\d+)?)px$/);
-        if (px) {
-          return Number.parseFloat(px[1]);
-        }
-        if (atom.endsWith('-0') || atom === '_btlr-0') {
-          return 0;
-        }
-        return Number.NaN;
-      }
-
       it('rail, fill and thumb each measure 0 at none and height/2 at every other stop', () => {
         for (const stop of RADIUS_STOPS) {
           const result = renderWithProviders(
             <Preset overrides={{ borderRadius: stop }}>
-              <Slider label="Radius Slider" value={[40]} />
+              <Slider
+                label="Radius Slider"
+                value={[40]}
+              />
             </Preset>,
           );
           const rail = part(result.container, 'rail');
@@ -833,32 +1029,23 @@ describe('Slider', () => {
     });
 
     describe('web session (dom)', () => {
-      const getTrack = (container: HTMLElement, thumb: Element) =>
-        Array.from(container.querySelectorAll('[data-orientation="horizontal"]')).find(
-          (el) => el !== thumb && !el.contains(thumb),
-        ) as HTMLElement;
-
       it('mounts without an armed transition or transform residue', () => {
-        const result = renderWithProviders(<Slider label="Mount" name="mount" value={[50]} />);
-        const thumb = result.container.querySelector('[role="slider"]') as HTMLElement;
+        const result = renderWithProviders(
+          <Slider
+            label="Mount"
+            name="mount"
+            value={[50]}
+          />,
+        );
+        const thumb = getThumb(result.container)!;
         expect(thumb.style.transition).toBe('');
-        expect(Array.from(thumb.classList)).toContain('_transition-none');
+        expect([...thumb.classList]).toContain('_transition-none');
       });
 
       it('track click arms the left/transform tween then disarms after the jump window', async () => {
-        // Controlled slider with the standard feedback loop (value + onChange
-        // echoing back) — a bare static `value` is a frozen controlled input
-        // now that the upstream value really drives tamagui.
-        const JumpExample = () => {
-          const [values, setValues] = useState([60]);
-          return (
-            // min > 0 so the degenerate unmeasured-layout pointer value stays truthy
-            <Slider label="Jump" name="jump" value={values} onChange={setValues} min={10} max={110} />
-          );
-        };
         const result = renderWithProviders(<JumpExample />);
-        const thumb = result.container.querySelector('[role="slider"]') as HTMLElement;
-        const track = getTrack(result.container, thumb);
+        const thumb = getThumb(result.container)!;
+        const track = getHorizontalTrack(result.container, thumb);
         expect(track).toBeDefined();
 
         await act(async () => {
@@ -879,8 +1066,14 @@ describe('Slider', () => {
       });
 
       it('thumb drag start keeps the transition off', async () => {
-        const result = renderWithProviders(<Slider label="Drag" name="drag" value={[40]} />);
-        const thumb = result.container.querySelector('[role="slider"]') as HTMLElement;
+        const result = renderWithProviders(
+          <Slider
+            label="Drag"
+            name="drag"
+            value={[40]}
+          />,
+        );
+        const thumb = getThumb(result.container)!;
         await act(async () => {
           fireEvent.mouseDown(thumb);
           fireEvent.mouseMove(thumb, { clientX: 50 });

@@ -5,18 +5,18 @@ import { Activity, Airplay, Download, Trash } from '@tamagui/lucide-icons-2';
 import { useState } from 'react';
 import { Button as TamaguiButton, Paragraph, XStack, YStack, useTheme } from 'tamagui';
 
-import { Button, type ButtonProps } from './index';
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 const pressed = (name: string) => () => action(name)();
 
 const iconOptions = ['none', 'Activity', 'Airplay', 'Download', 'Trash'] as const;
-const icons: Record<string, any> = {
-  none: undefined,
-  Activity,
-  Airplay,
-  Download,
-  Trash,
-};
+const icons = new Map<unknown, ButtonProps['icon']>([
+  ['Activity', Activity],
+  ['Airplay', Airplay],
+  ['Download', Download],
+  ['Trash', Trash],
+]);
 
 const meta: Meta<typeof Button> = {
   title: 'Forms/Button',
@@ -42,7 +42,7 @@ const meta: Meta<typeof Button> = {
 export default meta;
 type Story = StoryObj<typeof Button>;
 
-function ContrastExample({ children = 'Save', ...props }: ButtonProps) {
+const ContrastExample = ({ children = 'Save', ...props }: ButtonProps) => {
   const [presses, setPresses] = useState(0);
   return (
     <YStack data-lc-clicks={presses}>
@@ -55,7 +55,7 @@ function ContrastExample({ children = 'Save', ...props }: ButtonProps) {
       </Button>
     </YStack>
   );
-}
+};
 
 export const DestructiveEnabled: Story = {
   render: () => <ContrastExample error>Delete</ContrastExample>,
@@ -63,7 +63,9 @@ export const DestructiveEnabled: Story = {
 
 export const DestructiveDisabled: Story = {
   render: () => (
-    <ContrastExample error disabled>
+    <ContrastExample
+      error
+      disabled>
       Delete
     </ContrastExample>
   ),
@@ -122,8 +124,8 @@ export const Basic: Story = {
   render: ({ icon, iconAfter, ...args }) => (
     <Button
       {...args}
-      icon={icon ? icons[icon as unknown as string] : undefined}
-      iconAfter={iconAfter ? icons[iconAfter as unknown as string] : undefined}
+      icon={icons.get(icon)}
+      iconAfter={icons.get(iconAfter)}
     />
   ),
 };
@@ -131,35 +133,60 @@ export const Basic: Story = {
 export const Intents: Story = {
   name: 'Intent variants',
   render: () => (
-    <YStack gap="$3" padding="$4">
-      <XStack gap="$3" flexWrap="wrap">
+    <YStack
+      gap="$3"
+      padding="$4">
+      <XStack
+        gap="$3"
+        flexWrap="wrap">
         <Button onPress={pressed('default')}>Default</Button>
-        <Button accent onPress={pressed('accent')}>
+        <Button
+          accent
+          onPress={pressed('accent')}>
           Accent
         </Button>
-        <Button success onPress={pressed('success')}>
+        <Button
+          success
+          onPress={pressed('success')}>
           Success
         </Button>
-        <Button warning onPress={pressed('warning')}>
+        <Button
+          warning
+          onPress={pressed('warning')}>
           Warning
         </Button>
-        <Button error onPress={pressed('error')}>
+        <Button
+          error
+          onPress={pressed('error')}>
           Error
         </Button>
       </XStack>
       {/* Outlined intents keep the label on the hue's readable text
           tier ($color11), never the solid sub-theme's on-fill foreground. */}
-      <XStack gap="$3" flexWrap="wrap">
-        <Button outlined onPress={pressed('outlined.default')}>
+      <XStack
+        gap="$3"
+        flexWrap="wrap">
+        <Button
+          outlined
+          onPress={pressed('outlined.default')}>
           Default
         </Button>
-        <Button outlined success onPress={pressed('outlined.success')}>
+        <Button
+          outlined
+          success
+          onPress={pressed('outlined.success')}>
           Success
         </Button>
-        <Button outlined warning onPress={pressed('outlined.warning')}>
+        <Button
+          outlined
+          warning
+          onPress={pressed('outlined.warning')}>
           Warning
         </Button>
-        <Button outlined error onPress={pressed('outlined.error')}>
+        <Button
+          outlined
+          error
+          onPress={pressed('outlined.error')}>
           Error
         </Button>
       </XStack>
@@ -169,8 +196,12 @@ export const Intents: Story = {
 
 export const CompoundPattern: Story = {
   render: () => (
-    <XStack gap="$3" padding="$4">
-      <Button accent size="$4">
+    <XStack
+      gap="$3"
+      padding="$4">
+      <Button
+        accent
+        size="$4">
         <Button.Icon>
           <Activity />
         </Button.Icon>
@@ -187,8 +218,13 @@ export const CompoundPattern: Story = {
 export const SizeLadder: Story = {
   name: 'Size ladder $2–$6',
   render: () => (
-    <YStack gap="$4" padding="$4">
-      <XStack gap="$3" alignItems="flex-end" flexWrap="wrap">
+    <YStack
+      gap="$4"
+      padding="$4">
+      <XStack
+        gap="$3"
+        alignItems="flex-end"
+        flexWrap="wrap">
         <Button size="$2">Restart</Button>
         <Button size="$3">Restart</Button>
         <Button size="$4">Restart</Button>
@@ -201,34 +237,60 @@ export const SizeLadder: Story = {
 export const Anatomy: Story = {
   name: 'Anatomy (size / density / selected / nested)',
   render: () => (
-    <YStack gap="$4" padding="$4">
-      <XStack gap="$3" alignItems="center" flexWrap="wrap">
+    <YStack
+      gap="$4"
+      padding="$4">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        flexWrap="wrap">
         <Button size="$3">Small</Button>
         <Button size="$4">Medium</Button>
         <Button size="$5">Large</Button>
-        <Button size="$4" compact>
+        <Button
+          size="$4"
+          compact>
           Compact pad
         </Button>
       </XStack>
-      <XStack gap="$3" alignItems="center" flexWrap="wrap">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        flexWrap="wrap">
         <Button outlined>Rest</Button>
-        <Button outlined selected>
+        <Button
+          outlined
+          selected>
           Selected
         </Button>
-        <Button accent selected>
+        <Button
+          accent
+          selected>
           Accent selected
         </Button>
-        <Button chromeless selected>
+        <Button
+          chromeless
+          selected>
           Ghost selected
         </Button>
       </XStack>
-      <XStack gap="$3" alignItems="center" flexWrap="wrap">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        flexWrap="wrap">
         <Button>Page</Button>
         <Button nested>Nested</Button>
-        <Button nested circular aria-label="day">
+        <Button
+          nested
+          circular
+          aria-label="Day">
           12
         </Button>
-        <Button circular icon={Activity} aria-label="toolbar well" />
+        <Button
+          circular
+          icon={Activity}
+          aria-label="Toolbar well"
+        />
       </XStack>
     </YStack>
   ),
@@ -255,40 +317,66 @@ export const Comparison: Story = {
     },
   },
   render: () => (
-    <XStack gap="$6" alignItems="flex-start" padding="$4" flexWrap="wrap">
-      <YStack gap="$3" width={200}>
-        <Paragraph size="$2" color="$placeholderColor">
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4"
+      flexWrap="wrap">
+      <YStack
+        gap="$3"
+        width={200}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
           Custom Button
         </Paragraph>
         <Button onPress={pressed('custom.default')}>Default</Button>
-        <Button accent onPress={pressed('custom.accent')}>
+        <Button
+          accent
+          onPress={pressed('custom.accent')}>
           Accent
         </Button>
-        <Button icon={Activity} onPress={pressed('custom.icon')}>
+        <Button
+          icon={Activity}
+          onPress={pressed('custom.icon')}>
           With Icon
         </Button>
-        <Button outlined onPress={pressed('custom.outlined')}>
+        <Button
+          outlined
+          onPress={pressed('custom.outlined')}>
           Outlined
         </Button>
-        <Button disabled disabledReason="Needs a completed draft">
+        <Button
+          disabled
+          disabledReason="Needs a completed draft">
           Disabled
         </Button>
         <Button size="$3">Small</Button>
         <Button size="$5">Large</Button>
       </YStack>
 
-      <YStack gap="$3" width={200}>
-        <Paragraph size="$2" color="$placeholderColor">
+      <YStack
+        gap="$3"
+        width={200}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
           Tamagui Button
         </Paragraph>
         <TamaguiButton onPress={pressed('tamagui.default')}>Default</TamaguiButton>
-        <TamaguiButton theme="accent" onPress={pressed('tamagui.accent')}>
+        <TamaguiButton
+          theme="accent"
+          onPress={pressed('tamagui.accent')}>
           Accent
         </TamaguiButton>
-        <TamaguiButton icon={Activity} onPress={pressed('tamagui.icon')}>
+        <TamaguiButton
+          icon={Activity}
+          onPress={pressed('tamagui.icon')}>
           With Icon
         </TamaguiButton>
-        <TamaguiButton variant="outlined" onPress={pressed('tamagui.outlined')}>
+        <TamaguiButton
+          variant="outlined"
+          onPress={pressed('tamagui.outlined')}>
           Outlined
         </TamaguiButton>
         <TamaguiButton disabled>Disabled</TamaguiButton>
@@ -316,7 +404,7 @@ export const Comparison: Story = {
  * 3:1 floor, which `parameters.focusRingBoard.expectedBelowFloor` tells the
  * shooter; the old board reported those as severe findings because the
  * specimen was built from a bare ensureFocusVisibleRing() that now returns 0.
- * The shooter measures the painted composition (computed outline colour and
+ * The shooter measures the painted composition (computed outline color and
  * offset, then the surface the band actually lands on), never the declaration.
  */
 /**
@@ -326,23 +414,34 @@ export const Comparison: Story = {
  * PAGE scope the way Button does: inside the intent sub-theme the
  * token derives a ring for the inverted surface, which is the 1.00:1 trap.
  */
-function InsetRow() {
+const InsetRow = () => {
   const pageOutlineColor = useTheme().outlineColor?.val as string | undefined;
   const inset = ensureFocusVisibleRing({
     outlineOffset: FOCUS_RING_CLIPPED_OFFSET,
-    ...(pageOutlineColor ? { outlineColor: pageOutlineColor } : undefined),
+    ...(pageOutlineColor !== undefined && pageOutlineColor !== '' ? { outlineColor: pageOutlineColor } : undefined),
   });
   return (
-    <XStack gap="$3" alignItems="center" flexWrap="wrap">
-      <Button testID="inset-accent" accent forceStyle="focusVisible" focusVisibleStyle={inset}>
+    <XStack
+      gap="$3"
+      alignItems="center"
+      flexWrap="wrap">
+      <Button
+        testID="inset-accent"
+        accent
+        forceStyle="focusVisible"
+        focusVisibleStyle={inset}>
         Accent, offset -2
       </Button>
-      <Button testID="inset-error" error forceStyle="focusVisible" focusVisibleStyle={inset}>
+      <Button
+        testID="inset-error"
+        error
+        forceStyle="focusVisible"
+        focusVisibleStyle={inset}>
         Error, offset -2
       </Button>
     </XStack>
   );
-}
+};
 
 export const StateFocus: Story = {
   name: 'State: focus',
@@ -363,18 +462,36 @@ export const StateFocus: Story = {
     },
   },
   render: () => (
-    <YStack testID="focus-ring-board" gap="$4" padding="$4" backgroundColor="$background">
-      <XStack gap="$3" alignItems="center" flexWrap="wrap">
+    <YStack
+      testID="focus-ring-board"
+      gap="$4"
+      padding="$4"
+      backgroundColor="$background">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        flexWrap="wrap">
         <Button testID="rest">Rest</Button>
-        <Button testID="focus-default" forceStyle="focusVisible">
+        <Button
+          testID="focus-default"
+          forceStyle="focusVisible">
           Focus
         </Button>
       </XStack>
-      <XStack gap="$3" alignItems="center" flexWrap="wrap">
-        <Button testID="focus-accent" accent forceStyle="focusVisible">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        flexWrap="wrap">
+        <Button
+          testID="focus-accent"
+          accent
+          forceStyle="focusVisible">
           Accent focus
         </Button>
-        <Button testID="focus-error" error forceStyle="focusVisible">
+        <Button
+          testID="focus-error"
+          error
+          forceStyle="focusVisible">
           Error focus
         </Button>
       </XStack>

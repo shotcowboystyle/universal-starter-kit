@@ -3,10 +3,11 @@ import { createInterFont } from '@tamagui/font-inter';
 // `@tamagui/web`, not `tamagui`: createDefaultThemeConfig.test.ts mocks the
 // whole `tamagui` module down to `createTamagui`, and this module is on that
 // spec's import graph.
-import { createFont, type GenericFont } from '@tamagui/web';
+import { createFont } from '@tamagui/web';
+import type { GenericFont } from '@tamagui/web';
 
-import { flooredLineHeight, fontCategoryMetrics } from '../fontCategoryMetrics';
-import { fontCategoryStacks } from '../fontCategoryStacks';
+import { flooredLineHeight, fontCategoryMetrics } from '../font-category-metrics';
+import { fontCategoryStacks } from '../font-category-stacks';
 import type { FontCategory } from '../knobs';
 
 // Default purpose fonts for components that reference $heading / $body
@@ -78,14 +79,10 @@ const TRACKING_B = 0.185;
 const TRACKING_C = -0.1745;
 
 /** Inter dynamic tracking for a rendered `sizePx`, in em. */
-export function interTrackingEm(sizePx: number): number {
-  return TRACKING_A + TRACKING_B * Math.exp(TRACKING_C * sizePx);
-}
+export const interTrackingEm = (sizePx: number): number => TRACKING_A + TRACKING_B * Math.exp(TRACKING_C * sizePx);
 
 /** Inter dynamic tracking for a rendered `sizePx`, in px (2-decimal). */
-export function interTrackingPx(sizePx: number): number {
-  return Math.round(interTrackingEm(sizePx) * sizePx * 100) / 100;
-}
+export const interTrackingPx = (sizePx: number): number => Math.round(interTrackingEm(sizePx) * sizePx * 100) / 100;
 
 /**
  * Legacy `size + 10` leading. Kept for `createDefaultFont` callers that pass
@@ -93,38 +90,34 @@ export function interTrackingPx(sizePx: number): number {
  */
 export const BODY_LINE_HEIGHT_OFFSET = 10;
 
-export function bodyLineHeightPx(sizePx: number): number {
-  return sizePx + BODY_LINE_HEIGHT_OFFSET;
-}
+export const bodyLineHeightPx = (sizePx: number): number => sizePx + BODY_LINE_HEIGHT_OFFSET;
 
 /**
  * A tamagui font table with Variables unwrapped and `$` prefixes stripped.
  * Upstream hands these back either raw or wrapped depending on where in the
  * config pipeline they were read, and `createInterFont` wants them raw.
  */
-function plain<T>(raw: unknown): Record<string, T> {
-  const out: Record<string, T> = {};
-  for (const [key, value] of Object.entries((raw ?? {}) as Record<string, T | { val?: T }>)) {
-    const unwrapped = value && typeof value === 'object' && 'val' in value ? (value as { val?: T }).val : (value as T);
-    if (unwrapped !== undefined) {
-      out[key.replace(/^\$/, '')] = unwrapped;
-    }
-  }
-  return out;
-}
+type RawFontTable<T> = Record<string, T | { val?: T }>;
+
+const plain = <T extends number | string>(raw: RawFontTable<T> | undefined) =>
+  Object.fromEntries(
+    Object.entries(raw ?? {}).flatMap(([key, value]) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Tamagui font tables hold bare values or `{ val }` Variables depending on pipeline stage
+      const unwrapped = typeof value === 'object' && value !== null ? value.val : value;
+      return unwrapped === undefined ? [] : [[key.replace(/^\$/u, ''), unwrapped] as const];
+    }),
+  );
 
 /** A tamagui font table's numbers, with Variables and `$` prefixes unwrapped. */
-const numbers = (raw: unknown) => plain<number>(raw);
+const numbers = (raw: RawFontTable<number> | undefined) => plain<number>(raw);
 
 /** Inter dynamic tracking for every key of a size table. */
-function trackingFor(sizes: Record<string, number>): Record<string, number> {
-  return Object.fromEntries(Object.entries(sizes).map(([key, px]) => [key, interTrackingPx(px)]));
-}
+const trackingFor = (sizes: Record<string, number>): Record<string, number> =>
+  Object.fromEntries(Object.entries(sizes).map(([key, px]) => [key, interTrackingPx(px)]));
 
 /** Zero tracking for every key of a size table (non-Inter faces). */
-function neutralTracking(sizes: Record<string, number>): Record<string, number> {
-  return Object.fromEntries(Object.keys(sizes).map((key) => [key, 0]));
-}
+const neutralTracking = (sizes: Record<string, number>): Record<string, number> =>
+  Object.fromEntries(Object.keys(sizes).map((key) => [key, 0]));
 
 const v5Body = defaultConfig.fonts.body;
 const v5Heading = defaultConfig.fonts.heading;
@@ -148,7 +141,7 @@ export const bodyFontLineHeights: Record<string, number> = bodyLineHeights;
  * Inter faces the workspace ships. v5 heading weights are sparse — 600 up to
  * $5, 700 at $6–$8, 800 from $9 — and A4's reading of that is the point:
  * everything between inherits, so bold is rare and therefore means something.
- * Each declared weight needs a face or the browser synthesises one.
+ * Each declared weight needs a face or the browser synthesizes one.
  */
 const interFaces = {
   400: { normal: 'Inter' },
@@ -159,7 +152,7 @@ const interFaces = {
 
 /**
  * Concrete family stacks for each `headingFont`/`bodyFont` category. Alias of
- * the one table in `fontCategoryStacks.ts`, which `FontKnobStyles` also reads
+ * the one table in `font-category-stacks.ts`, which `FontKnobStyles` also reads
  * for its `--f-family` fallback — one stop cannot render two faces.
  */
 export const fontFamilyStacks = fontCategoryStacks;
@@ -171,7 +164,7 @@ export type FontFamilyCategory = FontCategory;
  * floor applied. Every text step comes back as `$body`'s own value; only the
  * display steps, where the era's taper eases below the floor, move up.
  */
-export function categoryLineHeights(category: FontCategory): Record<string, number> {
+export const categoryLineHeights = (category: FontCategory): Record<string, number> => {
   const minRatio = (fontCategoryMetrics[category] ?? fontCategoryMetrics['sans-serif']).body;
   return Object.fromEntries(
     Object.entries(bodySizes).map(([key, px]) => [
@@ -179,7 +172,7 @@ export function categoryLineHeights(category: FontCategory): Record<string, numb
       flooredLineHeight(px, bodyLineHeights[key] ?? bodyLineHeightPx(px), minRatio),
     ]),
   );
-}
+};
 
 /**
  * Category font on the `$body` ladder: same sizes (including `true`), same
@@ -187,15 +180,14 @@ export function categoryLineHeights(category: FontCategory): Record<string, numb
  * is what collapsed `$serif`/`$mono`/`$rounded` to the system face at
  * `line-height: normal`.
  */
-export function createCategoryFont(category: FontCategory, family: string): GenericFont {
-  return createFont({
+export const createCategoryFont = (category: FontCategory, family: string): GenericFont =>
+  createFont({
     family,
     size: bodySizes,
     lineHeight: categoryLineHeights(category),
     weight: bodyWeights,
     letterSpacing: neutralTracking(bodySizes),
-  }) as GenericFont;
-}
+  });
 
 export const defaultHeadingFont = createInterFont(
   {

@@ -1,6 +1,8 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
+import type { PressableProps } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
@@ -8,35 +10,41 @@ import { Form } from '../../Form';
 import { DatetimePicker } from './DatetimePicker.native';
 import { DatePicker } from './index.native';
 
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 
 // RNW omits React Native's accessibilityValue object. Bridge that native
 // contract for this harness; the actual iOS AX tree remains the runtime gate.
-vi.mock('react-native-web', async (importOriginal) => {
-  const native = await importOriginal<typeof import('react-native')>();
+vi.mock(import('react-native-web'), async (importOriginal) => {
+  const native = await importOriginal();
   return {
     ...native,
-    Pressable: ({ accessibilityValue, ...props }: import('react-native').PressableProps) => (
-      <native.Pressable {...props} aria-valuetext={accessibilityValue?.text} />
+    Pressable: ({ accessibilityValue, ...props }: PressableProps) => (
+      <native.Pressable
+        {...props}
+        aria-valuetext={accessibilityValue?.text}
+      />
     ),
   };
 });
 
 const picked = new Date(2026, 2, 5, 14, 30);
-vi.mock('../nativeDateTime/OsDateTimeSheet', () => ({
+vi.mock(import('../nativeDateTime/OsDateTimeSheet'), () => ({
   OsDateTimeSheet: ({ open, onConfirm }: { open: boolean; onConfirm: (date: Date) => void }) =>
     open ? (
-      <div role="dialog" aria-label="OS date and time">
+      <dialog
+        open
+        aria-label="OS date and time">
         <button
+          type="button"
           onClick={() => {
             onConfirm(new Date(2026, 2, 5, 14, 30));
           }}>
           Confirm OS selection
         </button>
-      </div>
+      </dialog>
     ) : null,
 }));
 
@@ -57,9 +65,14 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('opens from its full-width native target and commits exactly once', () => {
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
-    const result = renderWithProviders(<DatetimePicker onChange={onChange} onValueChange={onValueChange} />);
+    const onChange = vi.fn<(value: Date | null) => void>();
+    const onValueChange = vi.fn<(value: Date | null) => void>();
+    const result = renderWithProviders(
+      <DatetimePicker
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
+    );
     const trigger = result.getByRole('button', { name: 'Date and time' });
     expect(getComputedStyle(trigger).width).toBe('100%');
     fireEvent.click(trigger);
@@ -72,7 +85,12 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('keeps native read-only text undimmed, without a picker press target', () => {
-    const result = renderWithProviders(<DatetimePicker value={picked} readOnly />);
+    const result = renderWithProviders(
+      <DatetimePicker
+        value={picked}
+        readOnly
+      />,
+    );
     const input = result.container.querySelector('input')!;
     expect(input.value).toContain('Mar 5, 2026');
     expect(input.disabled).toBe(false);
@@ -81,13 +99,18 @@ describe('native DatetimePicker ownership', () => {
     fireEvent.click(input);
     expect(result.queryByRole('dialog')).toBeNull();
     for (let el: HTMLElement | null = input; el && el !== result.container; el = el.parentElement) {
-      const opacity = getComputedStyle(el).opacity;
+      const { opacity } = getComputedStyle(el);
       expect(opacity === '' || Number(opacity) === 1).toBe(true);
     }
   });
 
   it('keeps a disabled value visible while declining activation', () => {
-    const result = renderWithProviders(<DatetimePicker value={picked} disabled />);
+    const result = renderWithProviders(
+      <DatetimePicker
+        value={picked}
+        disabled
+      />,
+    );
     const trigger = result.getByRole('button', { name: 'Date and time' });
     expect(trigger.getAttribute('aria-disabled')).toBe('true');
     expect(result.container.querySelector('input')?.value).toContain('Mar 5, 2026');
@@ -96,13 +119,23 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('adopts controlled values after mount without emitting changes or opening', async () => {
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
+    const onChange = vi.fn<(value: Date | null) => void>();
+    const onValueChange = vi.fn<(value: Date | null) => void>();
     const result = renderWithProviders(
-      <DatetimePicker value={null} onChange={onChange} onValueChange={onValueChange} />,
+      <DatetimePicker
+        value={null}
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
     );
     expect(result.container.querySelector('input')?.value).toBe('');
-    result.rerender(<DatetimePicker value={picked} onChange={onChange} onValueChange={onValueChange} />);
+    result.rerender(
+      <DatetimePicker
+        value={picked}
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
+    );
     await waitFor(() => {
       expect(result.container.querySelector('input')?.value).toContain('Mar 5, 2026');
     });
@@ -112,19 +145,24 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('adopts form values after mount without emitting changes or opening', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: Date | null) => void>();
     let update: ((date: Date) => void) | undefined;
-    function Example() {
+    const Example = () => {
       const form = useForm({ defaultValues: { when: null as Date | null } });
-      update = (date) => {
-        form.setFieldValue('when', date);
-      };
+      useEffect(() => {
+        update = (date) => {
+          form.setFieldValue('when', date);
+        };
+      }, [form]);
       return (
         <Form form={form}>
-          <DatetimePicker name="when" onChange={onChange} />
+          <DatetimePicker
+            name="when"
+            onChange={onChange}
+          />
         </Form>
       );
-    }
+    };
     const result = renderWithProviders(<Example />);
     expect(result.container.querySelector('input')?.value).toBe('');
     await act(async () => update?.(picked));

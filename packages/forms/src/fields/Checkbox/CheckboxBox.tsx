@@ -1,11 +1,13 @@
 import { ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus, transitionProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import type { ReactNode } from 'react';
+import type { ComponentProps, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import type { SizeTokens, TransitionProp } from 'tamagui';
 import { View, getVariableValue, isWeb } from 'tamagui';
 
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
 import { clampRadiusForControl } from '../../shared/utils';
+
+import type { CheckboxFieldFrame } from './CheckboxFieldFrame';
 
 /** WCAG 2.5.5 pressable floor. The painted box is smaller and sits inside. */
 export const CHECKBOX_TARGET_PX = 44;
@@ -21,39 +23,40 @@ export const CHECKBOX_GLYPH_MAX_RADIUS_TOKEN = 2;
  * Per-component override for the checkbox glyph.
  * `pointy` / `$0` → 0; every other stop caps at `$2`. Never `$12`, never h/2.
  */
-export function clampCheckboxGlyphRadius(radiusToken: string | undefined, options?: { pointy?: boolean }): string | 0 {
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const clampCheckboxGlyphRadius = (radiusToken?: string, options?: { pointy?: boolean }): string | 0 => {
   if (options?.pointy) {
     return 0;
   }
   return clampRadiusForControl(radiusToken, CHECKBOX_GLYPH_MAX_RADIUS_TOKEN);
-}
+};
 
 /** Painted radius ≥ half the side reads as a circle (a radio, not a check). */
-export function isCircularCheckboxRadius(radiusPx: number, sidePx: number): boolean {
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const isCircularCheckboxRadius = (radiusPx: number, sidePx: number): boolean => {
   if (sidePx <= 0) {
     return false;
   }
   return radiusPx >= sidePx / 2;
-}
+};
 
-export function getCheckboxGlyphSize(size: SizeTokens): number {
-  return Math.round(getVariableValue(getSize(size)) * 0.45);
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const getCheckboxGlyphSize = (size: SizeTokens): number => Math.round(getVariableValue(getSize(size)) * 0.45);
 
 /** Spectrum / Primer: the empty box's edge is the shape (≥2px). */
-export function getCheckboxBoxBorderWidth(knobBorderWidth: number | undefined): number {
-  return Math.max(Number(knobBorderWidth) || 1, 2);
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const getCheckboxBoxBorderWidth = (knobBorderWidth?: number): number =>
+  Math.max(Number(knobBorderWidth) || 1, 2);
 
-export function getCheckboxIconSize(glyphSize: number): number {
-  return Math.max(10, Math.round(glyphSize * 0.7));
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const getCheckboxIconSize = (glyphSize: number): number => Math.max(10, Math.round(glyphSize * 0.7));
 
 /**
  * The 44px role=checkbox is a hit target, never a painted control.
  * Hover/press/focus washes and rings stay off this node so they cannot wrap
  * the label+box group. The visible box carries both channels.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
 export const checkboxTargetFrameProps = {
   width: CHECKBOX_TARGET_PX,
   height: CHECKBOX_TARGET_PX,
@@ -83,18 +86,25 @@ export const checkboxTargetFrameProps = {
   activeStyle: { backgroundColor: 'transparent', borderColor: 'transparent' },
 } as const;
 
-interface FocusRest {
-  onFocus?: (...args: any[]) => void;
-  onBlur?: (...args: any[]) => void;
-  onHoverIn?: (...args: any[]) => void;
-  onHoverOut?: (...args: any[]) => void;
+type FrameProps = ComponentProps<typeof CheckboxFieldFrame>;
+
+/** Tamagui's frame types omit the hover callbacks it still fires on web. */
+export interface CheckboxHoverHandlers {
+  onHoverIn?: (event: ReactMouseEvent) => void;
+  onHoverOut?: (event: ReactMouseEvent) => void;
 }
 
-export function checkboxKbFocusHandlers(
+interface FocusRest extends CheckboxHoverHandlers {
+  onFocus?: FrameProps['onFocus'];
+  onBlur?: FrameProps['onBlur'];
+}
+
+// oxlint-disable-next-line react-doctor/only-export-components -- geometry helper shared with Checkbox, CheckboxGroup and the Checkboxes compound; moving it would change import paths
+export const checkboxKbFocusHandlers = (
   setKbFocus: (next: boolean) => void,
   setHovered: (next: boolean) => void,
   rest?: FocusRest,
-) {
+) => {
   // Native: a focus handler on any styled layer over tamagui's
   // Checkbox makes that layer pass `onPress: undefined` down, and
   // createCheckbox spreads it over its own toggle, so a tap on the box does
@@ -103,28 +113,28 @@ export function checkboxKbFocusHandlers(
     return {};
   }
   return {
-    onFocus: (e: any) => {
+    onFocus: (e: Parameters<NonNullable<FrameProps['onFocus']>>[0]) => {
       if (wasKeyboardFocus()) {
         setKbFocus(true);
       }
       rest?.onFocus?.(e);
     },
-    onBlur: (e: any) => {
+    onBlur: (e: Parameters<NonNullable<FrameProps['onBlur']>>[0]) => {
       setKbFocus(false);
       rest?.onBlur?.(e);
     },
-    onHoverIn: (e: any) => {
+    onHoverIn: (e: ReactMouseEvent) => {
       setHovered(true);
       rest?.onHoverIn?.(e);
     },
-    onHoverOut: (e: any) => {
+    onHoverOut: (e: ReactMouseEvent) => {
       setHovered(false);
       rest?.onHoverOut?.(e);
     },
   };
-}
+};
 
-export function CheckboxGlyphBox({
+export const CheckboxGlyphBox = ({
   glyphSize,
   isMarked,
   kbFocus,
@@ -142,10 +152,11 @@ export function CheckboxGlyphBox({
   borderRadius: number | string;
   transition?: TransitionProp;
   children?: ReactNode;
-}) {
+}) => {
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
+  const idleBorderColor = hovered ? formControlColors.thumb.press : formControlColors.boundary;
   return (
     <View
       data-checkbox-box="true"
@@ -158,9 +169,7 @@ export function CheckboxGlyphBox({
       // is the boundary; checked = accent fill + check (same border width,
       // border color = fill — not a second outline).
       backgroundColor={isMarked ? formSelectedColors.mark : 'transparent'}
-      borderColor={
-        isMarked ? formSelectedColors.mark : hovered ? formControlColors.thumb.press : formControlColors.boundary
-      }
+      borderColor={isMarked ? formSelectedColors.mark : idleBorderColor}
       alignItems="center"
       justifyContent="center"
       overflow="visible"
@@ -173,4 +182,4 @@ export function CheckboxGlyphBox({
       {children}
     </View>
   );
-}
+};

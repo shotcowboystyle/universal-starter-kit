@@ -6,11 +6,11 @@ import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { XAxis, YAxis } from './Axis';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot, resolveSeriesFills, thinCategories } from './composeChart';
+import { computeCartesianPlot, resolveSeriesFills, thinCategories } from './compose-chart';
 import { createBandScale, createLinearScale, formatChartValue, getLinearTicks, valueDomain } from './math';
 import { BarSeries } from './series';
 import type { ChartDatum, ChartDatumEvents } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface BarChartProps extends ChartDatumEvents, Omit<YStackProps, 'children' | 'width' | 'height'> {
   data: ChartDatum[];
@@ -50,7 +50,7 @@ export interface BarChartProps extends ChartDatumEvents, Omit<YStackProps, 'chil
  * Categorical bar chart: d3 band/linear scales, zero-based value axis,
  * knob-driven chrome, palette-driven marks, 44px column hit targets.
  */
-export function BarChart({
+export const BarChart = ({
   data,
   height = 200,
   width,
@@ -69,16 +69,20 @@ export function BarChart({
   onDatumHoverIn,
   onDatumHoverOut,
   ...stackProps
-}: BarChartProps) {
+}: BarChartProps) => {
   const { t } = useTranslation();
   const { palette, labelFontSize } = useChartTheme();
   const fills = resolveSeriesFills(data, palette, { color, colors, categorical });
   const format = valueFormatter ?? formatChartValue;
   const ariaLabel = label ?? describeChart({ typeLabel: t('Bar chart'), title, data, formatValue: valueFormatter });
-  const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
+  const interactive = onDatumPress !== undefined || onDatumHoverIn !== undefined || onDatumHoverOut !== undefined;
 
   return (
-    <ChartDataFrame data={data} title={title} valueFormatter={valueFormatter} width={width}>
+    <ChartDataFrame
+      data={data}
+      title={title}
+      valueFormatter={valueFormatter}
+      width={width}>
       <ChartSurface
         label={ariaLabel}
         proof={{
@@ -158,4 +162,4 @@ export function BarChart({
       </ChartSurface>
     </ChartDataFrame>
   );
-}
+};

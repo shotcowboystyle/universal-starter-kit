@@ -2,9 +2,10 @@ import { ensureKeyboardModalityTracking, useResolvedKnobs, warnCancelDisabled, w
 import { useEffect } from 'react';
 import { Dialog, Paragraph, XStack } from 'tamagui';
 
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { Button } from '../Button';
-import { formCommonColors } from '../shared/colorRamps';
-import { DialogShowFocus, useReturnFocusOnClose } from '../shared/focusManagement';
+import { formCommonColors } from '../shared/color-ramps';
+import { DialogShowFocus, useReturnFocusOnClose } from '../shared/focus-management';
 import { t } from '../shared/t';
 
 export interface UnsavedChangesDialogProps {
@@ -21,22 +22,24 @@ export interface UnsavedChangesDialogProps {
  * WebKit's show() also marks the panel :focus-visible, which a plain focus()
  * would carry onto the button after a pointer open; the ring is keyboard-only.
  */
-function focusKeepEditing(event: Event) {
-  const root = event.currentTarget as HTMLElement | null;
-  const keep = root?.querySelector<HTMLElement>('[data-mp-savebar-keep]');
+const focusKeepEditing = (event: Event) => {
+  const root = event.currentTarget;
+  const keep = root instanceof Element ? root.querySelector<HTMLElement>('[data-mp-savebar-keep]') : null;
   if (!keep) {
     return;
   }
   event.preventDefault();
-  keep.focus({ preventScroll: true, focusVisible: wasKeyboardFocus() } as FocusOptions);
-}
+  // `focusVisible` is newer than the DOM lib's FocusOptions; a non-literal skips the excess-property check.
+  const focusOptions = { preventScroll: true, focusVisible: wasKeyboardFocus() };
+  keep.focus(focusOptions);
+};
 
 /**
  * Route-leave / Discard confirm. Lives in forms so ContextualSaveBar
  * does not import `@repo/ui` (ConfirmDialog → forms Button
  * would cycle).
  */
-export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscard }: UnsavedChangesDialogProps) {
+export const UnsavedChangesDialog = ({ open, fieldCount, onKeepEditing, onDiscard }: UnsavedChangesDialogProps) => {
   const { knobProps } = useResolvedKnobs();
   ensureKeyboardModalityTracking();
   useReturnFocusOnClose(open);
@@ -59,15 +62,18 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
         });
 
   return (
-    <Dialog modal open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay
           key="overlay"
           backgroundColor="$background"
           opacity={0.5}
           transition={knobProps.transition}
-          enterStyle={knobProps.transition ? { opacity: 0 } : undefined}
-          exitStyle={knobProps.transition ? { opacity: 0 } : undefined}
+          enterStyle={knobProps.transition === undefined ? undefined : { opacity: 0 }}
+          exitStyle={knobProps.transition === undefined ? undefined : { opacity: 0 }}
         />
         <Dialog.Content
           key="content"
@@ -94,15 +100,24 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
             e.preventDefault();
           }}
           onOpenAutoFocus={focusKeepEditing}>
-          <Dialog.Title {...knobProps.body} fontSize="$4">
+          <Dialog.Title
+            {...knobProps.body}
+            fontSize="$4">
             {t('Discard unsaved changes?')}
           </Dialog.Title>
           <Dialog.Description asChild>
-            <Paragraph {...knobProps.body} size="$3" color={formCommonColors.muted}>
+            <Paragraph
+              {...knobProps.body}
+              size="$3"
+              color={formCommonColors.muted}>
               {body}
             </Paragraph>
           </Dialog.Description>
-          <XStack {...knobProps.gap} justifyContent="flex-end" alignItems="center" flexWrap="wrap">
+          <XStack
+            {...knobProps.gap}
+            justifyContent="flex-end"
+            alignItems="center"
+            flexWrap="wrap">
             <Button
               outlined
               data-mp-savebar-keep=""
@@ -126,4 +141,4 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

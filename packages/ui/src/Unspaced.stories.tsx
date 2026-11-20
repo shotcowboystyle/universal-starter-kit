@@ -25,7 +25,9 @@ type Story = StoryObj<typeof Unspaced>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack maxWidth={420} gap="$4">
+    <YStack
+      maxWidth={420}
+      gap="$4">
       <Text>First row — takes the stack gap.</Text>
       <Unspaced>
         <Text>Unspaced row — the parent gap does not apply here.</Text>

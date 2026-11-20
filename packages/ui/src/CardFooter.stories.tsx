@@ -55,7 +55,9 @@ export const ManyActionsNarrow: Story = {
       <Card>
         <Paragraph>Narrow card body.</Paragraph>
         <Card.Footer>
-          <XStack gap="$2" flexWrap="wrap">
+          <XStack
+            gap="$2"
+            flexWrap="wrap">
             <Button size="$2">A very long action label</Button>
             <Button size="$2">Another action</Button>
             <Button size="$2">Primary confirm</Button>

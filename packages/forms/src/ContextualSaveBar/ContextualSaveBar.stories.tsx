@@ -13,9 +13,20 @@ import { Form } from '../Form';
 import { ContextualSaveBar } from './index';
 
 const fields = (
-  <YStack gap="$4" width="100%" maxWidth={640} padding="$4" minHeight={360}>
-    <Input name="name" label="Service name" />
-    <Checkbox name="agree" label="Notify on deploy" />
+  <YStack
+    gap="$4"
+    width="100%"
+    maxWidth={640}
+    padding="$4"
+    minHeight={360}>
+    <Input
+      name="name"
+      label="Service name"
+    />
+    <Checkbox
+      name="agree"
+      label="Notify on deploy"
+    />
     <RadioGroup
       name="env"
       label="Environment"
@@ -24,7 +35,10 @@ const fields = (
         { label: 'Stage', value: 'stage' },
       ]}
     />
-    <Switch name="live" label="Live" />
+    <Switch
+      name="live"
+      label="Live"
+    />
   </YStack>
 );
 
@@ -95,7 +109,9 @@ export const Dirty: Story = {
 export const NarrowRefusal: Story = {
   name: 'Narrow refusal',
   render: () => (
-    <YStack width={309} maxWidth="100%">
+    <YStack
+      width={309}
+      maxWidth="100%">
       <Form
         saveBar={{ forceVisible: true }}
         formOptions={{ defaultValues: { name: 'service-example' } }}
@@ -104,16 +120,23 @@ export const NarrowRefusal: Story = {
             'service_identifier_already_exists_012345678901234567890123456789. Choose a different identifier and retry.',
           );
         }}>
-        <Input name="name" label="Service name" />
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>
     </YStack>
   ),
 };
 
-function SubmissionPathsFixture() {
+const SubmissionPathsFixture = () => {
   const [calls, setCalls] = useState(0);
   return (
-    <YStack gap="$3" width={360} maxWidth="100%" padding="$4">
+    <YStack
+      gap="$3"
+      width={360}
+      maxWidth="100%"
+      padding="$4">
       <SizableText data-testid="submit-calls">onSubmit calls: {calls}</SizableText>
       <Form
         saveBar={{ forceVisible: true, onSaved: action('onSaved') }}
@@ -123,12 +146,15 @@ function SubmissionPathsFixture() {
           action('onSubmit')(values);
           throw new Error('The record changed. Refresh and retry.');
         }}>
-        <Input name="name" label="Service name" />
+        <Input
+          name="name"
+          label="Service name"
+        />
         <Button action="submit">Submit</Button>
       </Form>
     </YStack>
   );
-}
+};
 
 export const SubmissionPaths: Story = {
   name: 'Submission paths',

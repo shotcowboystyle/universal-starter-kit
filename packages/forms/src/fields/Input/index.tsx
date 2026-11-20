@@ -1,16 +1,15 @@
 import { ClipboardIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { writeToClipboard } from '@repo/platform';
-import { useTouchSurface } from '@repo/theme';
-import { MIN_PRESS_TARGET, pressTargetHitSlop } from '@repo/theme';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useTouchSurface, MIN_PRESS_TARGET, pressTargetHitSlop } from '@repo/theme';
+import type { ComponentProps, ReactElement, ReactNode, RefObject } from 'react';
 import { useCallback, useRef } from 'react';
 import type { InputKeyboardType, InputTextContentType, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { isWeb, Text } from 'tamagui';
 
-import { resolveFieldInputProps } from '../../fieldDefaults';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { resolveFieldInputProps } from '../../field-defaults';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts, useForwardFocus } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import {
   getFieldError,
   getFieldHeight,
@@ -23,15 +22,17 @@ import type { AnyFormApi, LinkResolver } from '../../types';
 import { LinkCell } from '../../utils/LinkCell';
 
 type InputAreaProps = ComponentProps<typeof InputParts.Area>;
+type AnyHandler = NonNullable<ComponentProps<typeof FieldLayout>['onBlur']>;
 
 /** F1 / reference §10: standalone Input rings at offset 0, not the inset −2. */
 const INPUT_FIELD_RING_STYLE_ID = 'mp-input-field-ring-offset';
 
-export function ensureInputFieldRingOffset(): void {
+// oxlint-disable-next-line react-doctor/only-export-components -- exported API consumed outside this file; moving it would change the module surface
+export const ensureInputFieldRingOffset = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(INPUT_FIELD_RING_STYLE_ID)) {
+  if (document.querySelector(`#${INPUT_FIELD_RING_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -42,13 +43,13 @@ export function ensureInputFieldRingOffset(): void {
 [data-mp-input-field][data-mp-ring="inset"]:focus-visible {
   outline-offset: 0px !important;
 }`;
-  document.head.appendChild(tag);
-}
+  document.head.append(tag);
+};
 
 export interface InputProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   /**
@@ -73,9 +74,9 @@ export interface InputProps {
   id?: string;
   value?: string;
   defaultValue?: string;
-  onChange?: (e: any) => void;
+  onChange?: AnyHandler;
   onChangeText?: (text: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: AnyHandler;
   secureTextEntry?: boolean;
   placeholder?: string;
   multiline?: boolean;
@@ -120,7 +121,229 @@ export interface InputProps {
 
 const COPY_LABEL = 'Copy to clipboard';
 
-export function Input({
+const chromelessBoxProps = (control: ReturnType<typeof useFormField>['control']) => ({
+  borderWidth: 0,
+  backgroundColor: 'transparent' as const,
+  hoverStyle: {
+    borderColor: 'transparent' as const,
+    ...control.hoverKnobProps,
+  },
+  focusStyle: {
+    borderColor: 'transparent' as const,
+    ...control.focusKnobProps,
+  },
+});
+
+const resolveAreaName = (hasVisibleLabel: boolean, ariaLabel: string | undefined) =>
+  hasVisibleLabel || ariaLabel === undefined || ariaLabel === '' ? undefined : { 'aria-label': ariaLabel };
+
+const flag = (value: boolean | undefined = false): true | undefined => (value ? true : undefined);
+
+const omitUndefined = <T extends object>(input: T): Partial<T> =>
+  // SAFETY: only entries are dropped, so every remaining key/value pair still matches T.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- fromEntries widens to a string index; dropping entries keeps every pair valid for T
+  Object.fromEntries(Object.entries(input).filter(([, entry]) => entry !== undefined)) as Partial<T>;
+
+type KeyEventArgs = Partial<[Pick<KeyboardEvent, 'key' | 'preventDefault' | 'stopPropagation'>]>;
+
+interface InputBoxContext {
+  copy: InputProps['copy'];
+  disabled: InputProps['disabled'];
+  inputProps: InputProps['inputProps'];
+  leftIcon: InputProps['leftIcon'];
+  linkResolver: InputProps['linkResolver'];
+  onChange: InputProps['onChange'];
+  onChangeText: InputProps['onChangeText'];
+  readOnly: InputProps['readOnly'];
+  required: InputProps['required'];
+  rightIcon: InputProps['rightIcon'];
+  rightIconInteractive: InputProps['rightIconInteractive'];
+  value: InputProps['value'];
+  areaName: { 'aria-label': string } | undefined;
+  belowFloor: boolean;
+  boxProps: object;
+  fieldOverrides: Partial<InputAreaProps>;
+  focusTrigger: ReturnType<typeof useForwardFocus>;
+  handleCopy: (text: string) => Promise<void>;
+  id: ReturnType<typeof useFormField>['id'];
+  identifierProps: object | undefined;
+  inputRef: RefObject<TamaguiElement | null>;
+  purposeOverrides: Partial<InputAreaProps>;
+  resolvedSize: SizeTokens;
+  visualHeight: number;
+}
+
+const renderReadOnly = (ctx: InputBoxContext, inputValue: string | undefined, hasError: boolean): ReactElement => {
+  const { areaName, id, identifierProps, inputRef, linkResolver, required } = ctx;
+  if (linkResolver !== undefined) {
+    return (
+      <LinkCell
+        value={inputValue}
+        linkResolver={linkResolver}>
+        <Text
+          id={id}
+          aria-readonly="true"
+          aria-required={flag(required)}
+          aria-invalid={flag(hasError)}
+          {...areaName}
+          {...identifierProps}
+          color="$color">
+          {inputValue ?? ''}
+        </Text>
+      </LinkCell>
+    );
+  }
+  return (
+    <InputParts.Area
+      ref={inputRef}
+      value={inputValue ?? ''}
+      readOnly
+      id={id}
+      aria-readonly="true"
+      aria-required={flag(required)}
+      aria-invalid={flag(hasError)}
+      {...identifierProps}
+      {...areaName}
+    />
+  );
+};
+
+const renderEditable = (
+  ctx: InputBoxContext,
+  inputValue: string | undefined,
+  handleChange: ((text: string) => void) | undefined,
+  hasError: boolean,
+): ReactElement => {
+  const { areaName, disabled, fieldOverrides, id, identifierProps, inputProps, inputRef, onChange, onChangeText } = ctx;
+  const valueProps =
+    handleChange !== undefined || ctx.value !== undefined ? { value: inputValue ?? '' } : { defaultValue: inputValue };
+  return (
+    <InputParts.Area
+      ref={inputRef}
+      {...ctx.purposeOverrides}
+      {...inputProps}
+      {...identifierProps}
+      {...fieldOverrides}
+      disabled={disabled}
+      id={id}
+      {...valueProps}
+      aria-required={flag(ctx.required)}
+      aria-invalid={flag(hasError)}
+      {...areaName}
+      onChange={onChange}
+      onChangeText={(text) => {
+        if (disabled === true) {
+          return;
+        }
+        handleChange?.(text);
+        onChangeText?.(text);
+      }}
+    />
+  );
+};
+
+const renderTrailing = (
+  ctx: InputBoxContext,
+  hasError: boolean,
+  copyButton: ReactElement | undefined,
+): ReactElement | null => {
+  if (copyButton !== undefined) {
+    return copyButton;
+  }
+  if (ctx.rightIcon !== undefined) {
+    return (
+      <InputParts.Icon
+        adornment="trailing"
+        {...(ctx.rightIconInteractive === true ? undefined : ctx.focusTrigger)}>
+        {ctx.rightIcon}
+      </InputParts.Icon>
+    );
+  }
+  if (!hasError) {
+    return null;
+  }
+  // M3 / Polaris / Spectrum: in-field error glyph (color is not the
+  // only channel). Omitted when the consumer owns the trailing slot.
+  return (
+    <InputParts.Icon
+      adornment="trailing"
+      color={formCommonColors.error}>
+      <WarningCircleIcon aria-hidden />
+    </InputParts.Icon>
+  );
+};
+
+const renderCopyButton = (ctx: InputBoxContext, activateCopy: () => void): ReactElement => {
+  const { belowFloor, disabled, resolvedSize, visualHeight } = ctx;
+  const isDisabled = disabled === true;
+  return (
+    <InputParts.Button
+      glyphRing
+      size={resolvedSize}
+      type="button"
+      disabled={disabled}
+      tabIndex={isDisabled ? -1 : 0}
+      aria-label={COPY_LABEL}
+      accessibilityLabel={COPY_LABEL}
+      hitSlop={belowFloor ? pressTargetHitSlop(visualHeight) : undefined}
+      onPress={isDisabled ? undefined : activateCopy}
+      // Button types onKeyDown as a no-arg handler, but on web it receives the key event.
+      onKeyDown={(...args: KeyEventArgs) => {
+        const [event] = args;
+        if (isDisabled || event === undefined) {
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          activateCopy();
+        }
+      }}>
+      <InputParts.Icon aria-hidden>
+        <ClipboardIcon />
+      </InputParts.Icon>
+    </InputParts.Button>
+  );
+};
+
+const renderInputBox = (
+  ctx: InputBoxContext,
+  inputValue: string | undefined,
+  handleChange: ((text: string) => void) | undefined,
+  hasError: boolean,
+): ReactElement => {
+  const copyText = inputValue ?? '';
+  // Empty omits the cap so the field stays one tab stop.
+  const showCopy = ctx.copy === true && copyText !== '';
+  const activateCopy = () => {
+    if (ctx.disabled === true) {
+      return;
+    }
+    void ctx.handleCopy(copyText);
+  };
+  return (
+    <InputParts.Box
+      {...ctx.boxProps}
+      // The Box owns the disabled chrome treatment (read-only renders
+      // its own branch below and never dims).
+      disabled={ctx.disabled}
+      {...(showCopy ? { paddingInlineEnd: 0 } : undefined)}>
+      {ctx.leftIcon && (
+        <InputParts.Icon
+          adornment="leading"
+          {...ctx.focusTrigger}>
+          {ctx.leftIcon}
+        </InputParts.Icon>
+      )}
+      {ctx.readOnly === true
+        ? renderReadOnly(ctx, inputValue, hasError)
+        : renderEditable(ctx, inputValue, handleChange, hasError)}
+      {renderTrailing(ctx, hasError, showCopy ? renderCopyButton(ctx, activateCopy) : undefined)}
+    </InputParts.Box>
+  );
+};
+
+export const Input = ({
   name,
   form: formProp,
   validators,
@@ -159,7 +382,7 @@ export function Input({
   chromeless,
   copy,
   onCopyResult,
-}: InputProps) {
+}: InputProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, control, id } = useFormField({
     form: formProp,
@@ -180,10 +403,12 @@ export function Input({
 
   // density ≠ size: compact steps knobProps.sizeToken; an explicit `size`
   // ejects only the painted box height and leaves density alone.
+  // SAFETY: knobProps.sizeToken is always a Tamagui size token; the cast only narrows its string type.
   const resolvedSize = (size ?? knobProps.sizeToken) as SizeTokens;
   const visualHeight = getFieldHeight(resolvedSize, 1, hydrationTouch);
   const belowFloor = visualHeight < MIN_PRESS_TARGET;
   const visibleLabel = labelHidden ? undefined : label;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is ReactNode; only a string can serve as aria-label
   const resolvedAriaLabel = ariaLabel ?? (labelHidden && typeof label === 'string' ? label : undefined);
 
   const boxContract = {
@@ -204,20 +429,7 @@ export function Input({
   // stays on InputParts.Box (whole frame, icons included; text-entry
   // mouse carve-out). Do not paint a ring on Area and do not replace
   // Box's focusVisibleStyle — that would drop the composite ring recipe.
-  const chromelessProps = chromeless
-    ? {
-        borderWidth: 0,
-        backgroundColor: 'transparent' as const,
-        hoverStyle: {
-          borderColor: 'transparent' as const,
-          ...control.hoverKnobProps,
-        },
-        focusStyle: {
-          borderColor: 'transparent' as const,
-          ...control.focusKnobProps,
-        },
-      }
-    : undefined;
+  const chromelessProps = chromeless ? chromelessBoxProps(control) : undefined;
 
   const layoutBind = {
     id,
@@ -235,7 +447,7 @@ export function Input({
     'aria-label': resolvedAriaLabel,
   };
 
-  const areaName = visibleLabel || !resolvedAriaLabel ? undefined : { 'aria-label': resolvedAriaLabel };
+  const areaName = resolveAreaName(Boolean(visibleLabel), resolvedAriaLabel);
 
   const handleCopy = useCallback(
     async (text: string) => {
@@ -256,181 +468,106 @@ export function Input({
 
   // Render skeleton placeholder — FieldLayout keeps label/helper anatomy;
   // only the control chrome is the skeleton.
-  if (skeleton) {
+  const hasChildren = Boolean(children);
+  const hasError = Boolean(error);
+
+  if (skeleton === true) {
     return (
-      <FieldLayout {...layoutBind} error={error}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+          />
         </InputParts>
       </FieldLayout>
     );
   }
 
-  if (children) {
+  if (hasChildren) {
     return (
-      <InputParts size={resolvedSize} {...(error ? { theme: 'error' } : undefined)}>
+      <InputParts
+        size={resolvedSize}
+        {...(hasError ? { theme: 'error' } : undefined)}>
         {children}
       </InputParts>
     );
   }
 
-  const renderInputBox = (
-    inputValue: string | undefined,
-    handleChange?: (text: string) => void,
-    handleBlur?: (...args: any[]) => void,
-    hasError?: boolean,
-  ) => {
-    const copyText = String(inputValue ?? '');
-    // Empty omits the cap so the field stays one tab stop.
-    const showCopy = Boolean(copy && copyText);
-    const activateCopy = () => {
-      if (disabled) {
-        return;
-      }
-      void handleCopy(copyText);
-    };
-    return (
-      <InputParts.Box
-        {...boxContract}
-        {...(handleBlur ? { onBlur: handleBlur } : undefined)}
-        // The Box owns the disabled chrome treatment (read-only renders
-        // its own branch below and never dims).
-        disabled={disabled}
-        {...(showCopy ? { paddingInlineEnd: 0 } : undefined)}
-        {...chromelessProps}>
-        {leftIcon && (
-          <InputParts.Icon adornment="leading" {...focusTrigger}>
-            {leftIcon}
-          </InputParts.Icon>
-        )}
-        {readOnly ? (
-          linkResolver ? (
-            <LinkCell value={inputValue} linkResolver={linkResolver}>
-              <Text
-                id={id}
-                aria-readonly="true"
-                aria-required={required || undefined}
-                aria-invalid={hasError || undefined}
-                {...areaName}
-                {...identifierProps}
-                color="$color">
-                {inputValue ?? ''}
-              </Text>
-            </LinkCell>
-          ) : (
-            <InputParts.Area
-              ref={inputRef}
-              value={inputValue ?? ''}
-              readOnly
-              id={id}
-              aria-readonly="true"
-              aria-required={required || undefined}
-              aria-invalid={hasError || undefined}
-              {...identifierProps}
-              {...areaName}
-            />
-          )
-        ) : (
-          <InputParts.Area
-            ref={inputRef}
-            {...(purposeInputProps.inputMode !== undefined ? { inputMode: purposeInputProps.inputMode } : undefined)}
-            {...(purposeInputProps.keyboardType !== undefined
-              ? { keyboardType: purposeInputProps.keyboardType }
-              : undefined)}
-            {...(purposeInputProps.autoComplete !== undefined
-              ? { autoComplete: purposeInputProps.autoComplete }
-              : undefined)}
-            {...inputProps}
-            {...identifierProps}
-            {...(multiline !== undefined ? { multiline } : undefined)}
-            {...(maxLength !== undefined ? { maxLength } : undefined)}
-            {...(keyboardType !== undefined ? { keyboardType } : undefined)}
-            {...(textContentType !== undefined ? { textContentType } : undefined)}
-            {...(autoComplete !== undefined ? { autoComplete } : undefined)}
-            {...(secureTextEntry !== undefined ? { secureTextEntry } : undefined)}
-            {...(placeholder !== undefined ? { placeholder } : undefined)}
-            disabled={disabled}
-            id={id}
-            {...(handleChange || value !== undefined ? { value: inputValue ?? '' } : { defaultValue: inputValue })}
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
-            {...areaName}
-            onChange={onChange}
-            onChangeText={(text) => {
-              if (disabled) {
-                return;
-              }
-              handleChange?.(text);
-              onChangeText?.(text);
-            }}
-          />
-        )}
-        {showCopy ? (
-          <InputParts.Button
-            glyphRing
-            size={resolvedSize}
-            type="button"
-            disabled={disabled}
-            tabIndex={disabled ? -1 : 0}
-            aria-label={COPY_LABEL}
-            accessibilityLabel={COPY_LABEL}
-            hitSlop={belowFloor ? pressTargetHitSlop(visualHeight) : undefined}
-            onPress={disabled ? undefined : activateCopy}
-            onKeyDown={
-              ((e: KeyboardEvent) => {
-                if (disabled) {
-                  return;
-                }
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  activateCopy();
-                }
-              }) as unknown as () => void
-            }>
-            <InputParts.Icon aria-hidden>
-              <ClipboardIcon />
-            </InputParts.Icon>
-          </InputParts.Button>
-        ) : rightIcon ? (
-          <InputParts.Icon adornment="trailing" {...(rightIconInteractive ? undefined : focusTrigger)}>
-            {rightIcon}
-          </InputParts.Icon>
-        ) : hasError ? (
-          // M3 / Polaris / Spectrum: in-field error glyph (color is not the
-          // only channel). Omitted when the consumer owns the trailing slot.
-          <InputParts.Icon adornment="trailing" color={formCommonColors.error}>
-            <WarningCircleIcon aria-hidden />
-          </InputParts.Icon>
-        ) : null}
-      </InputParts.Box>
-    );
+  const ctx: InputBoxContext = {
+    areaName,
+    belowFloor,
+    boxProps: { ...boxContract, ...chromelessProps },
+    copy,
+    disabled,
+    fieldOverrides: omitUndefined({
+      multiline,
+      maxLength,
+      keyboardType,
+      textContentType,
+      autoComplete,
+      secureTextEntry,
+      placeholder,
+    }),
+    focusTrigger,
+    handleCopy,
+    id,
+    identifierProps,
+    inputProps,
+    inputRef,
+    leftIcon,
+    linkResolver,
+    onChange,
+    onChangeText,
+    purposeOverrides: omitUndefined({
+      inputMode: purposeInputProps.inputMode,
+      keyboardType: purposeInputProps.keyboardType,
+      autoComplete: purposeInputProps.autoComplete,
+    }),
+    readOnly,
+    required,
+    resolvedSize,
+    rightIcon,
+    rightIconInteractive,
+    value,
+    visualHeight,
   };
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name === undefined || name === '') {
     return (
-      <FieldLayout {...layoutBind} error={error} onBlur={onBlur}>
-        <InputParts size={resolvedSize}>
-          {renderInputBox(value ?? defaultValue, undefined, undefined, !!error)}
-        </InputParts>
+      <FieldLayout
+        {...layoutBind}
+        error={error}
+        onBlur={onBlur}>
+        <InputParts size={resolvedSize}>{renderInputBox(ctx, value ?? defaultValue, undefined, hasError)}</InputParts>
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
-          <FieldLayout {...layoutBind} error={resolvedError} onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
+          <FieldLayout
+            {...layoutBind}
+            error={resolvedError}
+            onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
             <InputParts size={resolvedSize}>
               {renderInputBox(
+                ctx,
                 field.state.value,
                 (text) => {
-                  field.handleChange(text as any);
+                  field.handleChange(text);
                 },
-                undefined,
-                !!resolvedError,
+                Boolean(resolvedError),
               )}
             </InputParts>
           </FieldLayout>
@@ -438,7 +575,7 @@ export function Input({
       }}
     </Field>
   );
-}
+};
 
 Input.Icon = InputParts.Icon;
 Input.Box = InputParts.Box;

@@ -39,9 +39,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
-  type RefObject,
 } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { GetProps, TamaguiElement } from 'tamagui';
 import {
   Text,
@@ -55,7 +54,7 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import type { DropdownMenuEntry, DropdownMenuItemSpec } from '../DropdownMenu';
 
 export type ContextMenuEntry = DropdownMenuEntry;
@@ -81,13 +80,13 @@ interface ContextMenuContextValue {
 
 const ContextMenuContext = createContext<ContextMenuContextValue | null>(null);
 
-function useContextMenuContext(part: string): ContextMenuContextValue {
+const useContextMenuContext = (part: string): ContextMenuContextValue => {
   const ctx = useContext(ContextMenuContext);
   if (!ctx) {
     throw new Error(`ContextMenu.${part} must be used inside <ContextMenu>`);
   }
   return ctx;
-}
+};
 
 const HOVER_FILL = '$color3';
 const SELECTED_FILL = '$color2';
@@ -138,117 +137,29 @@ const freeOverlay = {
   openOn: 'contextmenu' as const,
 };
 
-function ContextMenuRoot({
-  children,
-  items,
-  open: openProp,
-  defaultOpen = false,
-  onOpenChange,
-  maxHeight,
-  closeOnSelect,
-}: ContextMenuProps) {
-  const [open, setOpen] = useControllableState({
-    prop: openProp,
-    defaultProp: defaultOpen,
-    onChange: onOpenChange,
-  });
-  const pendingFocusRef = useRef<'first' | 'last'>('first');
+const ContextMenuSeparator = (props: ContextMenuSeparatorProps) => (
+  <SeparatorLine
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui View; an <hr> render would change the native tree
+    role="separator"
+    {...hairline.height}
+    {...props}
+  />
+);
 
-  const close = useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
+// oxlint-disable-next-line react/jsx-no-useless-fragment -- `children` is typed ReactNode (may be a Promise), so it can't be returned bare
+const ContextMenuTrigger = ({ children }: ContextMenuTriggerProps) => <>{children}</>;
 
-  const ctx = useMemo<ContextMenuContextValue>(
-    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
-    [open, setOpen, close, closeOnSelect],
-  );
+// oxlint-disable-next-line react/jsx-no-useless-fragment -- `children` is typed ReactNode (may be a Promise), so it can't be returned bare
+const ContextMenuContent = ({ children }: ContextMenuContentProps) => <>{children}</>;
 
-  let trigger: ReactNode = children;
-  let body: ReactNode = null;
-  if (items) {
-    body = items.map((entry, index) =>
-      'separator' in entry && entry.separator ? (
-        <ContextMenuSeparator key={`separator-${index}`} />
-      ) : 'checked' in entry && entry.checked !== undefined ? (
-        <ContextMenuCheckboxItem
-          key={entry.key ?? index}
-          checked={entry.checked!}
-          onCheckedChange={entry.onCheckedChange}
-          onSelect={entry.onSelect}
-          closeOnSelect={entry.closeOnSelect}
-          disabled={entry.disabled}
-          disabledReason={entry.disabledReason}
-          shortcut={entry.shortcut}>
-          {entry.label}
-        </ContextMenuCheckboxItem>
-      ) : (
-        <ContextMenuItem
-          key={(entry as ContextMenuItemSpec).key ?? index}
-          icon={(entry as ContextMenuItemSpec).icon}
-          shortcut={(entry as ContextMenuItemSpec).shortcut}
-          disabled={(entry as ContextMenuItemSpec).disabled}
-          disabledReason={(entry as ContextMenuItemSpec).disabledReason}
-          destructive={(entry as ContextMenuItemSpec).destructive}
-          closeOnSelect={(entry as ContextMenuItemSpec).closeOnSelect}
-          onSelect={(entry as ContextMenuItemSpec).onSelect}>
-          {(entry as ContextMenuItemSpec).label}
-        </ContextMenuItem>
-      ),
-    );
-  } else if (Array.isArray(children) || isValidElement(children)) {
-    const list = Array.isArray(children) ? children : [children];
-    const triggerParts: ReactNode[] = [];
-    const contentParts: ReactNode[] = [];
-    for (const child of list) {
-      if (!isValidElement(child)) {
-        triggerParts.push(child);
-        continue;
-      }
-      const type = (child as { type?: unknown }).type;
-      if (type === ContextMenuTrigger) {
-        triggerParts.push((child.props as { children?: ReactNode }).children);
-      } else if (type === ContextMenuContent) {
-        contentParts.push((child.props as { children?: ReactNode }).children);
-      } else {
-        triggerParts.push(child);
-      }
-    }
-    if (triggerParts.length) {
-      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
-    }
-    if (contentParts.length) {
-      body = contentParts;
-    }
-  }
+// Menu refs are Tamagui host elements; only web hosts are DOM nodes.
+const toHtmlElement = (el: TamaguiElement | null): HTMLElement | null =>
+  isWeb && el instanceof HTMLElement ? el : null;
 
-  return (
-    <ContextMenuContext.Provider value={ctx}>
-      <FloatingPanel open={open} onOpenChange={setOpen} trigger={trigger} contentPadding="none" {...freeOverlay}>
-        <ContextMenuList maxHeight={maxHeight}>{body}</ContextMenuList>
-      </FloatingPanel>
-    </ContextMenuContext.Provider>
-  );
-}
+const listScrollProps = (maxHeight: number) =>
+  isWeb ? { maxHeight, style: { overflowY: 'auto' as const } } : { maxHeight };
 
-export interface ContextMenuTriggerProps {
-  children: ReactNode;
-  asChild?: boolean;
-}
-
-function ContextMenuTrigger({ children }: ContextMenuTriggerProps) {
-  return <>{children}</>;
-}
-
-export interface ContextMenuContentProps {
-  children?: ReactNode;
-  maxHeight?: number;
-}
-
-function ContextMenuContent({ children }: ContextMenuContentProps) {
-  return <>{children}</>;
-}
-
-function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) {
+const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) => {
   const ctx = useContextMenuContext('Content');
   const innerRef = useRef<TamaguiElement | null>(null);
   const typeahead = useRef({ buffer: '', at: 0 });
@@ -257,75 +168,78 @@ function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHei
   }
 
   const getItems = useCallback((): HTMLElement[] => {
-    const node = innerRef.current as unknown as HTMLElement | null;
+    const node = toHtmlElement(innerRef.current);
     if (!node) {
       return [];
     }
-    return Array.from(node.querySelectorAll<HTMLElement>(`[${MENU_ITEM_ATTR}]:not([aria-disabled="true"])`));
+    return [...node.querySelectorAll<HTMLElement>(`[${MENU_ITEM_ATTR}]:not([aria-disabled="true"])`)];
   }, []);
 
   const focusItem = useCallback((el: HTMLElement | undefined) => {
     el?.focus();
   }, []);
 
+  const { open, close, pendingFocusRef } = ctx;
   useEffect(() => {
-    if (!isWeb || !ctx.open) {
+    if (!isWeb || !open) {
       return;
     }
-    const prefer = ctx.pendingFocusRef.current;
-    ctx.pendingFocusRef.current = 'first';
+    const prefer = pendingFocusRef.current;
+    pendingFocusRef.current = 'first';
     requestAnimationFrame(() => {
       const items = getItems();
-      focusItem(prefer === 'last' ? items[items.length - 1] : items[0]);
+      focusItem(prefer === 'last' ? items.at(-1) : items[0]);
     });
-  }, [ctx, ctx.open, focusItem, getItems]);
+  }, [open, pendingFocusRef, focusItem, getItems]);
 
   useEffect(() => {
-    if (!isWeb) {
-      return;
-    }
-    const node = innerRef.current as unknown as HTMLElement | null;
-    if (!node) {
-      return;
-    }
+    const node = toHtmlElement(innerRef.current);
     const handler = (event: globalThis.KeyboardEvent) => {
       const items = getItems();
       if (!items.length) {
         return;
       }
-      const index = items.indexOf(document.activeElement as HTMLElement);
+      const active = document.activeElement;
+      const index = active instanceof HTMLElement ? items.indexOf(active) : -1;
       switch (event.key) {
-        case 'ArrowDown':
+        case 'ArrowDown': {
           event.preventDefault();
           focusItem(items[(index + 1) % items.length]);
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           event.preventDefault();
           focusItem(items[(index - 1 + items.length) % items.length]);
           break;
-        case 'Home':
+        }
+        case 'Home': {
           event.preventDefault();
           focusItem(items[0]);
           break;
-        case 'End':
+        }
+        case 'End': {
           event.preventDefault();
-          focusItem(items[items.length - 1]);
+          focusItem(items.at(-1));
           break;
+        }
         case 'Enter':
-        case ' ':
-          if (index >= 0) {
+        case ' ': {
+          if (index !== -1) {
             event.preventDefault();
             items[index].click();
           }
           break;
-        case 'Escape':
+        }
+        case 'Escape': {
           event.preventDefault();
           event.stopPropagation();
-          ctx.close();
+          close();
           break;
-        case 'Tab':
-          ctx.close();
+        }
+        case 'Tab': {
+          close();
           break;
+        }
         default: {
           if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
             const now = Date.now();
@@ -333,7 +247,7 @@ function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHei
             state.buffer = now - state.at > 600 ? event.key : state.buffer + event.key;
             state.at = now;
             const query = state.buffer.toLowerCase();
-            const start = index >= 0 ? index : 0;
+            const start = index === -1 ? 0 : index;
             const ordered = [...items.slice(start + 1), ...items.slice(0, start + 1)];
             const match = ordered.find((el) => (el.textContent ?? '').trim().toLowerCase().startsWith(query));
             if (match) {
@@ -343,27 +257,33 @@ function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHei
         }
       }
     };
-    node.addEventListener('keydown', handler);
+    node?.addEventListener('keydown', handler);
     return () => {
-      node.removeEventListener('keydown', handler);
+      node?.removeEventListener('keydown', handler);
     };
-  }, [ctx, focusItem, getItems]);
+  }, [close, focusItem, getItems]);
 
+  const scrollProps = maxHeight !== undefined && maxHeight !== 0 ? listScrollProps(maxHeight) : undefined;
   return (
     <YStack
       ref={innerRef}
       role="menu"
       width="100%"
       paddingVertical={0}
-      {...(maxHeight
-        ? {
-            maxHeight,
-            ...(isWeb ? { style: { overflowY: 'auto' } as Record<string, unknown> } : {}),
-          }
-        : {})}>
+      {...scrollProps}>
       {children}
     </YStack>
   );
+};
+
+export interface ContextMenuTriggerProps {
+  children: ReactNode;
+  asChild?: boolean;
+}
+
+export interface ContextMenuContentProps {
+  children?: ReactNode;
+  maxHeight?: number;
 }
 
 export interface ContextMenuItemProps extends Omit<GetProps<typeof ItemRow>, 'children' | 'onSelect'> {
@@ -382,6 +302,164 @@ interface ItemBodyProps extends ContextMenuItemProps {
   closeOnSelectDefault?: boolean;
   selected?: boolean;
 }
+
+interface WebRowProps {
+  tabIndex: number;
+  onFocus: () => void;
+  onBlur: () => void;
+  onPointerMove: (e: { pointerType?: string; currentTarget: unknown }) => void;
+  'data-highlighted'?: 'true';
+  'data-mp-kb-ring'?: 'true';
+  [MENU_ITEM_ATTR]: '';
+}
+
+/** Web-only focus/pointer wiring: keyboard ring vs pointer highlight, tracked per row. */
+const useWebRowProps = (disabled: boolean) => {
+  const [kbRing, setKbRing] = useState(false);
+  const [highlighted, setHighlighted] = useState(false);
+  const pointerIntentRef = useRef(false);
+
+  const webProps: WebRowProps = {
+    tabIndex: -1,
+    [MENU_ITEM_ATTR]: '',
+    onFocus: () => {
+      setHighlighted(true);
+      setKbRing(wasKeyboardFocus() && !pointerIntentRef.current);
+      pointerIntentRef.current = false;
+    },
+    onBlur: () => {
+      setHighlighted(false);
+      setKbRing(false);
+    },
+    onPointerMove: (e) => {
+      if (disabled) {
+        return;
+      }
+      const pointerType = e.pointerType ?? '';
+      if (pointerType !== '' && pointerType !== 'mouse') {
+        return;
+      }
+      const node = e.currentTarget;
+      if (!(node instanceof HTMLElement) || document.activeElement === node) {
+        return;
+      }
+      pointerIntentRef.current = true;
+      node.focus();
+    },
+  };
+  if (highlighted) {
+    webProps['data-highlighted'] = 'true';
+  }
+  if (kbRing) {
+    webProps['data-mp-kb-ring'] = 'true';
+  }
+  return { kbRing, webProps: isWeb ? webProps : undefined };
+};
+
+interface ItemLabelProps {
+  children: ReactNode;
+  disabledReason?: string;
+  explained: boolean;
+  textColor: string;
+}
+
+const ItemLabel = ({ children, disabledReason, explained, textColor }: ItemLabelProps) => {
+  const { knobProps } = useResolvedKnobs();
+  if (explained) {
+    return (
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        gap="$0.5">
+        <Text
+          {...knobProps.body}
+          color={textColor}
+          fontSize="$3"
+          fontWeight="400"
+          numberOfLines={1}>
+          {children}
+        </Text>
+        <Text
+          {...knobProps.body}
+          color={knobProps.textAccentColor}
+          fontSize="$1"
+          data-mp-disabled-reason="true">
+          {disabledReason}
+        </Text>
+      </YStack>
+    );
+  }
+  return (
+    <Text
+      {...knobProps.body}
+      color={textColor}
+      fontSize="$3"
+      fontWeight="400"
+      numberOfLines={1}
+      flexGrow={1}
+      flexShrink={1}>
+      {children}
+    </Text>
+  );
+};
+
+interface ItemIconProps {
+  icon: ReactNode;
+  destructive: boolean;
+}
+
+const ItemIcon = ({ icon, destructive }: ItemIconProps) => {
+  const theme = useTheme();
+  const colorToken = destructive ? theme.red11 : theme.color12;
+  const iconColor = colorToken == null ? undefined : String(colorToken.get());
+  const hasIcon = Boolean(icon);
+  if (!hasIcon) {
+    return null;
+  }
+  return (
+    <View
+      flexShrink={0}
+      alignItems="center"
+      justifyContent="center"
+      width={18}
+      {...(isWeb ? { style: { color: iconColor } } : undefined)}>
+      {icon}
+    </View>
+  );
+};
+
+const ItemShortcut = ({ shortcut }: { shortcut?: string }) => {
+  const { knobProps } = useResolvedKnobs();
+  if (shortcut === undefined || shortcut === '') {
+    return null;
+  }
+  return (
+    <Text
+      {...knobProps.body}
+      color={knobProps.textAccentColor}
+      fontSize="$1"
+      flexShrink={0}
+      paddingInlineStart="$4"
+      opacity={0.9}>
+      {shortcut}
+    </Text>
+  );
+};
+
+const getRowFills = (destructive: boolean, disabled: boolean, selected: boolean, kbRing: boolean) => {
+  const redIntent = destructive && !disabled;
+  const highlightFill = redIntent
+    ? {
+        hoverStyle: { backgroundColor: '$red3' },
+        pressStyle: { backgroundColor: '$red4' },
+      }
+    : undefined;
+  const focusFill = redIntent
+    ? { backgroundColor: '$red3' as const }
+    : { backgroundColor: selected ? SELECTED_FILL : HOVER_FILL };
+  const ring = kbRing ? { ...keyboardFocusRingProps, outlineOffset: 0 } : { outlineWidth: 0 as const };
+  return { highlightFill, ring, focusStyle: { ...focusFill, ...ring } };
+};
 
 const ContextMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function ContextMenuItemBody(
   {
@@ -403,19 +481,17 @@ const ContextMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function C
 ) {
   const ctx = useContextMenuContext('Item');
   const { knobProps } = useResolvedKnobs();
-  const theme = useTheme();
-  const [kbRing, setKbRing] = useState(false);
-  const [highlighted, setHighlighted] = useState(false);
-  const pointerIntentRef = useRef(false);
+  const { kbRing, webProps } = useWebRowProps(disabled);
   warnBareDisabled({
     component: 'ContextMenu.Item',
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- children is an arbitrary ReactNode; only a plain string label can serve as the warning id
     id: typeof children === 'string' ? children : undefined,
     disabled,
     disabledReason,
   });
   const explainedDisable = disabled && Boolean(disabledReason?.trim());
-  const iconColor = (destructive ? theme.red11?.get() : theme.color12?.get()) as string | undefined;
   const shouldCloseOnSelect = closeOnSelect ?? ctx.closeOnSelect ?? closeOnSelectDefault;
+
   const handleSelect = () => {
     if (disabled) {
       return;
@@ -425,20 +501,10 @@ const ContextMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function C
       ctx.close();
     }
   };
+
   const textColor = destructive ? '$red11' : componentColors.text.primary;
-  const highlightFill =
-    destructive && !disabled
-      ? {
-          hoverStyle: { backgroundColor: '$red3' },
-          pressStyle: { backgroundColor: '$red4' },
-        }
-      : undefined;
-  const focusFill =
-    destructive && !disabled
-      ? { backgroundColor: '$red3' as const }
-      : { backgroundColor: selected ? SELECTED_FILL : HOVER_FILL };
-  const ring = kbRing ? { ...keyboardFocusRingProps, outlineOffset: 0 } : { outlineWidth: 0 as const };
-  const rowHeight = knobProps.sizeToken === '$4' ? '44' : String(knobProps.sizeToken);
+  const { highlightFill, ring, focusStyle } = getRowFills(destructive, disabled, selected, kbRing);
+  const rowHeight = knobProps.sizeToken === '$4' ? '44' : knobProps.sizeToken;
 
   return (
     <ItemRow
@@ -456,93 +522,36 @@ const ContextMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function C
       data-mp-row-height={rowHeight}
       data-mp-font-weight="400"
       data-mp-ring-offset="0"
-      data-mp-kb-ring={kbRing ? 'true' : undefined}
       {...highlightFill}
       {...(explainedDisable ? { paddingVertical: '$1.5' } : {})}
-      {...(props as Record<string, unknown>)}
-      {...(isWeb
-        ? ({
-            tabIndex: -1,
-            [MENU_ITEM_ATTR]: '',
-            onFocus: () => {
-              setHighlighted(true);
-              setKbRing(wasKeyboardFocus() && !pointerIntentRef.current);
-              pointerIntentRef.current = false;
-            },
-            onBlur: () => {
-              setHighlighted(false);
-              setKbRing(false);
-            },
-            onPointerMove: (e: { pointerType?: string; currentTarget: unknown }) => {
-              if (disabled) {
-                return;
-              }
-              if (e.pointerType && e.pointerType !== 'mouse') {
-                return;
-              }
-              const node = e.currentTarget as HTMLElement;
-              if (document.activeElement === node) {
-                return;
-              }
-              pointerIntentRef.current = true;
-              node.focus();
-            },
-            'data-highlighted': highlighted ? 'true' : undefined,
-            'data-mp-kb-ring': kbRing ? 'true' : undefined,
-          } as Record<string, unknown>)
-        : {})}
-      {...(kbRing ? { ...keyboardFocusRingProps, outlineOffset: 0 } : { outlineWidth: 0 })}
-      focusStyle={{ ...focusFill, ...ring }}
-      focusVisibleStyle={{ ...focusFill, ...ring }}>
-      {icon ? (
-        <View
-          flexShrink={0}
-          alignItems="center"
-          justifyContent="center"
-          width={18}
-          {...(isWeb ? ({ style: { color: iconColor } } as Record<string, unknown>) : {})}>
-          {icon}
-        </View>
-      ) : null}
-      {explainedDisable ? (
-        <YStack flexGrow={1} flexShrink={1} gap="$0.5">
-          <Text {...knobProps.body} color={textColor} fontSize="$3" fontWeight="400" numberOfLines={1}>
-            {children}
-          </Text>
-          <Text {...knobProps.body} color={knobProps.textAccentColor} fontSize="$1" data-mp-disabled-reason="true">
-            {disabledReason}
-          </Text>
-        </YStack>
-      ) : (
-        <Text
-          {...knobProps.body}
-          color={textColor}
-          fontSize="$3"
-          fontWeight="400"
-          numberOfLines={1}
-          flexGrow={1}
-          flexShrink={1}>
-          {children}
-        </Text>
-      )}
-      {shortcut ? (
-        <Text
-          {...knobProps.body}
-          color={knobProps.textAccentColor}
-          fontSize="$1"
-          flexShrink={0}
-          paddingInlineStart="$4"
-          opacity={0.9}>
-          {shortcut}
-        </Text>
-      ) : null}
+      {...props}
+      {...webProps}
+      {...ring}
+      focusStyle={focusStyle}
+      focusVisibleStyle={focusStyle}>
+      <ItemIcon
+        icon={icon}
+        destructive={destructive}
+      />
+      <ItemLabel
+        disabledReason={disabledReason}
+        explained={explainedDisable}
+        textColor={textColor}>
+        {children}
+      </ItemLabel>
+      <ItemShortcut shortcut={shortcut} />
       {trailing}
     </ItemRow>
   );
 });
 
 const ContextMenuItem = forwardRef<TamaguiElement, ContextMenuItemProps>(function ContextMenuItem(props, ref) {
-  return <ContextMenuItemBody ref={ref} {...props} />;
+  return (
+    <ContextMenuItemBody
+      ref={ref}
+      {...props}
+    />
+  );
 });
 
 export interface ContextMenuCheckboxItemProps extends Omit<ContextMenuItemProps, 'destructive' | 'icon'> {
@@ -555,6 +564,8 @@ const ContextMenuCheckboxItem = forwardRef<TamaguiElement, ContextMenuCheckboxIt
     return (
       <ContextMenuItemBody
         ref={ref}
+        // SAFETY: Role omits 'menuitemcheckbox' although it is a valid ARIA role; ItemRow forwards role to the DOM unchanged
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the widened ItemRow Role type lacks this valid ARIA role
         role={'menuitemcheckbox' as 'menuitem'}
         aria-checked={checked}
         selected={checked}
@@ -571,7 +582,10 @@ const ContextMenuCheckboxItem = forwardRef<TamaguiElement, ContextMenuCheckboxIt
             justifyContent="center"
             opacity={checked ? 1 : 0}
             data-mp-check="trailing">
-            <CheckIcon size={14} weight="bold" />
+            <CheckIcon
+              size={14}
+              weight="bold"
+            />
           </View>
         }
         {...props}
@@ -580,17 +594,13 @@ const ContextMenuCheckboxItem = forwardRef<TamaguiElement, ContextMenuCheckboxIt
   },
 );
 
-export interface ContextMenuSeparatorProps extends GetProps<typeof SeparatorLine> {}
-
-function ContextMenuSeparator(props: ContextMenuSeparatorProps) {
-  return <SeparatorLine role="separator" {...hairline.height} {...props} />;
-}
+export type ContextMenuSeparatorProps = GetProps<typeof SeparatorLine>;
 
 export interface ContextMenuLabelProps extends GetProps<typeof Text> {
   children: ReactNode;
 }
 
-function ContextMenuLabel({ children, ...props }: ContextMenuLabelProps) {
+const ContextMenuLabel = ({ children, ...props }: ContextMenuLabelProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -605,7 +615,123 @@ function ContextMenuLabel({ children, ...props }: ContextMenuLabelProps) {
       {children}
     </Text>
   );
-}
+};
+
+const isSeparatorEntry = (entry: ContextMenuEntry): entry is { separator: true } =>
+  'separator' in entry && entry.separator;
+
+// Entries carry no identity beyond an optional `key`; position is the documented fallback.
+const positionalKey = (key: string | undefined, position: number): string | number => key ?? position;
+
+const separatorKey = (position: number): string => `separator-${position}`;
+
+const isNodeArray = (node: ReactNode): node is ReactNode[] => Array.isArray(node);
+
+const renderEntry = (entry: ContextMenuEntry, position: number): ReactNode => {
+  if (isSeparatorEntry(entry)) {
+    return <ContextMenuSeparator key={separatorKey(position)} />;
+  }
+  const handleSelect = entry.onSelect;
+  const handleCheckedChange = entry.onCheckedChange;
+  if (entry.checked !== undefined) {
+    return (
+      <ContextMenuCheckboxItem
+        key={positionalKey(entry.key, position)}
+        checked={entry.checked}
+        onCheckedChange={handleCheckedChange}
+        onSelect={handleSelect}
+        closeOnSelect={entry.closeOnSelect}
+        disabled={entry.disabled}
+        disabledReason={entry.disabledReason}
+        shortcut={entry.shortcut}>
+        {entry.label}
+      </ContextMenuCheckboxItem>
+    );
+  }
+  return (
+    <ContextMenuItem
+      key={positionalKey(entry.key, position)}
+      icon={entry.icon}
+      shortcut={entry.shortcut}
+      disabled={entry.disabled}
+      disabledReason={entry.disabledReason}
+      destructive={entry.destructive}
+      closeOnSelect={entry.closeOnSelect}
+      onSelect={handleSelect}>
+      {entry.label}
+    </ContextMenuItem>
+  );
+};
+
+const ContextMenuRoot = ({
+  children,
+  items,
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  maxHeight,
+  closeOnSelect,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- one controller: open state, focus handoff and positioning share the root's refs
+}: ContextMenuProps) => {
+  const [open, setOpen] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
+  const pendingFocusRef = useRef<'first' | 'last'>('first');
+
+  const close = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  const ctx = useMemo<ContextMenuContextValue>(
+    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
+    [open, setOpen, close, closeOnSelect],
+  );
+
+  let trigger: ReactNode = children;
+  let body: ReactNode = null;
+  if (items) {
+    body = items.map(renderEntry);
+  } else if (isNodeArray(children) || isValidElement(children)) {
+    const list = isNodeArray(children) ? children : [children];
+    const triggerParts: ReactNode[] = [];
+    const contentParts: ReactNode[] = [];
+    for (const child of list) {
+      if (!isValidElement<{ children?: ReactNode }>(child)) {
+        triggerParts.push(child);
+        continue;
+      }
+      const { type } = child;
+      if (type === ContextMenuTrigger) {
+        triggerParts.push(child.props.children);
+      } else if (type === ContextMenuContent) {
+        contentParts.push(child.props.children);
+      } else {
+        triggerParts.push(child);
+      }
+    }
+    if (triggerParts.length) {
+      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
+    }
+    if (contentParts.length) {
+      body = contentParts;
+    }
+  }
+
+  return (
+    <ContextMenuContext.Provider value={ctx}>
+      <FloatingPanel
+        open={open}
+        onOpenChange={setOpen}
+        trigger={trigger}
+        contentPadding="none"
+        {...freeOverlay}>
+        <ContextMenuList maxHeight={maxHeight}>{body}</ContextMenuList>
+      </FloatingPanel>
+    </ContextMenuContext.Provider>
+  );
+};
 
 export const ContextMenu = withStaticProperties(ContextMenuRoot, {
   Trigger: ContextMenuTrigger,

@@ -13,15 +13,13 @@
       "types": "./src/index.tsx",
       "default": "./src/index.tsx"
     },
-    "./tableCellContext": {
-      "types": "./src/tableCellContext.ts",
-      "default": "./src/tableCellContext.ts"
+    "./table-cell-context": {
+      "types": "./src/table-cell-context.ts",
+      "default": "./src/table-cell-context.ts"
     }
   },
   "scripts": {
     "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/table-primitives",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run"
   },
   "dependencies": {

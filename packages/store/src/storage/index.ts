@@ -2,16 +2,16 @@ import type { Storage } from '../persist';
 
 const noopStorage: Storage = {
   getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
+  setItem: () => {
+    // Intentional no-op: no storage backend is available in this environment
+  },
+  removeItem: () => {
+    // Intentional no-op: no storage backend is available in this environment
+  },
 };
 
-function getStorage(): Storage {
-  if (
-    typeof globalThis !== 'undefined' &&
-    'localStorage' in globalThis &&
-    typeof globalThis.localStorage?.getItem === 'function'
-  ) {
+const getStorage = (): Storage => {
+  if ('localStorage' in globalThis && globalThis.localStorage?.getItem != null) {
     return {
       getItem: (name: string) => globalThis.localStorage.getItem(name) ?? null,
       setItem: (name: string, value: string) => {
@@ -23,6 +23,6 @@ function getStorage(): Storage {
     };
   }
   return noopStorage;
-}
+};
 
 export const storage: Storage = getStorage();

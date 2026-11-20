@@ -21,66 +21,64 @@ let entries: FeedbackEntry[] = [];
 let counter = 0;
 const listeners = new Set<() => void>();
 
-function emit() {
+const emit = () => {
   for (const listener of listeners) {
     listener();
   }
-}
+};
 
-export function getFeedback(): FeedbackEntry[] {
-  return entries;
-}
+export const getFeedback = (): FeedbackEntry[] => entries;
 
-export function subscribeFeedback(listener: () => void): () => void {
+export const subscribeFeedback = (listener: () => void): (() => void) => {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
-}
+};
 
-export function pushFeedback(entry: Omit<FeedbackEntry, 'id'> & { id?: string }): string {
-  const id = entry.id ?? `mp-feedback-${++counter}`;
+export const pushFeedback = (entry: Omit<FeedbackEntry, 'id'> & { id?: string }): string => {
+  let { id } = entry;
+  if (id == null) {
+    counter += 1;
+    id = `mp-feedback-${counter}`;
+  }
   const next: FeedbackEntry = {
     ...entry,
     dismissible: entry.dismissible ?? true,
     id,
   };
   // Dialogs replace any open dialog; banners/alerts stack.
-  if (next.surface === 'dialog') {
-    entries = [...entries.filter((e) => e.surface !== 'dialog'), next];
-  } else {
-    entries = [...entries, next];
-  }
+  entries = next.surface === 'dialog' ? [...entries.filter((e) => e.surface !== 'dialog'), next] : [...entries, next];
   emit();
   return id;
-}
+};
 
-export function dismissFeedback(id: string): void {
+export const dismissFeedback = (id: string): void => {
   const before = entries.length;
   entries = entries.filter((e) => e.id !== id);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
-export function dismissFeedbackBySurface(surface: FeedbackEntry['surface']): void {
+export const dismissFeedbackBySurface = (surface: FeedbackEntry['surface']): void => {
   const before = entries.length;
   entries = entries.filter((e) => e.surface !== surface);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
-export function dismissFeedbackByRegion(region: string): void {
+export const dismissFeedbackByRegion = (region: string): void => {
   const before = entries.length;
   entries = entries.filter((entry) => entry.region !== region);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
 /** Hard-reset (tests / story decorators). */
-export function resetFeedback(): void {
+export const resetFeedback = (): void => {
   entries = [];
   emit();
-}
+};

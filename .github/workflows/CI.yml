@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint-and-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,13 +16,13 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 12.5.1
+          version: 12.9.1
           run_install: false
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 26.9.0
           cache: "pnpm"
 
       - name: Install dependencies
@@ -44,7 +44,7 @@ jobs:
         run: pnpm knip
 
   secrets-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
           GITLEAKS_CONFIG: .config/gitleaks.toml
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: [lint-and-check]
     environment: development
     steps:
@@ -70,7 +70,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 12.5.1
+          version: 12.9.1
           run_install: false
 
       - name: Install Node.js

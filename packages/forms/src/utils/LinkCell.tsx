@@ -10,14 +10,16 @@ import { Link } from '@repo/router';
 import type { Href } from '@repo/router';
 import type { ReactNode } from 'react';
 
-export interface LinkCellFieldProps {
-  value: unknown;
-  linkResolver: (value: unknown) => Href | null;
+import type { LinkResolver } from '../types';
+
+export interface LinkCellFieldProps<TValue = unknown> {
+  value: TValue;
+  linkResolver: LinkResolver<TValue>;
   children: ReactNode;
 }
 
 /** Field-level: wrap display value in Link when linkResolver returns href. */
-export function LinkCell({ value, linkResolver, children }: LinkCellFieldProps): ReactNode {
+export const LinkCell = <TValue,>({ value, linkResolver, children }: LinkCellFieldProps<TValue>): ReactNode => {
   let href: Href | null = null;
   try {
     href = linkResolver(value);
@@ -28,4 +30,4 @@ export function LinkCell({ value, linkResolver, children }: LinkCellFieldProps):
     return <Link href={href}>{children}</Link>;
   }
   return children;
-}
+};

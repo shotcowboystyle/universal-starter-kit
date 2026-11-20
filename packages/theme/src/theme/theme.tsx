@@ -2,13 +2,15 @@ import { ToastProvider } from '@tamagui/toast';
 import { useContext, useEffect, useInsertionEffect, useMemo, useRef } from 'react';
 import type { PropsWithChildren } from 'react';
 import { useCookies } from 'react-cookie';
-import { type CreateTamaguiProps, TamaguiProvider, type TamaguiProviderProps, useDidFinishSSR } from 'tamagui';
+import { TamaguiProvider, useDidFinishSSR } from 'tamagui';
+import type { createTamagui, CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
 
 import { animationDurations } from './animations/css';
 import { getCookieWatchList, readOverridesCookie, readPresetCookie } from './cookies';
-import { CornerSmoothingStyles } from './cornerSmoothing';
+import { CornerSmoothingStyles } from './corner-smoothing';
 import { FontKnobStyles } from './FontKnobStyles';
-import { PresetContext, type PresetContextValue } from './PresetContext';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import { defaultPreset } from './presets';
 import { getPreset } from './shared';
 
@@ -20,13 +22,14 @@ import { getPreset } from './shared';
  * Both paths derive their duration from the `--mp-transition` CSS variable,
  * which KnobBridge keeps in sync with the animation knob.
  */
-export function startThemeTransition(apply: () => void): void {
+// oxlint-disable-next-line react-doctor/only-export-components -- plain helper exported beside the provider; it is imported by name elsewhere
+export const startThemeTransition = (apply: () => void): void => {
   if (typeof document === 'undefined') {
     apply();
     return;
   }
 
-  if (document.startViewTransition) {
+  if (document.startViewTransition !== undefined) {
     document.startViewTransition(apply);
     return;
   }
@@ -35,11 +38,12 @@ export function startThemeTransition(apply: () => void): void {
   root.classList.add('mp-transitioning');
   apply();
 
-  const transitionMs = Number.parseInt(getComputedStyle(root).getPropertyValue('--mp-transition'), 10) || 200;
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- the value is a CSS time such as `200ms`: parseFloat reads the leading number, Number() would give NaN
+  const transitionMs = Number.parseFloat(getComputedStyle(root).getPropertyValue('--mp-transition')) || 200;
   setTimeout(() => {
     root.classList.remove('mp-transitioning');
   }, transitionMs + 50);
-}
+};
 
 // ---------------------------------------------------------------------------
 // ThemeProviderProps (simplified — knob-based theming)
@@ -49,111 +53,9 @@ export interface ThemeProviderProps<T extends CreateTamaguiProps = CreateTamagui
   Omit<TamaguiProviderProps, 'config' | 'defaultTheme'>
 > {
   config?: {
-    tamagui: ReturnType<typeof import('tamagui').createTamagui<T>>;
+    tamagui: ReturnType<typeof createTamagui<T>>;
   };
   systemTheme?: 'light' | 'dark';
-}
-
-// ---------------------------------------------------------------------------
-// ThemeProvider (simplified — TamaguiProvider + scheme + ToastProvider)
-// ---------------------------------------------------------------------------
-
-export function ThemeProvider<T extends CreateTamaguiProps>({
-  children,
-  config,
-  systemTheme = 'light',
-  ...tamaguiProps
-}: ThemeProviderProps<T>) {
-  // The caller is responsible for resolving the active scheme:
-  //   - App: useUserScheme() from @vxrn/color-scheme (reacts to OS changes)
-  //   - Storybook: decorator resolves "system"/"light"/"dark" with OS listener
-  // ThemeProvider simply applies whatever the caller provides.
-  const activeTheme = systemTheme;
-  // A hydrating root renders a light placeholder to match SSR; the
-  // blocking scheme script owns <html> until hydration finishes.
-  const hydrated = useDidFinishSSR();
-
-  const prevThemeRef = useRef<string | undefined>(undefined);
-
-  // Set the initial theme class synchronously to avoid FOUC.
-  useInsertionEffect(() => {
-    if (typeof document === 'undefined' || !hydrated) {
-      return;
-    }
-    const classList = document.documentElement.classList;
-    const toAdd = `t_${activeTheme}`;
-    if (!classList.contains(toAdd)) {
-      classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
-      classList.add(toAdd);
-    }
-    document.documentElement.style.colorScheme = activeTheme;
-  }, [activeTheme, hydrated]);
-
-  // Animate subsequent scheme changes via View Transitions / class-gated fallback.
-  useEffect(() => {
-    if (!hydrated) {
-      return;
-    }
-    const previous = prevThemeRef.current;
-    prevThemeRef.current = activeTheme;
-    if (previous === undefined || previous === activeTheme) {
-      return;
-    }
-
-    startThemeTransition(() => {
-      const classList = document.documentElement.classList;
-      classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
-      classList.add(`t_${activeTheme}`);
-      document.documentElement.style.colorScheme = activeTheme;
-    });
-  }, [activeTheme]);
-
-  // Inject class-gated CSS fallback (dormant until .mp-transitioning is added)
-  // plus View Transition duration tied to the animation knob.
-  useInsertionEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-    const id = '__mp-theme-transitions';
-    if (document.getElementById(id)) {
-      return;
-    }
-    const style = document.createElement('style');
-    style.id = id;
-    style.textContent = [
-      ':root { --mp-transition: 200ms; }',
-      // Reserve space for scrollbar to prevent gap when modal Sheet hides it
-      'html { scrollbar-gutter: stable; }',
-      // Disable browser-native focus ring on form controls;
-      // components provide their own focus-visible affordance.
-      'input:focus, input:focus-visible,',
-      'textarea:focus, textarea:focus-visible,',
-      'select:focus, select:focus-visible,',
-      'button:focus, button:focus-visible {',
-      '  outline: none;',
-      '  box-shadow: none;',
-      '}',
-      '.mp-transitioning *, .mp-transitioning *::before, .mp-transitioning *::after {',
-      '  transition: background-color var(--mp-transition) ease,',
-      '    color var(--mp-transition) ease,',
-      '    border-color var(--mp-transition) ease,',
-      '    box-shadow var(--mp-transition) ease,',
-      '    outline-color var(--mp-transition) ease;',
-      '}',
-      '::view-transition-old(root), ::view-transition-new(root) {',
-      '  animation-duration: calc(var(--mp-transition) * 1);',
-      '}',
-    ].join('\n');
-    document.head.appendChild(style);
-  }, []);
-
-  return (
-    <TamaguiProvider {...tamaguiProps} config={config?.tamagui} defaultTheme={activeTheme} disableInjectCSS={false}>
-      <ToastProvider>
-        <KnobBridge>{children}</KnobBridge>
-      </ToastProvider>
-    </TamaguiProvider>
-  );
 }
 
 /**
@@ -175,18 +77,20 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
  * stylesheet restyle every shipped app that uses ThemeProvider. Hairline
  * still self-mounts on module load.
  */
-function KnobBridge({ children }: PropsWithChildren) {
+const KnobBridge = ({ children }: PropsWithChildren) => {
   const existingCtx = useContext(PresetContext);
 
   const isCookieDisabled = typeof process !== 'undefined' && process.env?.COOKIE_POLICY?.toLowerCase() === 'disabled';
   const watchList = isCookieDisabled ? [] : getCookieWatchList();
   const [cookie] = useCookies<string, Record<string, string>>(watchList);
 
+  // SAFETY: react-cookie returns the watched cookies; values are strings or undefined when absent.
   const presetName = readPresetCookie(cookie as Record<string, string | undefined>);
+  // SAFETY: same cookie jar as above.
   const overrides = readOverridesCookie(cookie as Record<string, string | undefined>);
 
   const presetCtxValue = useMemo<PresetContextValue>(() => {
-    const base = (presetName ? getPreset(presetName) : undefined) ?? defaultPreset;
+    const base = (presetName === undefined ? undefined : getPreset(presetName)) ?? defaultPreset;
     return {
       preset: { ...base, knobs: { ...base.knobs, ...overrides } },
       overrides,
@@ -217,4 +121,111 @@ function KnobBridge({ children }: PropsWithChildren) {
   }
 
   return <PresetContext.Provider value={presetCtxValue}>{tree}</PresetContext.Provider>;
-}
+};
+
+// ---------------------------------------------------------------------------
+// ThemeProvider (simplified — TamaguiProvider + scheme + ToastProvider)
+// ---------------------------------------------------------------------------
+
+export const ThemeProvider = <T extends CreateTamaguiProps>({
+  children,
+  config,
+  systemTheme = 'light',
+  ...tamaguiProps
+}: ThemeProviderProps<T>) => {
+  // The caller is responsible for resolving the active scheme:
+  //   - App: useUserScheme() from @vxrn/color-scheme (reacts to OS changes)
+  //   - Storybook: decorator resolves "system"/"light"/"dark" with OS listener
+  // ThemeProvider simply applies whatever the caller provides.
+  const activeTheme = systemTheme;
+  // A hydrating root renders a light placeholder to match SSR; the
+  // blocking scheme script owns <html> until hydration finishes.
+  const hydrated = useDidFinishSSR();
+
+  const prevThemeRef = useRef<string | null>(null);
+
+  // Set the initial theme class synchronously to avoid FOUC.
+  useInsertionEffect(() => {
+    if (typeof document === 'undefined' || !hydrated) {
+      return;
+    }
+    const { classList } = document.documentElement;
+    const toAdd = `t_${activeTheme}`;
+    if (!classList.contains(toAdd)) {
+      classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
+      classList.add(toAdd);
+    }
+    document.documentElement.style.colorScheme = activeTheme;
+  }, [activeTheme, hydrated]);
+
+  // Animate subsequent scheme changes via View Transitions / class-gated fallback.
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+    const previous = prevThemeRef.current;
+    prevThemeRef.current = activeTheme;
+    if (previous === null || previous === activeTheme) {
+      return;
+    }
+
+    startThemeTransition(() => {
+      const { classList } = document.documentElement;
+      classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
+      classList.add(`t_${activeTheme}`);
+      document.documentElement.style.colorScheme = activeTheme;
+    });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keep deps at activeTheme: adding `hydrated` would start animating the first scheme change after hydration, which this effect has never done
+  }, [activeTheme]);
+
+  // Inject class-gated CSS fallback (dormant until .mp-transitioning is added)
+  // plus View Transition duration tied to the animation knob.
+  useInsertionEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const id = '__mp-theme-transitions';
+    if (document.querySelector(`#${id}`)) {
+      return;
+    }
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = [
+      ':root { --mp-transition: 200ms; }',
+      // Reserve space for scrollbar to prevent gap when modal Sheet hides it
+      'html { scrollbar-gutter: stable; }',
+      // Disable browser-native focus ring on form controls;
+      // components provide their own focus-visible affordance.
+      'input:focus, input:focus-visible,',
+      'textarea:focus, textarea:focus-visible,',
+      'select:focus, select:focus-visible,',
+      'button:focus, button:focus-visible {',
+      '  outline: none;',
+      '  box-shadow: none;',
+      '}',
+      '.mp-transitioning *, .mp-transitioning *::before, .mp-transitioning *::after {',
+      '  transition: background-color var(--mp-transition) ease,',
+      '    color var(--mp-transition) ease,',
+      '    border-color var(--mp-transition) ease,',
+      '    box-shadow var(--mp-transition) ease,',
+      '    outline-color var(--mp-transition) ease;',
+      '}',
+      '::view-transition-old(root), ::view-transition-new(root) {',
+      '  animation-duration: calc(var(--mp-transition) * 1);',
+      '}',
+    ].join('\n');
+    document.head.append(style);
+  }, []);
+
+  return (
+    <TamaguiProvider
+      {...tamaguiProps}
+      config={config?.tamagui}
+      defaultTheme={activeTheme}
+      disableInjectCSS={false}>
+      <ToastProvider>
+        <KnobBridge>{children}</KnobBridge>
+      </ToastProvider>
+    </TamaguiProvider>
+  );
+};

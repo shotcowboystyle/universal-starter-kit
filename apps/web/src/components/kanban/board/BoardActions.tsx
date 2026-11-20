@@ -5,12 +5,12 @@ import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { useRouter } from '@/i18n/navigation';
 import { useDeleteBoard, useUpdateBoard } from '@/lib/api/boards/queries';
-import { boardSchema } from '@/types/boardForm';
-import { Board } from '@/types/dbInterface';
+import type { boardSchema } from '@/types/board-form';
+import type { Board } from '@/types/db-interface';
 
 import { BoardForm } from './BoardForm';
 
@@ -21,7 +21,9 @@ interface BoardActionsProps {
   children?: React.ReactElement;
 }
 
-export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
+const UPDATE_ERROR_LOG = 'Error updating board:';
+
+export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [editEnable, setEditEnable] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -31,12 +33,25 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
   const router = useRouter();
   const t = useTranslations('kanban.actions');
 
-  const onSubmit = async (values: z.infer<typeof boardSchema>) => {
-    try {
-      if (!board?._id) {
-        throw new Error('Board ID is missing');
-      }
+  const reportUpdateError = (errorMessage: string) => {
+    if (errorMessage.includes('not found')) {
+      toast.error('Board not found. The board may have been deleted.');
+      router.refresh();
+    } else {
+      toast.error(`Failed to update board: ${errorMessage}`);
+    }
+  };
 
+  const onSubmit = async (values: z.infer<typeof boardSchema>) => {
+    if (!board?._id) {
+      const missingIdError = new Error('Board ID is missing');
+      console.error(UPDATE_ERROR_LOG, missingIdError);
+      reportUpdateError(missingIdError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       setIsSubmitting(true);
       await updateBoard.mutateAsync(
         { id: board._id, ...values },
@@ -48,31 +63,18 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
             router.refresh();
           },
           onError: (error: Error) => {
-            console.error('Error updating board:', error);
+            console.error(UPDATE_ERROR_LOG, error);
 
-            if (error.message.includes('not found')) {
-              // If board is not found, refresh the board list
-              toast.error('Board not found. The board may have been deleted.');
-              router.refresh();
-            } else {
-              toast.error(`Failed to update board: ${error.message}`);
-            }
+            // If board is not found, refresh the board list
+            reportUpdateError(error.message);
           },
         },
       );
     } catch (error) {
-      console.error('Error updating board:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (errorMessage.includes('not found')) {
-        toast.error('Board not found. The board may have been deleted.');
-        router.refresh();
-      } else {
-        toast.error(`Failed to update board: ${errorMessage}`);
-      }
-    } finally {
-      setIsSubmitting(false);
+      console.error(UPDATE_ERROR_LOG, error);
+      reportUpdateError(error instanceof Error ? error.message : String(error));
     }
+    setIsSubmitting(false);
   };
 
   const handleDelete = async () => {
@@ -115,23 +117,36 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
 
   return (
     <>
-      <Dialog modal open={editEnable} onOpenChange={setEditEnable}>
+      <Dialog
+        modal
+        open={editEnable}
+        onOpenChange={setEditEnable}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" maxWidth={448} width="90%" testID="edit-board-dialog">
+          <DialogContent
+            key="content"
+            maxWidth={448}
+            width="90%"
+            testID="edit-board-dialog">
             <Dialog.Title size="$7">{t('editBoardTitle')}</Dialog.Title>
             <Dialog.Description>{t('editBoardDescription')}</Dialog.Description>
             <BoardForm
               defaultValues={{
                 title: board.title,
-                description: board.description || '',
+                description: board.description ?? '',
               }}
               onSubmit={onSubmit}>
-              <XStack justifyContent="flex-end" gap="$2">
+              <XStack
+                justifyContent="flex-end"
+                gap="$2">
                 <Dialog.Close asChild>
                   <Button outlined>{t('cancel')}</Button>
                 </Dialog.Close>
-                <Button accent action="submit" loading={isSubmitting} testID="save-board-button">
+                <Button
+                  accent
+                  action="submit"
+                  loading={isSubmitting}
+                  testID="save-board-button">
                   {isSubmitting ? t('saving') : t('saveChanges')}
                 </Button>
               </XStack>
@@ -180,8 +195,10 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
         body={t('confirmDeleteDescription')}
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
-        onConfirm={handleDelete}
+        onConfirm={() => {
+          void handleDelete();
+        }}
       />
     </>
   );
-}
+};

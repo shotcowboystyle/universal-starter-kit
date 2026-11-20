@@ -16,6 +16,8 @@ import { describe, expect, it } from 'vitest';
 
 import { Quote } from './index';
 
+const suffixFor = (count: number) => (count === 0 ? '' : ` (${count})`);
+
 describe('Quote text rides text', () => {
   it('renders array-of-strings body children as one concatenated wrapped run', () => {
     renderWithProviders(
@@ -31,11 +33,10 @@ describe('Quote text rides text', () => {
   });
 
   it('renders the origin shape `{label}{cond ? suffix : ""}` when the condition is false', () => {
-    const suffix: number = 0;
     renderWithProviders(
       <Quote>
         Invent the future.
-        {suffix !== 0 ? ` (${suffix})` : ''}
+        {suffixFor(0)}
       </Quote>,
     );
     const body = screen.getByText('Invent the future.');

@@ -9,11 +9,12 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, View, XStack, YStack, isWeb, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
@@ -93,8 +94,8 @@ const StepButton = styled(View, {
   cursor: 'pointer',
   // The button is the hit target; the ring lives on the marker.
   outlineWidth: 0,
-  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
-  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
+  focusStyle: { outlineWidth: 0, outlineStyle: 'none' },
+  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' },
 });
 
 const StepMarkerTarget = styled(View, {
@@ -108,7 +109,7 @@ const Connector = styled(View, {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function stepState(index: number, current: number, forcedCompleted?: boolean): StepState {
+const stepState = (index: number, current: number, forcedCompleted = false): StepState => {
   if (forcedCompleted || index < current) {
     return 'completed';
   }
@@ -116,9 +117,9 @@ function stepState(index: number, current: number, forcedCompleted?: boolean): S
     return 'current';
   }
   return 'upcoming';
-}
+};
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -127,10 +128,449 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
+};
+
+type Knobs = ReturnType<typeof useResolvedKnobs>;
+type Fill = ReturnType<typeof useAaSolidFill>;
+type OnFill = ReturnType<typeof useReadableTextOn>;
+
+interface MarkerInk {
+  accent: Knobs['knobProps']['textAccentColor'];
+  onError: OnFill;
+  onCompleted: OnFill;
+  onSelected: OnFill;
 }
+
+const markerBackground = (kind: MarkerKind, currentFill: Fill) => {
+  if (kind === 'error') {
+    return '$red9';
+  }
+  if (kind === 'completed') {
+    return componentColors.indicator.completed;
+  }
+  if (kind === 'current') {
+    return currentFill;
+  }
+  return 'transparent';
+};
+
+const markerForeground = (kind: MarkerKind, ink: MarkerInk) => {
+  if (kind === 'upcoming') {
+    return ink.accent;
+  }
+  if (kind === 'error') {
+    return ink.onError ?? '$color1';
+  }
+  if (kind === 'completed') {
+    return ink.onCompleted ?? '$color1';
+  }
+  return ink.onSelected ?? '$color1';
+};
+
+const labelColor = (kind: MarkerKind, state: StepState, accent: MarkerInk['accent']) => {
+  if (kind === 'error') {
+    return '$red11';
+  }
+  if (state === 'upcoming') {
+    return accent;
+  }
+  return componentColors.text.primary;
+};
+
+const stepActivation = ({
+  interactive,
+  disabled,
+  state,
+  linear,
+}: {
+  interactive: boolean;
+  disabled: boolean | undefined;
+  state: StepState;
+  linear: boolean;
+}) => {
+  const enabled = interactive && !disabled;
+  const jumpable = state === 'completed' || !linear;
+  const canActivate = enabled && state !== 'current' && jumpable;
+  return { canActivate, isFocusable: enabled && (canActivate || state === 'current') };
+};
+
+const stepLabelName = (label: ReactNode, index: number) =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode label; only a plain string can name the step
+  typeof label === 'string' ? label : index + 1;
+
+/** Everything a step row reads from the rail-level hooks and props. */
+interface RailContext {
+  t: ReturnType<typeof useTranslation>['t'];
+  knobProps: Knobs['knobProps'];
+  control: Knobs['control'];
+  disabledState: Knobs['disabledState'];
+  ink: MarkerInk;
+  currentFill: Fill;
+  markerPx: number;
+  hitSlop: ReturnType<typeof splitNestedControl>['hitSlop'];
+  nestedBox: ReturnType<typeof splitNestedControl>['box'];
+  markerIconSize: number;
+  ringWidth: number;
+  pressOutset: number;
+  interactive: boolean;
+  horizontal: boolean;
+  linear: boolean;
+  gapToken: Knobs['knobProps']['gap']['gap'];
+  labels: 'visible' | 'hidden';
+  current: number;
+  kbFocusIndex: number | null;
+  setKbFocusIndex: (updater: (prev: number | null) => number | null) => void;
+  onStepChange: ((index: number) => void) | undefined;
+}
+
+const CONNECTOR_THICKNESS = 2;
+
+const MarkerGlyph = ({
+  kind,
+  index,
+  size,
+  fg,
+  rail,
+}: {
+  kind: MarkerKind;
+  index: number;
+  size: number;
+  fg: ReturnType<typeof markerForeground>;
+  rail: RailContext;
+}) => {
+  if (kind === 'error') {
+    return (
+      <WarningIcon
+        size={size}
+        color={fg}
+        weight="bold"
+      />
+    );
+  }
+  if (kind === 'completed') {
+    return (
+      <CheckIcon
+        size={size}
+        color={fg}
+        weight="bold"
+      />
+    );
+  }
+  return (
+    <SizableText
+      {...rail.knobProps.label}
+      fontWeight="400"
+      color={kind === 'current' ? (rail.ink.onSelected ?? '$color1') : fg}>
+      {index + 1}
+    </SizableText>
+  );
+};
+
+const StepMarkerBlock = ({
+  kind,
+  state,
+  index,
+  rail,
+}: {
+  kind: MarkerKind;
+  state: StepState;
+  index: number;
+  rail: RailContext;
+}) => {
+  const { knobProps, control, ink, currentFill, ringWidth, nestedBox, markerPx, markerIconSize } = rail;
+  const markerBg = markerBackground(kind, currentFill);
+  const markerBorder = kind === 'upcoming' ? componentColors.indicator.track : markerBg;
+  const markerFg = markerForeground(kind, ink);
+  // Upcoming is outlined-by-state: chromeless `borderWidth:none` would
+  // erase the empty disc, so it keeps the OUTLINED-HAIRLINE floor.
+  const markerRing = kind === 'upcoming' ? Math.max(ringWidth, 0.5) : ringWidth;
+  const focusProps = rail.kbFocusIndex === index ? control.focusVisibleKnobProps : { outlineWidth: 0 };
+  const hoverProps =
+    kind === 'upcoming'
+      ? {
+          hoverStyle: {
+            borderColor: componentColors.indicator.hover,
+            backgroundColor: componentColors.indicator.inactive,
+          },
+        }
+      : undefined;
+
+  return (
+    <StepMarkerTarget
+      width={MIN_PRESS_TARGET}
+      height={MIN_PRESS_TARGET}
+      minWidth={MIN_PRESS_TARGET}
+      minHeight={MIN_PRESS_TARGET}
+      marginVertical={-rail.pressOutset}
+      marginHorizontal={rail.horizontal ? -rail.pressOutset : 0}
+      alignItems="center"
+      justifyContent="center"
+      data-press-min={MIN_PRESS_TARGET}
+      hitSlop={rail.hitSlop ?? pressTargetHitSlop(markerPx)}>
+      <Marker
+        {...nestedBox}
+        borderRadius={1000}
+        borderWidth={markerRing}
+        backgroundColor={markerBg}
+        borderColor={markerBorder}
+        data-nested-px={markerPx}
+        data-step-state={kind}
+        data-marker-ring={markerRing}
+        transition={knobProps.transition}
+        aria-current={state === 'current' ? 'step' : undefined}
+        {...focusProps}
+        {...hoverProps}>
+        <MarkerGlyph
+          kind={kind}
+          index={index}
+          size={markerIconSize}
+          fg={markerFg}
+          rail={rail}
+        />
+      </Marker>
+    </StepMarkerTarget>
+  );
+};
+
+const StepLabelBlock = ({
+  step,
+  kind,
+  state,
+  rail,
+}: {
+  step: ProgressStep;
+  kind: MarkerKind;
+  state: StepState;
+  rail: RailContext;
+}) => {
+  const { knobProps, horizontal, t } = rail;
+  const helper = step.description ?? (step.optional && kind !== 'error' ? t('Optional') : null);
+  return (
+    <YStack
+      gap="$0.5"
+      flexShrink={1}
+      {...(horizontal ? { alignItems: 'center', maxWidth: 160 } : { flexGrow: 1, justifyContent: 'center' })}>
+      <SizableText
+        {...knobProps.body}
+        {...knobProps.label}
+        fontWeight="400"
+        color={labelColor(kind, state, rail.ink.accent)}
+        textAlign={horizontal ? 'center' : undefined}
+        numberOfLines={2}>
+        {step.label}
+      </SizableText>
+      {helper == null ? null : (
+        <SizableText
+          {...knobProps.body}
+          fontSize="$1"
+          color={kind === 'error' ? '$red11' : knobProps.textAccentColor}
+          textAlign={horizontal ? 'center' : undefined}
+          numberOfLines={2}>
+          {helper}
+        </SizableText>
+      )}
+    </YStack>
+  );
+};
+
+const StepConnector = ({ filled, rail }: { filled: boolean; rail: RailContext }) => {
+  const { knobProps, horizontal, markerPx, gapToken } = rail;
+  const connectorFill = filled ? componentColors.indicator.completed : componentColors.indicator.track;
+  if (!horizontal) {
+    return (
+      <Connector
+        width={CONNECTOR_THICKNESS}
+        flexGrow={1}
+        minHeight={16}
+        backgroundColor={connectorFill}
+        transition={knobProps.transition}
+      />
+    );
+  }
+  return (
+    <XStack
+      flexGrow={1}
+      paddingTop={(markerPx - CONNECTOR_THICKNESS) / 2}
+      paddingHorizontal={gapToken}>
+      <Connector
+        flexGrow={1}
+        height={CONNECTOR_THICKNESS}
+        backgroundColor={connectorFill}
+        minWidth={16}
+        transition={knobProps.transition}
+      />
+    </XStack>
+  );
+};
+
+const StepBody = ({
+  step,
+  kind,
+  state,
+  index,
+  isLast,
+  rail,
+}: {
+  step: ProgressStep;
+  kind: MarkerKind;
+  state: StepState;
+  index: number;
+  isLast: boolean;
+  rail: RailContext;
+}) => {
+  const { horizontal, gapToken } = rail;
+  const showLabels = rail.labels !== 'hidden';
+  const markerTarget = (
+    <StepMarkerBlock
+      kind={kind}
+      state={state}
+      index={index}
+      rail={rail}
+    />
+  );
+  const labelBlock = showLabels ? (
+    <StepLabelBlock
+      step={step}
+      kind={kind}
+      state={state}
+      rail={rail}
+    />
+  ) : null;
+
+  if (horizontal) {
+    return (
+      <YStack
+        alignItems="center"
+        flexShrink={0}
+        gap={gapToken}>
+        {markerTarget}
+        {labelBlock}
+      </YStack>
+    );
+  }
+  return (
+    <XStack
+      alignItems="stretch"
+      gap={gapToken}
+      minHeight={MIN_PRESS_TARGET}>
+      <YStack
+        alignItems="center"
+        width={MIN_PRESS_TARGET}
+        flexShrink={0}
+        gap={2}>
+        {markerTarget}
+        {isLast ? null : (
+          <StepConnector
+            filled={index < rail.current}
+            rail={rail}
+          />
+        )}
+      </YStack>
+      {labelBlock}
+    </XStack>
+  );
+};
+
+const StepRow = ({
+  step,
+  index,
+  isLast,
+  rail,
+}: {
+  step: ProgressStep;
+  index: number;
+  isLast: boolean;
+  rail: RailContext;
+}) => {
+  const { t, horizontal, interactive, linear, onStepChange, setKbFocusIndex, disabledState } = rail;
+  const state = stepState(index, rail.current, step.completed);
+  const kind: MarkerKind = step.error ? 'error' : state;
+  const { canActivate, isFocusable } = stepActivation({ interactive, disabled: step.disabled, state, linear });
+  const stepName = stepLabelName(step.label, index);
+  const goToLabel = withInterp(t('Go to step {{number}}: {{label}}'), {
+    number: index + 1,
+    label: stepName,
+  });
+
+  const body = (
+    <StepBody
+      step={step}
+      kind={kind}
+      state={state}
+      index={index}
+      isLast={isLast}
+      rail={rail}
+    />
+  );
+
+  const domButtonProps = {
+    type: 'button',
+    onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
+      if (!canActivate) {
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault?.();
+        onStepChange?.(index);
+      }
+    },
+  };
+
+  const wrapped = (
+    <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui View has no native <li> on native; role carries the semantics
+      role="listitem"
+      flexGrow={horizontal ? 0 : undefined}
+      flexShrink={horizontal ? 0 : undefined}
+      {...(step.disabled ? disabledState.chromeKnobProps : undefined)}>
+      {isFocusable ? (
+        <StepButton
+          render="button"
+          tabIndex={0}
+          aria-label={canActivate ? goToLabel : String(stepName)}
+          aria-disabled={step.disabled === true ? true : undefined}
+          cursor={step.disabled ? 'not-allowed' : 'pointer'}
+          onPress={() => {
+            if (canActivate) {
+              onStepChange?.(index);
+            }
+          }}
+          onFocus={() => {
+            if (wasKeyboardFocus()) {
+              setKbFocusIndex(() => index);
+            }
+          }}
+          onBlur={() => {
+            setKbFocusIndex((prev) => (prev === index ? null : prev));
+          }}
+          {...domButtonProps}>
+          {body}
+        </StepButton>
+      ) : (
+        body
+      )}
+    </View>
+  );
+
+  return (
+    <XStack
+      flexDirection={horizontal ? 'row' : 'column'}
+      alignItems={horizontal ? 'flex-start' : 'stretch'}
+      flexGrow={horizontal ? 1 : undefined}
+      flexBasis={horizontal ? 0 : undefined}>
+      {wrapped}
+      {horizontal && !isLast ? (
+        <StepConnector
+          filled={index < rail.current}
+          rail={rail}
+        />
+      ) : null}
+    </XStack>
+  );
+};
 
 // ── Component ─────────────────────────────────────────────────
 
@@ -143,7 +583,7 @@ function splitNestedControl(nested: {
  * helper text, error/optional, linear-by-default. Polaris has no wizard
  * stepper — display-only when `onStepChange` is omitted.
  */
-export function ProgressSteps({
+export const ProgressSteps = ({
   steps,
   current,
   onStepChange,
@@ -153,7 +593,7 @@ export function ProgressSteps({
   compact,
   labels = 'visible',
   ...props
-}: ProgressStepsProps) {
+}: ProgressStepsProps) => {
   const { t } = useTranslation();
   const { knobProps, control, disabledState } = useResolvedKnobs(
     compact === undefined ? { component: 'ProgressSteps' } : { component: 'ProgressSteps', compact },
@@ -171,240 +611,56 @@ export function ProgressSteps({
   const onCompleted = useReadableTextOn(componentColors.indicator.completed);
   const onError = useReadableTextOn('$red9');
   const { px: markerPx, hitSlop, box: nestedBox } = splitNestedControl(knobProps.nestedControl);
-  const markerIconSize = Math.max(12, Math.round(markerPx * 0.45));
-  const ringWidth = knobProps.borderRadius.borderWidth ?? 0;
-  const connectorThickness = 2;
-  const pressOutset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - markerPx) / 2));
-  const interactive = !!onStepChange && allowJump;
   const horizontal = orientation === 'horizontal';
-  const gapToken = knobProps.gap.gap;
+
+  const rail: RailContext = {
+    t,
+    knobProps,
+    control,
+    disabledState,
+    ink: { accent: knobProps.textAccentColor, onError, onCompleted, onSelected },
+    currentFill,
+    markerPx,
+    hitSlop,
+    nestedBox,
+    markerIconSize: Math.max(12, Math.round(markerPx * 0.45)),
+    ringWidth: knobProps.borderRadius.borderWidth ?? 0,
+    pressOutset: Math.max(0, Math.ceil((MIN_PRESS_TARGET - markerPx) / 2)),
+    interactive: !!onStepChange && allowJump,
+    horizontal,
+    linear,
+    gapToken: knobProps.gap.gap,
+    labels,
+    current,
+    kbFocusIndex,
+    setKbFocusIndex,
+    onStepChange,
+  };
 
   return (
-    <StepsRoot role="list" aria-label={t('Progress')} data-density={knobProps.density} data-labels={labels} {...props}>
+    <StepsRoot
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui YStack renders a div on web and a View on native; switching to <ul> would change the DOM and default list styling
+      role="list"
+      aria-label={t('Progress')}
+      data-density={knobProps.density}
+      data-labels={labels}
+      {...props}>
       <XStack
         flexDirection={horizontal ? 'row' : 'column'}
         alignItems={horizontal ? 'flex-start' : 'stretch'}
         width="100%"
-        gap={horizontal ? 0 : gapToken}>
-        {steps.map((step, index) => {
-          const state = stepState(index, current, step.completed);
-          const kind: MarkerKind = step.error ? 'error' : state;
-          const isLast = index === steps.length - 1;
-          const canActivate =
-            interactive && !step.disabled && state !== 'current' && (state === 'completed' || !linear);
-          const isFocusable = interactive && !step.disabled && (canActivate || state === 'current');
-          const markerBg =
-            kind === 'error'
-              ? '$red9'
-              : kind === 'completed'
-                ? componentColors.indicator.completed
-                : kind === 'current'
-                  ? currentFill
-                  : 'transparent';
-          const markerBorder = kind === 'upcoming' ? componentColors.indicator.track : markerBg;
-          const markerFg =
-            kind === 'upcoming'
-              ? knobProps.textAccentColor
-              : kind === 'error'
-                ? (onError ?? '$color1')
-                : kind === 'completed'
-                  ? (onCompleted ?? '$color1')
-                  : (onSelected ?? '$color1');
-          const helper = step.description ?? (step.optional && kind !== 'error' ? t('Optional') : null);
-          const connectorFill = index < current ? componentColors.indicator.completed : componentColors.indicator.track;
-          // Upcoming is outlined-by-state: chromeless `borderWidth:none` would
-          // erase the empty disc, so it keeps the OUTLINED-HAIRLINE floor.
-          const markerRing = kind === 'upcoming' ? Math.max(ringWidth, 0.5) : ringWidth;
-
-          const marker = (
-            <Marker
-              {...nestedBox}
-              borderRadius={1000}
-              borderWidth={markerRing}
-              backgroundColor={markerBg}
-              borderColor={markerBorder}
-              data-nested-px={markerPx}
-              data-step-state={kind}
-              data-marker-ring={markerRing}
-              transition={knobProps.transition}
-              {...(state === 'current' ? ({ 'aria-current': 'step' } as Record<string, unknown>) : undefined)}
-              {...(kbFocusIndex === index ? control.focusVisibleKnobProps : { outlineWidth: 0 })}
-              {...(kind === 'upcoming'
-                ? {
-                    hoverStyle: {
-                      borderColor: componentColors.indicator.hover,
-                      backgroundColor: componentColors.indicator.inactive,
-                    },
-                  }
-                : undefined)}>
-              {kind === 'error' ? (
-                <WarningIcon size={markerIconSize} color={markerFg} weight="bold" />
-              ) : kind === 'completed' ? (
-                <CheckIcon size={markerIconSize} color={markerFg} weight="bold" />
-              ) : (
-                <SizableText
-                  {...knobProps.label}
-                  fontWeight="400"
-                  color={kind === 'current' ? (onSelected ?? '$color1') : markerFg}>
-                  {index + 1}
-                </SizableText>
-              )}
-            </Marker>
-          );
-
-          const markerTarget = (
-            <StepMarkerTarget
-              width={MIN_PRESS_TARGET}
-              height={MIN_PRESS_TARGET}
-              minWidth={MIN_PRESS_TARGET}
-              minHeight={MIN_PRESS_TARGET}
-              marginVertical={-pressOutset}
-              marginHorizontal={horizontal ? -pressOutset : 0}
-              alignItems="center"
-              justifyContent="center"
-              data-press-min={MIN_PRESS_TARGET}
-              hitSlop={hitSlop ?? pressTargetHitSlop(markerPx)}>
-              {marker}
-            </StepMarkerTarget>
-          );
-
-          const labelBlock = (
-            <YStack
-              gap="$0.5"
-              flexShrink={1}
-              {...(horizontal ? { alignItems: 'center', maxWidth: 160 } : { flexGrow: 1, justifyContent: 'center' })}>
-              <SizableText
-                {...knobProps.body}
-                {...knobProps.label}
-                fontWeight="400"
-                color={
-                  kind === 'error'
-                    ? '$red11'
-                    : state === 'upcoming'
-                      ? knobProps.textAccentColor
-                      : componentColors.text.primary
-                }
-                textAlign={horizontal ? 'center' : undefined}
-                numberOfLines={2}>
-                {step.label}
-              </SizableText>
-              {helper != null ? (
-                <SizableText
-                  {...knobProps.body}
-                  fontSize="$1"
-                  color={kind === 'error' ? '$red11' : knobProps.textAccentColor}
-                  textAlign={horizontal ? 'center' : undefined}
-                  numberOfLines={2}>
-                  {helper}
-                </SizableText>
-              ) : null}
-            </YStack>
-          );
-
-          const verticalConnector = !isLast ? (
-            <Connector
-              width={connectorThickness}
-              flexGrow={1}
-              minHeight={16}
-              backgroundColor={connectorFill}
-              transition={knobProps.transition}
-            />
-          ) : null;
-
-          const horizontalConnector = !isLast ? (
-            <XStack flexGrow={1} paddingTop={(markerPx - connectorThickness) / 2} paddingHorizontal={gapToken}>
-              <Connector
-                flexGrow={1}
-                height={connectorThickness}
-                backgroundColor={connectorFill}
-                minWidth={16}
-                transition={knobProps.transition}
-              />
-            </XStack>
-          ) : null;
-
-          const showLabels = labels !== 'hidden';
-          const body = horizontal ? (
-            <YStack alignItems="center" flexShrink={0} gap={gapToken}>
-              {markerTarget}
-              {showLabels ? labelBlock : null}
-            </YStack>
-          ) : (
-            <XStack alignItems="stretch" gap={gapToken} minHeight={MIN_PRESS_TARGET}>
-              <YStack alignItems="center" width={MIN_PRESS_TARGET} flexShrink={0} gap={2}>
-                {markerTarget}
-                {verticalConnector}
-              </YStack>
-              {showLabels ? labelBlock : null}
-            </XStack>
-          );
-
-          const stepName = typeof step.label === 'string' ? step.label : index + 1;
-          const goToLabel = withInterp(t('Go to step {{number}}: {{label}}'), {
-            number: index + 1,
-            label: stepName,
-          });
-
-          const wrapped = (
-            <View
-              key={step.id ?? index}
-              role="listitem"
-              flexGrow={horizontal ? 0 : undefined}
-              flexShrink={horizontal ? 0 : undefined}
-              {...(step.disabled ? disabledState.chromeKnobProps : undefined)}>
-              {isFocusable ? (
-                <StepButton
-                  render="button"
-                  tabIndex={0}
-                  aria-label={canActivate ? goToLabel : String(stepName)}
-                  aria-disabled={step.disabled || undefined}
-                  cursor={step.disabled ? 'not-allowed' : 'pointer'}
-                  onPress={() => {
-                    if (canActivate) {
-                      onStepChange?.(index);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (wasKeyboardFocus()) {
-                      setKbFocusIndex(index);
-                    }
-                  }}
-                  onBlur={() => {
-                    setKbFocusIndex((prev) => (prev === index ? null : prev));
-                  }}
-                  {...({
-                    type: 'button',
-                    onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
-                      if (!canActivate) {
-                        return;
-                      }
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault?.();
-                        onStepChange?.(index);
-                      }
-                    },
-                  } as Record<string, unknown>)}>
-                  {body}
-                </StepButton>
-              ) : (
-                body
-              )}
-            </View>
-          );
-
-          return (
-            <XStack
-              key={`row-${step.id ?? index}`}
-              flexDirection={horizontal ? 'row' : 'column'}
-              alignItems={horizontal ? 'flex-start' : 'stretch'}
-              flexGrow={horizontal ? 1 : undefined}
-              flexBasis={horizontal ? 0 : undefined}>
-              {wrapped}
-              {horizontal ? horizontalConnector : null}
-            </XStack>
-          );
-        })}
+        gap={horizontal ? 0 : rail.gapToken}>
+        {steps.map((step, index) => (
+          <StepRow
+            // oxlint-disable-next-line react-doctor/no-array-index-as-key -- ProgressStep.id is optional by contract and documented to fall back to the index
+            key={`row-${step.id ?? index}`}
+            step={step}
+            index={index}
+            isLast={index === steps.length - 1}
+            rail={rail}
+          />
+        ))}
       </XStack>
     </StepsRoot>
   );
-}
+};

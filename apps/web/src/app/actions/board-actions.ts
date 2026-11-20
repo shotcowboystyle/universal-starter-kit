@@ -1,51 +1,55 @@
-"use server";
+'use server';
 
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
+import { z } from 'zod';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { API_URL } from '@/constants/routes';
+import type { UpdateBoardInput } from '@/types/board-api';
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+const boardResponseSchema = z.looseObject({ _id: z.string(), title: z.string() });
+
+const getAuthHeaders = async (): Promise<HeadersInit> => {
   const cookieStore = await cookies();
-  const token = cookieStore.get("jwt")?.value;
+  const token = cookieStore.get('jwt')?.value;
   return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` })
+    'Content-Type': 'application/json',
+    ...(token !== undefined && token !== '' && { Authorization: `Bearer ${token}` }),
   };
-}
+};
 
-export async function createBoard(data: { title: string; description?: string; owner: string }) {
+export const createBoard = async (data: { title: string; description?: string; owner: string }) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards`, {
-    method: "POST",
+    method: 'POST',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to create board");
+    throw new Error('Failed to create board');
   }
-  return response.json();
-}
+  return boardResponseSchema.parse(await response.json());
+};
 
-export async function updateBoard(id: string, data: Record<string, unknown>) {
+export const updateBoard = async (id: string, data: UpdateBoardInput) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to update board");
+    throw new Error('Failed to update board');
   }
-  return response.json();
-}
+  return boardResponseSchema.parse(await response.json());
+};
 
-export async function deleteBoard(id: string) {
+export const deleteBoard = async (id: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards/${id}`, {
-    method: "DELETE",
-    headers
+    method: 'DELETE',
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to delete board");
+    throw new Error('Failed to delete board');
   }
-}
+};

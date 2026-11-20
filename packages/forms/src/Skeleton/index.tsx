@@ -50,41 +50,48 @@ const SkeletonFrame = styled(View, {
 // is the token's recipe fontSize + 2px of line-box rounding (medium keeps
 // the previous 16px line), and a circle bone is the medallion one height
 // step above the control ramp (medium keeps the previous 40px circle).
-const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
-const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
+const SKELETON_SIZE_TOKENS = new Set(['$3', '$4', '$5']);
+const skeletonCircleTokenUp = new Map([
+  ['$3', '$4'],
+  ['$4', '$5'],
+  ['$5', '$6'],
+]);
 
-function skeletonTextHeight(sizeToken: string): number | undefined {
-  if (!(SKELETON_SIZE_TOKENS as readonly string[]).includes(sizeToken)) {
+const skeletonTextHeight = (sizeToken: string): number | undefined => {
+  if (!SKELETON_SIZE_TOKENS.has(sizeToken)) {
     return undefined;
   }
   return sizeRecipeForToken(sizeToken).fontSize + 2;
-}
+};
 
-function skeletonCircleSize(sizeToken: string): number {
-  return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-}
+const skeletonCircleSize = (sizeToken: string): number =>
+  sizeRecipeForToken(skeletonCircleTokenUp.get(sizeToken) ?? '$5').height;
 // SP-GAP: text-line gap follows the space knob; medium keeps $2.
-const skeletonGapMap: Record<string, string> = { small: '$1', medium: '$2', large: '$3' };
+const skeletonGapMap = new Map([
+  ['small', '$1'],
+  ['medium', '$2'],
+  ['large', '$3'],
+]);
 
 // Self-contained pulse keyframes: the app root layout injects the same rule,
 // but Skeleton must not depend on a particular host (Storybook, tests, docs).
 const PULSE_STYLE_ID = '__mp-skeleton-pulse';
-function ensurePulseKeyframes() {
+const ensurePulseKeyframes = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(PULSE_STYLE_ID)) {
+  if (document.querySelector(`#${PULSE_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
   style.id = PULSE_STYLE_ID;
   style.textContent = '@keyframes skeleton-pulse{0%{opacity:1}50%{opacity:0.4}100%{opacity:1}}';
-  document.head.appendChild(style);
-}
+  document.head.append(style);
+};
 
 // ── Skeleton Component ────────────────────────────────────────
 
-export function Skeleton({ variant = 'text', width, height, animate = true, style, ...props }: SkeletonProps) {
+export const Skeleton = ({ variant = 'text', width, height, animate = true, style, ...props }: SkeletonProps) => {
   const { knobProps } = useResolvedKnobs();
   // Pulse only when animating is on AND the animation knob is not "none"
   // (knobProps.transition resolves to undefined at animation:none).
@@ -96,8 +103,9 @@ export function Skeleton({ variant = 'text', width, height, animate = true, styl
   // Merge pulse last into `style` so a consumer style prop cannot kill the
   // animation (animation:none stops the pulse via the knob; otherwise
   // it must run).
-  const mergedStyle =
-    isWeb && pulsing ? { ...(style as object), animation: 'skeleton-pulse 1.5s ease-in-out infinite' } : style;
+  // oxlint-disable-next-line eslint/prefer-object-spread -- `style` is typed as a union that is not all object types, so spread does not type-check; Object.assign copies identically
+  const pulseStyle = Object.assign({}, style, { animation: 'skeleton-pulse 1.5s ease-in-out infinite' });
+  const mergedStyle = isWeb && pulsing ? pulseStyle : style;
 
   return (
     <SkeletonFrame
@@ -117,14 +125,14 @@ export function Skeleton({ variant = 'text', width, height, animate = true, styl
       // `radius:none` sweep licenses it under.
       {...(variant === 'circular' ? radiusClassProps('R-PILL', 'SkeletonCircle') : undefined)}
       {...props}
-      {...(mergedStyle ? { style: mergedStyle } : undefined)}
+      {...(mergedStyle == null ? undefined : { style: mergedStyle })}
     />
   );
-}
+};
 
 // ── Skeleton.Text - for text placeholder ──────────────────────
 
-export function SkeletonText({
+export const SkeletonText = ({
   lines = 1,
   gap: gapProp,
   lastLineWidth = '70%',
@@ -133,29 +141,47 @@ export function SkeletonText({
   lines?: number;
   gap?: string | number;
   lastLineWidth?: string | number;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
-  const gap = gapProp ?? skeletonGapMap[knobProps.space] ?? '$2';
+  const gap = gapProp ?? skeletonGapMap.get(knobProps.space) ?? '$2';
   if (lines === 1) {
-    return <Skeleton variant="text" width={lastLineWidth} {...props} />;
+    return (
+      <Skeleton
+        variant="text"
+        width={lastLineWidth}
+        {...props}
+      />
+    );
   }
 
   return (
     <View gap={gap}>
       {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton key={i} variant="text" width={i === lines - 1 ? lastLineWidth : '100%'} {...props} />
+        <Skeleton
+          key={i}
+          variant="text"
+          width={i === lines - 1 ? lastLineWidth : '100%'}
+          {...props}
+        />
       ))}
     </View>
   );
-}
+};
 
 // ── Skeleton.Circle - for avatar placeholder ──────────────────
 
-export function SkeletonCircle({ size: sizeProp, ...props }: SkeletonProps & { size?: number }) {
+export const SkeletonCircle = ({ size: sizeProp, ...props }: SkeletonProps & { size?: number }) => {
   const { knobProps } = useResolvedKnobs();
   const size = sizeProp ?? skeletonCircleSize(knobProps.sizeToken);
-  return <Skeleton variant="circular" width={size} height={size} {...props} />;
-}
+  return (
+    <Skeleton
+      variant="circular"
+      width={size}
+      height={size}
+      {...props}
+    />
+  );
+};
 
 // ── Attach sub-components ─────────────────────────────────────
 

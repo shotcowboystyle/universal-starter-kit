@@ -29,66 +29,84 @@ const meta: Meta<typeof PresetSwatches> = {
 export default meta;
 type Story = StoryObj<typeof PresetSwatches>;
 
+const MainExample = () => {
+  const [selected, setSelected] = useState<string | null>(BRAND[3]);
+  return (
+    <YStack
+      gap="$3"
+      padding="$4"
+      width={280}>
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor={selected}
+        onSelect={(next) => {
+          setSelected(next);
+          action('onSelect')(next);
+        }}
+      />
+      <Text
+        fontSize="$2"
+        color="$color10">
+        {selected ?? 'none'}
+      </Text>
+    </YStack>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const Example = () => {
-      const [selected, setSelected] = useState<string | null>(BRAND[3]);
-      return (
-        <YStack gap="$3" padding="$4" width={280}>
-          <PresetSwatches
-            presetColors={BRAND}
-            selectedColor={selected}
-            onSelect={(next) => {
-              setSelected(next);
-              action('onSelect')(next);
-            }}
-          />
-          <Text fontSize="$2" color="$color10">
-            {selected ?? 'none'}
-          </Text>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <MainExample />,
 };
 
 export const Selected: Story = {
   render: () => (
-    <YStack padding="$4" width={280}>
-      <PresetSwatches presetColors={BRAND} selectedColor="#3B82F6" onSelect={action('onSelect')} />
+    <YStack
+      padding="$4"
+      width={280}>
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor="#3B82F6"
+        onSelect={action('onSelect')}
+      />
     </YStack>
   ),
 };
 
+const NoColorExample = () => {
+  const [selected, setSelected] = useState<string | null>(null);
+  return (
+    <YStack
+      gap="$3"
+      padding="$4"
+      width={280}>
+      <PresetSwatches
+        presetColors={[{ name: 'None', value: null }, ...BRAND]}
+        selectedColor={selected}
+        onSelect={setSelected}
+      />
+    </YStack>
+  );
+};
+
 /** Null entry is the "no color" chip with the diagonal strike. */
 export const NoColor: Story = {
-  render: () => {
-    const Example = () => {
-      const [selected, setSelected] = useState<string | null>(null);
-      return (
-        <YStack gap="$3" padding="$4" width={280}>
-          <PresetSwatches
-            presetColors={[{ name: 'None', value: null }, ...BRAND]}
-            selectedColor={selected}
-            onSelect={setSelected}
-          />
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <NoColorExample />,
 };
 
 /** Empty list paints nothing; the host owns the empty marker. */
 export const Empty: Story = {
   render: () => (
     <YStack padding="$4">
-      <Text fontSize="$2" color="$color10">
+      <Text
+        fontSize="$2"
+        color="$color10">
         empty presetColors — row is null
       </Text>
-      <PresetSwatches presetColors={[]} selectedColor={null} onSelect={action('onSelect')} />
+      <PresetSwatches
+        presetColors={[]}
+        selectedColor={null}
+        onSelect={action('onSelect')}
+      />
     </YStack>
   ),
 };

@@ -8,35 +8,46 @@ const STROKE = 2.5;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 const ARC = CIRCUMFERENCE * 0.75;
 
-export function useSpinnerStroke(color?: string): string {
+export const useSpinnerStroke = (color?: string): string => {
   const theme = useTheme();
-  if (color && !color.startsWith('$')) {
+  if (color !== undefined && color !== '' && !color.startsWith('$')) {
     return color;
   }
-  const key = (color ?? '$color').replace(/^\$/, '');
+  const key = (color ?? '$color').replace(/^\$/u, '');
+  // SAFETY: key is a theme token name derived from the color prop
   const token = theme[key as keyof typeof theme];
   if (!token) {
     return color ?? 'currentColor';
   }
-  return String(getVariable((token as { get?: (p: string) => unknown }).get?.('web') ?? token));
-}
+  return String(getVariable(token.get('web') ?? token));
+};
 
 /** Linear/Polaris arc: round-cap 270° head on a faint track. Scales with the box. */
-export function SpinnerGlyph({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox={`0 0 ${VB} ${VB}`} pointerEvents="none">
-      <Circle cx={CX} cy={CX} r={R} fill="none" stroke={color} strokeWidth={STROKE} opacity={0.2} />
-      <Circle
-        cx={CX}
-        cy={CX}
-        r={R}
-        fill="none"
-        stroke={color}
-        strokeWidth={STROKE}
-        strokeLinecap="round"
-        strokeDasharray={`${ARC} ${CIRCUMFERENCE - ARC}`}
-        transform={`rotate(-90 ${CX} ${CX})`}
-      />
-    </Svg>
-  );
-}
+export const SpinnerGlyph = ({ color, size }: { color: string; size: number }) => (
+  <Svg
+    width={size}
+    height={size}
+    viewBox={`0 0 ${VB} ${VB}`}
+    pointerEvents="none">
+    <Circle
+      cx={CX}
+      cy={CX}
+      r={R}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE}
+      opacity={0.2}
+    />
+    <Circle
+      cx={CX}
+      cy={CX}
+      r={R}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE}
+      strokeLinecap="round"
+      strokeDasharray={`${ARC} ${CIRCUMFERENCE - ARC}`}
+      transform={`rotate(-90 ${CX} ${CX})`}
+    />
+  </Svg>
+);

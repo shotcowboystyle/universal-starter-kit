@@ -1,0 +1,61 @@
+'use client';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ThemeProvider } from 'next-themes';
+import React, { useState } from 'react';
+
+import type { ColorScheme } from '@/lib/color-scheme';
+import { useAuthStore } from '@/stores/auth-store';
+
+import { TamaguiRoot } from './TamaguiRoot';
+
+const makeQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        // 5 minutes
+        staleTime: 5 * 60 * 1000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  });
+
+// SyncAuthStore ensures auth store is hydrated from persistence on mount
+// Without subscribing to any state, it just triggers hydration once
+const SyncAuthStore = () => {
+  // Trigger hydration by accessing getState, but don't subscribe to updates
+  React.useEffect(() => {
+    // Access getState to ensure persistence is hydrated
+    useAuthStore.getState();
+  }, []);
+  return null;
+};
+
+export const ClientProviders = ({
+  children,
+  initialScheme,
+}: {
+  children: React.ReactNode;
+  initialScheme?: ColorScheme;
+}) => {
+  // oxlint-disable-next-line react/hook-use-state -- lazy-init singleton; the setter is never needed
+  const [queryClient] = useState(makeQueryClient);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        attribute="class"
+        value={{ light: 't_light', dark: 't_dark' }}
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange>
+        <TamaguiRoot initialScheme={initialScheme}>
+          <SyncAuthStore />
+          {children}
+          <ReactQueryDevtools initialIsOpen={false} />
+        </TamaguiRoot>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};

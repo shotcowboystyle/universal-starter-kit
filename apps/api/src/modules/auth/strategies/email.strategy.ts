@@ -1,35 +1,31 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  UnauthorizedException
-} from "@nestjs/common";
-import { PassportStrategy } from "@nestjs/passport";
-import { Request } from "express";
-import { Strategy } from "passport-custom";
+import { Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import type { Request } from 'express';
+import { Strategy } from 'passport-custom';
 
-import { AuthService } from "../auth.service";
+import type { UserDocument } from '../../users/schemas/users.schema';
+import type { AuthService } from '../auth.service';
 
 @Injectable()
-export class EmailStrategy extends PassportStrategy(Strategy, "email") {
+export class EmailStrategy extends PassportStrategy(Strategy, 'email') {
   private readonly logger = new Logger(EmailStrategy.name);
 
-  constructor(private authService: AuthService) {
+  constructor(private readonly authService: AuthService) {
     super();
   }
 
-  async validate(req: Request): Promise<any> {
+  async validate(req: Request<unknown, unknown, { email?: string }>): Promise<UserDocument> {
     try {
       const { email } = req.body;
 
-      if (!email) {
-        throw new UnauthorizedException("The login email is incorrect, please correct it");
+      if (email === undefined || email === '') {
+        throw new UnauthorizedException('The login email is incorrect, please correct it');
       }
 
       const user = await this.authService.validateUser(email);
 
       if (!user) {
-        throw new UnauthorizedException("The login email is incorrect, please correct it");
+        throw new UnauthorizedException('The login email is incorrect, please correct it');
       }
 
       return user;
@@ -40,9 +36,9 @@ export class EmailStrategy extends PassportStrategy(Strategy, "email") {
       }
 
       // Log and wrap unexpected errors (系統錯誤)
-      const err = error as Error;
-      this.logger.error(`Error during validation: ${err.message}`, err.stack);
-      throw new InternalServerErrorException("An error occurred during authentication");
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error during validation: ${message}`, error instanceof Error ? error.stack : undefined);
+      throw new InternalServerErrorException('An error occurred during authentication');
     }
   }
 }

@@ -40,49 +40,132 @@
  *     Declare the field and assign it in the constructor.
  */
 
-import { isDrawingFile, readDrawingRegistry } from './drawingRegistry.mjs';
-import { readSlotMarginRegistry } from './specRegistry.mjs';
+import { isDrawingFile, readDrawingRegistry } from './drawing-registry.mjs';
+import { readSlotMarginRegistry } from './spec-registry.mjs';
 
-/** Hex + functional CSS colour literals. AST-visited only (not a text scan). */
-export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/i;
+/** Hex + functional CSS color literals. AST-visited only (not a text scan). */
+export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/iu;
 
 /** Palette modules where a 12-step ramp in hex/hsl is the deliverable (EN-2). */
-export const PALETTE_FILE = /(?:^|\/)themes\/(base|accent)\.(tsx?|jsx?)$|(?:^|\/)[^/]*palette[^/]*\.(tsx?|jsx?)$/i;
+export const PALETTE_FILE =
+  /(?:^|\/)themes\/(?:base|accent)\.(?:tsx?|jsx?)$|(?:^|\/)[^/]*palette[^/]*\.(?:tsx?|jsx?)$/iu;
 
 /**
  * A `hex-escape: <reason>` line or block comment. A JSDoc `*` line or a
  * backticked mention is prose about the marker, not the marker.
  */
-const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:\s*(.*?)\s*(?:\*\/.*)?$/;
+const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:(?<rest>.*)$/u;
 
 /**
  * Every `hex-escape:` comment in a source file, with the reason it writes.
- * @param {string} src
- * @returns {{ line: number, reason: string }[]}
+ * @param {string} src source text of one file
+ * @returns {{ line: number, reason: string }[]} one entry per marker comment, with its trimmed reason
  */
-export function findHexEscapes(src) {
-  if (!src.includes('hex-escape:')) {return [];}
+export const findHexEscapes = (src) => {
+  if (!src.includes('hex-escape:')) {
+    return [];
+  }
   /** @type {{ line: number, reason: string }[]} */
   const sites = [];
-  src.split('\n').forEach((text, index) => {
-    if (text.trim().startsWith('*')) {return;}
-    const match = text.match(HEX_ESCAPE_COMMENT);
-    if (match) {sites.push({ line: index + 1, reason: match[1].trim() });}
-  });
+  for (const [index, text] of src.split('\n').entries()) {
+    const match = text.trim().startsWith('*') ? null : HEX_ESCAPE_COMMENT.exec(text);
+    if (match) {
+      const [reason] = (match.groups?.rest ?? '').split('*/');
+      sites.push({ line: index + 1, reason: reason.trim() });
+    }
+  }
   return sites;
-}
+};
 
 /**
- * @param {unknown} context
- * @returns {string}
+ * @typedef {string | number | boolean | bigint | RegExp | null} LiteralValue
  */
-function sourceText(context) {
-  const ctx = /** @type {{ sourceCode?: { text?: string }, getSourceCode?: () => { text?: string } }} */ (context);
-  return ctx?.sourceCode?.text ?? ctx?.getSourceCode?.()?.text ?? '';
-}
 
-const RAW_TYPOGRAPHY_HATCH = /^Tamagui(?:Text|SizableText|Paragraph|Heading|H[1-6]|Anchor)$/;
-const HOUSE_PACKAGE = /^@repo\//;
+/**
+ * The slice of an ESTree / JSX node that these rules read.
+ * @typedef {object} AstNode
+ * @property {string} [type] node kind
+ * @property {string | AstNode} [name] identifier name, or the name node of a JSX attribute
+ * @property {AstNode | LiteralValue} [value] literal value, JSX attribute value or template element value
+ * @property {string | null} [cooked] template element text
+ * @property {string} [operator] unary operator
+ * @property {AstNode} [argument] unary operand
+ * @property {AstNode} [expression] JSX expression container content
+ * @property {AstNode} [callee] call target
+ * @property {AstNode} [object] member object
+ * @property {AstNode} [property] member property
+ * @property {AstNode} [imported] imported binding
+ * @property {AstNode} [local] local binding
+ * @property {AstNode} [source] import source
+ * @property {AstNode[]} [specifiers] import specifiers
+ * @property {AstNode[]} [attributes] JSX attributes
+ * @property {AstNode} [parameter] TS parameter property target
+ * @property {AstNode} [left] default-valued parameter target
+ */
+
+/**
+ * A node field that may hold a literal as well as a node.
+ * @typedef {AstNode | LiteralValue | undefined} NodeValue
+ */
+
+/**
+ * @typedef {object} RuleOptions
+ * @property {string[]} [slotMargins] element names that may carry a margin
+ * @property {string[]} [drawings] files allowed raw geometry
+ * @property {string[]} [chromeAllow] elements allowed chrome props
+ */
+
+/**
+ * The slice of the rule context that these rules use.
+ * @typedef {object} RuleContext
+ * @property {string} [filename] file being linted
+ * @property {() => string} [getFilename] legacy accessor for the file being linted
+ * @property {{ text?: string }} [sourceCode] source of the file being linted
+ * @property {() => { text?: string }} [getSourceCode] legacy accessor for the source
+ * @property {(RuleOptions | undefined)[]} [options] rule options
+ * @property {(report: { node: AstNode, messageId: string, data?: Record<string, string> }) => void} report reports a violation
+ */
+
+/**
+ * @typedef {Record<string, (node: AstNode) => void>} Visitors
+ */
+
+/**
+ * @param {RuleContext} context rule context
+ * @returns {string} source text of the linted file
+ */
+const sourceText = (context) => context.sourceCode?.text ?? context.getSourceCode?.()?.text ?? '';
+
+/**
+ * @param {RuleContext} context rule context
+ * @returns {string} path of the linted file
+ */
+const filenameOf = (context) => context.filename ?? context.getFilename?.() ?? '';
+
+/**
+ * ESTree literal values are only distinguishable at runtime, so the guards
+ * below are the one place that inspects their JS type.
+ * @param {NodeValue} value a node field
+ * @returns {value is string} true for a string literal value
+ */
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ESTree literal values carry no static type; this guard is the single boundary check
+const isString = (value) => typeof value === 'string';
+
+/**
+ * @param {NodeValue} value a node field
+ * @returns {value is number} true for a numeric literal value
+ */
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ESTree literal values carry no static type; this guard is the single boundary check
+const isNumber = (value) => typeof value === 'number';
+
+/**
+ * @param {NodeValue} value a node field
+ * @returns {value is AstNode} true when the field holds a node rather than a literal
+ */
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ESTree literal values carry no static type; this guard is the single boundary check
+const isNode = (value) => typeof value === 'object' && value !== null && !(value instanceof RegExp);
+
+const RAW_TYPOGRAPHY_HATCH = /^Tamagui(?:Text|SizableText|Paragraph|Heading|H[1-6]|Anchor)$/u;
 
 /**
  * Chrome props banned on imported `@repo/*` components
@@ -184,7 +267,7 @@ export const MARGIN_PROPS = Object.freeze([
 
 const CHROME_PROP_SET = new Set(CHROME_PROPS);
 const MARGIN_PROP_SET = new Set(MARGIN_PROPS);
-const ZERO_VALUE = /^(?:-?0(?:\.0+)?(?:px)?|\$0)$/;
+const ZERO_VALUE = /^(?:-?0(?:\.0+)?(?:px)?|\$0)$/u;
 const GEOMETRY_PROP_SET = new Set(GEOMETRY_PROPS);
 
 const RULE_OPTIONS_SCHEMA = [
@@ -209,43 +292,70 @@ const SLOT_MARGIN_OPTIONS_SCHEMA = [
 ];
 
 /**
- * @param {unknown} context
- * @returns {Set<string>}
+ * @param {AstNode | undefined} node a node that may carry a plain-string name
+ * @returns {string} the node's own name, or '' when it has none
  */
-function resolveSlotMargins(context) {
-  const opt = context?.options?.[0] ?? {};
-  if (Array.isArray(opt.slotMargins)) {return new Set(opt.slotMargins);}
+const nameOf = (node) => {
+  const name = node?.name;
+  return isString(name) ? name : '';
+};
+
+/**
+ * @param {RuleContext} context rule context
+ * @returns {Set<string>} element names allowed a margin, from the rule option or the spec registry
+ */
+const resolveSlotMargins = (context) => {
+  const opt = context.options?.[0] ?? {};
+  if (Array.isArray(opt.slotMargins)) {
+    return new Set(opt.slotMargins);
+  }
   try {
     return new Set(readSlotMarginRegistry().members);
   } catch {
     return new Set();
   }
-}
+};
+
+/**
+ * @param {NodeValue} value a JSX attribute value
+ * @returns {NodeValue} the expression inside any `{…}` containers
+ */
+const unwrapJsxValue = (value) => {
+  if (isNode(value) && value.type === 'JSXExpressionContainer') {
+    return unwrapJsxValue(value.expression);
+  }
+  return value;
+};
 
 /**
  * `0` is `00` L8 E1, legal anywhere: a zero-reset is the absence of an outer
  * margin or a size, not one (Tamagui's own headings ship `margin: 0`, and
  * `minWidth={0}` is what lets a flex child shrink below its content).
- * @param {unknown} value
+ * @param {NodeValue} value a JSX attribute value
+ * @returns {boolean} true when the value is a zero literal
  */
-function isZeroReset(value) {
+const isZeroReset = (value) => {
   const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
-  const expr = /** @type {{ type?: string, value?: unknown, operator?: string, argument?: unknown }} */ (node);
-  if (expr.type === 'Literal') {
-    if (typeof expr.value === 'number') {return expr.value === 0;}
-    if (typeof expr.value === 'string') {return ZERO_VALUE.test(expr.value.trim());}
+  if (!isNode(node)) {
+    return false;
   }
-  if (expr.type === 'UnaryExpression' && expr.operator === '-') {return isZeroReset(expr.argument);}
-  return false;
-}
+  if (node.type === 'Literal') {
+    if (isNumber(node.value)) {
+      return node.value === 0;
+    }
+    if (isString(node.value)) {
+      return ZERO_VALUE.test(node.value.trim());
+    }
+  }
+  return node.type === 'UnaryExpression' && node.operator === '-' && isZeroReset(node.argument);
+};
 
 /**
- * @param {unknown} context
- * @returns {{ drawings: string[], chromeAllow: Set<string> }}
+ * @param {RuleContext} context rule context
+ * @returns {{ drawings: string[], chromeAllow: Set<string> }} the files allowed raw geometry and the elements allowed chrome props
  */
-function resolveAllowlists(context) {
-  const opt = context?.options?.[0] ?? {};
+const resolveAllowlists = (context) => {
+  const opt = context.options?.[0] ?? {};
   if (Array.isArray(opt.drawings) || Array.isArray(opt.chromeAllow)) {
     return {
       drawings: Array.isArray(opt.drawings) ? opt.drawings : [],
@@ -258,171 +368,222 @@ function resolveAllowlists(context) {
   } catch {
     return { drawings: [], chromeAllow: new Set() };
   }
-}
+};
 
-/** @param {string | undefined} source */
-function isHousePackage(source) {
-  return typeof source === 'string' && HOUSE_PACKAGE.test(source);
-}
+/**
+ * @param {NodeValue} source an import source value
+ * @returns {boolean} true for an `@repo/*` specifier
+ */
+const isHousePackage = (source) => isString(source) && source.startsWith('@repo/');
 
-/** @param {{ type?: string, imported?: { name?: string, value?: string }, local?: { name?: string } }} specifier */
-function specifierLocalName(specifier) {
-  return specifier.local?.name ?? specifier.imported?.name ?? specifier.imported?.value;
-}
+/**
+ * @param {AstNode} specifier an import specifier
+ * @returns {NodeValue} the local binding name, falling back to the imported name
+ */
+const specifierLocalName = (specifier) =>
+  specifier.local?.name ?? specifier.imported?.name ?? specifier.imported?.value;
 
 /**
  * Walk a JSX name node into "Card" or "Menu.Content".
- * @param {unknown} name
- * @returns {string}
+ * @param {AstNode | undefined} name a JSX element name node
+ * @returns {string} the dotted component name, or '' when the node is not a name
  */
-function jsxName(name) {
-  if (!name || typeof name !== 'object') {return '';}
-  const node = /** @type {{ type?: string, name?: string, object?: unknown, property?: { name?: string } }} */ (name);
-  if (node.type === 'JSXIdentifier') {return node.name ?? '';}
-  if (node.type === 'JSXMemberExpression') {
-    const object = jsxName(node.object);
-    const property = node.property?.name ?? '';
+const jsxName = (name) => {
+  if (name == null) {
+    return '';
+  }
+  if (name.type === 'JSXIdentifier') {
+    return nameOf(name);
+  }
+  if (name.type === 'JSXMemberExpression') {
+    const object = jsxName(name.object);
+    const property = nameOf(name.property);
     return object && property ? `${object}.${property}` : object || property;
   }
   return '';
-}
-
-/** @param {unknown} attr */
-function jsxAttrName(attr) {
-  if (!attr || typeof attr !== 'object') {return '';}
-  const node = /** @type {{ type?: string, name?: { type?: string, name?: string } }} */ (attr);
-  if (node.type !== 'JSXAttribute') {return '';}
-  return node.name?.name ?? '';
-}
+};
 
 /**
- * @param {unknown} value
- * @returns {unknown}
+ * @param {AstNode} attr a JSX attribute or spread attribute
+ * @returns {string} the attribute name, or '' for a spread
  */
-function unwrapJsxValue(value) {
-  if (!value || typeof value !== 'object') {return value;}
-  const node = /** @type {{ type?: string, expression?: unknown }} */ (value);
-  if (node.type === 'JSXExpressionContainer') {return unwrapJsxValue(node.expression);}
-  return value;
-}
-
-/** @param {unknown} value */
-function isNumericLiteral(value) {
-  const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
-  const expr = /** @type {{ type?: string, value?: unknown, operator?: string, argument?: unknown }} */ (node);
-  if (expr.type === 'Literal' && typeof expr.value === 'number') {return true;}
-  if (expr.type === 'UnaryExpression' && expr.operator === '-' && isNumericLiteral(expr.argument)) {
-    return true;
-  }
-  return false;
-}
-
-/** @param {unknown} value */
-function isSizeRecipeEscape(value) {
-  const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
-  const expr =
-    /** @type {{ type?: string, callee?: { type?: string, name?: string, property?: { name?: string } } }} */ (node);
-  if (expr.type !== 'CallExpression') {return false;}
-  const callee = expr.callee;
-  if (!callee) {return false;}
-  if (callee.type === 'Identifier' && callee.name === 'sizeRecipeEscape') {return true;}
-  if (callee.type === 'MemberExpression' && callee.property?.name === 'sizeRecipeEscape') {
-    return true;
-  }
-  return false;
-}
+const jsxAttrName = (attr) => (attr.type === 'JSXAttribute' && isNode(attr.name) ? nameOf(attr.name) : '');
 
 /**
- * @param {unknown} importNode
- * @param {Set<string>} locals
- * @param {Set<string>} namespaces
+ * @param {NodeValue} value a JSX attribute value
+ * @returns {boolean} true for a (possibly negated) numeric literal
  */
-function collectHouseLocals(importNode, locals, namespaces) {
-  const node = /** @type {{ source?: { value?: string }, specifiers?: unknown[] }} */ (importNode);
-  if (!isHousePackage(node.source?.value)) {return;}
-  for (const specifier of node.specifiers ?? []) {
-    const spec = /** @type {{ type?: string, local?: { name?: string } }} */ (specifier);
-    if (spec.type === 'ImportNamespaceSpecifier' && spec.local?.name) {
-      namespaces.add(spec.local.name);
-      continue;
+const isNumericLiteral = (value) => {
+  const node = unwrapJsxValue(value);
+  if (!isNode(node)) {
+    return false;
+  }
+  if (node.type === 'Literal' && isNumber(node.value)) {
+    return true;
+  }
+  return node.type === 'UnaryExpression' && node.operator === '-' && isNumericLiteral(node.argument);
+};
+
+/**
+ * @param {NodeValue} value a JSX attribute value
+ * @returns {boolean} true for a `sizeRecipeEscape(...)` call
+ */
+const isSizeRecipeEscape = (value) => {
+  const node = unwrapJsxValue(value);
+  if (!isNode(node) || node.type !== 'CallExpression') {
+    return false;
+  }
+  const { callee } = node;
+  if (callee == null) {
+    return false;
+  }
+  if (callee.type === 'Identifier' && callee.name === 'sizeRecipeEscape') {
+    return true;
+  }
+  return callee.type === 'MemberExpression' && callee.property?.name === 'sizeRecipeEscape';
+};
+
+/**
+ * @param {AstNode} importNode an import declaration
+ * @param {Set<string>} locals receives the named bindings imported from `@repo/*`
+ * @param {Set<string>} namespaces receives the namespace bindings imported from `@repo/*`
+ */
+const collectHouseLocals = (importNode, locals, namespaces) => {
+  if (!isHousePackage(importNode.source?.value)) {
+    return;
+  }
+  for (const specifier of importNode.specifiers ?? []) {
+    const namespaceName = specifier.type === 'ImportNamespaceSpecifier' ? nameOf(specifier.local) : '';
+    if (namespaceName === '') {
+      const local = specifierLocalName(specifier);
+      if (isString(local) && local !== '') {
+        locals.add(local);
+      }
+    } else {
+      namespaces.add(namespaceName);
     }
-    const local = specifierLocalName(spec);
-    if (typeof local === 'string' && local) {locals.add(local);}
   }
-}
+};
 
 /**
- * @param {string} name
- * @param {Set<string>} locals
- * @param {Set<string>} namespaces
+ * @param {string} name a JSX element name
+ * @param {Set<string>} locals named `@repo/*` bindings
+ * @param {Set<string>} namespaces namespace `@repo/*` bindings
+ * @returns {boolean} true when the element is an `@repo/*` component
  */
-function isHouseElement(name, locals, namespaces) {
-  if (!name) {return false;}
-  if (locals.has(name)) {return true;}
+const isHouseElement = (name, locals, namespaces) => {
+  if (!name) {
+    return false;
+  }
+  if (locals.has(name)) {
+    return true;
+  }
   const dot = name.indexOf('.');
-  if (dot === -1) {return false;}
+  if (dot === -1) {
+    return false;
+  }
   return namespaces.has(name.slice(0, dot));
-}
+};
 
 /**
  * Bare component name for CHROME-ALLOW matching (`Menu.Item` → `Item` and `Menu.Item`).
- * @param {string} name
+ * @param {string} name a JSX element name
+ * @returns {string[]} the full name, plus the last segment when dotted
  */
-function elementAllowKeys(name) {
+const elementAllowKeys = (name) => {
   const keys = [name];
   const dot = name.lastIndexOf('.');
-  if (dot !== -1) {keys.push(name.slice(dot + 1));}
+  if (dot !== -1) {
+    keys.push(name.slice(dot + 1));
+  }
   return keys;
-}
+};
 
 /**
- * @param {unknown} context
+ * @typedef {object} HouseElement
+ * @property {AstNode} node the JSX opening element
+ * @property {string} name its dotted component name
+ * @property {string} filename the linted file
+ * @property {string[]} drawings files allowed raw geometry
+ * @property {Set<string>} chromeAllow elements allowed chrome props
  */
-function houseJsxVisitors(context, onHouseElement) {
-  const filename = context.filename ?? context.getFilename?.() ?? '';
+
+/**
+ * @param {RuleContext} context rule context
+ * @param {(element: HouseElement) => void} onHouseElement called for every JSX element that is an `@repo/*` component
+ * @returns {{ drawings: string[], chromeAllow: Set<string>, filename: string, visitors: Visitors }} the allowlists and the visitors to register
+ */
+const houseJsxVisitors = (context, onHouseElement) => {
+  const filename = filenameOf(context);
   const { drawings, chromeAllow } = resolveAllowlists(context);
+  /** @type {Set<string>} */
   const locals = new Set();
+  /** @type {Set<string>} */
   const namespaces = new Set();
+  /** @type {(node: AstNode) => void} */
+  const onImportDeclaration = (node) => {
+    collectHouseLocals(node, locals, namespaces);
+  };
+  /** @type {(node: AstNode) => void} */
+  const onJsxOpeningElement = (node) => {
+    const name = jsxName(node.name);
+    if (isHouseElement(name, locals, namespaces)) {
+      onHouseElement({ node, name, filename, drawings, chromeAllow });
+    }
+  };
   return {
     drawings,
     chromeAllow,
     filename,
-    visitors: {
-      ImportDeclaration(node) {
-        collectHouseLocals(node, locals, namespaces);
-      },
-      JSXOpeningElement(node) {
-        const name = jsxName(node.name);
-        if (!isHouseElement(name, locals, namespaces)) {return;}
-        onHouseElement({ node, name, filename, drawings, chromeAllow });
-      },
-    },
+    visitors: { ImportDeclaration: onImportDeclaration, JSXOpeningElement: onJsxOpeningElement },
   };
-}
+};
 
 /**
- * @param {string | undefined} filename
- * @returns {boolean}
+ * @param {string | undefined} filename path being linted
+ * @returns {boolean} true for a palette module, where color literals are the deliverable
  */
-export function isPaletteModule(filename) {
-  if (!filename) {return false;}
+export const isPaletteModule = (filename) => {
+  if (filename === undefined || filename === '') {
+    return false;
+  }
   const normalized = filename.replaceAll('\\', '/');
   return PALETTE_FILE.test(normalized);
-}
+};
 
 /**
- * @param {unknown} value
+ * @param {NodeValue} value a literal value
  * @returns {string | undefined} the matched literal, if any
  */
-export function matchColorLiteral(value) {
-  if (typeof value !== 'string') {return undefined;}
-  const match = value.match(COLOR_LITERAL);
-  return match?.[0];
-}
+export const matchColorLiteral = (value) => (isString(value) ? COLOR_LITERAL.exec(value)?.[0] : undefined);
 
-/** @type {import("eslint").ESLint.Plugin} */
+/**
+ * @param {AstNode} attr a JSX attribute
+ * @returns {boolean} true for a non-zero numeric geometry prop outside a size-recipe escape
+ */
+const isRawGeometry = (attr) => {
+  if (!GEOMETRY_PROP_SET.has(jsxAttrName(attr))) {
+    return false;
+  }
+  if (isSizeRecipeEscape(attr.value)) {
+    return false;
+  }
+  return isNumericLiteral(attr.value) && !isZeroReset(attr.value);
+};
+
+/**
+ * @typedef {object} RuleModule
+ * @property {object} meta rule metadata
+ * @property {(context: RuleContext) => Visitors} create builds the visitors for one file
+ */
+
+/**
+ * @typedef {object} RulePlugin
+ * @property {{ name: string }} meta plugin metadata
+ * @property {Record<string, RuleModule>} rules the rules, by name
+ */
+
+/** @type {RulePlugin} */
 export const plugin = {
   meta: {
     name: 'mpo-conventions',
@@ -440,34 +601,39 @@ export const plugin = {
         },
       },
       create(context) {
-        const filename = context.filename ?? context.getFilename?.() ?? '';
-        if (isPaletteModule(filename)) {
+        if (isPaletteModule(filenameOf(context))) {
           return {};
         }
         if (findHexEscapes(sourceText(context)).some((site) => site.reason)) {
           return {};
         }
 
-        function reportIfColor(node, value) {
+        /**
+         * @param {AstNode} node the node holding the value
+         * @param {NodeValue} value the value to test
+         */
+        const reportIfColor = (node, value) => {
           const matched = matchColorLiteral(value);
-          if (!matched) {return;}
-          context.report({
-            node,
-            messageId: 'hex',
-            data: { value: matched },
-          });
-        }
-
-        return {
-          Literal(node) {
-            if (typeof node.value === 'string') {
-              reportIfColor(node, node.value);
-            }
-          },
-          TemplateElement(node) {
-            reportIfColor(node, node.value?.cooked ?? '');
-          },
+          if (matched !== undefined && matched !== '') {
+            context.report({
+              node,
+              messageId: 'hex',
+              data: { value: matched },
+            });
+          }
         };
+
+        /** @type {(node: AstNode) => void} */
+        const onLiteral = (node) => {
+          if (isString(node.value)) {
+            reportIfColor(node, node.value);
+          }
+        };
+        /** @type {(node: AstNode) => void} */
+        const onTemplateElement = (node) => {
+          reportIfColor(node, isNode(node.value) ? (node.value.cooked ?? '') : '');
+        };
+        return { Literal: onLiteral, TemplateElement: onTemplateElement };
       },
     },
     'no-raw-typography': {
@@ -484,22 +650,23 @@ export const plugin = {
         },
       },
       create(context) {
-        return {
-          ImportDeclaration(node) {
-            if (node.source?.value !== '@repo/ui') {return;}
-            for (const specifier of node.specifiers ?? []) {
-              if (specifier.type !== 'ImportSpecifier') {continue;}
-              const imported = specifier.imported?.name ?? specifier.imported?.value;
-              if (typeof imported === 'string' && RAW_TYPOGRAPHY_HATCH.test(imported)) {
-                context.report({
-                  node: specifier,
-                  messageId: 'rawTypography',
-                  data: { name: imported },
-                });
-              }
+        /** @type {(node: AstNode) => void} */
+        const onImportDeclaration = (node) => {
+          if (node.source?.value !== '@repo/ui') {
+            return;
+          }
+          for (const specifier of node.specifiers ?? []) {
+            const imported = specifier.imported?.name ?? specifier.imported?.value;
+            if (specifier.type === 'ImportSpecifier' && isString(imported) && RAW_TYPOGRAPHY_HATCH.test(imported)) {
+              context.report({
+                node: specifier,
+                messageId: 'rawTypography',
+                data: { name: imported },
+              });
             }
-          },
+          }
         };
+        return { ImportDeclaration: onImportDeclaration };
       },
     },
     'no-chrome-props': {
@@ -517,15 +684,18 @@ export const plugin = {
       },
       create(context) {
         const { visitors } = houseJsxVisitors(context, ({ node, name, chromeAllow }) => {
-          if (elementAllowKeys(name).some((key) => chromeAllow.has(key))) {return;}
+          if (elementAllowKeys(name).some((key) => chromeAllow.has(key))) {
+            return;
+          }
           for (const attr of node.attributes ?? []) {
             const prop = jsxAttrName(attr);
-            if (!CHROME_PROP_SET.has(prop)) {continue;}
-            context.report({
-              node: attr,
-              messageId: 'chrome',
-              data: { prop, name },
-            });
+            if (CHROME_PROP_SET.has(prop)) {
+              context.report({
+                node: attr,
+                messageId: 'chrome',
+                data: { prop, name },
+              });
+            }
           }
         });
         return visitors;
@@ -546,18 +716,17 @@ export const plugin = {
       },
       create(context) {
         const { visitors } = houseJsxVisitors(context, ({ node, name, filename, drawings }) => {
-          if (isDrawingFile(filename, drawings)) {return;}
+          if (isDrawingFile(filename, drawings)) {
+            return;
+          }
           for (const attr of node.attributes ?? []) {
-            const prop = jsxAttrName(attr);
-            if (!GEOMETRY_PROP_SET.has(prop)) {continue;}
-            if (isSizeRecipeEscape(attr.value)) {continue;}
-            if (!isNumericLiteral(attr.value)) {continue;}
-            if (isZeroReset(attr.value)) {continue;}
-            context.report({
-              node: attr,
-              messageId: 'geometry',
-              data: { prop, name },
-            });
+            if (isRawGeometry(attr)) {
+              context.report({
+                node: attr,
+                messageId: 'geometry',
+                data: { prop: jsxAttrName(attr), name },
+              });
+            }
           }
         });
         return visitors;
@@ -585,26 +754,32 @@ export const plugin = {
         const exit = () => {
           depth -= 1;
         };
-        return {
-          JSXElement: enter,
-          'JSXElement:exit': exit,
-          JSXFragment: enter,
-          'JSXFragment:exit': exit,
-          JSXOpeningElement(node) {
-            if (depth < 2) {return;}
-            const name = jsxName(node.name);
-            if (elementAllowKeys(name).some((key) => slotMargins.has(key))) {return;}
-            for (const attr of node.attributes ?? []) {
-              const prop = jsxAttrName(attr);
-              if (!MARGIN_PROP_SET.has(prop)) {continue;}
-              if (isZeroReset(attr.value)) {continue;}
+        /** @type {(node: AstNode) => void} */
+        const onJsxOpeningElement = (node) => {
+          if (depth < 2) {
+            return;
+          }
+          const name = jsxName(node.name);
+          if (elementAllowKeys(name).some((key) => slotMargins.has(key))) {
+            return;
+          }
+          for (const attr of node.attributes ?? []) {
+            const prop = jsxAttrName(attr);
+            if (MARGIN_PROP_SET.has(prop) && !isZeroReset(attr.value)) {
               context.report({
                 node: attr,
                 messageId: 'childMargin',
                 data: { prop, name: name || 'element' },
               });
             }
-          },
+          }
+        };
+        return {
+          JSXElement: enter,
+          'JSXElement:exit': exit,
+          JSXFragment: enter,
+          'JSXFragment:exit': exit,
+          JSXOpeningElement: onJsxOpeningElement,
         };
       },
     },
@@ -622,13 +797,12 @@ export const plugin = {
         },
       },
       create(context) {
-        return {
-          TSParameterProperty(node) {
-            const parameter = node.parameter ?? {};
-            const name = parameter.name ?? parameter.left?.name ?? 'parameter';
-            context.report({ node, messageId: 'parameterProperty', data: { name } });
-          },
+        /** @type {(node: AstNode) => void} */
+        const onParameterProperty = (node) => {
+          const name = nameOf(node.parameter) || nameOf(node.parameter?.left) || 'parameter';
+          context.report({ node, messageId: 'parameterProperty', data: { name } });
         };
+        return { TSParameterProperty: onParameterProperty };
       },
     },
   },

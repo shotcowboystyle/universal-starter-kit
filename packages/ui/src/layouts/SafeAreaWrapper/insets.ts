@@ -15,11 +15,11 @@ const ALL_EDGES: SafeAreaEdge[] = ['top', 'bottom', 'left', 'right'];
  * start/end) — notches and home indicators sit on the device, not the
  * reading direction.
  */
-export function applySafeAreaInsets(
+export const applySafeAreaInsets = (
   insets: SafeAreaInsets,
   edges: SafeAreaEdge[] = ALL_EDGES,
   mode: SafeAreaMode = 'padding',
-): Record<string, number> {
+) => {
   const edgesSet = new Set(edges);
   if (mode === 'padding') {
     return {
@@ -35,4 +35,4 @@ export function applySafeAreaInsets(
     marginLeft: edgesSet.has('left') ? insets.left : 0,
     marginRight: edgesSet.has('right') ? insets.right : 0,
   };
-}
+};

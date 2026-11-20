@@ -4,93 +4,147 @@ import { act, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
 import { ImageField } from './index';
 
-afterEach(cleanup);
+type ImageValue = string | File | null;
 
-function mediaTile(container: HTMLElement) {
-  return container.querySelector('[data-media-tile]') as HTMLElement | null;
-}
+const tableCellValue = { inTableCell: true, isHeader: false, editable: true };
 
-function radiusClasses(el: HTMLElement | null) {
-  return String(el?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
-}
+const mediaTile = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-media-tile]');
 
-describe('ImageField', () => {
+const radiusClasses = (el: HTMLElement | null) =>
+  (el?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
+
+describe(ImageField, () => {
+  afterEach(cleanup);
+
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<ImageField label="Avatar" name="avatar" />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Avatar"
+          name="avatar"
+        />,
+      );
       expect(result.findTextElement('Avatar')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<ImageField label="Required" name="req" required />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Required"
+          name="req"
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      const result = renderWithProviders(<ImageField label="Image" name="img" helperText="Upload an image" />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Image"
+          name="img"
+          helperText="Upload an image"
+        />,
+      );
       expect(result.findTextElement('Upload an image')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<ImageField label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector("input[type='file']")).toBeNull();
     });
 
     it('renders file input for upload', () => {
-      const result = renderWithProviders(<ImageField label="Upload" name="u" />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Upload"
+          name="u"
+        />,
+      );
       const input = result.container.querySelector("input[type='file']");
       expect(input).toBeTruthy();
     });
 
     it('renders with placeholder text', () => {
-      const result = renderWithProviders(<ImageField label="Image" name="img" placeholder="Click to upload" />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Image"
+          name="img"
+          placeholder="Click to upload"
+        />,
+      );
       expect(result.findTextElement('Click to upload')).toBeDefined();
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<ImageField label="Disabled" name="d" disabled />);
+      const result = renderWithProviders(
+        <ImageField
+          label="Disabled"
+          name="d"
+          disabled
+        />,
+      );
       expect(result.findTextElement('Disabled')).toBeDefined();
     });
 
     it('associates the label with the attach frame and is keyboard reachable', () => {
-      const result = renderWithProviders(<ImageField label="Avatar" name="avatar" />);
-      const label = result.container.querySelector('label[for]') as HTMLLabelElement | null;
+      const result = renderWithProviders(
+        <ImageField
+          label="Avatar"
+          name="avatar"
+        />,
+      );
+      const label = result.container.querySelector('label[for]');
       expect(label?.textContent).toContain('Avatar');
-      const forId = label?.getAttribute('for') as string;
-      const frame = result.container.querySelector(`[id="${forId}"]`) as HTMLElement | null;
+      const forId = label!.getAttribute('for')!;
+      const frame = result.container.querySelector(`[id="${forId}"]`);
       expect(frame?.getAttribute('role')).toBe('button');
       expect(frame?.getAttribute('tabindex')).toBe('0');
     });
 
     it('does not put the hidden file input in the tab order', () => {
-      const result = renderWithProviders(<ImageField label="Avatar" name="avatar" />);
-      const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
+      const result = renderWithProviders(
+        <ImageField
+          label="Avatar"
+          name="avatar"
+        />,
+      );
+      const input = result.container.querySelector("input[type='file']");
       expect(input?.getAttribute('tabindex')).toBe('-1');
       expect(input?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('opens the file dialog from Enter on the frame', async () => {
       const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(() => {});
-      const result = renderWithProviders(<ImageField label="Avatar" name="avatar" />);
-      const frame = result.container.querySelector('[role="button"]') as HTMLElement | null;
+      const result = renderWithProviders(
+        <ImageField
+          label="Avatar"
+          name="avatar"
+        />,
+      );
+      const frame = result.container.querySelector('[role="button"]');
       expect(frame).toBeTruthy();
       await act(async () => {
         if (frame) {
           fireEvent.keyDown(frame, { key: 'Enter' });
         }
       });
-      expect(click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalledWith();
       click.mockRestore();
     });
 
-    it('shows a labelled fallback when the attached image fails to load', async () => {
+    it('shows a labeled fallback when the attached image fails to load', async () => {
       const result = renderWithProviders(
         <ImageField
           label="Photo"
@@ -100,7 +154,7 @@ describe('ImageField', () => {
           imageHeight={96}
         />,
       );
-      const img = result.container.querySelector('img') as HTMLImageElement | null;
+      const img = result.container.querySelector('img');
       expect(img).toBeTruthy();
       await act(async () => {
         if (img) {
@@ -112,7 +166,7 @@ describe('ImageField', () => {
     });
 
     it('clears the value from the Remove action', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ImageValue) => void>();
       const result = renderWithProviders(
         <ImageField
           label="Photo"
@@ -134,13 +188,19 @@ describe('ImageField', () => {
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once when an image is chosen', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: ImageValue) => void>();
+      const onValueChange = vi.fn<(value: ImageValue) => void>();
       const result = renderWithProviders(
-        <ImageField label="Avatar" name="avatar" onChange={onChange} onValueChange={onValueChange} />,
+        <ImageField
+          label="Avatar"
+          name="avatar"
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- exercises the deprecated alias
+          onValueChange={onValueChange}
+        />,
       );
 
-      const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
+      const input = result.container.querySelector("input[type='file']");
       expect(input).toBeTruthy();
       const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
       await act(async () => {
@@ -150,18 +210,21 @@ describe('ImageField', () => {
       });
 
       // Exactly once each — guards against the standalone double-fire bug.
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith(file);
-      expect(onValueChange).toHaveBeenCalledTimes(1);
-      expect(onValueChange).toHaveBeenCalledWith(file);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(file);
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith(file);
     });
   });
 
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { avatar: null } }} submitText="Submit">
-          <ImageField name="avatar" label="Avatar" />
+        <Form
+          formOptions={{ defaultValues: { avatar: null } }}
+          submitText="Submit">
+          <ImageField
+            name="avatar"
+            label="Avatar"
+          />
         </Form>,
       );
       expect(result.findTextElement('Avatar')).toBeDefined();
@@ -171,7 +234,13 @@ describe('ImageField', () => {
   describe('live-media tiles', () => {
     it('does not paint a status pip on the media tile', () => {
       const result = renderWithProviders(
-        <ImageField label="Photo" name="photo" value="https://example.com/a.png" imageWidth={96} imageHeight={96} />,
+        <ImageField
+          label="Photo"
+          name="photo"
+          value="https://example.com/a.png"
+          imageWidth={96}
+          imageHeight={96}
+        />,
       );
       const tile = mediaTile(result.container);
       expect(tile).not.toBeNull();
@@ -180,35 +249,53 @@ describe('ImageField', () => {
 
     it('keeps Remove as chrome outside the media tile', () => {
       const result = renderWithProviders(
-        <ImageField label="Photo" name="photo" value="https://example.com/a.png" imageWidth={96} imageHeight={96} />,
+        <ImageField
+          label="Photo"
+          name="photo"
+          value="https://example.com/a.png"
+          imageWidth={96}
+          imageHeight={96}
+        />,
       );
       const tile = mediaTile(result.container);
       expect(tile).not.toBeNull();
-      expect(tile?.textContent ?? '').not.toMatch(/Remove/);
+      expect(tile?.textContent ?? '').not.toMatch(/Remove/u);
       expect(result.findTextElement('Remove')).toBeDefined();
     });
 
     it('rides the unclamped radius knob including full', () => {
       const none = renderWithProviders(
         <Preset overrides={{ borderRadius: 'none' }}>
-          <ImageField label="Photo" name="photo" />
+          <ImageField
+            label="Photo"
+            name="photo"
+          />
         </Preset>,
       );
-      expect(radiusClasses(mediaTile(none.container))).toEqual(['_btlr-t-radius-0']);
+      expect(radiusClasses(mediaTile(none.container))).toStrictEqual(['_btlr-t-radius-0']);
       cleanup();
 
       const full = renderWithProviders(
         <Preset overrides={{ borderRadius: 'full' }}>
-          <ImageField label="Photo" name="photo" />
+          <ImageField
+            label="Photo"
+            name="photo"
+          />
         </Preset>,
       );
-      expect(radiusClasses(mediaTile(full.container))).toEqual(['_btlr-t-radius-12']);
+      expect(radiusClasses(mediaTile(full.container))).toStrictEqual(['_btlr-t-radius-12']);
     });
 
     it('does not grow a table cell with a Remove sibling', () => {
       const result = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
-          <ImageField label="Photo" name="photo" value="https://example.com/a.png" imageWidth={48} imageHeight={48} />
+        <TableCellContext.Provider value={tableCellValue}>
+          <ImageField
+            label="Photo"
+            name="photo"
+            value="https://example.com/a.png"
+            imageWidth={48}
+            imageHeight={48}
+          />
         </TableCellContext.Provider>,
       );
       expect(mediaTile(result.container)).not.toBeNull();

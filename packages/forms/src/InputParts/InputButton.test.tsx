@@ -9,15 +9,17 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button size="$4" aria-label="cap">
+          <Input.Button
+            size="$4"
+            aria-label="Cap">
             x
           </Input.Button>
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='cap']") as HTMLElement;
+    const btn = result.getByLabelText('Cap');
     expect(btn).not.toBeNull();
-    expect(btn.className).not.toMatch(/mp-chip-dismiss/);
+    expect(btn.className).not.toMatch(/mp-chip-dismiss/u);
     expect(btn.querySelector('.mp-chip-dismiss-ring')).toBeNull();
   });
 
@@ -25,18 +27,21 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button glyphRing size="$4" aria-label="Show password">
+          <Input.Button
+            glyphRing
+            size="$4"
+            aria-label="Show password">
             x
           </Input.Button>
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='Show password']") as HTMLElement;
+    const btn = result.getByLabelText('Show password');
     expect(btn).not.toBeNull();
     expect(btn.getAttribute('tabindex')).toBe('0');
-    expect(btn.className).toMatch(/mp-chip-dismiss/);
-    expect(btn.className).not.toMatch(/mp-chip-dismiss-ring/);
-    const ring = btn.querySelector('.mp-chip-dismiss-ring') as HTMLElement;
+    expect(btn.className).toMatch(/mp-chip-dismiss/u);
+    expect(btn.className).not.toMatch(/mp-chip-dismiss-ring/u);
+    const ring = btn.querySelector<HTMLElement>('.mp-chip-dismiss-ring');
     expect(ring).not.toBeNull();
     expect(btn.contains(ring)).toBe(true);
   });
@@ -45,13 +50,15 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button size="$4" aria-label="cap">
+          <Input.Button
+            size="$4"
+            aria-label="Cap">
             Scan
           </Input.Button>
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='cap']") as HTMLElement;
+    const btn = result.getByLabelText('Cap');
     expect(btn).not.toBeNull();
     expect(btn.textContent).toContain('Scan');
     expect(result.container.querySelector('scan')).toBeNull();
@@ -62,18 +69,21 @@ describe('Input.Button', () => {
       if (token === '$true') {
         continue;
       }
-      const height = sizeRecipeForToken(token).height;
+      const { height } = sizeRecipeForToken(token);
       const result = renderWithProviders(
         <Input size={token}>
           <Input.Box size={token}>
-            <Input.Button glyphRing size={token} aria-label={`reveal-${token}`}>
+            <Input.Button
+              glyphRing
+              size={token}
+              aria-label={`reveal-${token}`}>
               x
             </Input.Button>
           </Input.Box>
         </Input>,
       );
-      const btn = result.container.querySelector(`[aria-label='reveal-${token}']`) as HTMLElement;
-      expect(btn.getAttribute('data-end-cap'), token).toBe(String(height));
+      const btn = result.getByLabelText(`reveal-${token}`);
+      expect(btn.dataset.endCap, token).toBe(String(height));
     }
   });
 });

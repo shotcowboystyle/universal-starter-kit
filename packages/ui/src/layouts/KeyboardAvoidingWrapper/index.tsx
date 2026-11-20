@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import type { KeyboardAvoidingBehavior } from './behavior';
 
@@ -31,21 +32,19 @@ export interface KeyboardAvoidingWrapperProps extends YStackProps {
  * software keyboard; `behavior` / offset / enabled are accepted for API
  * parity and ignored. Consumer `{...stackProps}` last.
  */
-export function KeyboardAvoidingWrapper({
+export const KeyboardAvoidingWrapper = ({
   children,
   behavior: _behavior,
   keyboardVerticalOffset: _offset,
   enabled = true,
   ...stackProps
-}: PropsWithChildren<KeyboardAvoidingWrapperProps>) {
-  return (
-    <YStack
-      data-testid="keyboard-avoiding-wrapper"
-      data-keyboard-avoiding="web"
-      data-enabled={String(enabled)}
-      flex={1}
-      {...stackProps}>
-      {children}
-    </YStack>
-  );
-}
+}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => (
+  <YStack
+    data-testid="keyboard-avoiding-wrapper"
+    data-keyboard-avoiding="web"
+    data-enabled={String(enabled)}
+    flex={1}
+    {...stackProps}>
+    {children}
+  </YStack>
+);

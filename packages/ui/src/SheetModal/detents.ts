@@ -29,7 +29,7 @@ export interface ResolveSheetDetentsOptions {
  * The heights the sheet is allowed to rest at, largest first.
  *
  * `snapPoint` is a percent on the web Sheet (`snapPoints={[snapPoint]}`).
- * Native honours the same prop by turning that percent into a detent, so a
+ * Native honors the same prop by turning that percent into a detent, so a
  * caller that writes `snapPoint={85}` gets an 85%-height rest on both twins
  * rather than the prop being silently dropped on device.
  *
@@ -38,14 +38,14 @@ export interface ResolveSheetDetentsOptions {
  * full height is already under the floor keeps its own height, otherwise it
  * would have no detents at all.
  */
-export function resolveSheetDetents({ travel, scrollable, snapPoint }: ResolveSheetDetentsOptions): number[] {
+export const resolveSheetDetents = ({ travel, scrollable, snapPoint }: ResolveSheetDetentsOptions): number[] => {
   const points = [travel];
   if (scrollable) {
     points.push(Math.round(travel * mediumDetent));
   }
-  if (typeof snapPoint === 'number' && Number.isFinite(snapPoint) && snapPoint > 0) {
+  if (snapPoint !== undefined && Number.isFinite(snapPoint) && snapPoint > 0) {
     points.push(Math.round(travel * (Math.min(snapPoint, 100) / 100)));
   }
   const floor = Math.min(minSheetHeight, travel);
-  return Array.from(new Set(points.filter((h) => h >= floor))).sort((a, b) => b - a);
-}
+  return [...new Set(points.filter((h) => h >= floor))].toSorted((a, b) => b - a);
+};

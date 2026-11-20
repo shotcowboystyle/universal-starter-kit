@@ -46,7 +46,10 @@ export const Default: Story = {
   name: 'Main',
   render: (args) => (
     <Screen {...args}>
-      <PageHeader title="Screen" subtitle="Outer page shell with knob padding" />
+      <PageHeader
+        title="Screen"
+        subtitle="Outer page shell with knob padding"
+      />
       <PageSection title="Region one">
         <Paragraph>First page region.</Paragraph>
       </PageSection>
@@ -64,7 +67,10 @@ export const Empty: Story = {
 export const LongContent: Story = {
   render: (args) => (
     <Screen {...args}>
-      <PageHeader title="Long content" subtitle="Forces internal scrolling" />
+      <PageHeader
+        title="Long content"
+        subtitle="Forces internal scrolling"
+      />
       {Array.from({ length: 40 }).map((_, i) => (
         <Paragraph key={i}>
           Paragraph {i + 1} — enough repeated content to overflow the viewport and exercise the internal ScrollView
@@ -79,7 +85,10 @@ export const NoScroll: Story = {
   args: { scroll: false },
   render: (args) => (
     <Screen {...args}>
-      <PageHeader title="No scroll" subtitle="scroll=false renders a plain YStack" />
+      <PageHeader
+        title="No scroll"
+        subtitle="scroll=false renders a plain YStack"
+      />
       <Paragraph>Static content.</Paragraph>
     </Screen>
   ),
@@ -101,9 +110,17 @@ export const NestedScreens: Story = {
   render: (args) => (
     <Screen {...args}>
       <PageHeader title="Outer screen" />
-      <YStack borderWidth={1} borderColor="$color6" borderStyle="dashed">
-        <Screen {...args} scroll={false}>
-          <PageHeader title="Inner screen" divider={false} />
+      <YStack
+        borderWidth={1}
+        borderColor="$color6"
+        borderStyle="dashed">
+        <Screen
+          {...args}
+          scroll={false}>
+          <PageHeader
+            title="Inner screen"
+            divider={false}
+          />
           <Paragraph>Nested screen content — check for double padding.</Paragraph>
         </Screen>
       </YStack>
@@ -113,10 +130,12 @@ export const NestedScreens: Story = {
 
 const PROJECTS = ['Alpha', 'Beta', 'Gamma', 'Delta'] as const;
 
-function SheetOverKeyboardHarness(args: Story['args']) {
+const SheetOverKeyboardHarness = (args: Story['args']) => {
   const [open, setOpen] = useState(false);
   const [picks, setPicks] = useState<string[]>([]);
-  const readout = `Picks: ${picks.length}${picks.length ? `, last ${picks[picks.length - 1]}` : ''}`;
+  const lastPick = picks.at(-1);
+  const lastSuffix = lastPick === undefined ? '' : `, last ${lastPick}`;
+  const readout = `Picks: ${picks.length}${lastSuffix}`;
   return (
     <Screen {...args}>
       <PageHeader
@@ -124,7 +143,10 @@ function SheetOverKeyboardHarness(args: Story['args']) {
         subtitle="The Screen scrolls at its defaults and the sheet opens over it"
       />
       <Paragraph testID="screen-plain-text">With a field focused, a tap on this text dismisses the keyboard.</Paragraph>
-      <Input label="Screen field" placeholder="Focus to raise the keyboard" />
+      <Input
+        label="Screen field"
+        placeholder="Focus to raise the keyboard"
+      />
       <Button
         onPress={() => {
           setOpen(true);
@@ -137,7 +159,10 @@ function SheetOverKeyboardHarness(args: Story['args']) {
         onOpenChange={setOpen}
         header={<SizableText fontWeight="600">Pick a project</SizableText>}>
         <YStack gap="$2">
-          <Input label="Search" placeholder="Focus to raise the keyboard" />
+          <Input
+            label="Search"
+            placeholder="Focus to raise the keyboard"
+          />
           <Paragraph testID="sheet-picks">{readout}</Paragraph>
           {PROJECTS.map((name) => (
             <Button
@@ -152,7 +177,7 @@ function SheetOverKeyboardHarness(args: Story['args']) {
       </SheetModal>
     </Screen>
   );
-}
+};
 
 export const SheetOverKeyboard: Story = {
   name: 'Sheet over the keyboard',

@@ -10,7 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { UserNav } from './UserNav';
 
-export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
+const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const t = useTranslations('sidebar');
   return (
     <XStack
@@ -19,7 +19,9 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => vo
       gap="$2"
       padding="$2"
       $md={{ gap: '$4', minHeight: 64, paddingHorizontal: '$4' }}>
-      <XStack alignItems="center" gap="$2">
+      <XStack
+        alignItems="center"
+        gap="$2">
         <Button
           chromeless
           size="$3"
@@ -28,18 +30,27 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => vo
           testID="sidebar-trigger"
           onPress={onToggleSidebar}
         />
-        <Separator vertical height={16} />
+        <Separator
+          vertical
+          height={16}
+        />
       </XStack>
 
-      <XStack flex={1} minWidth={0}>
+      <XStack
+        flex={1}
+        minWidth={0}>
         <Breadcrumbs />
       </XStack>
 
-      <XStack alignItems="center" gap="$2">
+      <XStack
+        alignItems="center"
+        gap="$2">
         <UserNav />
         <ThemeToggle />
         <LanguageSwitcher />
       </XStack>
     </XStack>
   );
-}
+};
+
+export default Header;

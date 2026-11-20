@@ -21,17 +21,13 @@
  * restyles the page; pass `compact` to declare Surface intent for the subtree.
  */
 
-import {
-  defaultMaxPanes,
-  layoutBreakpoints,
-  useLayoutSizeClass,
-  useSemanticGaps,
-  type LayoutSizeClass,
-} from '@repo/theme';
+import { defaultMaxPanes, layoutBreakpoints, useLayoutSizeClass, useSemanticGaps } from '@repo/theme';
+import type { LayoutSizeClass } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { YStack } from 'tamagui';
 
-import { PageHeader, Screen, ScreenToolbar, type ScreenProps } from './Page';
+import { PageHeader, Screen, ScreenToolbar } from './Page';
+import type { ScreenProps } from './Page';
 import { SupportingPaneLayout } from './PaneScaffold';
 
 // ── Shared header slot ─────────────────────────────────────────────────────
@@ -46,15 +42,28 @@ interface TemplateHeaderProps {
   header?: ReactNode;
 }
 
-function renderTemplateHeader({ title, subtitle, actions, nav, header }: TemplateHeaderProps) {
+/** Non-empty check for optional text props. */
+const hasText = (text: string | undefined): boolean => text !== undefined && text !== '';
+
+// oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise but this is a sync render helper; `async` would break rendering
+const renderTemplateHeader = ({ title, subtitle, actions, nav, header }: TemplateHeaderProps) => {
   if (header !== undefined) {
     return header;
   }
-  if (!title && !subtitle && !actions && !nav) {
+  const hasActions = Boolean(actions);
+  const hasNav = Boolean(nav);
+  if (!hasText(title) && !hasText(subtitle) && !hasActions && !hasNav) {
     return null;
   }
-  return <PageHeader title={title} subtitle={subtitle} actions={actions} nav={nav} />;
-}
+  return (
+    <PageHeader
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+      nav={nav}
+    />
+  );
+};
 
 // ── ListPageLayout ─────────────────────────────────────────────────────────
 
@@ -70,10 +79,10 @@ export interface ListPageLayoutProps extends ScreenProps, TemplateHeaderProps {
  *
  * @example
  * <ListPageLayout title="Pokemon" actions={<ViewSwitcher … />}>
- *   <FrappeListView doctype="Pokemon" flex={1} />
+ *   <PokemonList flex={1} />
  * </ListPageLayout>
  */
-export function ListPageLayout({
+export const ListPageLayout = ({
   title,
   subtitle,
   actions,
@@ -82,17 +91,20 @@ export function ListPageLayout({
   toolbar,
   children,
   ...rest
-}: ListPageLayoutProps) {
-  return (
-    <Screen data-canonical="list-page" {...rest}>
-      {renderTemplateHeader({ title, subtitle, actions, header, nav })}
-      {toolbar}
-      <YStack flex={1} minWidth={0} data-testid="list-page-content">
-        {children}
-      </YStack>
-    </Screen>
-  );
-}
+}: ListPageLayoutProps) => (
+  <Screen
+    data-canonical="list-page"
+    {...rest}>
+    {renderTemplateHeader({ title, subtitle, actions, header, nav })}
+    {toolbar}
+    <YStack
+      flex={1}
+      minWidth={0}
+      data-testid="list-page-content">
+      {children}
+    </YStack>
+  </Screen>
+);
 
 // ── DetailPageLayout ───────────────────────────────────────────────────────
 
@@ -123,10 +135,10 @@ export interface DetailPageLayoutProps extends ScreenProps, TemplateHeaderProps 
  *   toolbarTrailing={<Button theme="accent">Edit</Button>}
  *   aside={<Timeline … />}
  * >
- *   <FrappeForm doctype="Pokemon" name={id} />
+ *   <PokemonForm id={id} />
  * </DetailPageLayout>
  */
-export function DetailPageLayout({
+export const DetailPageLayout = ({
   title,
   subtitle,
   actions,
@@ -138,28 +150,37 @@ export function DetailPageLayout({
   sizeClass: sizeClassProp,
   children,
   ...rest
-}: DetailPageLayoutProps) {
+}: DetailPageLayoutProps) => {
   const liveClass = useLayoutSizeClass();
   const sizeClass = sizeClassProp ?? liveClass;
   const multi = defaultMaxPanes(sizeClass) >= 2;
   const gaps = useSemanticGaps();
 
-  const toolbar =
-    toolbarLeading || toolbarTrailing ? <ScreenToolbar leading={toolbarLeading} trailing={toolbarTrailing} /> : null;
+  const hasToolbar = Boolean(toolbarLeading) || Boolean(toolbarTrailing);
+  const toolbar = hasToolbar ? (
+    <ScreenToolbar
+      leading={toolbarLeading}
+      trailing={toolbarTrailing}
+    />
+  ) : null;
 
   let body: ReactNode;
   if (aside === null || aside === undefined) {
     body = children;
   } else if (multi) {
     body = (
-      <SupportingPaneLayout sizeClass={sizeClass} supporting={aside}>
+      <SupportingPaneLayout
+        sizeClass={sizeClass}
+        supporting={aside}>
         {children}
       </SupportingPaneLayout>
     );
   } else {
     // Supporting content stays reachable on small viewports (stacked, not hidden).
     body = (
-      <YStack {...gaps.betweenGroups} data-testid="detail-page-stack">
+      <YStack
+        {...gaps.betweenGroups}
+        data-testid="detail-page-stack">
         {children}
         {aside}
       </YStack>
@@ -167,13 +188,15 @@ export function DetailPageLayout({
   }
 
   return (
-    <Screen data-canonical="detail-page" {...rest}>
+    <Screen
+      data-canonical="detail-page"
+      {...rest}>
       {toolbar}
       {renderTemplateHeader({ title, subtitle, actions, header, nav })}
       {body}
     </Screen>
   );
-}
+};
 
 // ── SettingsPageLayout ─────────────────────────────────────────────────────
 
@@ -194,7 +217,7 @@ export interface SettingsPageLayoutProps extends ScreenProps, TemplateHeaderProp
  *   <PageSection title="Notifications">…fields…</PageSection>
  * </SettingsPageLayout>
  */
-export function SettingsPageLayout({
+export const SettingsPageLayout = ({
   title,
   subtitle,
   actions,
@@ -203,11 +226,12 @@ export function SettingsPageLayout({
   maxWidth = layoutBreakpoints.expanded,
   children,
   ...rest
-}: SettingsPageLayoutProps) {
-  return (
-    <Screen data-canonical="settings-page" maxWidth={maxWidth} {...rest}>
-      {renderTemplateHeader({ title, subtitle, actions, header, nav })}
-      {children}
-    </Screen>
-  );
-}
+}: SettingsPageLayoutProps) => (
+  <Screen
+    data-canonical="settings-page"
+    maxWidth={maxWidth}
+    {...rest}>
+    {renderTemplateHeader({ title, subtitle, actions, header, nav })}
+    {children}
+  </Screen>
+);

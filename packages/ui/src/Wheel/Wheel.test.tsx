@@ -5,11 +5,40 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Wheel } from './index';
 
-afterEach(cleanup);
+const rowTransform = (index: number): string => {
+  const row = screen
+    .getByTestId('wheel')
+    .querySelector<HTMLElement>(`[data-testid="wheel-item"][data-index="${index}"]`);
+  return row?.style.transform ?? '(virtualized out)';
+};
+
+const useFrameClock = () => {
+  vi.useFakeTimers({
+    toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
+  });
+};
+
+const flick = (wrapper: HTMLElement) => {
+  fireEvent.pointerDown(wrapper, { clientY: 300, pointerId: 1 });
+  act(() => {
+    vi.advanceTimersByTime(16);
+  });
+  fireEvent.pointerMove(wrapper, { clientY: 80, pointerId: 1 });
+  fireEvent.pointerUp(wrapper, { clientY: 80, pointerId: 1 });
+};
 
 describe('Wheel contrast contract', () => {
+  afterEach(cleanup);
+
   it('keeps inactive item text on the AA $color11 ramp (not opacity-dimmed)', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const selected = screen.getByTestId('wheel').querySelector('[data-selected="true"]');
     expect(selected).toBeTruthy();
     // Selected / inactive use token classes — opacity on the row must stay 1 so
@@ -21,9 +50,16 @@ describe('Wheel contrast contract', () => {
   });
 
   it('marks disabled wheels for a11y probes without crushing contrast via container opacity', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} disabled visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        disabled
+        visibleItems={5}
+      />,
+    );
     const wheel = screen.getByTestId('wheel');
-    expect(wheel.getAttribute('data-disabled')).toBe('true');
+    expect(wheel.dataset.disabled).toBe('true');
     expect(wheel.getAttribute('aria-disabled')).toBe('true');
     expect(getComputedStyle(wheel).opacity).toBe('1');
   });
@@ -39,33 +75,23 @@ describe('Wheel contrast contract', () => {
 describe('Wheel snaps ride the animation knob', () => {
   const items = [10, 20, 30, 40, 50];
 
-  function rowTransform(index: number): string {
-    const row = screen
-      .getByTestId('wheel')
-      .querySelector(`[data-testid="wheel-item"][data-index="${index}"]`) as HTMLElement | null;
-    return row?.style.transform ?? '(virtualized out)';
-  }
-
-  function wheelSnapshot(): string {
-    return items.map((_, index) => rowTransform(index)).join(' | ');
-  }
+  const wheelSnapshot = (): string => items.map((_, index) => rowTransform(index)).join(' | ');
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
-  function useFrameClock() {
-    vi.useFakeTimers({
-      toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
-    });
-  }
-
   it('jumps instantly on keyboard snap at animation none — settled within one frame', () => {
     useFrameClock();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Wheel items={items} onChange={onChange} visibleItems={5} />
+        <Wheel
+          items={items}
+          onChange={onChange}
+          visibleItems={5}
+        />
       </Preset>,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
@@ -73,8 +99,7 @@ describe('Wheel snaps ride the animation knob', () => {
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
 
     // Snap completed synchronously: selection committed, no tween scheduled.
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(20);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
 
     // Positions are already settled — 500ms of frames changes nothing.
@@ -83,15 +108,19 @@ describe('Wheel snaps ride the animation knob', () => {
       vi.advanceTimersByTime(500);
     });
     expect(wheelSnapshot()).toBe(settled);
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
   });
 
   it('tweens the same snap with motion on (positive control)', () => {
     useFrameClock();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       // Default knobs: animation "quick" — knobProps.transition is defined.
-      <Wheel items={items} onChange={onChange} visibleItems={5} />,
+      <Wheel
+        items={items}
+        onChange={onChange}
+        visibleItems={5}
+      />,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
 
@@ -111,33 +140,27 @@ describe('Wheel snaps ride the animation knob', () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(20);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
   });
 
-  function flick(wrapper: HTMLElement) {
-    fireEvent.pointerDown(wrapper, { clientY: 300, pointerId: 1 });
-    act(() => {
-      vi.advanceTimersByTime(16);
-    });
-    fireEvent.pointerMove(wrapper, { clientY: 80, pointerId: 1 });
-    fireEvent.pointerUp(wrapper, { clientY: 80, pointerId: 1 });
-  }
-
   it('skips momentum coast at animation none — flick snaps in the same turn', () => {
     useFrameClock();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Wheel items={items} onChange={onChange} visibleItems={5} />
+        <Wheel
+          items={items}
+          onChange={onChange}
+          visibleItems={5}
+        />
       </Preset>,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
     flick(wrapper);
 
     // No rAF coast: selection committed before any frames.
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(50);
     const settled = wheelSnapshot();
     const calls = onChange.mock.calls.length;
     act(() => {
@@ -149,8 +172,14 @@ describe('Wheel snaps ride the animation knob', () => {
 
   it('coasts after a flick with motion on (positive control)', () => {
     useFrameClock();
-    const onChange = vi.fn();
-    renderWithProviders(<Wheel items={items} onChange={onChange} visibleItems={5} />);
+    const onChange = vi.fn<(value: number) => void>();
+    renderWithProviders(
+      <Wheel
+        items={items}
+        onChange={onChange}
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     flick(wrapper);
 
@@ -164,13 +193,22 @@ describe('Wheel snaps ride the animation knob', () => {
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(50);
   });
 });
 
 describe('Wheel iOS picker contract', () => {
+  afterEach(cleanup);
+
   it('paints the selection band as a fill with no hairline borders', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const band = screen.getByTestId('wheel-selection');
     const style = getComputedStyle(band);
     expect(style.borderTopWidth === '0px' || style.borderTopWidth === '').toBe(true);
@@ -179,18 +217,33 @@ describe('Wheel iOS picker contract', () => {
 
   it('seats the selected row in the highlight band', () => {
     renderWithProviders(
-      <Wheel items={[1, 2, 3, 4, 5, 6, 7]} value={4} onChange={() => {}} visibleItems={5} itemHeight={36} />,
+      <Wheel
+        items={[1, 2, 3, 4, 5, 6, 7]}
+        value={4}
+        onChange={() => {}}
+        visibleItems={5}
+        itemHeight={36}
+      />,
     );
     const selected = screen
       .getByTestId('wheel')
-      .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
+      .querySelector<HTMLElement>('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(selected.style.transform)?.[1] ?? NaN);
+    const translateY = Number(
+      /translateY\((?<offset>[-\d.]+)px\)/u.exec(selected.style.transform)?.groups?.offset ?? Number.NaN,
+    );
     expect(translateY).toBeCloseTo(2 * 36, 1);
   });
 
   it('keeps duplicate values as distinct rows', () => {
-    renderWithProviders(<Wheel items={[1, 1, 2]} value={2} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 1, 2]}
+        value={2}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const rows = screen.getByTestId('wheel').querySelectorAll('[data-testid="wheel-item"]');
     expect(rows.length).toBeGreaterThanOrEqual(3);
   });
@@ -199,13 +252,20 @@ describe('Wheel iOS picker contract', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-    const onChange = vi.fn();
-    renderWithProviders(<Wheel items={[10, 20, 30, 40, 50]} value={10} onChange={onChange} visibleItems={5} />);
+    const onChange = vi.fn<(value: number) => void>();
+    renderWithProviders(
+      <Wheel
+        items={[10, 20, 30, 40, 50]}
+        value={10}
+        onChange={onChange}
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
-    const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]') as HTMLElement | null;
+    const row = wrapper.querySelector<HTMLElement>('[data-testid="wheel-item"][data-index="1"]');
     expect(row).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(row!.style.transform)?.[1] ?? 0);
-    const rowHeight = Number.parseFloat(row!.style.height) || 32;
+    const translateY = Number(/translateY\((?<offset>[-\d.]+)px\)/u.exec(row!.style.transform)?.groups?.offset ?? 0);
+    const rowHeight = Number(row!.style.height.replace(/px$/u, '')) || 32;
     const tapY = translateY + rowHeight / 2;
     fireEvent.pointerDown(wrapper, { clientY: tapY, pointerId: 1 });
     fireEvent.pointerUp(wrapper, { clientY: tapY, pointerId: 1 });
@@ -220,9 +280,17 @@ describe('Wheel iOS picker contract', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     const minutes = Array.from({ length: 60 }, (_, i) => i);
-    renderWithProviders(<Wheel items={minutes} value={59} onChange={onChange} loop visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={minutes}
+        value={59}
+        onChange={onChange}
+        loop
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
     act(() => {
@@ -234,6 +302,8 @@ describe('Wheel iOS picker contract', () => {
 });
 
 describe('Wheel design-law', () => {
+  afterEach(cleanup);
+
   it('exposes named exports and no default', async () => {
     const mod = await import('./index');
     expect(mod.Wheel).toBe(Wheel);
@@ -241,39 +311,50 @@ describe('Wheel design-law', () => {
   });
 
   it('selected row type stays on the body weight channel (400/700), never 500/600', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} onChange={() => {}} visibleItems={5} />);
-    const selected = screen
-      .getByTestId('wheel')
-      .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
+    const selected = screen.getByTestId('wheel').querySelector('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
-    const text = selected.querySelector('[class]') as HTMLElement;
-    expect(text.className).toMatch(/_fow-(400|700|bold)\b/);
-    expect(text.className).not.toMatch(/_fow-600\b/);
-    expect(text.className).not.toMatch(/_fow-500\b/);
+    const text = selected.querySelector('[class]')!;
+    expect(text.className).toMatch(/_fow-(?<weight>400|700|bold)\b/u);
+    expect(text.className).not.toMatch(/_fow-600\b/u);
+    expect(text.className).not.toMatch(/_fow-500\b/u);
   });
 
   it('viewport is R-NONE — no knob radius atom on the clip frame', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Wheel items={[1, 2, 3]} value={2} onChange={() => {}} visibleItems={3} />
+        <Wheel
+          items={[1, 2, 3]}
+          value={2}
+          onChange={() => {}}
+          visibleItems={3}
+        />
       </Preset>,
     );
-    const noneFrame = none.container.querySelector('[data-testid="wheel"]') as HTMLElement;
-    const noneAtoms = String(noneFrame.className)
-      .split(' ')
-      .filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
+    const noneFrame = none.container.querySelector('[data-testid="wheel"]')!;
+    const noneAtoms = noneFrame.className.split(' ').filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
     none.unmount();
 
     const full = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Wheel items={[1, 2, 3]} value={2} onChange={() => {}} visibleItems={3} />
+        <Wheel
+          items={[1, 2, 3]}
+          value={2}
+          onChange={() => {}}
+          visibleItems={3}
+        />
       </Preset>,
     );
-    const fullFrame = full.container.querySelector('[data-testid="wheel"]') as HTMLElement;
-    const fullAtoms = String(fullFrame.className)
-      .split(' ')
-      .filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
-    expect(noneAtoms).toEqual([]);
-    expect(fullAtoms).toEqual([]);
+    const fullFrame = full.container.querySelector('[data-testid="wheel"]')!;
+    const fullAtoms = fullFrame.className.split(' ').filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
+    expect(noneAtoms).toStrictEqual([]);
+    expect(fullAtoms).toStrictEqual([]);
   });
 });

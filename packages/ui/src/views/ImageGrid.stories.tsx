@@ -34,7 +34,7 @@ const TITLES = [
  * Self-contained plate (no network): a horizon + sun on a categorical solid.
  * Embedded SVG pixels, not UI chrome — same honesty rule as ImageView sprites.
  */
-function plateSrc(color: string, seed: number): string {
+const plateSrc = (color: string, seed: number): string => {
   const sunX = 248 + (seed % 5) * 22;
   const sunY = 58 + (seed % 4) * 16;
   const sunR = 34 + (seed % 3) * 8;
@@ -46,7 +46,7 @@ function plateSrc(color: string, seed: number): string {
       <rect y="${horizon}" width="400" height="${400 - horizon}" fill="black" fill-opacity="0.2"/>
     </svg>`,
   )}`;
-}
+};
 
 const palette = resolveChartPalette({ scheme: 'light' }).categorical;
 
@@ -73,12 +73,19 @@ const meta: Meta = {
 
 export default meta;
 
-function PhotoPlate({ item }: { item: ImageItem }) {
+const PhotoPlate = ({ item }: { item: ImageItem }) => (
   // Catalog Image. No tile-owned radius (story honesty):
   // ImageGrid's card frame clips items at the knob radius — a pinned $3
   // held a 7px arc at borderRadius:none.
-  return <Image src={item.src} alt={item.alt} width="100%" aspectRatio={1} objectFit="cover" borderRadius={0} />;
-}
+  <Image
+    src={item.src}
+    alt={item.alt}
+    width="100%"
+    aspectRatio={1}
+    objectFit="cover"
+    borderRadius={0}
+  />
+);
 
 export const Default = {
   name: 'Main',
@@ -107,11 +114,19 @@ export const WithCaptions = {
       renderItem={(item) => (
         <YStack>
           <PhotoPlate item={item} />
-          <YStack padding="$2" gap="$1">
-            <Text fontSize="$3" color="$color12" numberOfLines={1}>
+          <YStack
+            padding="$2"
+            gap="$1">
+            <Text
+              fontSize="$3"
+              color="$color12"
+              numberOfLines={1}>
               {item.title}
             </Text>
-            <Text fontSize="$2" color="$color11" numberOfLines={1}>
+            <Text
+              fontSize="$2"
+              color="$color11"
+              numberOfLines={1}>
               {item.filename}
             </Text>
           </YStack>
@@ -127,7 +142,14 @@ export const WithCaptions = {
  * aspect-correct blocks in the live cell geometry, not a raw spinner.
  */
 export const Loading = {
-  render: () => <ImageGrid<ImageItem> items={[]} columns={3} renderItem={() => null} isLoading />,
+  render: () => (
+    <ImageGrid<ImageItem>
+      items={[]}
+      columns={3}
+      renderItem={() => null}
+      isLoading
+    />
+  ),
 };
 
 /** No images, no failure — neutral empty state (Axiom 6: empty ≠ error). */
@@ -161,7 +183,7 @@ export const NoResults = {
 };
 
 /** Failed load wins over empty — error chrome with retry, never empty chrome. */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <ImageGrid<ImageItem>
       items={[]}
@@ -172,3 +194,5 @@ export const Error = {
     />
   ),
 };
+
+export { ErrorStory as Error };

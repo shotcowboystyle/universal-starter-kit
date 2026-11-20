@@ -8,7 +8,7 @@ describe('hairline (Axiom 15 OPTICS)', () => {
   });
 
   it('renders standalone rules as filled fractional-size lines (Blink floors sub-1px borders)', () => {
-    expect(hairline.line).toEqual({
+    expect(hairline.line).toStrictEqual({
       height: 0.5,
       maxHeight: 0.5,
       flexBasis: 0.5,
@@ -16,7 +16,7 @@ describe('hairline (Axiom 15 OPTICS)', () => {
       backgroundColor: '$borderColor',
       className: 'mp-hairline-h',
     });
-    expect(hairline.vline).toEqual({
+    expect(hairline.vline).toStrictEqual({
       width: 0.5,
       maxWidth: 0.5,
       flexBasis: 0.5,
@@ -24,18 +24,18 @@ describe('hairline (Axiom 15 OPTICS)', () => {
       backgroundColor: '$borderColor',
       className: 'mp-hairline-w',
     });
-    expect(hairline.height).toEqual({ height: 0.5, className: 'mp-hairline-h' });
+    expect(hairline.height).toStrictEqual({ height: 0.5, className: 'mp-hairline-h' });
   });
 
   it('pairs each edge treatment with its low-DPI fallback class', () => {
-    expect(hairline.bottom).toEqual({ borderBottomWidth: 0.5, className: 'mp-hairline-b' });
-    expect(hairline.top).toEqual({ borderTopWidth: 0.5, className: 'mp-hairline-t' });
-    expect(hairline.right).toEqual({ borderRightWidth: 0.5, className: 'mp-hairline-r' });
-    expect(hairline.left).toEqual({ borderLeftWidth: 0.5, className: 'mp-hairline-l' });
+    expect(hairline.bottom).toStrictEqual({ borderBottomWidth: 0.5, className: 'mp-hairline-b' });
+    expect(hairline.top).toStrictEqual({ borderTopWidth: 0.5, className: 'mp-hairline-t' });
+    expect(hairline.right).toStrictEqual({ borderRightWidth: 0.5, className: 'mp-hairline-r' });
+    expect(hairline.left).toStrictEqual({ borderLeftWidth: 0.5, className: 'mp-hairline-l' });
   });
 
   it('falls back to 1px through a resolution media query on low-DPI screens', () => {
-    expect(hairlineFallbackCss).toMatch(/@media \(max-resolution: 1\.49dppx\)/);
+    expect(hairlineFallbackCss).toMatch(/@media \(max-resolution: 1\.49dppx\)/u);
     // every fallback class resolves a full CSS pixel
     for (const cls of ['b', 't', 'r', 'l', 'h', 'w', 'ie']) {
       expect(hairlineFallbackCss).toContain(`.mp-hairline-${cls}`);
@@ -50,7 +50,7 @@ describe('hairline (Axiom 15 OPTICS)', () => {
 
   describe('fallback stylesheet mount', () => {
     beforeEach(() => {
-      document.getElementById('mp-hairline-styles')?.remove();
+      document.querySelector('#mp-hairline-styles')?.remove();
     });
 
     it('mounts the fallback stylesheet once (idempotent)', () => {

@@ -1,9 +1,10 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { Text } from 'tamagui';
-import { afterEach, describe, expect, it, vitest } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Tabs, tabsOverflowFades, tabsScrollIntoViewX, type TabsItem } from './index';
+import { Tabs, tabsOverflowFades, tabsScrollIntoViewX } from './index';
+import type { TabsItem } from './index';
 
 const items: TabsItem[] = [
   { value: 'one', label: 'One', content: <Text>Panel one</Text> },
@@ -16,9 +17,17 @@ const clearDirs = () => {
   document.body.removeAttribute('dir');
 };
 
-afterEach(clearDirs);
+const classesOf = (el: Element | null | undefined) => (el?.getAttribute('class') ?? '').split(' ');
 
-describe('Tabs', () => {
+const fillChain = (container: HTMLElement) => ({
+  root: container.querySelector('[data-tabs-variant]'),
+  host: container.querySelector('[data-tabs-panels]'),
+  panel: screen.getByText('Panel one').closest('[role="tabpanel"]'),
+});
+
+describe(Tabs, () => {
+  afterEach(clearDirs);
+
   it('renders a tablist with aria-selected on the active tab', () => {
     renderWithProviders(<Tabs items={items} />);
     expect(screen.getByRole('tablist')).toBeInTheDocument();
@@ -31,8 +40,13 @@ describe('Tabs', () => {
   });
 
   it('switches panels on click and calls onChange (uncontrolled)', () => {
-    const onChange = vitest.fn();
-    renderWithProviders(<Tabs items={items} onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    renderWithProviders(
+      <Tabs
+        items={items}
+        onChange={onChange}
+      />,
+    );
     fireEvent.click(screen.getByText('Two'));
     expect(onChange).toHaveBeenCalledWith('two');
     expect(screen.getByText('Panel two')).toBeInTheDocument();
@@ -42,13 +56,24 @@ describe('Tabs', () => {
   });
 
   it('respects defaultValue', () => {
-    renderWithProviders(<Tabs items={items} defaultValue="two" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        defaultValue="two"
+      />,
+    );
     expect(screen.getByText('Panel two')).toBeInTheDocument();
   });
 
   it('stays controlled: value wins and does not change on its own', () => {
-    const onChange = vitest.fn();
-    renderWithProviders(<Tabs items={items} value="one" onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    renderWithProviders(
+      <Tabs
+        items={items}
+        value="one"
+        onChange={onChange}
+      />,
+    );
     fireEvent.click(screen.getByText('Two'));
     expect(onChange).toHaveBeenCalledWith('two');
     // still on panel one because the parent did not update `value`
@@ -57,15 +82,25 @@ describe('Tabs', () => {
   });
 
   it('does not activate a disabled tab', () => {
-    const onChange = vitest.fn();
-    renderWithProviders(<Tabs items={items} onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    renderWithProviders(
+      <Tabs
+        items={items}
+        onChange={onChange}
+      />,
+    );
     fireEvent.click(screen.getByText('Three'));
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByText('Panel one')).toBeInTheDocument();
   });
 
   it('lazyMount keeps a visited panel mounted after switching away', () => {
-    renderWithProviders(<Tabs items={items} lazyMount />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        lazyMount
+      />,
+    );
     // panel two not mounted yet
     expect(screen.queryByText('Panel two')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Two'));
@@ -96,11 +131,22 @@ describe('Tabs', () => {
   });
 
   it('size recipes and density are independent axes', () => {
-    const { rerender } = renderWithProviders(<Tabs items={items} size="$5" />);
+    const { rerender } = renderWithProviders(
+      <Tabs
+        items={items}
+        size="$5"
+      />,
+    );
     const list = screen.getByRole('tablist');
     expect(list).toHaveAttribute('data-size-token', '$5');
-    const comfortableDensity = list.getAttribute('data-density');
-    rerender(<Tabs items={items} size="$5" compact />);
+    const comfortableDensity = list.dataset.density;
+    rerender(
+      <Tabs
+        items={items}
+        size="$5"
+        compact
+      />,
+    );
     const compactList = screen.getByRole('tablist');
     expect(compactList).toHaveAttribute('data-size-token', '$5');
     expect(compactList).toHaveAttribute('data-density', 'compact');
@@ -108,7 +154,12 @@ describe('Tabs', () => {
   });
 
   it('compact density keeps the default size token (space only)', () => {
-    renderWithProviders(<Tabs items={items} compact />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        compact
+      />,
+    );
     const list = screen.getByRole('tablist');
     expect(list).toHaveAttribute('data-density', 'compact');
     expect(list).toHaveAttribute('data-size-token', '$4');
@@ -120,17 +171,20 @@ describe('Tabs', () => {
     // subtree may carry the recipe's horizontal padding.
     renderWithProviders(<Tabs items={items} />);
     for (const tab of screen.getAllByRole('tab')) {
-      const padded = [tab, ...Array.from(tab.querySelectorAll('*'))].filter((el) =>
-        String((el as HTMLElement).className || '')
-          .split(' ')
-          .some((c) => c.startsWith('_pl-')),
+      const padded = [tab, ...tab.querySelectorAll('*')].filter((el) =>
+        ((el as HTMLElement).className || '').split(' ').some((c) => c.startsWith('_pl-')),
       );
       expect(padded).toHaveLength(1);
     }
   });
 
   it('contained list clips to the track (CONTAINER-CLIP)', () => {
-    renderWithProviders(<Tabs items={items.slice(0, 3)} variant="contained" />);
+    renderWithProviders(
+      <Tabs
+        items={items.slice(0, 3)}
+        variant="contained"
+      />,
+    );
     const list = screen.getByRole('tablist');
     expect(list).toHaveAttribute('data-tabs-list', 'contained');
   });
@@ -146,17 +200,15 @@ describe('Tabs', () => {
   // (the idiom above): `_fg-1` grow, `_fb-0px` basis, `_mih-0px` floor.
 
   const growClasses = ['_fg-1', '_fb-0px', '_mih-0px'];
-  const classesOf = (el: Element | null | undefined) => String(el?.getAttribute('class') ?? '').split(' ');
   const grows = (el: Element | null | undefined) => growClasses.every((c) => classesOf(el).includes(c));
 
-  const fillChain = (container: HTMLElement) => ({
-    root: container.querySelector('[data-tabs-variant]'),
-    host: container.querySelector('[data-tabs-panels]'),
-    panel: screen.getByText('Panel one').closest('[role="tabpanel"]'),
-  });
-
   it('fill opens the whole flex chain: root, panel host, and active panel', () => {
-    const { container } = renderWithProviders(<Tabs items={items} fill />);
+    const { container } = renderWithProviders(
+      <Tabs
+        items={items}
+        fill
+      />,
+    );
     const { root, host, panel } = fillChain(container);
     expect(root).toHaveAttribute('data-tabs-fill', 'true');
     expect(grows(root)).toBe(true);
@@ -177,7 +229,12 @@ describe('Tabs', () => {
   it('fill leaves the tab strip at its intrinsic height', () => {
     // The strip must not compete with the panel for the leftover room, or the
     // tabs stretch and the panel loses the height it was given fill to take.
-    const { container } = renderWithProviders(<Tabs items={items} fill />);
+    const { container } = renderWithProviders(
+      <Tabs
+        items={items}
+        fill
+      />,
+    );
     const strip = container.querySelector('[data-tabs-panels]')?.previousElementSibling;
     expect(strip).toContainElement(screen.getByRole('tablist'));
     expect(classesOf(strip)).not.toContain('_fg-1');
@@ -188,7 +245,13 @@ describe('Tabs', () => {
     // follow stream must survive a tab press, and the panel it lives in must
     // still be sizable. Consumers that hand-roll a panel host to get one lose
     // the other, plus tamagui's tabpanel aria.
-    const { container } = renderWithProviders(<Tabs items={items} fill lazyMount />);
+    const { container } = renderWithProviders(
+      <Tabs
+        items={items}
+        fill
+        lazyMount
+      />,
+    );
     fireEvent.click(screen.getByText('Two'));
     fireEvent.click(screen.getByText('One'));
     const panelTwo = screen.getByText('Panel two').closest('[role="tabpanel"]');
@@ -220,7 +283,12 @@ describe('Tabs', () => {
   });
 
   it('navigates the band by keyboard while skipping disabled tabs', async () => {
-    renderWithProviders(<Tabs items={[...items, { value: 'four', label: 'Four' }]} variant="band" />);
+    renderWithProviders(
+      <Tabs
+        items={[...items, { value: 'four', label: 'Four' }]}
+        variant="band"
+      />,
+    );
     const one = screen.getByRole('tab', { name: 'One' });
     one.focus();
     fireEvent.keyDown(one, { key: 'End' });
@@ -238,7 +306,13 @@ describe('Tabs', () => {
   });
 
   it('keeps manual activation distinct from keyboard focus in a band', async () => {
-    renderWithProviders(<Tabs items={items} variant="band" activationMode="manual" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        variant="band"
+        activationMode="manual"
+      />,
+    );
     const one = screen.getByRole('tab', { name: 'One' });
     const two = screen.getByRole('tab', { name: 'Two' });
     one.focus();
@@ -252,7 +326,12 @@ describe('Tabs', () => {
   });
 
   it('selects the focused tab automatically when navigating with arrows', async () => {
-    renderWithProviders(<Tabs items={items} variant="band" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        variant="band"
+      />,
+    );
     const one = screen.getByRole('tab', { name: 'One' });
     const two = screen.getByRole('tab', { name: 'Two' });
     one.focus();
@@ -266,7 +345,12 @@ describe('Tabs', () => {
 
   it('reverses horizontal arrow navigation in RTL', async () => {
     document.documentElement.dir = 'rtl';
-    renderWithProviders(<Tabs items={items} defaultValue="two" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        defaultValue="two"
+      />,
+    );
     const two = screen.getByRole('tab', { name: 'Two' });
     const one = screen.getByRole('tab', { name: 'One' });
     two.focus();
@@ -278,7 +362,12 @@ describe('Tabs', () => {
   });
 
   it('stops at the last enabled tab when looping is disabled', async () => {
-    renderWithProviders(<Tabs items={items} loop={false} />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        loop={false}
+      />,
+    );
     const one = screen.getByRole('tab', { name: 'One' });
     const two = screen.getByRole('tab', { name: 'Two' });
     one.focus();
@@ -292,7 +381,12 @@ describe('Tabs', () => {
   });
 
   it('removes every tab from the page tab order when the strip is disabled', () => {
-    renderWithProviders(<Tabs items={items} disabled />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        disabled
+      />,
+    );
     for (const tab of screen.getAllByRole('tab')) {
       expect(tab.tabIndex).toBe(-1);
       expect(tab).toHaveAttribute('aria-disabled', 'true');
@@ -300,14 +394,24 @@ describe('Tabs', () => {
   });
 
   it('keeps an enabled entry point when the selected tab is disabled', () => {
-    renderWithProviders(<Tabs items={items} value="three" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        value="three"
+      />,
+    );
     const stops = screen.getAllByRole('tab').filter((tab) => tab.tabIndex === 0);
     expect(stops).toHaveLength(1);
     expect(stops[0]).toHaveAccessibleName('One');
   });
 
   it('renders a flat equal band with named tabs and no scrolling viewport', () => {
-    const { container } = renderWithProviders(<Tabs items={items} variant="band" />);
+    const { container } = renderWithProviders(
+      <Tabs
+        items={items}
+        variant="band"
+      />,
+    );
     expect(container.querySelector('[data-tabs-distribution="equal"]')).not.toBeNull();
     expect(container.querySelector('[data-tabs-scroll="true"]')).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(3);
@@ -315,14 +419,24 @@ describe('Tabs', () => {
   });
 
   it('lets equal-band chrome shrink inside each allocated tab', () => {
-    renderWithProviders(<Tabs items={items} variant="band" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        variant="band"
+      />,
+    );
     const chrome = screen.getByRole('tab', { name: 'One' }).firstElementChild!;
     expect(chrome.className).toContain('_fs-1');
     expect(chrome.className).toContain('_fb-0px');
   });
 
   it('ariaLabel overrides the default tablist name', () => {
-    renderWithProviders(<Tabs items={items} ariaLabel="Document sections" />);
+    renderWithProviders(
+      <Tabs
+        items={items}
+        ariaLabel="Document sections"
+      />,
+    );
     expect(screen.getByRole('tablist')).toHaveAttribute('aria-label', 'Document sections');
   });
 
@@ -332,37 +446,42 @@ describe('Tabs', () => {
   });
 
   it('contained variant does not paint the underline hairline', () => {
-    const { container } = renderWithProviders(<Tabs items={items.slice(0, 3)} variant="contained" />);
+    const { container } = renderWithProviders(
+      <Tabs
+        items={items.slice(0, 3)}
+        variant="contained"
+      />,
+    );
     expect(container.querySelector('.mp-hairline-b')).toBeNull();
   });
 
   it('declares writing direction on the root (useDirection)', () => {
     document.documentElement.dir = 'rtl';
     const { container } = renderWithProviders(<Tabs items={items} />);
-    expect(container.querySelector('[data-tabs-dir]')?.getAttribute('data-tabs-dir')).toBe('rtl');
+    expect(container.querySelector<HTMLElement>('[data-tabs-dir]')?.dataset.tabsDir).toBe('rtl');
   });
 });
 
 describe('tabsOverflowFades (rtl-audit U1)', () => {
   it('LTR: rest state fades only the inline-end (right) edge', () => {
-    expect(tabsOverflowFades(0, 100, 400, 'ltr')).toEqual({ left: false, right: true });
-    expect(tabsOverflowFades(50, 100, 400, 'ltr')).toEqual({ left: true, right: true });
-    expect(tabsOverflowFades(300, 100, 400, 'ltr')).toEqual({ left: true, right: false });
+    expect(tabsOverflowFades(0, 100, 400, 'ltr')).toStrictEqual({ left: false, right: true });
+    expect(tabsOverflowFades(50, 100, 400, 'ltr')).toStrictEqual({ left: true, right: true });
+    expect(tabsOverflowFades(300, 100, 400, 'ltr')).toStrictEqual({ left: true, right: false });
   });
 
   it('RTL: CSSOM scrollLeft is 0 → −range; rest (0) fades the physical left', () => {
-    expect(tabsOverflowFades(0, 100, 400, 'rtl')).toEqual({ left: true, right: false });
-    expect(tabsOverflowFades(-150, 100, 400, 'rtl')).toEqual({ left: true, right: true });
-    expect(tabsOverflowFades(-300, 100, 400, 'rtl')).toEqual({ left: false, right: true });
+    expect(tabsOverflowFades(0, 100, 400, 'rtl')).toStrictEqual({ left: true, right: false });
+    expect(tabsOverflowFades(-150, 100, 400, 'rtl')).toStrictEqual({ left: true, right: true });
+    expect(tabsOverflowFades(-300, 100, 400, 'rtl')).toStrictEqual({ left: false, right: true });
   });
 
   it('no overflow → no fades in either direction', () => {
-    expect(tabsOverflowFades(0, 400, 400, 'ltr')).toEqual({ left: false, right: false });
-    expect(tabsOverflowFades(0, 400, 400, 'rtl')).toEqual({ left: false, right: false });
+    expect(tabsOverflowFades(0, 400, 400, 'ltr')).toStrictEqual({ left: false, right: false });
+    expect(tabsOverflowFades(0, 400, 400, 'rtl')).toStrictEqual({ left: false, right: false });
   });
 });
 
-describe('tabsScrollIntoViewX', () => {
+describe(tabsScrollIntoViewX, () => {
   const layout = { x: 250, y: 0, width: 80, height: 32 };
 
   it('LTR scrolls so a clipped tab lands inside the pad', () => {

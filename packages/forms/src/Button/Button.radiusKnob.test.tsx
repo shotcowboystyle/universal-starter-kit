@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -25,23 +23,21 @@ import { Button } from './index';
  * `_btlr-100000px`.
  */
 
-afterEach(cleanup);
-
-function frameRadiusClasses(): string[] {
+const frameRadiusClasses = (): string[] => {
   const frame = screen.getByRole('button');
-  return String(frame.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
-}
+  return frame.className.split(' ').filter((c) => c.startsWith('_btlr-'));
+};
 
 describe('Button KNOB-TOTALITY — borderRadius knob', () => {
+  afterEach(cleanup);
+
   it('default variant squares at borderRadius none and follows the scale', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
     cleanup();
 
     renderWithProviders(
@@ -49,7 +45,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-12']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('outlined variant squares at borderRadius none', () => {
@@ -58,23 +54,27 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button outlined>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
   });
 
   it('circular ignores the radius knob and keeps its circle at none', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Button circular icon={<span>x</span>} aria-label="favorite" />
+        <Button
+          circular
+          icon={<span>x</span>}
+          aria-label="Favorite"
+        />
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frameRadiusClasses()).toEqual(['_btlr-100000px']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-100000px']);
     // The old implementation squared circles with an inline style eject —
     // the shape eject must not be re-overridden by the knob channel.
     expect(frame.style.borderRadius).toBe('');
     // The circle is licensed by the spec registry, not inferred.
-    expect(frame.getAttribute('data-radius-class')).toBe('R-IDENTITY');
-    expect(frame.getAttribute('data-radius-part')).toBe('circular Button');
+    expect(frame.dataset.radiusClass).toBe('R-IDENTITY');
+    expect(frame.dataset.radiusPart).toBe('circular Button');
   });
 
   it('default frames do not declare identity (they square at none)', () => {
@@ -84,8 +84,8 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-radius-class')).toBeNull();
-    expect(frame.getAttribute('data-radius-part')).toBeNull();
+    expect(frame.dataset.radiusClass).toBeUndefined();
+    expect(frame.dataset.radiusPart).toBeUndefined();
   });
 
   it('consumer borderRadius prop wins last over the knob fragment', () => {
@@ -94,18 +94,20 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button borderRadius="$6">Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-6']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-6']);
   });
 });
 
 describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
+  afterEach(cleanup);
+
   it('size knob drives the recipe height (not the Tamagui token box)', () => {
     renderWithProviders(
       <Preset overrides={{ size: 'small' }}>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').getAttribute('data-mp-button-height')).toBe('36');
+    expect(screen.getByRole('button').dataset.mpButtonHeight).toBe('36');
     cleanup();
 
     renderWithProviders(
@@ -113,7 +115,7 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').getAttribute('data-mp-button-height')).toBe('52');
+    expect(screen.getByRole('button').dataset.mpButtonHeight).toBe('52');
   });
 
   it('elevation knob reaches the frame (was dropped: styled(View) had no elevation variant)', () => {
@@ -122,7 +124,7 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/u);
     cleanup();
 
     renderWithProviders(
@@ -130,6 +132,6 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).toMatch(/_bxsh-/u);
   });
 });

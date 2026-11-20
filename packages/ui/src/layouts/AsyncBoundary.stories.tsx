@@ -6,7 +6,8 @@ import { Paragraph, Text, XStack, YStack } from 'tamagui';
 
 import { Badge } from '../Badge';
 
-import { AsyncBoundary, type AsyncBoundaryLayout } from './AsyncBoundary';
+import { AsyncBoundary } from './AsyncBoundary';
+import type { AsyncBoundaryLayout, AsyncStatus } from './AsyncBoundary';
 
 const meta: Meta<typeof AsyncBoundary> = {
   title: 'Components/AsyncBoundary',
@@ -38,7 +39,9 @@ export const Data: Story = {
   },
   render: (args) => (
     <AsyncBoundary {...args}>
-      <YStack gap="$2" padding="$3">
+      <YStack
+        gap="$2"
+        padding="$3">
         <Text>Row A</Text>
         <Text>Row B</Text>
         <Text>Row C</Text>
@@ -72,7 +75,7 @@ export const Empty: Story = {
   },
 };
 
-export const Error: Story = {
+const ErrorState: Story = {
   args: {
     error: 'The server did not respond.',
     errorTitle: "Couldn't load data",
@@ -80,6 +83,8 @@ export const Error: Story = {
     onRetry: action('retry'),
   },
 };
+
+export { ErrorState as Error };
 
 /** Empty title must not appear when error is also set. */
 export const ErrorWinsOverEmpty: Story = {
@@ -102,7 +107,10 @@ export const HideBadgesOnFailure: Story = {
       error="Secondary feed unavailable"
       errorTitle="Couldn't load notifications"
       chrome={
-        <XStack gap="$3" padding="$3" alignItems="center">
+        <XStack
+          gap="$3"
+          padding="$3"
+          alignItems="center">
           <Badge count={12}>
             <Text>Inbox</Text>
           </Badge>
@@ -114,80 +122,96 @@ export const HideBadgesOnFailure: Story = {
   ),
 };
 
+const InteractiveCycleDemo = () => {
+  const [status, setStatus] = useState<AsyncStatus>('loading');
+  return (
+    <YStack
+      gap="$3"
+      padding="$3"
+      minHeight={320}>
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        {(['loading', 'empty', 'error', 'data'] as const).map((s) => (
+          <Button
+            key={s}
+            size="$3"
+            onPress={() => {
+              setStatus(s);
+            }}>
+            {s}
+          </Button>
+        ))}
+      </XStack>
+      <AsyncBoundary
+        loading={status === 'loading'}
+        empty={status === 'empty'}
+        error={status === 'error' ? 'Simulated failure' : null}
+        layout="list"
+        emptyTitle="No items found"
+        onRetry={() => {
+          setStatus('loading');
+        }}
+        chrome={
+          <Badge count={4}>
+            <Text>Count</Text>
+          </Badge>
+        }>
+        <YStack gap="$2">
+          <Text>Loaded item 1</Text>
+          <Text>Loaded item 2</Text>
+        </YStack>
+      </AsyncBoundary>
+    </YStack>
+  );
+};
+
 export const InteractiveCycle: Story = {
-  render: () => {
-    const [status, setStatus] = useState<'loading' | 'empty' | 'error' | 'data'>('loading');
-    return (
-      <YStack gap="$3" padding="$3" minHeight={320}>
-        <XStack gap="$2" flexWrap="wrap">
-          {(['loading', 'empty', 'error', 'data'] as const).map((s) => (
-            <Button
-              key={s}
-              size="$3"
-              onPress={() => {
-                setStatus(s);
-              }}>
-              {s}
-            </Button>
-          ))}
-        </XStack>
-        <AsyncBoundary
-          loading={status === 'loading'}
-          empty={status === 'empty'}
-          error={status === 'error' ? 'Simulated failure' : null}
-          layout="list"
-          emptyTitle="No items found"
-          onRetry={() => {
-            setStatus('loading');
-          }}
-          chrome={
-            <Badge count={4}>
-              <Text>Count</Text>
-            </Badge>
-          }>
-          <YStack gap="$2">
-            <Text>Loaded item 1</Text>
-            <Text>Loaded item 2</Text>
-          </YStack>
-        </AsyncBoundary>
-      </YStack>
-    );
-  },
+  render: () => <InteractiveCycleDemo />,
+};
+
+const KeepPreviousOnRefetchDemo = () => {
+  const [phase, setPhase] = useState<'data' | 'loading' | 'error'>('data');
+  return (
+    <YStack
+      gap="$3"
+      padding="$3"
+      minHeight={320}>
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        {(['data', 'loading', 'error'] as const).map((s) => (
+          <Button
+            key={s}
+            size="$3"
+            onPress={() => {
+              setPhase(s);
+            }}>
+            {s}
+          </Button>
+        ))}
+      </XStack>
+      <AsyncBoundary
+        loading={phase === 'loading'}
+        error={phase === 'error' ? 'Refresh did not complete.' : null}
+        errorTitle="Couldn't refresh"
+        layout="list"
+        onRetry={() => {
+          setPhase('loading');
+        }}>
+        <YStack
+          gap="$2"
+          padding="$3">
+          <Text>Loaded item 1</Text>
+          <Text>Loaded item 2</Text>
+          <Text>Loaded item 3</Text>
+        </YStack>
+      </AsyncBoundary>
+    </YStack>
+  );
 };
 
 /** Settled rows stay painted while a later load is in flight (default keepPrevious). */
 export const KeepPreviousOnRefetch: Story = {
-  render: () => {
-    const [phase, setPhase] = useState<'data' | 'loading' | 'error'>('data');
-    return (
-      <YStack gap="$3" padding="$3" minHeight={320}>
-        <XStack gap="$2" flexWrap="wrap">
-          {(['data', 'loading', 'error'] as const).map((s) => (
-            <Button
-              key={s}
-              size="$3"
-              onPress={() => {
-                setPhase(s);
-              }}>
-              {s}
-            </Button>
-          ))}
-        </XStack>
-        <AsyncBoundary
-          loading={phase === 'loading'}
-          error={phase === 'error' ? 'Refresh did not complete.' : null}
-          errorTitle="Couldn't refresh"
-          layout="list"
-          onRetry={() => {
-            setPhase('loading');
-          }}>
-          <YStack gap="$2" padding="$3">
-            <Text>Loaded item 1</Text>
-            <Text>Loaded item 2</Text>
-            <Text>Loaded item 3</Text>
-          </YStack>
-        </AsyncBoundary>
-      </YStack>
-    );
-  },
+  render: () => <KeepPreviousOnRefetchDemo />,
 };

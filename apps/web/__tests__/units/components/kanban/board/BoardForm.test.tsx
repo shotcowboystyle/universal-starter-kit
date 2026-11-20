@@ -1,35 +1,41 @@
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import type { useTranslations } from 'next-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardForm } from '@/components/kanban/board/BoardForm';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as typeof useTranslations,
 }));
 
-function renderForm(props: Partial<React.ComponentProps<typeof BoardForm>> = {}) {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+const renderForm = (props: Partial<React.ComponentProps<typeof BoardForm>> = {}) => {
+  const onSubmit = vi.fn<(values: { title: string; description?: string }) => Promise<void>>().mockResolvedValue();
   renderWithProviders(
-    <BoardForm onSubmit={onSubmit} {...props}>
-      <Button action="submit" testID="submit">
+    <BoardForm
+      onSubmit={onSubmit}
+      {...props}>
+      <Button
+        action="submit"
+        testID="submit">
         Submit
       </Button>
     </BoardForm>,
   );
   return { onSubmit };
-}
+};
 
-describe('BoardForm', () => {
+describe(BoardForm, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders labelled title and description fields', () => {
+  it('renders labeled title and description fields', () => {
     renderForm();
-    expect(screen.getByText(/boardTitleLabel/)).toBeInTheDocument();
-    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/boardTitleLabel/u)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/u)).toBeInTheDocument();
     expect(screen.getByTestId('board-title-input')).toHaveAttribute('placeholder', 'boardTitlePlaceholder');
     expect(screen.getByTestId('board-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });
@@ -55,7 +61,7 @@ describe('BoardForm', () => {
     const { onSubmit } = renderForm();
     fireEvent.click(screen.getByTestId('submit'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });

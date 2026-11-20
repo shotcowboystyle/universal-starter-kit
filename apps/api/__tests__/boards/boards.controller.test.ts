@@ -1,121 +1,116 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardController } from "../../src/modules/boards/boards.controller";
+import { BoardController } from '../../src/modules/boards/boards.controller';
+import type { BoardService } from '../../src/modules/boards/boards.service';
 
-describe("BoardController", () => {
+const createService = () => ({
+  create: vi.fn<BoardService['create']>(),
+  findAll: vi.fn<BoardService['findAll']>(),
+  findOne: vi.fn<BoardService['findOne']>(),
+  update: vi.fn<BoardService['update']>(),
+  remove: vi.fn<BoardService['remove']>(),
+  addMember: vi.fn<BoardService['addMember']>(),
+  removeMember: vi.fn<BoardService['removeMember']>(),
+});
+
+describe(BoardController, () => {
   let controller: BoardController;
-  let service: {
-    create: vi.Mock;
-    findAll: vi.Mock;
-    findOne: vi.Mock;
-    update: vi.Mock;
-    remove: vi.Mock;
-    addMember: vi.Mock;
-    removeMember: vi.Mock;
-  };
+  let service: ReturnType<typeof createService>;
 
   beforeEach(() => {
-    service = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findOne: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-      addMember: vi.fn(),
-      removeMember: vi.fn()
-    };
+    service = createService();
 
     // Manually instantiate BoardController with the mock BoardService
     controller = new BoardController(service as any);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should create a board", async () => {
-      const createBoardDto = { name: "Test Board", owner: "" };
-      const user = { _id: "1", email: "test@test.com" };
-      const result = { ...createBoardDto, _id: "1", owner: "1" };
+  describe('create', () => {
+    it('should create a board', async () => {
+      const createBoardDto = { name: 'Test Board', owner: '' };
+      const user = { _id: '1', email: 'test@test.com' };
+      const result = { ...createBoardDto, _id: '1', owner: '1' };
 
       service.create.mockResolvedValue(result as any);
 
-      expect(await controller.create(createBoardDto as any, user)).toEqual(result);
-      expect(service.create).toHaveBeenCalledWith({ ...createBoardDto, owner: "1" });
+      await expect(controller.create(createBoardDto as any, user)).resolves.toStrictEqual(result);
+      expect(service.create).toHaveBeenCalledWith({ ...createBoardDto, owner: '1' });
     });
   });
 
-  describe("findAll", () => {
-    it("should find all boards for a user", async () => {
-      const user = { _id: "1" };
+  describe('findAll', () => {
+    it('should find all boards for a user', async () => {
+      const user = { _id: '1' };
       const result = { myBoards: [], teamBoards: [] };
 
       service.findAll.mockResolvedValue(result);
 
-      expect(await controller.findAll(user)).toEqual(result);
-      expect(service.findAll).toHaveBeenCalledWith("1");
+      await expect(controller.findAll(user)).resolves.toStrictEqual(result);
+      expect(service.findAll).toHaveBeenCalledWith('1');
     });
   });
 
-  describe("findOne", () => {
-    it("should find a board by id", async () => {
-      const user = { _id: "1" };
-      const result = { _id: "1", name: "Test Board", owner: "1" };
+  describe('findOne', () => {
+    it('should find a board by id', async () => {
+      const user = { _id: '1' };
+      const result = { _id: '1', name: 'Test Board', owner: '1' };
 
       service.findOne.mockResolvedValue(result as any);
 
-      expect(await controller.findOne("1", user)).toEqual(result);
-      expect(service.findOne).toHaveBeenCalledWith("1", "1");
+      await expect(controller.findOne('1', user)).resolves.toStrictEqual(result);
+      expect(service.findOne).toHaveBeenCalledWith('1', '1');
     });
   });
 
-  describe("update", () => {
-    it("should update a board", async () => {
-      const updateBoardDto = { name: "Test Board Updated" };
-      const user = { _id: "1" };
-      const result = { _id: "1", name: "Test Board Updated", owner: "1" };
+  describe('update', () => {
+    it('should update a board', async () => {
+      const updateBoardDto = { name: 'Test Board Updated' };
+      const user = { _id: '1' };
+      const result = { _id: '1', name: 'Test Board Updated', owner: '1' };
 
       service.update.mockResolvedValue(result as any);
 
-      expect(await controller.update("1", updateBoardDto as any, user)).toEqual(result);
-      expect(service.update).toHaveBeenCalledWith("1", updateBoardDto, "1");
+      await expect(controller.update('1', updateBoardDto as any, user)).resolves.toStrictEqual(result);
+      expect(service.update).toHaveBeenCalledWith('1', updateBoardDto, '1');
     });
   });
 
-  describe("remove", () => {
-    it("should remove a board", async () => {
-      const user = { _id: "1" };
+  describe('remove', () => {
+    it('should remove a board', async () => {
+      const user = { _id: '1' };
       const result = { acknowledged: true, deletedCount: 1 };
 
       service.remove.mockResolvedValue(result as any);
 
-      expect(await controller.remove("1", user)).toEqual(result);
-      expect(service.remove).toHaveBeenCalledWith("1", "1");
+      await expect(controller.remove('1', user)).resolves.toStrictEqual(result);
+      expect(service.remove).toHaveBeenCalledWith('1', '1');
     });
   });
 
-  describe("addMember", () => {
-    it("should add a member to a board", async () => {
-      const user = { _id: "1" };
-      const result = { _id: "1", name: "Test Board", owner: "1", members: ["2"] };
+  describe('addMember', () => {
+    it('should add a member to a board', async () => {
+      const user = { _id: '1' };
+      const result = { _id: '1', name: 'Test Board', owner: '1', members: ['2'] };
 
       service.addMember.mockResolvedValue(result as any);
 
-      expect(await controller.addMember("1", "2", user)).toEqual(result);
-      expect(service.addMember).toHaveBeenCalledWith("1", "1", "2");
+      await expect(controller.addMember('1', '2', user)).resolves.toStrictEqual(result);
+      expect(service.addMember).toHaveBeenCalledWith('1', '1', '2');
     });
   });
 
-  describe("removeMember", () => {
-    it("should remove a member from a board", async () => {
-      const user = { _id: "1" };
-      const result = { _id: "1", name: "Test Board", owner: "1", members: [] };
+  describe('removeMember', () => {
+    it('should remove a member from a board', async () => {
+      const user = { _id: '1' };
+      const result = { _id: '1', name: 'Test Board', owner: '1', members: [] };
 
       service.removeMember.mockResolvedValue(result as any);
 
-      expect(await controller.removeMember("1", "2", user)).toEqual(result);
-      expect(service.removeMember).toHaveBeenCalledWith("1", "1", "2");
+      await expect(controller.removeMember('1', '2', user)).resolves.toStrictEqual(result);
+      expect(service.removeMember).toHaveBeenCalledWith('1', '1', '2');
     });
   });
 });

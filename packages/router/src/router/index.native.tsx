@@ -1,6 +1,6 @@
-import { Link, useParams, usePathname as useOnePathname, useRouter } from 'one';
+import { usePathname as useOnePathname } from 'one';
 
-export { Link, useParams, useRouter };
+export { Link, useParams, useRouter } from 'one';
 
 /**
  * One 1.16.5 `usePathname()` reads `useRouteInfo().pathname` with no guard.
@@ -9,10 +9,11 @@ export { Link, useParams, useRouter };
  * container mounts. A root layout that calls this on first paint throws
  * `Cannot read property 'pathname' of undefined`.
  */
-export function usePathname(): string {
+export const usePathname = (): string => {
   try {
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- the try/catch only guards One's unguarded routeInfo read; the hook still runs on every render
     return useOnePathname() ?? '/';
   } catch {
     return '/';
   }
-}
+};

@@ -1,49 +1,62 @@
+import { useSortable } from '@dnd-kit/sortable';
+import type { CSS } from '@dnd-kit/utilities';
 import { renderWithProviders as render } from '@repo/test-utils';
 import { screen } from '@testing-library/react';
+import type { useTranslations } from 'next-intl';
 /// <reference types="react" />
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskCard } from '@/components/kanban/task/TaskCard';
-import { TaskStatus, type Task } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
+import type { Task } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
 
 // Mock dependencies
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: any) => {
-    if (values?.name) {
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string, values?: { name?: string }) => {
+    if (values?.name !== undefined && values.name !== '') {
       return `${key}: ${values.name}`;
     }
     return key;
-  },
+  }) as typeof useTranslations,
 }));
 
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({
-    setNodeRef: vi.fn(),
-    attributes: {},
-    listeners: {},
-    transform: null,
-    transition: undefined,
-    isDragging: false,
-  })),
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('@dnd-kit/sortable'), () => ({
+  useSortable: vi.fn<typeof useSortable>(
+    () =>
+      ({
+        setNodeRef: vi.fn<(element: HTMLElement | null) => void>(),
+        attributes: {},
+        listeners: {},
+        transform: null,
+        isDragging: false,
+      }) as unknown as ReturnType<typeof useSortable>,
+  ),
 }));
 
-vi.mock('@dnd-kit/utilities', () => ({
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('@dnd-kit/utilities'), () => ({
   CSS: {
     Translate: {
       toString: () => '',
     },
-  },
+  } as unknown as typeof CSS,
 }));
 
-vi.mock('@/components/kanban/task/TaskAction', () => ({
+vi.mock(import('@/components/kanban/task/TaskAction'), () => ({
   TaskActions: () => <div data-testid="task-actions">Actions</div>,
 }));
 
-describe('TaskCard', () => {
+// SAFETY: callers only omit fields the component is expected to render without
+const omitField = (task: Task, key: keyof Task): Task =>
+  Object.fromEntries(Object.entries(task).filter(([name]) => name !== key)) as Task;
+
+describe(TaskCard, () => {
   const mockUserInfo: any = { _id: 'user-1', name: 'John', email: 'john@example.com' };
   const mockTask: Task = {
     _id: 'task-1',
@@ -68,7 +81,7 @@ describe('TaskCard', () => {
   it('should render task card', () => {
     const { container } = render(<TaskCard task={mockTask} />);
     const card = container.querySelector('[data-testid="task-card"]');
-    expect(card || container.firstChild).toBeTruthy();
+    expect(card ?? container.firstChild).toBeTruthy();
   });
 
   it('should render task title', () => {
@@ -101,23 +114,23 @@ describe('TaskCard', () => {
 
   it('should render creator information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/createdBy: John/)).toBeInTheDocument();
+    expect(screen.getByText(/createdBy: John/u)).toBeInTheDocument();
   });
 
   it('should render last modifier information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/lastModifiedBy: Jane/)).toBeInTheDocument();
+    expect(screen.getByText(/lastModifiedBy: Jane/u)).toBeInTheDocument();
   });
 
   it('should render assignee information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/assignee: Bob/)).toBeInTheDocument();
+    expect(screen.getByText(/assignee: Bob/u)).toBeInTheDocument();
   });
 
   it('should render due date', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/dueDate/)).toBeInTheDocument();
-    expect(screen.getByText(/2025\/12\/31/)).toBeInTheDocument();
+    expect(screen.getByText(/dueDate/u)).toBeInTheDocument();
+    expect(screen.getByText(/2025\/12\/31/u)).toBeInTheDocument();
   });
 
   it('should render TaskActions component', () => {
@@ -132,53 +145,73 @@ describe('TaskCard', () => {
   });
 
   it('should render without description', () => {
-    const taskWithoutDesc = { ...mockTask, description: undefined };
+    const taskWithoutDesc = omitField(mockTask, 'description');
     render(<TaskCard task={taskWithoutDesc} />);
     expect(screen.queryByTestId('task-card-description')).not.toBeInTheDocument();
   });
 
   it('should render without creator', () => {
-    const taskWithoutCreator = { ...mockTask, creator: undefined } as unknown as Task;
+    const taskWithoutCreator = omitField(mockTask, 'creator');
     render(<TaskCard task={taskWithoutCreator} />);
-    expect(screen.queryByText(/createdBy/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/createdBy/u)).not.toBeInTheDocument();
   });
 
   it('should render without last modifier', () => {
-    const taskWithoutModifier = { ...mockTask, lastModifier: undefined } as unknown as Task;
+    const taskWithoutModifier = omitField(mockTask, 'lastModifier');
     render(<TaskCard task={taskWithoutModifier} />);
-    expect(screen.queryByText(/lastModifiedBy/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/lastModifiedBy/u)).not.toBeInTheDocument();
   });
 
   it('should render without assignee', () => {
-    const taskWithoutAssignee = { ...mockTask, assignee: undefined };
+    const taskWithoutAssignee = omitField(mockTask, 'assignee');
     render(<TaskCard task={taskWithoutAssignee} />);
-    expect(screen.queryByText(/assignee/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/assignee/u)).not.toBeInTheDocument();
   });
 
   it('should render without due date', () => {
-    const taskWithoutDueDate = { ...mockTask, dueDate: undefined };
+    const taskWithoutDueDate = omitField(mockTask, 'dueDate');
     render(<TaskCard task={taskWithoutDueDate} />);
-    expect(screen.queryByText(/dueDate/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dueDate/u)).not.toBeInTheDocument();
   });
 
   it('should render with drag enabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should render with drag disabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={false} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={false}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should render as overlay', () => {
-    const { container } = render(<TaskCard task={mockTask} isOverlay={true} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isOverlay={true}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should call onUpdate callback when provided', () => {
-    const mockOnUpdate = vi.fn();
-    const { container } = render(<TaskCard task={mockTask} onUpdate={mockOnUpdate} />);
+    const mockOnUpdate = vi.fn<() => void>();
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        onUpdate={mockOnUpdate}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -207,18 +240,27 @@ describe('TaskCard', () => {
   });
 
   it('should render drag handle when drag is enabled', () => {
-    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     expect(screen.getByLabelText('drag task: Test Task')).toBeInTheDocument();
   });
 
   it('should not render drag handle when drag is disabled', () => {
-    render(<TaskCard task={mockTask} isDragEnabled={false} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={false}
+      />,
+    );
     expect(screen.queryByLabelText('drag task: Test Task')).not.toBeInTheDocument();
   });
 
   it('should apply the sortable transform to the card wrapper', async () => {
-    const { useSortable } = await import('@dnd-kit/sortable');
-    const setNodeRef = vi.fn();
+    const setNodeRef = vi.fn<(element: HTMLElement | null) => void>();
     vi.mocked(useSortable).mockReturnValue({
       setNodeRef,
       attributes: {},
@@ -228,20 +270,23 @@ describe('TaskCard', () => {
       isDragging: false,
     } as any);
 
-    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     const card = screen.getByTestId('task-card');
     expect(setNodeRef).toHaveBeenCalledWith(card);
     expect(card.style.transition).toBe('transform 200ms ease');
   });
 
   it('should render with dragging state', async () => {
-    const { useSortable } = await import('@dnd-kit/sortable');
     vi.mocked(useSortable).mockReturnValue({
-      setNodeRef: vi.fn(),
+      setNodeRef: vi.fn<(element: HTMLElement | null) => void>(),
       attributes: {},
       listeners: {},
       transform: null,
-      transition: undefined,
       isDragging: true,
     } as any);
 
@@ -250,9 +295,8 @@ describe('TaskCard', () => {
   });
 
   it('should handle transform during drag', async () => {
-    const { useSortable } = await import('@dnd-kit/sortable');
     vi.mocked(useSortable).mockReturnValue({
-      setNodeRef: vi.fn(),
+      setNodeRef: vi.fn<(element: HTMLElement | null) => void>(),
       attributes: {},
       listeners: {},
       transform: { x: 10, y: 20, scaleX: 1, scaleY: 1 },

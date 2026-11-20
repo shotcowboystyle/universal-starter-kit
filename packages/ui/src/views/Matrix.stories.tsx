@@ -1,8 +1,9 @@
 import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 
-import { MatrixView, type MatrixRow } from './Matrix';
-import type { MatrixCell } from './matrixMath';
+import { MatrixView } from './Matrix';
+import type { MatrixRow } from './Matrix';
+import type { MatrixCell } from './matrix-math';
 
 const accounts: MatrixRow[] = [
   { id: 'checking', label: 'Checking' },
@@ -84,12 +85,19 @@ const status = {
 
 // Health by service and day. Bare presence (no value) paints at full
 // strength in the intent's hue, so the grid reads as a status board.
+const authStatus = (i: number) => {
+  if (i === 4) {
+    return status.error;
+  }
+  return i === 5 ? status.warning : status.success;
+};
+
 const health: MatrixCell[] = [
   ...Array.from({ length: 14 }, (_, i) => ({ rowId: 'api', date: day(i), ...status.success })),
   ...Array.from({ length: 14 }, (_, i) => ({
     rowId: 'auth',
     date: day(i),
-    ...(i === 4 ? status.error : i === 5 ? status.warning : status.success),
+    ...authStatus(i),
   })),
   ...Array.from({ length: 10 }, (_, i) => ({
     rowId: 'search',

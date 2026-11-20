@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
@@ -8,9 +6,23 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Fieldset } from './FormSection';
 
-afterEach(cleanup);
+const legendWeight = (legend: HTMLElement | null): string => {
+  if (legend === null) {
+    return '';
+  }
+  if (legend.style.fontWeight !== '') {
+    return legend.style.fontWeight;
+  }
+  const computed = getComputedStyle(legend).fontWeight;
+  if (computed !== '') {
+    return computed;
+  }
+  return /fw-400|fow-400|font-weight-400/u.test(legend.className) ? '400' : '';
+};
 
-describe('Fieldset', () => {
+describe(Fieldset, () => {
+  afterEach(cleanup);
+
   it('renders a semantic fieldset + legend on web', () => {
     const result = renderWithProviders(
       <Fieldset label="Contact">
@@ -28,13 +40,10 @@ describe('Fieldset', () => {
         <div>name</div>
       </Fieldset>,
     );
-    const legend = (result.container.querySelector('[data-mpo-legend]') ||
-      result.container.querySelector('legend')) as HTMLElement | null;
+    const legend =
+      result.container.querySelector<HTMLElement>('[data-mpo-legend]') ??
+      result.container.querySelector<HTMLElement>('legend');
     expect(legend).toBeTruthy();
-    const weight =
-      legend?.style.fontWeight ||
-      (legend ? getComputedStyle(legend).fontWeight : '') ||
-      (legend?.className.match(/fw-400|fow-400|font-weight-400/) ? '400' : '');
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(legendWeight(legend));
   });
 });

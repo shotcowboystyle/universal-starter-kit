@@ -17,8 +17,6 @@
   },
   "scripts": {
     "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/storybook",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run"
   },
   "dependencies": {
@@ -27,6 +25,7 @@
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
+    "@repo/platform": "workspace:*",
     "@repo/test-utils": "workspace:*",
     "@repo/theme": "workspace:*",
     "@testing-library/jest-dom": "catalog:",
@@ -43,7 +42,6 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@multiplatform.one/frappe": "*",
     "@repo/platform": "workspace:*",
     "@repo/theme": "workspace:*",
     "@storybook-community/storybook-dark-mode": "^7.1.1",
@@ -53,9 +51,6 @@
     "tamagui": "^2.0.0-rc"
   },
   "peerDependenciesMeta": {
-    "@multiplatform.one/frappe": {
-      "optional": true
-    },
     "@repo/platform": {
       "optional": true
     },

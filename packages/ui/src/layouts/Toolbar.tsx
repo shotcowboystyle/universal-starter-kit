@@ -14,11 +14,13 @@ import { Group, Separator, Text, XStack, isWeb } from 'tamagui';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 
+export type ToolbarActionVariant = 'default' | 'primary' | 'outlined' | 'destructive';
+
 export interface ToolbarAction {
   label: string;
   icon?: React.ComponentType<{ size?: number; color?: string }>;
   onPress: () => void;
-  variant?: 'default' | 'primary' | 'outlined' | 'destructive';
+  variant?: ToolbarActionVariant;
   disabled?: boolean;
   /**
    * Explains why the action is disabled. Flows through the Button
@@ -45,10 +47,10 @@ export interface ToolbarProps {
 
 type ActionCluster = { kind: 'independent'; actions: ToolbarAction[] } | { kind: 'fused'; actions: ToolbarAction[] };
 
-function clusterActions(actions: ToolbarAction[]): ActionCluster[] {
+const clusterActions = (actions: ToolbarAction[]): ActionCluster[] => {
   const clusters: ActionCluster[] = [];
   for (const action of actions) {
-    const prev = clusters[clusters.length - 1];
+    const prev = clusters.at(-1);
     if (action.fused) {
       if (prev?.kind === 'fused') {
         prev.actions.push(action);
@@ -62,9 +64,9 @@ function clusterActions(actions: ToolbarAction[]): ActionCluster[] {
     }
   }
   return clusters;
-}
+};
 
-function partitionByDestructive(actions: ToolbarAction[]) {
+const partitionByDestructive = (actions: ToolbarAction[]) => {
   const neutral: ToolbarAction[] = [];
   const destructive: ToolbarAction[] = [];
   for (const action of actions) {
@@ -75,27 +77,24 @@ function partitionByDestructive(actions: ToolbarAction[]) {
     }
   }
   return { neutral, destructive };
-}
+};
 
-export function Toolbar(props: ToolbarProps) {
-  // Toolbar chrome is small + compact (Primer ActionBar / Spectrum quiet /
-  // Linear). Previously this rode `compact: true` (which then stepped size AND
-  // space); with the axes split, the Surface host declares the same intent
-  // lawfully: a subtree ceiling, so hosted actions clamp to
-  // small+compact while ambient pages keep their own size.
-  return (
-    <Surface size="small" density="compact">
-      <ToolbarInner {...props} />
-    </Surface>
-  );
-}
+const NO_ACTIONS: ToolbarAction[] = [];
 
-function ToolbarInner({
-  primaryActions = [],
-  secondaryActions = [],
+// Route emphasis through the intent system (accent/error) instead of
+// hardcoded color themes, so toolbar actions share the app's one solid
+// emphasis language.
+const getButtonIntents = (variant?: string) => ({
+  accent: variant === 'primary',
+  error: variant === 'destructive',
+});
+
+const ToolbarInner = ({
+  primaryActions = NO_ACTIONS,
+  secondaryActions = NO_ACTIONS,
   position = 'top',
   loadingLabel: loadingLabelProp,
-}: ToolbarProps) {
+}: ToolbarProps) => {
   const { t } = useTranslation();
   const loadingLabel = loadingLabelProp ?? t('Loading...');
   // Must run inside <Surface> so size/density clamp to this ceiling.
@@ -108,45 +107,40 @@ function ToolbarInner({
   const pressFloor = pressTargetStyle();
   const actionHitSlop = pressTargetHitSlop(sizePx);
 
-  // Route emphasis through the intent system (accent/error) instead of
-  // hardcoded color themes, so toolbar actions share the app's one solid
-  // emphasis language.
-  const getButtonIntents = (variant?: string) => ({
-    accent: variant === 'primary',
-    error: variant === 'destructive',
-  });
-
-  const renderAction = (action: ToolbarAction) => (
-    <Button
-      key={action.label}
-      icon={action.icon as any}
-      onPress={action.onPress}
-      disabled={action.disabled}
-      // Busy is derived state, not a bare disable — Button shows the spinner
-      // and skips the bare-disabled warn; loadingLabel stays for SRs.
-      loading={action.loading}
-      aria-label={action.loading ? loadingLabel : undefined}
-      disabledReason={action.disabledReason}
-      disabledReasonPlacement="inline"
-      flexShrink={0}
-      {...getButtonIntents(action.variant)}
-      // Axiom 13 ONE BODY: the Toolbar's `outlined` variant maps to the
-      // Button's canonical boolean `outlined` prop. Passing it as a string
-      // `variant` matched no styled-frame key and silently dissolved.
-      outlined={action.variant === 'outlined'}
-      {...pressFloor}
-      {...(!isWeb ? { hitSlop: actionHitSlop } : undefined)}>
-      {/* §6.1: action labels measure 400 on the TEXT NODE. */}
-      <Text fontWeight="400">{action.label}</Text>
-    </Button>
-  );
+  const renderAction = (action: ToolbarAction) => {
+    const handlePress = action.onPress;
+    return (
+      <Button
+        key={action.label}
+        icon={action.icon}
+        onPress={handlePress}
+        disabled={action.disabled}
+        // Busy is derived state, not a bare disable — Button shows the spinner
+        // and skips the bare-disabled warn; loadingLabel stays for SRs.
+        loading={action.loading}
+        aria-label={action.loading ? loadingLabel : undefined}
+        disabledReason={action.disabledReason}
+        disabledReasonPlacement="inline"
+        flexShrink={0}
+        {...getButtonIntents(action.variant)}
+        // Axiom 13 ONE BODY: the Toolbar's `outlined` variant maps to the
+        // Button's canonical boolean `outlined` prop. Passing it as a string
+        // `variant` matched no styled-frame key and silently dissolved.
+        outlined={action.variant === 'outlined'}
+        {...pressFloor}
+        {...(isWeb ? undefined : { hitSlop: actionHitSlop })}>
+        {/* §6.1: action labels measure 400 on the TEXT NODE. */}
+        <Text fontWeight="400">{action.label}</Text>
+      </Button>
+    );
+  };
 
   const renderClusters = (actions: ToolbarAction[], region: string) =>
-    clusterActions(actions).map((cluster, index) => {
+    clusterActions(actions).map((cluster) => {
       if (cluster.kind === 'fused') {
         return (
           <Group
-            key={`${region}-fused-${index}`}
+            key={`${region}-fused-${cluster.actions[0].label}`}
             orientation="horizontal"
             flexWrap="nowrap"
             flexShrink={0}
@@ -160,7 +154,7 @@ function ToolbarInner({
       }
       return (
         <XStack
-          key={`${region}-independent-${index}`}
+          key={`${region}-independent-${cluster.actions[0].label}`}
           {...knobProps.gap}
           alignItems="center"
           flexWrap="nowrap"
@@ -217,7 +211,12 @@ function ToolbarInner({
         minWidth={0}
         {...(isWeb ? { overflow: 'scroll' as const } : undefined)}
         contentContainerStyle={{ alignItems: 'center' }}>
-        <XStack {...knobProps.gapLg} alignItems="center" flexWrap="nowrap" flexShrink={0} data-toolbar-slot="start">
+        <XStack
+          {...knobProps.gapLg}
+          alignItems="center"
+          flexWrap="nowrap"
+          flexShrink={0}
+          data-toolbar-slot="start">
           {renderClusters(primaryActions, 'primary')}
         </XStack>
       </ScrollView>
@@ -247,4 +246,17 @@ function ToolbarInner({
       )}
     </XStack>
   );
-}
+};
+
+export const Toolbar = (props: ToolbarProps) => (
+  // Toolbar chrome is small + compact (Primer ActionBar / Spectrum quiet /
+  // Linear). Previously this rode `compact: true` (which then stepped size AND
+  // space); with the axes split, the Surface host declares the same intent
+  // lawfully: a subtree ceiling, so hosted actions clamp to
+  // small+compact while ambient pages keep their own size.
+  <Surface
+    size="small"
+    density="compact">
+    <ToolbarInner {...props} />
+  </Surface>
+);

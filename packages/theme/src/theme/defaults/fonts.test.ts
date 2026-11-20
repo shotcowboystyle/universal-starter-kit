@@ -1,83 +1,66 @@
+import { getVariableValue } from '@tamagui/web';
+import type { GenericFont } from '@tamagui/web';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultFont } from '../../font';
-import { flooredLineHeight, fontCategoryMetrics } from '../fontCategoryMetrics';
-import { fontCategoryStacks } from '../fontCategoryStacks';
+import { flooredLineHeight, fontCategoryMetrics } from '../font-category-metrics';
+import { fontCategoryStacks } from '../font-category-stacks';
 import type { FontCategory } from '../knobs';
 
 import { defaultBodyFont, defaultFonts, defaultHeadingFont, fontFamilyStacks, interTrackingPx } from './fonts';
 
-type NumTable = Record<string, number>;
-
 /** Unwrap a font table whose values may be tamagui Variables. */
-function table(font: unknown, key: 'size' | 'lineHeight' | 'letterSpacing'): NumTable {
-  const raw = (font as Record<string, Record<string, number | { val: number }>>)[key] ?? {};
-  const out: NumTable = {};
-  for (const [k, v] of Object.entries(raw)) {
-    const num = typeof v === 'number' ? v : v && typeof v.val === 'number' ? v.val : undefined;
-    if (num !== undefined) {
-      out[k.replace(/^\$/, '')] = num;
-    }
-  }
-  return out;
-}
+const table = (font: GenericFont, key: 'size' | 'lineHeight' | 'letterSpacing') =>
+  Object.fromEntries(
+    Object.entries(font[key] ?? {}).map(([k, v]) => [k.replace(/^\$/u, ''), Number(getVariableValue(v))]),
+  );
 
 /** Unwrap a font table whose values are strings (weight). */
-function strTable(font: unknown, key: 'weight'): Record<string, string> {
-  const raw = (font as Record<string, Record<string, string | { val: string }>>)[key] ?? {};
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    const str = typeof v === 'string' ? v : v && typeof v.val === 'string' ? v.val : undefined;
-    if (str !== undefined) {
-      out[k.replace(/^\$/, '')] = str;
-    }
-  }
-  return out;
-}
+const strTable = (font: GenericFont, key: 'weight') =>
+  Object.fromEntries(
+    Object.entries(font[key] ?? {}).map(([k, v]) => [k.replace(/^\$/u, ''), String(getVariableValue(v))]),
+  );
 
 describe('default heading/body fonts — tracking-by-size (Axiom 15 OPTICS)', () => {
-  for (const [name, font] of [
+  describe.each([
     ['heading', defaultHeadingFont],
     ['body', defaultBodyFont],
-  ] as const) {
-    describe(`${name} font`, () => {
-      const size = table(font, 'size');
-      const letterSpacing = table(font, 'letterSpacing');
+  ] as const)('%s font', (_name, font) => {
+    const size = table(font, 'size');
+    const letterSpacing = table(font, 'letterSpacing');
 
-      it('defines tracking for every size key, computed from the rendered size', () => {
-        expect(Object.keys(size).length).toBeGreaterThan(0);
-        for (const [key, px] of Object.entries(size)) {
-          expect(letterSpacing[key], `letterSpacing[${key}]`).toBe(interTrackingPx(px));
-        }
-      });
-
-      it('is looser at caption sizes and tighter at display sizes', () => {
-        // caption end (≤12px rendered) is neutral-to-loose, never tighter
-        for (const [key, px] of Object.entries(size)) {
-          if (px <= 12) {
-            expect(letterSpacing[key]).toBeGreaterThanOrEqual(0);
-          }
-          if (px >= 28) {
-            expect(letterSpacing[key]).toBeLessThanOrEqual(-0.55);
-          }
-        }
-      });
-
-      it('tracking decreases monotonically as size grows', () => {
-        const bySize = Object.entries(size)
-          .filter(([key]) => key !== 'true')
-          .sort((a, b) => a[1] - b[1]);
-        for (let i = 1; i < bySize.length; i++) {
-          const [prevKey, prevPx] = bySize[i - 1];
-          const [key, px] = bySize[i];
-          if (px === prevPx) {
-            continue;
-          }
-          expect(letterSpacing[key], `letterSpacing[${key}]`).toBeLessThan(letterSpacing[prevKey]);
-        }
-      });
+    it('defines tracking for every size key, computed from the rendered size', () => {
+      expect(Object.keys(size).length).toBeGreaterThan(0);
+      for (const [key, px] of Object.entries(size)) {
+        expect(letterSpacing[key], `letterSpacing[${key}]`).toBe(interTrackingPx(px));
+      }
     });
-  }
+
+    it('is looser at caption sizes and tighter at display sizes', () => {
+      // caption end (≤12px rendered) is neutral-to-loose, never tighter
+      const entries = Object.entries(size);
+      for (const [key] of entries.filter(([, px]) => px <= 12)) {
+        expect(letterSpacing[key], `letterSpacing[${key}]`).toBeGreaterThanOrEqual(0);
+      }
+      for (const [key] of entries.filter(([, px]) => px >= 28)) {
+        expect(letterSpacing[key], `letterSpacing[${key}]`).toBeLessThanOrEqual(-0.55);
+      }
+    });
+
+    it('tracking decreases monotonically as size grows', () => {
+      const bySize = Object.entries(size)
+        .filter(([key]) => key !== 'true')
+        .toSorted((a, b) => a[1] - b[1]);
+      for (let i = 1; i < bySize.length; i += 1) {
+        const [prevKey, prevPx] = bySize[i - 1];
+        const [key, px] = bySize[i];
+        if (px === prevPx) {
+          continue;
+        }
+        expect(letterSpacing[key], `letterSpacing[${key}]`).toBeLessThan(letterSpacing[prevKey]);
+      }
+    });
+  });
 
   it('heading H1–H4 land on the expected optical tracking (snapshot)', () => {
     const size = table(defaultHeadingFont, 'size');
@@ -113,9 +96,12 @@ describe('default heading/body fonts — tracking-by-size (Axiom 15 OPTICS)', ()
   });
 });
 
+const fontFamily = (font: GenericFont): string => String(getVariableValue(font.family));
+
+const firstFamily = (stack: string) => stack.split(',')[0]?.replaceAll(/['"]/gu, '').trim();
+
 describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyStops = ['body', 'serif', 'mono', 'rounded'] as const;
-  const firstFamily = (stack: string) => stack.split(',')[0]?.replace(/['"]/g, '').trim();
   const categories = Object.keys(defaultFonts).filter(
     (name) => name !== 'heading' && name !== 'body',
   ) as FontCategory[];
@@ -123,9 +109,9 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyLineHeight = table(defaultBodyFont, 'lineHeight');
 
   it('registers every category token the bodyFont knob maps to', () => {
-    expect(categories.length).toBe(10);
+    expect(categories).toHaveLength(10);
     for (const key of categories) {
-      expect(defaultFonts[key], key).toBeTruthy();
+      expect(defaultFonts[key]).toBeTruthy();
       expect(fontFamily(defaultFonts[key])).toBe(fontCategoryStacks[key]);
     }
     expect(fontFamily(defaultFonts.body)).toContain('Inter');
@@ -137,7 +123,7 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
 
   it('gives the four bodyFont stops four distinct first families', () => {
     const firsts = bodyStops.map((key) => firstFamily(fontFamily(defaultFonts[key])));
-    expect(firsts).toEqual(['Inter', 'Georgia', 'ui-monospace', 'Nunito']);
+    expect(firsts).toStrictEqual(['Inter', 'Georgia', 'ui-monospace', 'Nunito']);
     expect(new Set(firsts).size).toBe(4);
   });
 
@@ -151,7 +137,7 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
 
   it('puts every category font on the $body SIZE ladder — a family knob never resizes', () => {
     for (const name of categories) {
-      expect(table(defaultFonts[name], 'size'), `${name}.size`).toEqual(bodySize);
+      expect(table(defaultFonts[name], 'size'), `${name}.size`).toStrictEqual(bodySize);
     }
   });
 
@@ -202,7 +188,9 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
   it("zeroes tracking on every category face so Inter's curve cannot leak in", () => {
     for (const name of categories) {
       const letterSpacing = table(defaultFonts[name], 'letterSpacing');
-      expect(Object.keys(letterSpacing).sort(), `${name}.letterSpacing keys`).toEqual(Object.keys(bodySize).sort());
+      expect(Object.keys(letterSpacing).toSorted(), `${name}.letterSpacing keys`).toStrictEqual(
+        Object.keys(bodySize).toSorted(),
+      );
       for (const key of Object.keys(bodySize)) {
         expect(letterSpacing[key], `${name}.letterSpacing[${key}]`).toBe(0);
       }
@@ -222,8 +210,8 @@ describe('createDefaultFont — the era body ramp', () => {
 
   it('lands a consumer font on the same ladder as the built-in category fonts', () => {
     const font = createDefaultFont({ family: 'Georgia, serif' });
-    expect(table(font, 'size')).toEqual(table(defaultFonts.serif, 'size'));
-    expect(table(font, 'lineHeight')).toEqual(table(defaultFonts.rounded, 'lineHeight'));
+    expect(table(font, 'size')).toStrictEqual(table(defaultFonts.serif, 'size'));
+    expect(table(font, 'lineHeight')).toStrictEqual(table(defaultFonts.rounded, 'lineHeight'));
   });
 
   it('defaults to weight 400, never the legacy 300', () => {
@@ -231,14 +219,3 @@ describe('createDefaultFont — the era body ramp', () => {
     expect(weight['4']).toBe('400');
   });
 });
-
-function fontFamily(font: unknown): string {
-  const family = (font as { family?: string | { val?: string } }).family;
-  if (typeof family === 'string') {
-    return family;
-  }
-  if (family && typeof family.val === 'string') {
-    return family.val;
-  }
-  return '';
-}

@@ -8,10 +8,13 @@
  * successful empty dataset.
  */
 import { Intent, readingWidthStyle, useResolvedKnobs, warnBannedErrorWords } from '@repo/theme';
-import { useId, type ReactNode } from 'react';
-import { H2, Paragraph, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import type { KnobProps } from '@repo/theme';
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+import { H2, Paragraph, XStack, YStack, isWeb } from 'tamagui';
+import type { ColorTokens, SpaceTokens, YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 export interface EmptyStateProps extends YStackProps {
   title: string;
@@ -29,6 +32,47 @@ export interface EmptyStateProps extends YStackProps {
   intent?: 'neutral' | 'error';
 }
 
+type WellRadius = Omit<KnobProps['borderRadius'], 'borderColor' | 'borderWidth'>;
+
+/** The well paints no edge: keep the radius half of the fragment only. */
+const radiusOnly = (fragment: KnobProps['borderRadius']): WellRadius =>
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: only the borderColor/borderWidth keys are dropped, which is exactly what WellRadius omits (Object.fromEntries widens to a plain record; the filtered entries are exactly the keys WellRadius keeps)
+  Object.fromEntries(
+    Object.entries(fragment).filter(([key]) => key !== 'borderColor' && key !== 'borderWidth'),
+  ) as WellRadius;
+
+/**
+ * One paragraph per line: a web paragraph folds a newline into a space, and
+ * a multi-line server reason then reads as one run-on sentence. Keys carry the
+ * occurrence count so repeated lines stay distinct without an index key.
+ */
+const toDescriptionLines = (description: string | undefined): { key: string; line: string }[] => {
+  const seen = new Map<string, number>();
+  return (description ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const occurrence = seen.get(line) ?? 0;
+      seen.set(line, occurrence + 1);
+      return { key: `${occurrence}:${line}`, line };
+    });
+};
+
+const rootA11yProps = (isError: boolean, titleId: string, title: string) => {
+  if (isWeb) {
+    return {
+      role: isError ? 'alert' : 'status',
+      'aria-labelledby': titleId,
+      'aria-live': isError ? undefined : 'polite',
+    } as const;
+  }
+  return {
+    accessibilityRole: isError ? 'alert' : 'text',
+    accessibilityLabel: title,
+  } as const;
+};
+
 /**
  * Centered empty/error state. Use for "no data", "not configured",
  * "permission denied" placeholder screens.
@@ -36,7 +80,7 @@ export interface EmptyStateProps extends YStackProps {
  * Prefer `<AsyncBoundary>` for async data views so empty chrome can never
  * render on a failed load.
  */
-export function EmptyState({
+export const EmptyState = ({
   title,
   description,
   icon,
@@ -45,7 +89,7 @@ export function EmptyState({
   intent = 'neutral',
   children,
   ...rest
-}: EmptyStateProps) {
+}: EmptyStateProps) => {
   // Compact is a density override (space only), not a size step.
   // Omit it so the density knob can restyle pad/gap (Alert gallery hole).
   const { knobProps } = useResolvedKnobs(
@@ -58,21 +102,20 @@ export function EmptyState({
   // Polaris/Primer: icon | copy | actions are three bands; title+description
   // sit tighter than the bands. Compact (table/column) stays on the stepped gap.
   const frameGap = compact ? knobProps.gap : knobProps.gapLg;
-  // One paragraph per line: a web paragraph folds a newline into a space, and
-  // a multi-line server reason then reads as one run-on sentence.
-  const descriptionLines = (description ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const descriptionLines = toDescriptionLines(description);
 
   if (isError) {
     warnBannedErrorWords(title, { component: 'EmptyState' });
     warnBannedErrorWords(description, { component: 'EmptyState' });
   }
 
-  const { borderColor: _wellEdgeColor, borderWidth: _wellEdgeWidth, ...wellRadius } = knobProps.borderRadius;
+  const wellRadius = radiusOnly(knobProps.borderRadius);
 
-  const well = icon ? (
+  const hasIcon = Boolean(icon);
+  const titleIdProps = isWeb ? { id: titleId } : { nativeID: titleId };
+  const nativeHiddenProps = isWeb ? null : { accessibilityElementsHidden: true };
+  const nativeFitProps = isWeb ? null : { numberOfLines: 2, adjustsFontSizeToFit: true, minimumFontScale: 0.55 };
+  const well = hasIcon ? (
     <YStack
       alignItems="center"
       justifyContent="center"
@@ -82,27 +125,28 @@ export function EmptyState({
       // fragment applies — the well paints no edge. Its inset still scales
       // with the size knob (spec: empty icon well consumes sizeToken).
       {...wellRadius}
-      padding={knobProps.sizeToken as any}
+      // SAFETY: sizeToken is a size-knob token name, which is also a valid space token key.
+      padding={knobProps.sizeToken as SpaceTokens}
       aria-hidden
-      {...(!isWeb ? { accessibilityElementsHidden: true } : null)}>
+      {...nativeHiddenProps}>
       {icon}
     </YStack>
   ) : null;
 
   const titleNode = compact ? (
     <Paragraph
-      {...(isWeb ? { id: titleId } : { nativeID: titleId })}
+      {...titleIdProps}
       {...knobProps.body}
       color={componentColors.text.primary}
       textAlign="center"
       margin={0}
       width="100%"
-      {...(!isWeb && { numberOfLines: 2, adjustsFontSizeToFit: true, minimumFontScale: 0.55 })}>
+      {...nativeFitProps}>
       {title}
     </Paragraph>
   ) : (
     <H2
-      {...(isWeb ? { id: titleId } : { nativeID: titleId })}
+      {...titleIdProps}
       {...knobProps.heading}
       {...headingFamily}
       {...knobProps.textWeight}
@@ -110,10 +154,12 @@ export function EmptyState({
       margin={0}
       width="100%"
       color={componentColors.text.primary}
-      {...(!isWeb && { numberOfLines: 2, adjustsFontSizeToFit: true, minimumFontScale: 0.55 })}>
+      {...nativeFitProps}>
       {title}
     </H2>
   );
+
+  const hasAction = Boolean(action);
 
   return (
     <YStack
@@ -123,27 +169,22 @@ export function EmptyState({
       justifyContent="center"
       data-empty-intent={intent}
       data-density={knobProps.density}
-      {...(isWeb
-        ? {
-            role: isError ? 'alert' : 'status',
-            'aria-labelledby': titleId,
-            ...(!isError ? { 'aria-live': 'polite' as const } : null),
-          }
-        : {
-            accessibilityRole: isError ? 'alert' : 'text',
-            accessibilityLabel: title,
-          })}
+      {...rootA11yProps(isError, titleId, title)}
       {...knobProps.panelPadding}
       {...frameGap}
       {...rest}>
       {well && isError ? <Intent name="error">{well}</Intent> : well}
-      <YStack alignItems="center" gap="$1" {...readingWidthStyle()}>
+      <YStack
+        alignItems="center"
+        gap="$1"
+        {...readingWidthStyle()}>
         {titleNode}
-        {descriptionLines.map((line, index) => (
+        {descriptionLines.map(({ key, line }) => (
           <Paragraph
-            key={`${index}:${line}`}
+            key={key}
             {...knobProps.body}
-            color={knobProps.textAccentColor as any}
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: textAccentColor is a theme color token name ($colorN) emitted by the knob recipe (textAccentColor is typed `string`; the color prop only accepts the color-token union)
+            color={knobProps.textAccentColor as ColorTokens}
             fontSize={knobProps.label.fontSize}
             textAlign="center"
             margin={0}
@@ -152,7 +193,7 @@ export function EmptyState({
           </Paragraph>
         ))}
       </YStack>
-      {action ? (
+      {hasAction ? (
         <XStack
           {...knobProps.gap}
           alignItems="center"
@@ -167,4 +208,4 @@ export function EmptyState({
       {children}
     </YStack>
   );
-}
+};

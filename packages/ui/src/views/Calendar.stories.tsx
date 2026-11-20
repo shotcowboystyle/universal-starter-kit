@@ -4,7 +4,8 @@ import type { Meta } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import { Calendar, type CalendarEvent, type CalendarEventDraft, type CalendarEventMoveRange } from './Calendar';
+import { Calendar } from './Calendar';
+import type { CalendarEvent, CalendarEventDraft, CalendarEventMoveRange } from './Calendar';
 
 // Fixture colors from the sanctioned categorical palette (chart-palette
 // precedent) — no raw brand hexes in story data.
@@ -59,12 +60,14 @@ export const Default = {
   ),
 };
 
-function EventDragDemo() {
+const EventDragDemo = () => {
   const [dragEvents, setDragEvents] = useState<CalendarEvent[]>(events);
   const [lastMove, setLastMove] = useState<string | null>(null);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-move' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-move' }}
+        fontSize="$2">
         {lastMove ?? 'Drag an event chip onto another day'}
       </Text>
       <Calendar
@@ -84,7 +87,7 @@ function EventDragDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const EventDrag = {
   name: 'Event Drag',
@@ -140,7 +143,7 @@ const timeGridSeed: CalendarEvent[] = [
   },
 ];
 
-function TimeGridDemo() {
+const TimeGridDemo = () => {
   const [gridEvents, setGridEvents] = useState<CalendarEvent[]>(timeGridSeed);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
@@ -150,7 +153,9 @@ function TimeGridDemo() {
 
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-action' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-action' }}
+        fontSize="$2">
         {lastAction ?? 'Drag to move, grab an edge to resize, press-drag empty grid to create'}
       </Text>
       <Calendar
@@ -186,7 +191,7 @@ function TimeGridDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const TimeGrid = {
   name: 'Time Grid',
@@ -239,11 +244,13 @@ export const Overflow = {
 // Keyboard: arrows move day/slot focus, Enter selects/creates
 // ---------------------------------------------------------------------------
 
-function KeyboardDemo() {
+const KeyboardDemo = () => {
   const [lastSelect, setLastSelect] = useState<string | null>(null);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-select' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-select' }}
+        fontSize="$2">
         {lastSelect ?? 'Focus the grid, then use arrow keys + Enter'}
       </Text>
       <Calendar
@@ -259,7 +266,7 @@ function KeyboardDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const Keyboard = {
   name: 'Keyboard',
@@ -275,7 +282,13 @@ export const Keyboard = {
 };
 
 export const Empty = {
-  render: () => <Calendar events={[]} initialDate={new Date(2026, 2, 10)} height={500} />,
+  render: () => (
+    <Calendar
+      events={[]}
+      initialDate={new Date(2026, 2, 10)}
+      height={500}
+    />
+  ),
   parameters: {
     docs: {
       description: {

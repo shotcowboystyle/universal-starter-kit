@@ -4,57 +4,60 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import NewBoardDialog from '@/components/kanban/board/NewBoardDialog';
-import { useBoards } from '@/hooks/useBoards';
+import { useBoards } from '@/hooks/use-boards';
 import { useRouter } from '@/i18n/navigation';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 
-vi.mock('@/hooks/useBoards', () => ({
-  useBoards: vi.fn(),
+vi.mock(import('@/hooks/use-boards'), () => ({
+  useBoards: vi.fn<typeof useBoards>(),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the zustand hook stub omits the store statics (getState, setState, subscribe)
 vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(),
+  useWorkspaceStore: vi.fn<typeof useWorkspaceStore>(),
 }));
 
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: vi.fn(),
+vi.mock(import('@/i18n/navigation'), () => ({
+  useRouter: vi.fn<typeof useRouter>(),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the identity translator stub does not match next-intl's typed translator signature
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- sonner's toast is a callable with many members; the test stubs only success/error
 vi.mock('sonner', () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
+    success: vi.fn<(message: string) => void>(),
+    error: vi.fn<(message: string) => void>(),
   },
 }));
 
-describe('NewBoardDialog', () => {
-  const addBoard = vi.fn();
-  const refresh = vi.fn();
-  const push = vi.fn();
+const renderDialog = () =>
+  renderWithProviders(
+    <NewBoardDialog>
+      <button type="button">New Board</button>
+    </NewBoardDialog>,
+  );
+
+const openDialog = async () => {
+  fireEvent.click(screen.getByText('New Board'));
+  return await screen.findByTestId('new-board-dialog-title');
+};
+
+describe(NewBoardDialog, () => {
+  const addBoard = vi.fn<(title: string, description?: string) => Promise<string>>();
+  const refresh = vi.fn<() => Promise<void>>();
+  const push = vi.fn<(href: string) => void>();
 
   beforeEach(() => {
     vi.clearAllMocks();
     addBoard.mockResolvedValue('board-1');
     vi.mocked(useBoards).mockReturnValue({ refresh } as any);
     vi.mocked(useWorkspaceStore).mockReturnValue({ addBoard } as any);
-    vi.mocked(useRouter).mockReturnValue({ push, replace: vi.fn(), refresh: vi.fn() } as any);
+    vi.mocked(useRouter).mockReturnValue({ push, replace: vi.fn<() => void>(), refresh: vi.fn<() => void>() } as any);
   });
-
-  const renderDialog = () =>
-    renderWithProviders(
-      <NewBoardDialog>
-        <button type="button">New Board</button>
-      </NewBoardDialog>,
-    );
-
-  const openDialog = async () => {
-    fireEvent.click(screen.getByText('New Board'));
-    return screen.findByTestId('new-board-dialog-title');
-  };
 
   it('renders only the trigger while closed', () => {
     renderDialog();
@@ -64,7 +67,7 @@ describe('NewBoardDialog', () => {
 
   it('opens the dialog with title, description and the board form', async () => {
     renderDialog();
-    expect(await openDialog()).toHaveTextContent('newBoardTitle');
+    await expect(openDialog()).resolves.toHaveTextContent('newBoardTitle');
     expect(screen.getByText('newBoardDescription')).toBeInTheDocument();
     expect(screen.getByTestId('board-title-input')).toBeInTheDocument();
     expect(screen.getByTestId('cancel-button')).toHaveTextContent('cancel');
@@ -82,7 +85,7 @@ describe('NewBoardDialog', () => {
     });
     expect(addBoard).toHaveBeenCalledWith('Roadmap', '');
     expect(toast.success).toHaveBeenCalledWith('boardCreatedSuccess');
-    expect(refresh).toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledWith();
   });
 
   it('does not create a board without a title', async () => {
@@ -90,7 +93,7 @@ describe('NewBoardDialog', () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('create-button'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(addBoard).not.toHaveBeenCalled();
   });
 

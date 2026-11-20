@@ -2,8 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { TreeView, type TreeNode, type TreeViewProps } from './TreeView';
-import { applyTreeMove } from './treeViewDnd';
+import { applyTreeMove } from './tree-view-dnd';
+import { TreeView } from './TreeView';
+import type { TreeNode, TreeViewProps } from './TreeView';
 
 const nodes: TreeNode[] = [
   {
@@ -98,10 +99,10 @@ export default meta;
 
 type Story = StoryObj<typeof TreeView>;
 
-function SelectableTree(args: TreeViewProps) {
+const SelectableTree = (args: TreeViewProps) => {
   const [selectedId, setSelectedId] = useState<string | undefined>(args.selectedId ?? 'button');
   return (
-    <YStack height={args.height ? Number(args.height) + 20 : 420}>
+    <YStack height={args.height === undefined || args.height === 0 ? 420 : args.height + 20}>
       <TreeView
         {...args}
         selectedId={selectedId}
@@ -112,7 +113,7 @@ function SelectableTree(args: TreeViewProps) {
       />
     </YStack>
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',
@@ -125,7 +126,6 @@ export const Compressed: Story = {
   args: {
     display: 'compressed',
     showExpansionArrows: true,
-    selectedId: undefined,
   },
   render: (args) => <SelectableTree {...args} />,
 };
@@ -135,10 +135,31 @@ export const ExpandByDefault: Story = {
   args: {
     expandByDefault: true,
     showExpansionArrows: true,
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined clears the meta-level default so `expandByDefault` takes effect
     defaultExpandedIds: undefined,
     height: 460,
   },
   render: (args) => <SelectableTree {...args} />,
+};
+
+const ReorderStory = (args: TreeViewProps) => {
+  const [tree, setTree] = useState<TreeNode[]>(args.nodes ?? nodes);
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+  return (
+    <YStack height={440}>
+      <TreeView
+        {...args}
+        nodes={tree}
+        selectedId={selectedId}
+        onNodeSelect={(node) => {
+          setSelectedId(node.id);
+        }}
+        onNodeMove={(nodeId, target) => {
+          setTree((prev) => applyTreeMove(prev, nodeId, target));
+        }}
+      />
+    </YStack>
+  );
 };
 
 /**
@@ -150,26 +171,8 @@ export const ExpandByDefault: Story = {
  */
 export const Reorder: Story = {
   name: 'Reorder',
-  args: { height: 420, selectedId: undefined },
-  render: function ReorderStory(args) {
-    const [tree, setTree] = useState<TreeNode[]>(args.nodes ?? nodes);
-    const [selectedId, setSelectedId] = useState<string | undefined>();
-    return (
-      <YStack height={440}>
-        <TreeView
-          {...args}
-          nodes={tree}
-          selectedId={selectedId}
-          onNodeSelect={(node) => {
-            setSelectedId(node.id);
-          }}
-          onNodeMove={(nodeId, target) => {
-            setTree((prev) => applyTreeMove(prev, nodeId, target));
-          }}
-        />
-      </YStack>
-    );
-  },
+  args: { height: 420 },
+  render: (args) => <ReorderStory {...args} />,
 };
 
 /**
@@ -192,6 +195,7 @@ export const DeepNesting: Story = {
     nodes: deepNodes,
     ariaLabel: 'Deep tree',
     expandByDefault: true,
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined clears the meta-level default so `expandByDefault` takes effect
     defaultExpandedIds: undefined,
     height: 280,
   },
@@ -204,6 +208,7 @@ export const LongLabels: Story = {
     nodes: longLabelNodes,
     ariaLabel: 'Long labels',
     expandByDefault: true,
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined clears the meta-level default so `expandByDefault` takes effect
     defaultExpandedIds: undefined,
     height: 160,
   },

@@ -16,8 +16,8 @@ import { describe, expect, it } from 'vitest';
 
 import { Table } from './index';
 
-function renderTable(headerChildren: React.ReactNode, cellChildren: React.ReactNode) {
-  return renderWithProviders(
+const renderTable = (headerChildren: React.ReactNode, cellChildren: React.ReactNode) =>
+  renderWithProviders(
     <Table>
       <Table.Head>
         <Table.Row>
@@ -31,7 +31,6 @@ function renderTable(headerChildren: React.ReactNode, cellChildren: React.ReactN
       </Table.Body>
     </Table>,
   );
-}
 
 describe('Table primitives wrap bare text children', () => {
   it('renders array-of-strings cell children as one concatenated wrapped run', () => {
@@ -51,8 +50,8 @@ describe('Table primitives wrap bare text children', () => {
   });
 
   it('renders the origin shape `{value}{cond ? suffix : ""}` when the condition is false', () => {
-    const delta: number = 0;
-    renderTable('Price', ['$5.00', delta !== 0 ? ` +$${delta}` : '']);
+    const delta = Number('0');
+    renderTable('Price', ['$5.00', delta === 0 ? '' : ` +$${delta}`]);
     const value = screen.getByText('$5.00');
     expect(value.tagName).not.toBe('TD');
     expect(value.tagName).not.toBe('DIV');

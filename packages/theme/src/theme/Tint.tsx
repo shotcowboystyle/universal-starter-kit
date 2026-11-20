@@ -1,7 +1,8 @@
-import { type PropsWithChildren, createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
+import type { PropsWithChildren } from 'react';
 import { Theme } from 'tamagui';
 
-import { usePresetTints } from './PresetContext';
+import { usePresetTints } from './preset-context';
 
 const TintDepthContext = createContext(0);
 
@@ -19,7 +20,7 @@ export interface TintProps extends PropsWithChildren {
  *
  * Applies a tint sub-theme based on nesting depth.
  */
-export function Tint({ children, alt = 0, disable, ...props }: TintProps) {
+export const Tint = ({ children, alt = 0, disable, ...props }: TintProps) => {
   const parentDepth = useContext(TintDepthContext);
   const depth = parentDepth + 1 + alt;
   const tints = usePresetTints();
@@ -27,20 +28,20 @@ export function Tint({ children, alt = 0, disable, ...props }: TintProps) {
 
   return (
     <TintDepthContext.Provider value={depth}>
-      {disable || !tint ? (
+      {disable || tint === undefined || tint === '' ? (
         children
       ) : (
-        <Theme name={tint} {...props}>
+        <Theme
+          name={tint}
+          {...props}>
           {children}
         </Theme>
       )}
     </TintDepthContext.Provider>
   );
-}
+};
 
 /**
  * Read the current tint depth from context.
  */
-export function useTintDepth(): number {
-  return useContext(TintDepthContext);
-}
+export const useTintDepth = (): number => useContext(TintDepthContext);

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,51 +9,48 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PageHeader, PageSection, Screen } from './Page';
 import { ListPageLayout } from './PageTemplates';
 
-function readSibling(name: string) {
-  return readFileSync(join(import.meta.dirname, name), 'utf8');
-}
+const readSibling = (name: string) => readFileSync(path.join(import.meta.dirname, name), 'utf-8');
 
-function atoms(el: Element, prefixes: string[]): string[] {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: HTMLElement, prefixes: string[]): string[] =>
+  el.className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
-
-afterEach(cleanup);
+    .toSorted();
 
 describe('page layouts named exports', () => {
   it('page.tsx and PageTemplates export named functions only', () => {
     const page = readSibling('page.tsx');
     const templates = readSibling('PageTemplates.tsx');
-    expect(page).toMatch(/export function Screen/);
-    expect(page).toMatch(/export function PageHeader/);
-    expect(page).toMatch(/export function PageSection/);
-    expect(templates).toMatch(/export function ListPageLayout/);
-    expect(templates).toMatch(/export function DetailPageLayout/);
-    expect(templates).toMatch(/export function SettingsPageLayout/);
-    expect(page).not.toMatch(/export default/);
-    expect(templates).not.toMatch(/export default/);
+    expect(page).toMatch(/export const Screen = /u);
+    expect(page).toMatch(/export const PageHeader = /u);
+    expect(page).toMatch(/export const PageSection = /u);
+    expect(templates).toMatch(/export const ListPageLayout = /u);
+    expect(templates).toMatch(/export const DetailPageLayout = /u);
+    expect(templates).toMatch(/export const SettingsPageLayout = /u);
+    expect(page).not.toMatch(/export default/u);
+    expect(templates).not.toMatch(/export default/u);
   });
 });
 
 describe('no Tint wrap', () => {
   it('page.tsx does not wrap Tint; NestedScale is the nest dialect', () => {
     const src = readSibling('page.tsx');
-    expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
-    expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).toMatch(/function NestedScale/);
-    expect(src).not.toMatch(/<Surface density="comfortable">/);
+    expect(src).not.toMatch(/from ["'][^"']*Tint["']/u);
+    expect(src).not.toMatch(/<[Tt]int[\s/>]/u);
+    expect(src).toMatch(/const NestedScale = /u);
+    expect(src).not.toMatch(/<Surface density="comfortable">/u);
   });
 });
 
 describe('PageHeader / PageSection labels — weight 400, never 600', () => {
+  afterEach(cleanup);
+
   it('page title rides the fontWeight knob and is not 600', () => {
     renderWithProviders(<PageHeader title="Workspace Settings" />);
     const title = screen.getByText('Workspace Settings');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('section title rides the fontWeight knob and is not 600', () => {
@@ -61,7 +58,7 @@ describe('PageHeader / PageSection labels — weight 400, never 600', () => {
     const title = screen.getByText('Profile');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('bold fontWeight knob restyles the page title without landing on 600', () => {
@@ -73,16 +70,18 @@ describe('PageHeader / PageSection labels — weight 400, never 600', () => {
     const title = screen.getByText('Workspace Settings');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 });
 
 describe('density unpinned', () => {
+  afterEach(cleanup);
+
   it('PageHeader publishes density and does not pin compact', () => {
     const { container } = renderWithProviders(<PageHeader title="Workspace" />);
-    const frame = container.querySelector('[data-testid="page-header"]') as HTMLElement;
-    expect(frame.getAttribute('data-density')).toBeTruthy();
-    expect(frame.getAttribute('data-density')).not.toBe('');
+    const frame = container.querySelector<HTMLElement>('[data-testid="page-header"]')!;
+    expect(frame.dataset.density).toBeTruthy();
+    expect(frame.dataset.density).not.toBe('');
   });
 
   it('omitted compact follows the density knob on Screen and templates', () => {
@@ -93,10 +92,10 @@ describe('density unpinned', () => {
         </Screen>
       </Preset>,
     );
-    const comfortableScreen = comfortable.container.querySelector('[data-testid="screen-shell"]') as HTMLElement;
-    const comfortableHeader = comfortable.container.querySelector('[data-testid="page-header"]') as HTMLElement;
-    expect(comfortableScreen.getAttribute('data-density')).toBe('comfortable');
-    expect(comfortableHeader.getAttribute('data-density')).toBe('comfortable');
+    const comfortableScreen = comfortable.container.querySelector<HTMLElement>('[data-testid="screen-shell"]')!;
+    const comfortableHeader = comfortable.container.querySelector<HTMLElement>('[data-testid="page-header"]')!;
+    expect(comfortableScreen.dataset.density).toBe('comfortable');
+    expect(comfortableHeader.dataset.density).toBe('comfortable');
     cleanup();
 
     const compact = renderWithProviders(
@@ -106,68 +105,87 @@ describe('density unpinned', () => {
         </Screen>
       </Preset>,
     );
-    const compactScreen = compact.container.querySelector('[data-testid="screen-shell"]') as HTMLElement;
-    const compactHeader = compact.container.querySelector('[data-testid="page-header"]') as HTMLElement;
-    expect(compactScreen.getAttribute('data-density')).toBe('compact');
-    expect(compactHeader.getAttribute('data-density')).toBe('compact');
+    const compactScreen = compact.container.querySelector<HTMLElement>('[data-testid="screen-shell"]')!;
+    const compactHeader = compact.container.querySelector<HTMLElement>('[data-testid="page-header"]')!;
+    expect(compactScreen.dataset.density).toBe('compact');
+    expect(compactHeader.dataset.density).toBe('compact');
   });
 
   it('ListPageLayout rides the density knob through Screen', () => {
     renderWithProviders(
       <Preset overrides={{ density: 'compact' }}>
-        <ListPageLayout title="Pokemon" data-testid="list-shell">
+        <ListPageLayout
+          title="Pokemon"
+          data-testid="list-shell">
           <span>rows</span>
         </ListPageLayout>
       </Preset>,
     );
-    expect(screen.getByTestId('list-shell').getAttribute('data-density')).toBe('compact');
-    expect(screen.getByTestId('page-header').getAttribute('data-density')).toBe('compact');
+    expect(screen.getByTestId('list-shell').dataset.density).toBe('compact');
+    expect(screen.getByTestId('page-header').dataset.density).toBe('compact');
   });
 
   it('explicit compact publishes compact density', () => {
-    const { container } = renderWithProviders(<PageSection compact title="Profile" />);
-    const frame = container.querySelector('[data-testid="page-section"]') as HTMLElement;
-    expect(frame.getAttribute('data-density')).toBe('compact');
+    const { container } = renderWithProviders(
+      <PageSection
+        compact
+        title="Profile"
+      />,
+    );
+    const frame = container.querySelector<HTMLElement>('[data-testid="page-section"]')!;
+    expect(frame.dataset.density).toBe('compact');
   });
 
   it("Screen's explicit density override reaches nested page primitives", () => {
     renderWithProviders(
       <Preset overrides={{ density: 'comfortable' }}>
-        <Screen compact scroll={false}>
+        <Screen
+          compact
+          scroll={false}>
           <PageHeader title="Compact screen" />
           <PageSection title="Inherited section" />
         </Screen>
       </Preset>,
     );
-    expect(screen.getByTestId('page-header').getAttribute('data-density')).toBe('compact');
-    expect(screen.getByTestId('page-section').getAttribute('data-density')).toBe('compact');
+    expect(screen.getByTestId('page-header').dataset.density).toBe('compact');
+    expect(screen.getByTestId('page-section').dataset.density).toBe('compact');
   });
 
   it('a painted section steps its interior density without shrinking its heading', () => {
     renderWithProviders(
       <Preset overrides={{ density: 'comfortable' }}>
-        <PageSection surface title="Outer" data-testid="outer-section">
-          <PageSection title="Inner" data-testid="inner-section" />
+        <PageSection
+          surface
+          title="Outer"
+          data-testid="outer-section">
+          <PageSection
+            title="Inner"
+            data-testid="inner-section"
+          />
         </PageSection>
       </Preset>,
     );
-    expect(screen.getByTestId('outer-section').getAttribute('data-density')).toBe('comfortable');
-    expect(screen.getByTestId('inner-section').getAttribute('data-density')).toBe('compact');
+    expect(screen.getByTestId('outer-section').dataset.density).toBe('comfortable');
+    expect(screen.getByTestId('inner-section').dataset.density).toBe('compact');
   });
 });
 
 describe('PageSection surface declares its container cap', () => {
+  afterEach(cleanup);
+
   it('the painted surface carries the knob stops its radius resolved from', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'full', space: 'small' }}>
-        <PageSection surface title="Details" data-testid="details">
-          <></>
-        </PageSection>
+        <PageSection
+          surface
+          title="Details"
+          data-testid="details"
+        />
       </Preset>,
     );
-    const surface = document.querySelector('[data-constraint-container="PageSection"]');
-    expect(surface?.getAttribute('data-radius-knob')).toBe('full');
-    expect(surface?.getAttribute('data-space-knob')).toBe('small');
+    const surface = document.querySelector<HTMLElement>('[data-constraint-container="PageSection"]');
+    expect(surface?.dataset.radiusKnob).toBe('full');
+    expect(surface?.dataset.spaceKnob).toBe('small');
   });
 
   it('a section without a surface makes no claim', () => {

@@ -1,45 +1,61 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { useWorkspaceStore } from "@/stores/workspace-store";
-import type { Task, TaskStatus } from "@/types/dbInterface";
-import { TASK_KEYS, UpdateTaskInput } from "@/types/taskApi";
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import type { Task, TaskStatus } from '@/types/db-interface';
+import type { UpdateTaskInput } from '@/types/task-api';
+import { TASK_KEYS } from '@/types/task-api';
 
-import { taskApi } from "../taskApi";
+import { taskApi } from '../task-api';
 
-export const useTasks = (projectId?: string, assigneeId?: string) => {
-  return useQuery<Task[]>({
+const hasValue = (value: string | null | undefined): value is string =>
+  value !== undefined && value !== null && value !== '';
+
+const toAssigneeId = (assignee?: string | { _id: string }) =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the string | { _id } union
+  typeof assignee === 'string' ? assignee : assignee?._id;
+
+const buildAssignee = (previousAssignee: Task['assignee'], assigneeId: string): NonNullable<Task['assignee']> =>
+  // Same assignee keeps the existing user info; otherwise use placeholders until the next fetch fills them in
+  previousAssignee !== undefined && previousAssignee._id === assigneeId
+    ? { ...previousAssignee }
+    : { _id: assigneeId, name: 'Loading...', email: 'loading@example.com' };
+
+export const useTasks = (projectId?: string, assigneeId?: string) =>
+  useQuery<Task[]>({
     queryKey: TASK_KEYS.list({
       project: projectId,
-      assignee: assigneeId
+      assignee: assigneeId,
     }),
-    queryFn: async () => taskApi.getTasks(projectId, assigneeId),
-    enabled: !!projectId || !!assigneeId,
+    queryFn: async () => await taskApi.getTasks(projectId, assigneeId),
+    enabled: hasValue(projectId) || hasValue(assigneeId),
     // Ensure we always get fresh data when the component mounts
     staleTime: 0,
-    gcTime: 5 * 60 * 1000 // 5 minutes
+    // 5 minutes
+    gcTime: 5 * 60 * 1000,
   });
-};
 
 interface UseTaskOptions {
   enabled?: boolean;
-  retry?: boolean | ((failureCount: number, error: unknown) => boolean);
+  retry?: boolean | ((failureCount: number, error: Error) => boolean);
 }
 
 export const useTask = (taskId?: string, options: UseTaskOptions = {}) => {
   const { enabled = true, retry } = options;
 
   return useQuery({
-    queryKey: TASK_KEYS.detail(taskId || ""),
-    queryFn: async () => taskApi.getTaskById(taskId || ""),
-    enabled: !!taskId && enabled,
+    queryKey: TASK_KEYS.detail(taskId ?? ''),
+    queryFn: async () => await taskApi.getTaskById(taskId ?? ''),
+    enabled: hasValue(taskId) && enabled,
     retry:
       retry ??
-      ((failureCount: number, error: unknown) => {
-        if ((error as { response?: { status?: number } })?.response?.status === 404) {
+      ((failureCount: number, error: Error) => {
+        // SAFETY: HTTP clients attach an optional `response` to the thrown error; every property is optional-chained
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Error has no `response` in its type
+        if ((error as { response?: { status?: number } }).response?.status === 404) {
           return false;
         }
         return failureCount < 3;
-      })
+      }),
   });
 };
 
@@ -58,8 +74,8 @@ export const useCreateTask = () => {
       orderInProject?: number;
     }) => {
       // Ensure assignee is a string (user ID)
-      const assigneeId = typeof input.assignee === "string" ? input.assignee : input.assignee?._id;
-      return taskApi.createTask({
+      const assigneeId = toAssigneeId(input.assignee);
+      return await taskApi.createTask({
         title: input.title,
         description: input.description,
         status: input.status,
@@ -67,28 +83,24 @@ export const useCreateTask = () => {
         board: input.board,
         project: input.project,
         assignee: assigneeId,
-        orderInProject: input.orderInProject
+        orderInProject: input.orderInProject,
       });
     },
     onSuccess: (variables) => {
       // Invalidate the tasks list query to refetch
-      queryClient.invalidateQueries({
-        queryKey: TASK_KEYS.list({ project: variables.project })
+      void queryClient.invalidateQueries({
+        queryKey: TASK_KEYS.list({ project: variables.project }),
       });
 
       // Also invalidate the assignee's tasks if applicable
-      let assigneeId: string | undefined;
-      if (variables.assignee) {
-        assigneeId =
-          typeof variables.assignee === "string" ? variables.assignee : variables.assignee._id;
-      }
+      const assigneeId = toAssigneeId(variables.assignee);
 
-      if (assigneeId) {
-        queryClient.invalidateQueries({
-          queryKey: TASK_KEYS.list({ assignee: assigneeId })
+      if (hasValue(assigneeId)) {
+        void queryClient.invalidateQueries({
+          queryKey: TASK_KEYS.list({ assignee: assigneeId }),
         });
       }
-    }
+    },
   });
 };
 
@@ -101,16 +113,17 @@ export const useUpdateTask = () => {
     mutationFn: async ({
       id,
       ...updates
-    }: { id: string } & Omit<UpdateTaskInput, "assigneeId" | "lastModifier"> & {
+    }: { id: string } & Omit<UpdateTaskInput, 'assigneeId' | 'lastModifier'> & {
         assigneeId?: string | null;
       }) => {
-      if (!userId) {
-        throw new Error("User must be authenticated to update a task");
+      if (!hasValue(userId)) {
+        throw new Error('User must be authenticated to update a task');
       }
 
       // Create a clean update object with only the fields we want to send
       const apiUpdates: UpdateTaskInput = {
-        lastModifier: userId // Use the current user's ID as the lastModifier
+        // Use the current user's ID as the lastModifier
+        lastModifier: userId,
       };
 
       // Only include fields that are defined in the updates
@@ -128,11 +141,11 @@ export const useUpdateTask = () => {
       }
 
       // Handle assigneeId separately to ensure it's not sent as undefined
-      if ("assigneeId" in updates) {
+      if ('assigneeId' in updates) {
         apiUpdates.assigneeId = updates.assigneeId ?? null;
       }
 
-      return taskApi.updateTask(id, apiUpdates);
+      return await taskApi.updateTask(id, apiUpdates);
     },
 
     // Optimistic updates
@@ -152,51 +165,31 @@ export const useUpdateTask = () => {
         const updateFields: Partial<Task> = {};
 
         // Only include fields that were actually provided in the update
-        if ("title" in updatedTask) {
+        if ('title' in updatedTask) {
           updateFields.title = updatedTask.title;
         }
-        if ("description" in updatedTask) {
+        if ('description' in updatedTask) {
           updateFields.description = updatedTask.description;
         }
-        if ("status" in updatedTask) {
+        if ('status' in updatedTask) {
           updateFields.status = updatedTask.status;
         }
-        if ("dueDate" in updatedTask) {
+        if ('dueDate' in updatedTask) {
           updateFields.dueDate = updatedTask.dueDate;
         }
 
         // Handle assignee update - we need to include all required UserInfo fields
-        if ("assigneeId" in updatedTask) {
-          if (updatedTask.assigneeId) {
-            // If we have an assigneeId, we need to get the user info from the previous task
-            // or from the current assignee if it exists
-            const previousTask = queryClient.getQueryData<Task>(taskQueryKey);
-            const previousAssignee = previousTask?.assignee;
-
-            if (previousAssignee && previousAssignee._id === updatedTask.assigneeId) {
-              // If the assignee is the same, keep the existing user info
-              updateFields.assignee = { ...previousAssignee };
-            } else {
-              // Otherwise, we need to fetch the user info
-              // For now, we'll just include the ID and placeholder values for required fields
-              // The next data fetch will update this with the full user info
-              updateFields.assignee = {
-                _id: updatedTask.assigneeId,
-                name: "Loading...",
-                email: "loading@example.com"
-              };
-            }
-          } else {
-            // If assigneeId is null or undefined, set assignee to undefined
-            updateFields.assignee = undefined;
-          }
+        if ('assigneeId' in updatedTask) {
+          const { assigneeId } = updatedTask;
+          updateFields.assignee = hasValue(assigneeId) ? buildAssignee(previousTask.assignee, assigneeId) : undefined;
         }
 
         const newTask = {
           ...previousTask,
           ...updateFields,
           updatedAt: new Date().toISOString(),
-          _id: taskId // Ensure _id is always set
+          // Ensure _id is always set
+          _id: taskId,
         };
 
         // Update the task in the cache
@@ -215,27 +208,27 @@ export const useUpdateTask = () => {
     },
 
     // If the mutation fails, use the context returned from onMutate to roll back
-    onError: (err, updatedTask, context) => {
+    onError: (_err, updatedTask, context) => {
       if (context?.previousTask) {
         queryClient.setQueryData(TASK_KEYS.detail(updatedTask.id), context.previousTask);
       }
     },
 
     // Always refetch after error or success to ensure consistency
-    onSettled: (data, error, variables) => {
+    onSettled: (_data, _error, variables) => {
       const taskId = variables.id;
       // Invalidate both the specific task and any lists that might contain it
-      Promise.all([
+      void Promise.all([
         queryClient.invalidateQueries({
           queryKey: TASK_KEYS.detail(taskId),
-          refetchType: "all"
+          refetchType: 'all',
         }),
         queryClient.invalidateQueries({
           queryKey: TASK_KEYS.lists(),
-          refetchType: "active"
-        })
+          refetchType: 'active',
+        }),
       ]);
-    }
+    },
   });
 };
 
@@ -244,7 +237,7 @@ export const useDeleteTask = () => {
 
   return useMutation({
     mutationFn: async (taskId: string) => {
-      return taskApi.deleteTask(taskId);
+      await taskApi.deleteTask(taskId);
     },
     onMutate: async (taskId) => {
       // Cancel any outgoing refetches
@@ -266,23 +259,24 @@ export const useDeleteTask = () => {
           }
 
           // Filter out the deleted task and update orders for remaining tasks
-          return old
-            .filter((task) => task._id !== taskId)
-            .map((task) => {
-              // If task is in the same project and has higher order, decrease it by 1
-              if (
-                task.project === taskToDelete.project &&
-                task.orderInProject !== undefined &&
-                taskToDelete.orderInProject !== undefined &&
-                task.orderInProject > taskToDelete.orderInProject
-              ) {
-                return {
-                  ...task,
-                  orderInProject: task.orderInProject - 1
-                };
-              }
-              return task;
-            });
+          const remaining: Task[] = [];
+          for (const task of old) {
+            if (task._id === taskId) {
+              continue;
+            }
+            // If task is in the same project and has higher order, decrease it by 1
+            if (
+              task.project === taskToDelete.project &&
+              task.orderInProject !== undefined &&
+              taskToDelete.orderInProject !== undefined &&
+              task.orderInProject > taskToDelete.orderInProject
+            ) {
+              remaining.push({ ...task, orderInProject: task.orderInProject - 1 });
+            } else {
+              remaining.push(task);
+            }
+          }
+          return remaining;
         });
       } else {
         // Fallback: just remove the task if we don't have its details
@@ -301,34 +295,34 @@ export const useDeleteTask = () => {
     },
 
     // If the mutation fails, use the context returned from onMutate to roll back
-    onError: (err, taskId, context) => {
-      if (context?.previousTasks) {
+    onError: (_err, taskId, context) => {
+      if (context?.previousTasks != null) {
         queryClient.setQueryData(TASK_KEYS.lists(), context.previousTasks);
       }
-      if (context?.previousTask) {
+      if (context?.previousTask != null) {
         queryClient.setQueryData(TASK_KEYS.detail(taskId), context.previousTask);
       }
     },
 
     // Always refetch after error or success to ensure data consistency
-    onSettled: (data, error, taskId, context) => {
+    onSettled: (_data, _error, taskId, context) => {
       // If we have the deleted task info, invalidate queries for that specific project
-      if (context?.taskToDelete?.project) {
-        queryClient.invalidateQueries({
+      if (hasValue(context?.taskToDelete?.project)) {
+        void queryClient.invalidateQueries({
           queryKey: TASK_KEYS.list({ project: context.taskToDelete.project }),
-          refetchType: "active"
+          refetchType: 'active',
         });
       }
 
       // Also invalidate general task lists and the specific task
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: TASK_KEYS.lists(),
-        refetchType: "active"
+        refetchType: 'active',
       });
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: TASK_KEYS.detail(taskId),
-        refetchType: "all"
+        refetchType: 'all',
       });
-    }
+    },
   });
 };

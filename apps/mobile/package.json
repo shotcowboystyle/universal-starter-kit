@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -11,8 +11,6 @@
     "expo:doctor": "npx expo-doctor",
     "expo:fix": "npx expo install --fix",
     "expo:upgrade": "npx expo install expo@latest && npx expo install --fix",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json apps/mobile",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run --coverage",
     "test:watch": "vitest watch"
   },
@@ -25,6 +23,9 @@
     "@repo/i18n": "workspace:*",
     "@repo/store": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tamagui/animations-react-native": "catalog:",
+    "@tamagui/config": "catalog:",
+    "@tamagui/core": "catalog:",
     "@tanstack/react-query": "catalog:",
     "expo": "~55.0.15",
     "expo-constants": "~55.0.14",
@@ -39,9 +40,6 @@
     "expo-status-bar": "~55.0.5",
     "expo-web-browser": "~55.0.14",
     "i18next": "catalog:",
-    "@tamagui/animations-react-native": "catalog:",
-    "@tamagui/config": "catalog:",
-    "@tamagui/core": "catalog:",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-i18next": "catalog:",

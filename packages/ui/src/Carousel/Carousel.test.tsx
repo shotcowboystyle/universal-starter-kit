@@ -7,8 +7,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset, isTouchSurface, sizeRecipeForToken } from '@repo/theme';
@@ -17,8 +17,6 @@ import { Text, View, getTokens } from 'tamagui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Carousel } from './index';
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 // ── happy-dom layout plumbing ─────────────────────────────────
 // react-native-web's onLayout rides a module-level ResizeObserver singleton
@@ -36,22 +34,21 @@ interface ObserverRecord {
 }
 const observerRecords: ObserverRecord[] = [];
 
-function makeEntry(target: Element): ResizeObserverEntry {
-  return {
+const makeEntry = (target: Element): ResizeObserverEntry =>
+  ({
     target,
     contentRect: { width: layoutWidth, height: 240 } as DOMRectReadOnly,
     borderBoxSize: [],
     contentBoxSize: [],
     devicePixelContentBoxSize: [],
-  } as unknown as ResizeObserverEntry;
-}
+  }) as unknown as ResizeObserverEntry;
 
 vi.stubGlobal(
   'ResizeObserver',
   class {
     record: ObserverRecord;
-    constructor(cb: ResizeObserverCallback) {
-      this.record = { cb, targets: new Set() };
+    constructor(onResize: ResizeObserverCallback) {
+      this.record = { cb: onResize, targets: new Set() };
       observerRecords.push(this.record);
     }
     observe(target: Element) {
@@ -81,7 +78,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
 });
 
 // react-native-web's scrollTo lands on the DOM node's scroll(); capture it.
-const scrollCalls: Array<{ left?: number; top?: number; behavior?: string }> = [];
+const scrollCalls: { left?: number; top?: number; behavior?: string }[] = [];
 Object.defineProperty(HTMLElement.prototype, 'scroll', {
   configurable: true,
   writable: true,
@@ -91,66 +88,62 @@ Object.defineProperty(HTMLElement.prototype, 'scroll', {
 });
 
 /** Flush UIManager.measure's setTimeout(0) so onLayout commits. */
-async function flushMeasure() {
+const flushMeasure = async () => {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await sleep(0);
   });
-}
+};
 
-function fireResize(width: number) {
+const fireResize = (width: number) => {
   layoutWidth = width;
   for (const record of observerRecords) {
     for (const target of record.targets) {
       record.cb([makeEntry(target)], undefined as unknown as ResizeObserver);
     }
   }
-}
+};
 
-function slides(container: HTMLElement) {
-  return container.querySelectorAll('[data-carousel-slide]');
-}
+const slides = (container: HTMLElement) => container.querySelectorAll('[data-carousel-slide]');
 
 /**
  * Tamagui materializes dynamic numeric widths as atomic CSS classes, not
  * inline style — resolve whether any class on the node carries the width, in
  * inline style, <style> text, CSSOM rules, or adopted sheets.
  */
-function elementCarriesWidth(node: HTMLElement, widthPx: number): boolean {
+const elementCarriesWidth = (node: HTMLElement, widthPx: number): boolean => {
   const needle = `${widthPx}px`;
   const inline = node.getAttribute('style') ?? '';
   if (inline.includes(needle)) {
     return true;
   }
   const ruleTexts: string[] = [];
-  for (const styleTag of Array.from(document.querySelectorAll('style'))) {
+  for (const styleTag of document.querySelectorAll('style')) {
     ruleTexts.push(styleTag.textContent ?? '');
   }
   const sheets = [
-    ...Array.from(document.styleSheets),
-    ...Array.from((document as unknown as { adoptedStyleSheets?: CSSStyleSheet[] }).adoptedStyleSheets ?? []),
+    ...document.styleSheets,
+    ...((document as unknown as { adoptedStyleSheets?: CSSStyleSheet[] }).adoptedStyleSheets ?? []),
   ];
   for (const sheet of sheets) {
     try {
-      for (const rule of Array.from(sheet.cssRules)) {
+      for (const rule of sheet.cssRules) {
         ruleTexts.push(rule.cssText);
       }
     } catch {
       // Unreadable sheet — nothing Tamagui inserts is.
     }
   }
-  return Array.from(node.classList).some((className) =>
+  return [...node.classList].some((className) =>
     ruleTexts.some((text) => text.includes(`.${className}`) && text.includes(needle)),
   );
-}
+};
 
-function dots(container: HTMLElement) {
-  return container.querySelectorAll("[role='button'][aria-label^='Go to item']");
-}
+const dots = (container: HTMLElement) => container.querySelectorAll("[role='button'][aria-label^='Go to item']");
 
-beforeEach(() => {
+const resetLayout = () => {
   layoutWidth = 400;
   scrollCalls.length = 0;
-});
+};
 
 const Slide = ({ index }: { index: number }) => (
   <View height={100}>
@@ -159,11 +152,16 @@ const Slide = ({ index }: { index: number }) => (
 );
 
 describe('Carousel geometry', () => {
+  beforeEach(resetLayout);
+
   it('sizes each slide from the measured viewport, never percent-of-track', async () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -180,7 +178,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -197,7 +198,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2, 3, 4].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -208,12 +212,15 @@ describe('Carousel geometry', () => {
 
   it('resolves token gaps into the offset math', async () => {
     const tokenGap = (getTokens().space as Record<string, { val?: number } | undefined>)?.$4?.val;
-    expect(typeof tokenGap).toBe('number');
+    expect(tokenGap).toBeTypeOf('number');
     expect(tokenGap!).toBeGreaterThan(0);
     const { container } = renderWithProviders(
       <Carousel gap="$4">
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -226,7 +233,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -244,12 +254,15 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
     await flushMeasure();
-    const track = container.querySelector('[data-carousel-track]') as HTMLElement;
+    const track = container.querySelector<HTMLElement>('[data-carousel-track]')!;
     expect(track).toBeTruthy();
     Object.defineProperty(track, 'scrollLeft', { configurable: true, value: 2 * (400 + 16) });
     fireEvent.scroll(track);
@@ -270,9 +283,14 @@ describe('Carousel geometry', () => {
 
   it('lands initialSlide at its pitch offset on first measure', async () => {
     renderWithProviders(
-      <Carousel gap={0} initialSlide={2}>
+      <Carousel
+        gap={0}
+        initialSlide={2}>
         {[0, 1, 2, 3].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -289,12 +307,17 @@ describe('Carousel geometry', () => {
 // probe measures). A hardcoded `animated: true` is the violation this locks
 // out.
 describe('Carousel snaps ride the animation knob', () => {
+  beforeEach(resetLayout);
+
   it('jumps (animated: false → behavior auto) on dot click at animation none', async () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
         <Carousel gap={0}>
           {[0, 1, 2].map((index) => (
-            <Slide key={index} index={index} />
+            <Slide
+              key={index}
+              index={index}
+            />
           ))}
         </Carousel>
       </Preset>,
@@ -311,7 +334,10 @@ describe('Carousel snaps ride the animation knob', () => {
       // Default knobs: animation "quick" — knobProps.transition is defined.
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -326,36 +352,42 @@ describe('Carousel snaps ride the animation knob', () => {
 // scroll viewport. Painted arrow size follows sizeToken; the hit target is
 // floored at MIN_PRESS_TARGET (44). Embla/Polaris/Apple: halo on the control.
 
-function arrow(container: HTMLElement, side: 'prev' | 'next') {
-  return container.querySelector(`[data-carousel-arrow='${side}']`) as HTMLElement | null;
-}
+const arrow = (container: HTMLElement, side: 'prev' | 'next') =>
+  container.querySelector<HTMLElement>(`[data-carousel-arrow='${side}']`);
 
-function arrowVisual(container: HTMLElement, side: 'prev' | 'next') {
-  return container.querySelector(`[data-carousel-arrow-visual='${side}']`) as HTMLElement | null;
-}
+const arrowVisual = (container: HTMLElement, side: 'prev' | 'next') =>
+  container.querySelector<HTMLElement>(`[data-carousel-arrow-visual='${side}']`);
 
 describe('Carousel ring anatomy, size recipes, 44px floor', () => {
+  beforeEach(resetLayout);
+
   it('keeps the viewport out of the tab order with no outline', async () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
     await flushMeasure();
-    const track = container.querySelector('[data-carousel-track]') as HTMLElement;
+    const track = container.querySelector<HTMLElement>('[data-carousel-track]')!;
     expect(track).toBeTruthy();
     expect(track.tabIndex).toBe(-1);
     const style = track.getAttribute('style') ?? '';
-    expect(style).not.toMatch(/outline-width:\s*[1-9]/);
+    expect(style).not.toMatch(/outline-width:\s*[1-9]/u);
   });
 
   it('floors arrow press targets at 44px and paints the size-recipe visual', async () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -380,7 +412,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
       <Preset overrides={{ size: 'small' }}>
         <Carousel gap={0}>
           {[0, 1, 2].map((index) => (
-            <Slide key={index} index={index} />
+            <Slide
+              key={index}
+              index={index}
+            />
           ))}
         </Carousel>
       </Preset>,
@@ -400,12 +435,15 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
     await flushMeasure();
-    const region = container.querySelector("[aria-roledescription='carousel']") as HTMLElement;
+    const region = container.querySelector<HTMLElement>("[aria-roledescription='carousel']")!;
     expect(region).toBeTruthy();
     fireEvent.keyDown(region, { key: 'ArrowRight' });
     expect(scrollCalls.at(-1)).toMatchObject({ left: 400, behavior: 'smooth' });
@@ -421,12 +459,15 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
     await flushMeasure();
-    const sheet = document.getElementById('mp-carousel-arrow-ring');
+    const sheet = document.querySelector('#mp-carousel-arrow-ring');
     expect(sheet?.textContent ?? '').toContain('.mp-carousel-arrow:focus-visible');
     expect(sheet?.textContent ?? '').toContain('.mp-carousel-arrow-visual');
     expect(sheet?.textContent ?? '').not.toContain('[data-carousel-track]');
@@ -434,16 +475,21 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
 });
 
 describe('Carousel live-media tile', () => {
+  beforeEach(resetLayout);
+
   it('does not paint a status pip; viewport radius stays UNCLAMPED', async () => {
-    const src = readFileSync(join(here, 'index.tsx'), 'utf8');
-    expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/);
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    const src = readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8');
+    expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/u);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
     expect(src).toContain('knobProps.borderRadius');
 
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );

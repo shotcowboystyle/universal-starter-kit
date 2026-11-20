@@ -33,7 +33,7 @@ export {
   formatTimeRangeLabel,
   type TimedBlockLayout,
   type CalendarRange,
-} from './calendarMath';
+} from './calendar-math';
 export { TreeView, type TreeViewProps, type TreeNode, type TreeViewHotkeys, type TreeViewDisplay } from './TreeView';
 export { ImageGrid, type ImageGridProps, type ImageGridHotkeys } from './ImageGrid';
 // ProgressCard/ShortcutCard/ListCard ride this barrel on purpose (the
@@ -131,7 +131,7 @@ export {
   type GanttSpan,
   type GanttTick,
   type GanttZoom,
-} from './ganttMath';
+} from './gantt-math';
 export { MatrixView, type MatrixViewProps, type MatrixRow, type MatrixCellRef, type MatrixLegendItem } from './Matrix';
 // matrixMath is surfaced whole for the same reason ganttMath is: pure bucket
 // math a consumer laying out its own grid on the same axis needs unchanged.
@@ -153,13 +153,14 @@ export {
   type MatrixCellSummary,
   type MatrixIntent,
   type MatrixRange,
-} from './matrixMath';
+} from './matrix-math';
 // Kanban drag maths. Only the helper other packages consume is surfaced, in
 // keeping with this barrel's curated style: the table package's
 // ChildTable imports renumberIdx to renumber rows after a reorder, and failed
 // to build without it.
-export { renumberIdx } from './kanbanDnd';
+export { renumberIdx } from './kanban-dnd';
 // Universal chart catalog (d3 math + react-native-svg rendering). Charts are
 // data views; the package barrel star-exports this module, so the charts
 // submodule surfaces through the existing views barrel.
+// oxlint-disable-next-line sonarjs/no-wildcard-import, oxc/no-barrel-file -- the charts catalog is deliberately re-exported whole through the views barrel (see above)
 export * from '../charts';

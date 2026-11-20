@@ -1,6 +1,5 @@
 // Stack-navigation seam — One router semantics over host-native stacks
-// (Adw.NavigationView on GTK, DOM pages in VS Code webviews / webext
-// views). See navigator.ts for the design notes.
+// (DOM pages in webext views). See navigator.ts for the design notes.
 //
 // Deliberately NOT re-exported from the package root: the root barrel is
 // consumed by One/native builds where the seam is never the router;
@@ -37,5 +36,5 @@ export {
   useParams,
   usePathname,
   useRouter,
-} from './oneAdapter';
-export type { LinkProps, LoaderProps } from './oneAdapter';
+} from './one-adapter';
+export type { LinkProps, LoaderProps } from './one-adapter';

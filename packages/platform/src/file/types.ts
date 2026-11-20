@@ -31,27 +31,41 @@ export class FileSaveError extends Error {
   }
 }
 
-function hasControlCharacters(value: string) {
-  return Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
-}
+const isControlCodePoint = (character: string): boolean => {
+  const code = character.codePointAt(0) ?? 0;
+  return code < 32 || code === 127;
+};
 
-export function prepareFileSave(options: FileSaveOptions) {
-  if (
-    !options ||
-    !(options.bytes instanceof Uint8Array) ||
-    typeof options.filename !== 'string' ||
-    !options.filename.trim() ||
-    options.filename === '.' ||
-    options.filename === '..' ||
-    /[/\\]/.test(options.filename) ||
-    hasControlCharacters(options.filename) ||
-    typeof options.mimeType !== 'string' ||
-    hasControlCharacters(options.mimeType)
-  ) {
+const hasControlCharacters = (value: string): boolean => {
+  for (const character of value) {
+    if (isControlCodePoint(character)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const isSingleFilename = (filename: string): boolean => {
+  const isNamed = filename.trim() !== '' && filename !== '.' && filename !== '..';
+  return isNamed && !/[/\\]/u.test(filename) && !hasControlCharacters(filename);
+};
+
+const isValidInput = (options: FileSaveOptions): boolean => {
+  if (options == null || !(options.bytes instanceof Uint8Array)) {
+    return false;
+  }
+  const { filename, mimeType } = options;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- untrusted callers can bypass the declared string types
+  const areStrings = typeof filename === 'string' && typeof mimeType === 'string';
+  return areStrings && isSingleFilename(filename) && !hasControlCharacters(mimeType);
+};
+
+export const prepareFileSave = (options: FileSaveOptions) => {
+  if (!isValidInput(options)) {
     throw new FileSaveError('invalid-input', 'Provide bytes, a single filename and a MIME type.');
   }
   const nativeMimeType = options.mimeType.split(';', 1)[0].trim();
-  if (!/^[\w!#$%&'*+.^`|~-]+\/[\w!#$%&'*+.^`|~-]+$/.test(nativeMimeType)) {
+  if (!/^[\w!#$%&'*+.^`|~-]+\/[\w!#$%&'*+.^`|~-]+$/u.test(nativeMimeType)) {
     throw new FileSaveError('invalid-input', 'Provide a MIME type with a type and subtype.');
   }
   return {
@@ -60,4 +74,4 @@ export function prepareFileSave(options: FileSaveOptions) {
     mimeType: options.mimeType,
     nativeMimeType,
   };
-}
+};

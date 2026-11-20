@@ -7,44 +7,27 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
+import type { useResolvedKnobs } from '@repo/theme';
 import {
+  useTouchSurface,
   ensureFocusVisibleRing,
   ensureKeyboardModalityTracking,
   keyboardFocusRingProps,
   menuRowFrame,
   useGlyphColor,
-  useResolvedKnobs,
   transitionProps,
 } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, memo } from 'react';
 import { Pressable as RNPressable } from 'react-native';
-import type { LabelProps, SizeTokens } from 'tamagui';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { ColorTokens, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { Input as TInput, Text, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Chip, type ChipProps } from '../../Chip';
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
-import { Input as InputParts } from '../../InputParts';
-import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/colorRamps';
-import { SyncFocusToOpen, ScrollArrow } from '../../shared/floatingList';
-import { useTranslation } from '../../shared/i18n';
-import { pickerTriggerContract } from '../../shared/pickerTriggerContract';
-import {
-  getFieldError,
-  getFieldHeight,
-  mergeFieldHandler,
-  useFormField,
-  useResolvedValidators,
-} from '../../shared/utils';
-import { Skeleton } from '../../Skeleton';
-import { Spinner } from '../../Spinner';
-import type { AnyFormApi } from '../../types';
-
-/** Buffer so we scroll before the item hits the scroll-arrow gradient (28px) */
-const scrollArrowBuffer = 28;
-
+import { Chip } from '../../Chip';
+import type { ChipProps } from '../../Chip';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
 import {
   FloatingPanel,
   useFloatingPanel,
@@ -53,10 +36,131 @@ import {
   useViewportGtSm,
 } from '../../FloatingPanel';
 import { PanelPortal } from '../../FloatingPanel/PanelPortal';
-import { useIsInTableCell } from '../../shared/tableCellContext';
-import { useDragScroll } from '../../shared/useDragScroll';
-import { zIndex } from '../../shared/zIndex';
-import { orderOptionsBySelected, type SelectedOrder } from '../selectedOrder';
+import { Input as InputParts } from '../../InputParts';
+import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/color-ramps';
+import { SyncFocusToOpen, ScrollArrow } from '../../shared/floating-list';
+import { useTranslation } from '../../shared/i18n';
+import { pickerTriggerContract } from '../../shared/picker-trigger-contract';
+import { useIsInTableCell } from '../../shared/table-cell-context';
+import { useDragScroll } from '../../shared/use-drag-scroll';
+import {
+  getFieldError,
+  getFieldHeight,
+  mergeFieldHandler,
+  useFormField,
+  useResolvedValidators,
+} from '../../shared/utils';
+import { zIndex } from '../../shared/z-index';
+import { Skeleton } from '../../Skeleton';
+import { Spinner } from '../../Spinner';
+import type { AnyFormApi } from '../../types';
+import { orderOptionsBySelected } from '../selected-order';
+import type { SelectedOrder } from '../selected-order';
+
+/** Buffer so we scroll before the item hits the scroll-arrow gradient (28px) */
+const scrollArrowBuffer = 28;
+
+type SelectionValue = string | string[] | undefined;
+
+const comboboxRowSelector = '[data-combobox-index]';
+
+const hasText = (text: string | undefined): text is string => text !== undefined && text !== '';
+
+/** Normalizes the string | string[] value into a list (empty string means no selection). */
+const toValueArray = (value: SelectionValue): string[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return hasText(value) ? [value] : [];
+};
+
+/** Row fill: the active row wins over the selected row; otherwise `fallback`. */
+const rowBackground = (isActive: boolean, isSelected: boolean, fallback?: string) => {
+  if (isActive) {
+    return formInputColors.background.focus;
+  }
+  return isSelected ? formInputColors.background.base : fallback;
+};
+
+/** Next active index for j/k and arrow navigation, wrapping at both ends. */
+const stepActiveIndex = (previous: number | null, isDown: boolean, total: number): number => {
+  if (isDown) {
+    const next = previous == null ? 0 : previous + 1;
+    return next >= total ? 0 : next;
+  }
+  const next = previous == null ? total - 1 : previous - 1;
+  return next < 0 ? total - 1 : next;
+};
+
+const chipSizeFor = (sizeToken: string): ChipProps['size'] => {
+  switch (sizeToken) {
+    case '$3': {
+      return '$2';
+    }
+    case '$4': {
+      return '$3';
+    }
+    case '$5': {
+      return '$4';
+    }
+    default: {
+      return '$3';
+    }
+  }
+};
+
+const withCreatedOption = (previous: ComboboxOption[], created: ComboboxOption): ComboboxOption[] =>
+  previous.some((option) => option.value === created.value) ? previous : [...previous, created];
+
+/** Tamagui types `ref` as Ref<TamaguiElement>; these web-only panels hold DOM refs. */
+const asTamaguiRef = <Element extends HTMLElement>(
+  ref: React.RefObject<Element | null> | undefined,
+): React.Ref<TamaguiElement> | undefined =>
+  // SAFETY: the web panel renders DOM elements, so the ref only ever receives HTMLElements.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TamaguiElement also admits native views, which never reach these web-only refs
+  ref as React.Ref<TamaguiElement> | undefined;
+
+const toColorToken = (color: string): ColorTokens =>
+  // SAFETY: Tamagui resolves raw color strings and `$token` names alike at runtime; the union only models the token form.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ColorTokens is narrower than string by typing only
+  color as ColorTokens;
+
+const cssPixels = (length: string): number =>
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed lengths carry a `px` suffix, which Number() rejects as NaN
+  Number.parseFloat(length) || 0;
+
+const floatingPanelStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  zIndex: zIndex.dropdown,
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  boxShadow: '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.04)',
+  transition: panelTransition,
+  boxSizing: 'border-box',
+} satisfies React.CSSProperties;
+
+const triggerOpenKeys = new Set(['Enter', ' ', 'ArrowDown', 'ArrowUp', 'j', 'k']);
+
+const isTriggerBagEntry = ([key, val]: [string, unknown]): boolean => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- floating-ui's prop bag mixes handlers and attributes; handlers are only identifiable by runtime kind
+  if (key === 'ref' || typeof val === 'function') {
+    return true;
+  }
+  return key.startsWith('aria-') || key === 'role' || key === 'tabIndex';
+};
+
+const isNode = (target: EventTarget | null): target is Node => target !== null && 'nodeType' in target;
+
+/** True for a non-checkbox <input> (duck-typed so it also works for nodes from other documents). */
+const isTextEntryTarget = (target: EventTarget | null): boolean => {
+  if (target === null || !('tagName' in target) || target.tagName !== 'INPUT') {
+    return false;
+  }
+  return !('type' in target && target.type === 'checkbox');
+};
 
 // ── Styled row ───────────────────────────────────────────────
 
@@ -81,22 +185,24 @@ const ComboboxRow = styled(View, {
       false: {},
     },
     size: {
-      '...size': (val: any) => ({ height: val }),
+      '...size': (val: SizeTokens) => ({ height: val }),
     },
   } as const,
 });
 
-function comboboxOptionId(baseId: string | undefined, index: number) {
-  return `${baseId ?? 'combobox'}-opt-${index}`;
+const comboboxOptionId = (baseId: string | undefined, index: number) => `${baseId ?? 'combobox'}-opt-${index}`;
+
+const comboboxListboxId = (baseId: string | undefined) => `${baseId ?? 'combobox'}-listbox`;
+
+const listItemRingProps = (keyboardRing: boolean) =>
+  keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 as const };
+
+interface ThemeToken {
+  val?: string;
 }
 
-function comboboxListboxId(baseId: string | undefined) {
-  return `${baseId ?? 'combobox'}-listbox`;
-}
-
-function listItemRingProps(keyboardRing: boolean) {
-  return keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 as const };
-}
+/** The Tamagui theme looked up by token name; entries are resolved Variables carrying `val`. */
+const useThemeTokens = (): Readonly<Record<string, ThemeToken | undefined>> => useTheme();
 
 /**
  * Resolve the selected-mark token to a real paint.
@@ -113,11 +219,11 @@ function listItemRingProps(keyboardRing: boolean) {
  * stays declared once in colorRamps, and degrading to `$color` ink rather than
  * black when a narrow sub-theme has no accent step.
  */
-function useSelectedMarkColor(): string {
-  const theme = useTheme();
-  const entry = (theme as unknown as Record<string, { val?: string } | undefined>)[formSelectedColors.mark.slice(1)];
+const useSelectedMarkColor = (): string => {
+  const theme = useThemeTokens();
+  const entry = theme[formSelectedColors.mark.slice(1)];
   return entry?.val ?? theme.color?.val ?? 'currentColor';
-}
+};
 
 const GroupHeader = styled(Text, {
   name: 'ComboboxGroupHeader',
@@ -133,6 +239,15 @@ const GroupHeader = styled(Text, {
 });
 
 // ── Types ─────────────────────────────────────────────────────
+
+// A handler may return nothing or a cleanup function, so `void` must stay in the return union.
+// oxlint-disable-next-line typescript/no-invalid-void-type -- return-position void keeps callbacks that return nothing assignable
+type SearchHandler = (query: string) => void | (() => void);
+
+// oxlint-disable-next-line typescript/no-invalid-void-type -- return-position void keeps callbacks that return nothing assignable
+type CreateHandler = (value: string) => ComboboxOption | void;
+
+type TriggerRender = (selected: ComboboxOption | ComboboxOption[] | undefined, open: boolean) => ReactNode;
 
 export interface ComboboxOption {
   value: string;
@@ -158,7 +273,7 @@ export interface ComboboxProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
-  onSearch?: (query: string) => void | (() => void);
+  onSearch?: SearchHandler;
   loading?: boolean;
   /**
    * Honest async-search failure surface: when set, the dropdown list area
@@ -177,12 +292,12 @@ export interface ComboboxProps {
   onLoadMore?: () => void;
   /** Whether more pages are available. Shows a spinner at the bottom when loading more. */
   hasMore?: boolean;
-  trigger?: (selected: ComboboxOption | ComboboxOption[] | undefined, open: boolean) => ReactNode;
+  trigger?: TriggerRender;
   /** Custom triggers stretch by default; content hugs a composite-field adornment. */
   triggerSizing?: 'stretch' | 'content';
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -192,7 +307,7 @@ export interface ComboboxProps {
   readOnly?: boolean;
   size?: SizeTokens;
   id?: string;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: (...args: never[]) => void;
   popoverWidth?: number;
   tabIndex?: number;
   multiple?: boolean;
@@ -214,7 +329,7 @@ export interface ComboboxProps {
    * keeps it listed until `options` carries it. Return nothing to handle
    * creation yourself (a single-value panel still closes).
    */
-  onCreate?: (value: string) => ComboboxOption | void;
+  onCreate?: CreateHandler;
   /** Label template for the create option. Use {value} as placeholder. Default: 'Create "{value}"' */
   createLabel?: string;
   /** Hide the search input (useful for @mentions where search is provided externally) */
@@ -243,34 +358,32 @@ interface ComboboxGroupHeaderItem {
 
 type GroupedComboboxItem = GroupedComboboxOption | ComboboxGroupHeaderItem;
 
-function groupComboboxOptions(options: ComboboxOption[]): {
-  items: GroupedComboboxItem[];
-  flatOptions: ComboboxOption[];
-} {
-  const hasGroups = options.some((o) => o.group);
+const groupComboboxOptions = (options: ComboboxOption[]) => {
+  const hasGroups = options.some((o) => hasText(o.group));
   if (!hasGroups) {
-    return {
-      items: options.map((option, index) => ({
-        type: 'option' as const,
-        option,
-        flatIndex: index,
-      })),
-      flatOptions: options,
-    };
+    const items: GroupedComboboxItem[] = options.map((option, index) => ({
+      type: 'option',
+      option,
+      flatIndex: index,
+    }));
+    return { items, flatOptions: options };
   }
 
-  // Separate grouped and ungrouped options
-  const ungrouped = options.filter((o) => !o.group);
-  const grouped = options.filter((o) => o.group);
-
-  // Group by group label
+  // Separate ungrouped options and bucket the rest by group label
+  const ungrouped: ComboboxOption[] = [];
   const groups = new Map<string, ComboboxOption[]>();
-  for (const option of grouped) {
-    const groupLabel = option.group!;
-    if (!groups.has(groupLabel)) {
-      groups.set(groupLabel, []);
+  for (const option of options) {
+    const groupLabel = option.group;
+    if (!hasText(groupLabel)) {
+      ungrouped.push(option);
+      continue;
     }
-    groups.get(groupLabel)!.push(option);
+    const bucket = groups.get(groupLabel);
+    if (bucket === undefined) {
+      groups.set(groupLabel, [option]);
+    } else {
+      bucket.push(option);
+    }
   }
 
   // Build result
@@ -293,14 +406,14 @@ function groupComboboxOptions(options: ComboboxOption[]): {
   }
 
   return { items, flatOptions };
-}
+};
 
 // ── Memoized option row ──────────────────────────────────────
 
 type KnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
 
 interface ComboboxItemHandlers {
-  getItemProps: (userProps?: React.HTMLProps<HTMLElement>) => Record<string, unknown>;
+  getItemProps: ReturnType<typeof useInteractions>['getItemProps'];
   onSelect: (option: ComboboxOption, index: number, event?: React.MouseEvent) => void;
   onItemHover?: (e: React.MouseEvent<HTMLElement>) => void;
   onItemKeyDown?: (e: React.KeyboardEvent, index: number) => void;
@@ -308,7 +421,7 @@ interface ComboboxItemHandlers {
   textColor: string;
   /** Selected mark, already resolved to a paint. */
   markColor: string;
-  listItemsRef: React.RefObject<Array<HTMLElement | null>>;
+  listItemsRef: React.RefObject<(HTMLElement | null)[]>;
 }
 
 const ComboboxItem = memo(function ComboboxItem({
@@ -330,18 +443,25 @@ const ComboboxItem = memo(function ComboboxItem({
   optionId?: string;
   /** When true, disable hoverStyle so only isActive drives the highlight (avoids ghost highlight from stale hover) */
   suppressHover?: boolean;
-  handlers: React.RefObject<ComboboxItemHandlers>;
+  handlers: React.RefObject<ComboboxItemHandlers | null>;
 }) {
   const ctx = handlers.current;
+  if (ctx === null) {
+    throw new Error('ComboboxItem rendered before its handlers were set');
+  }
   const itemProps = ctx.getItemProps({
     onClick(event: React.MouseEvent) {
       ctx.onSelect(option, index, event);
     },
   });
+  // SAFETY: floating-ui's item props are an untyped bag; its `onKeyDown` is a React keyboard handler when present.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the bag is Record<string, unknown> by floating-ui's contract
   const defaultOnKeyDown = itemProps.onKeyDown as ((e: React.KeyboardEvent) => void) | undefined;
   return (
     <ComboboxRow
-      ref={(node: any) => {
+      ref={(node: TamaguiElement | null) => {
+        // SAFETY: option rows render as DOM nodes on the web panel, the only consumer of listItemsRef.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion, react/immutability -- TamaguiElement also admits native views, which never reach this web-only list; the ref callback registers the row in floating-ui's listRef by design
         ctx.listItemsRef.current[index] = node as HTMLElement | null;
       }}
       {...itemProps}
@@ -356,6 +476,7 @@ const ComboboxItem = memo(function ComboboxItem({
         }
       }}
       {...(ctx.onItemHover ? { onMouseEnter: ctx.onItemHover } : {})}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
       role="option"
       tabIndex={-1}
       selected={isSelected}
@@ -367,30 +488,22 @@ const ComboboxItem = memo(function ComboboxItem({
       {...(suppressHover
         ? {
             hoverStyle: {
-              backgroundColor: isActive
-                ? formInputColors.background.focus
-                : isSelected
-                  ? formInputColors.background.base
-                  : 'transparent',
+              backgroundColor: rowBackground(isActive, isSelected, 'transparent'),
             },
-            backgroundColor: isActive
-              ? formInputColors.background.focus
-              : isSelected
-                ? formInputColors.background.base
-                : undefined,
+            backgroundColor: rowBackground(isActive, isSelected),
           }
         : {
             hoverStyle: {
               backgroundColor: isSelected ? formInputColors.background.base : formInputColors.background.focus,
             },
           })}
-      {...(option.description
-        ? // Two-line rows need to grow past the size-variant height.
-          { height: 'auto', paddingVertical: '$2' }
-        : undefined)}
+      // Two-line rows need to grow past the size-variant height.
+      {...(hasText(option.description) ? { height: 'auto', paddingVertical: '$2' } : undefined)}
       {...transitionProps(ctx.knobProps.transition)}>
-      {option.description ? (
-        <YStack flex={1} minWidth={0}>
+      {hasText(option.description) ? (
+        <YStack
+          flex={1}
+          minWidth={0}>
           <Text
             fontFamily={ctx.knobProps.body.fontFamily}
             fontWeight={ctx.knobProps.body.fontWeight}
@@ -416,7 +529,12 @@ const ComboboxItem = memo(function ComboboxItem({
           {option.label}
         </Text>
       )}
-      {isSelected && <CheckIcon size={14} color={ctx.markColor} />}
+      {isSelected && (
+        <CheckIcon
+          size={14}
+          color={ctx.markColor}
+        />
+      )}
     </ComboboxRow>
   );
 });
@@ -425,13 +543,13 @@ const ComboboxItem = memo(function ComboboxItem({
 
 interface FloatingComboboxCoreProps {
   options: ComboboxOption[];
-  value: string | string[] | undefined;
+  value: SelectionValue;
   onValueChange?: (value: string | string[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: (...args: never[]) => void;
   placeholder: string;
   searchPlaceholder: string;
   emptyMessage: string;
-  onSearch?: (query: string) => void | (() => void);
+  onSearch?: SearchHandler;
   loading?: boolean;
   searchError?: string;
   valueLabel?: string;
@@ -444,14 +562,14 @@ interface FloatingComboboxCoreProps {
   hasLabel?: boolean;
   tabIndexOverride?: number;
   popoverWidth?: number;
-  trigger?: (selected: ComboboxOption | ComboboxOption[] | undefined, open: boolean) => ReactNode;
+  trigger?: TriggerRender;
   triggerSizing?: 'stretch' | 'content';
   knobProps: KnobProps;
   multiple?: boolean;
   selectedOrder?: SelectedOrder;
   dismissible?: boolean;
   creatable?: boolean;
-  onCreate?: (value: string) => ComboboxOption | void;
+  onCreate?: CreateHandler;
   createLabel?: string;
   hideSearch?: boolean;
   searchValue?: string;
@@ -459,7 +577,8 @@ interface FloatingComboboxCoreProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-function FloatingComboboxCore({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one component owns the shared overlay refs and keyboard state; splitting would thread ~20 refs through props
+const FloatingComboboxCore = ({
   options,
   value,
   onValueChange,
@@ -493,7 +612,8 @@ function FloatingComboboxCore({
   searchValue,
   open: openProp,
   onOpenChange,
-}: FloatingComboboxCoreProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component note above
+}: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -504,20 +624,20 @@ function FloatingComboboxCore({
   const glyphColor = useGlyphColor();
   const [internalOpen, setInternalOpen] = useState(false);
   // Use external open state when provided (controlled), otherwise use internal state
-  const open = openProp !== undefined ? openProp : internalOpen;
+  const open = openProp ?? internalOpen;
   const setOpen = useCallback(
     (nextOpen: boolean) => {
-      if (openProp !== undefined) {
-        onOpenChange?.(nextOpen);
-      } else {
+      if (openProp === undefined) {
         setInternalOpen(nextOpen);
+      } else {
+        onOpenChange?.(nextOpen);
       }
     },
     [openProp, onOpenChange],
   );
   const [internalFilter, setInternalFilter] = useState('');
   // Use external searchValue when provided, otherwise use internal filter
-  const filter = searchValue !== undefined ? searchValue : internalFilter;
+  const filter = searchValue ?? internalFilter;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const textColor = knobProps.textAccentColor;
@@ -525,6 +645,7 @@ function FloatingComboboxCore({
 
   const labelCacheRef = useRef<Map<string, string>>(new Map());
   for (const o of options) {
+    // oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text
     labelCacheRef.current.set(o.value, o.label);
   }
   const getLabel = useCallback((v: string) => labelCacheRef.current.get(v) ?? v, []);
@@ -533,8 +654,9 @@ function FloatingComboboxCore({
     if (!multiple) {
       return [];
     }
-    const vals = Array.isArray(value) ? value : value ? [value] : [];
-    return [...vals].sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
+    const vals = toValueArray(value);
+    // oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text
+    return vals.toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
   }, [multiple, value, getLabel]);
 
   const selectedOption = useMemo(
@@ -542,10 +664,13 @@ function FloatingComboboxCore({
     [options, value, multiple],
   );
 
-  const selectedOptions = useMemo(
-    () => (multiple ? options.filter((o) => selectedValues.includes(o.value)) : []),
-    [options, selectedValues, multiple],
-  );
+  const selectedOptions = useMemo(() => {
+    if (!multiple) {
+      return [];
+    }
+    const selectedSet = new Set(selectedValues);
+    return options.filter((o) => selectedSet.has(o.value));
+  }, [options, selectedValues, multiple]);
 
   const isSelected = useCallback(
     (optionValue: string) => (multiple ? selectedValues.includes(optionValue) : optionValue === value),
@@ -557,7 +682,7 @@ function FloatingComboboxCore({
       if (!multiple) {
         return;
       }
-      const current = Array.isArray(value) ? value : value ? [value] : [];
+      const current = toValueArray(value);
       const next = current.filter((v) => v !== valueToRemove);
       onValueChange?.(next);
     },
@@ -573,7 +698,7 @@ function FloatingComboboxCore({
       (option) =>
         option.label.toLowerCase().includes(query) ||
         option.value.toLowerCase().includes(query) ||
-        (option.keywords && option.keywords.toLowerCase().includes(query)),
+        option.keywords?.toLowerCase().includes(query) === true,
     );
   }, [options, filter, onSearch]);
 
@@ -593,7 +718,7 @@ function FloatingComboboxCore({
     }
     const newOption = onCreate(typed);
     if (newOption && multiple) {
-      const current = Array.isArray(value) ? value : value ? [value] : [];
+      const current = toValueArray(value);
       if (!current.includes(newOption.value)) {
         onValueChange?.([...current, newOption.value]);
       }
@@ -613,6 +738,7 @@ function FloatingComboboxCore({
   const hasSearchedRef = useRef(false);
   const sortedFiltered = useMemo(() => {
     if (filter.trim()) {
+      // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
       hasSearchedRef.current = true;
       return filtered;
     }
@@ -623,13 +749,16 @@ function FloatingComboboxCore({
       return filtered;
     }
     // First open with empty filter (no search yet): compute order with selected at front, store once
+    // User searched then cleared: keep natural order.
+    // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
     if (hasSearchedRef.current) {
       return filtered;
-    } // user searched then cleared; keep natural order
+    }
     if (initialOrderRef.current === null) {
-      const current = Array.isArray(value) ? value : value ? [value] : [];
+      const current = toValueArray(value);
       initialOrderRef.current = orderOptionsBySelected(filtered, current, selectedOrder);
     }
+    // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
     return initialOrderRef.current;
   }, [filtered, filter, open, multiple, value, selectedOrder]);
 
@@ -646,7 +775,8 @@ function FloatingComboboxCore({
   const searchCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!onSearch || !open) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const timerId = setTimeout(() => {
       searchCleanupRef.current?.();
@@ -660,7 +790,7 @@ function FloatingComboboxCore({
     };
   }, [filter, onSearch, open]);
 
-  const listItemsRef = useRef<Array<HTMLElement | null>>([]);
+  const listItemsRef = useRef<(HTMLElement | null)[]>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const listScrollRef = useRef<HTMLElement | null>(null);
   const keyboardNavRef = useRef(false);
@@ -679,6 +809,7 @@ function FloatingComboboxCore({
   const lastScrollTopRef = useRef(0);
   const growConstraintRef = useRef<'no-up' | 'no-down' | null>(null);
   const filterRef = useRef(filter);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   filterRef.current = filter;
 
   const repositionRef = useRef<(() => void) | null>(null);
@@ -705,47 +836,62 @@ function FloatingComboboxCore({
     },
   });
 
+  const { refs: panelRefs, triggerRef: panelTriggerRef, arrowScrollDirRef, updateArrows } = panel;
+
   const { scrollRef: dragScrollRef, dragProps } = useDragScroll({
     direction: 'vertical',
   });
+  const handleListPointerDown = dragProps.onPointerDown;
 
   // Sync drag scroll ref with list scroll ref
   useEffect(() => {
     if (listScrollRef.current) {
       dragScrollRef.current = listScrollRef.current;
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `open` re-syncs once the list mounts; react-hooks requires dragScrollRef because it comes from a custom hook
   }, [open, dragScrollRef]);
 
   const justResetFromFilterRef = useRef(false);
+  const lastSelectedIndexRef = useRef<number | null>(null);
+  const hasSelectedSinceOpenRef = useRef(false);
   useEffect(() => {
     if (open) {
       justResetFromFilterRef.current = true;
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(0);
       hasSelectedSinceOpenRef.current = false;
     } else {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setInternalFilter('');
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(null);
       lastMousePosRef.current = null;
       initialOrderRef.current = null;
       hasSearchedRef.current = false;
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setKeyboardNav(false);
     }
-  }, [open]);
+  }, [open, setKeyboardNav]);
 
   // Document-level Enter/Escape to close (catches keys when focus is on list, not just search)
   const activeIndexRef = useRef(activeIndex);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   activeIndexRef.current = activeIndex;
   const navigableOptionsRef = useRef(navigableOptions);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   navigableOptionsRef.current = navigableOptions;
   const showCreateOptionRef = useRef(showCreateOption);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   showCreateOptionRef.current = showCreateOption;
   const multipleRef = useRef(multiple);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   multipleRef.current = multiple;
 
   const repositionOverlay = useCallback(
+    // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one imperative positioning pass; splitting would scatter the shared geometry locals
     (source: 'filter' | 'wheel' | 'init') => {
-      const dropdownElement = panel.refs.floating.current;
-      const trigger = panel.triggerRef.current;
+      const dropdownElement = panelRefs.floating.current;
+      const trigger = panelTriggerRef.current;
       const listScrollElement = listScrollRef.current;
       if (!dropdownElement || !trigger) {
         return;
@@ -753,6 +899,7 @@ function FloatingComboboxCore({
 
       const suppressTransition = source === 'init' || source === 'filter';
       if (suppressTransition) {
+        // oxlint-disable-next-line react/immutability -- imperative positioning writes the floating element's DOM style from layout callbacks, never during render
         dropdownElement.style.transition = 'none';
       }
 
@@ -767,16 +914,15 @@ function FloatingComboboxCore({
 
       dropdownElement.style.minWidth = `${minWidth}px`;
       dropdownElement.style.maxWidth = `${maxWidth}px`;
-      if (popoverWidth) {
+      if (popoverWidth !== undefined && popoverWidth !== 0) {
         dropdownElement.style.width = `${popoverWidth}px`;
       }
 
-      const searchBarElement = dropdownElement.children[0] as HTMLElement | undefined;
+      const searchBarElement = dropdownElement.querySelector<HTMLElement>(':scope > *');
       const searchBarHeight = searchBarElement?.offsetHeight ?? 0;
       const listContentHeight = listScrollElement?.scrollHeight ?? 0;
       const computedStyle = getComputedStyle(dropdownElement);
-      const borderHeight =
-        (parseFloat(computedStyle.borderTopWidth) || 0) + (parseFloat(computedStyle.borderBottomWidth) || 0);
+      const borderHeight = cssPixels(computedStyle.borderTopWidth) + cssPixels(computedStyle.borderBottomWidth);
       const contentHeight = searchBarHeight + listContentHeight + borderHeight;
 
       const isDropup = panel.placement.startsWith('top');
@@ -825,10 +971,10 @@ function FloatingComboboxCore({
         }
         requestAnimationFrame(() => {
           if (listScrollRef.current) {
-            panel.updateArrows(listScrollRef.current);
+            updateArrows(listScrollRef.current);
             requestAnimationFrame(() => {
               if (listScrollRef.current) {
-                panel.updateArrows(listScrollRef.current);
+                updateArrows(listScrollRef.current);
               }
             });
           }
@@ -863,12 +1009,7 @@ function FloatingComboboxCore({
 
         // For dropdowns: don't move the panel below the trigger
         // For dropups: don't move the panel above where it started
-        if (!isDropup) {
-          // Keep the panel starting at or above the trigger. A non-covering
-          // (multi-select) panel may not grow upward at all — that is what
-          // would swallow the chips.
-          top = coversTrigger ? Math.min(top, triggerTop) : triggerBottom;
-        } else {
+        if (isDropup) {
           // Keep the panel ending at or below the trigger; a non-covering
           // drop-up stops at the trigger's TOP edge.
           const floor = coversTrigger ? triggerBottom : triggerTop;
@@ -876,6 +1017,11 @@ function FloatingComboboxCore({
           if (panelBottom < floor) {
             top = floor - height;
           }
+        } else {
+          // Keep the panel starting at or above the trigger. A non-covering
+          // (multi-select) panel may not grow upward at all — that is what
+          // would swallow the chips.
+          top = coversTrigger ? Math.min(top, triggerTop) : triggerBottom;
         }
         searchTopRef.current = top;
 
@@ -891,7 +1037,7 @@ function FloatingComboboxCore({
         void dropdownElement.offsetHeight;
         requestAnimationFrame(() => {
           if (listScrollRef.current) {
-            panel.updateArrows(listScrollRef.current);
+            updateArrows(listScrollRef.current);
           }
         });
         return;
@@ -919,18 +1065,20 @@ function FloatingComboboxCore({
       }
       requestAnimationFrame(() => {
         if (listScrollRef.current) {
-          panel.updateArrows(listScrollRef.current);
+          updateArrows(listScrollRef.current);
           requestAnimationFrame(() => {
             if (listScrollRef.current) {
-              panel.updateArrows(listScrollRef.current);
+              updateArrows(listScrollRef.current);
             }
           });
         }
       });
     },
-    [panel.placement, panel.updateArrows, popoverWidth, panel.refs],
+    // oxlint-disable-next-line react/preserve-manual-memoization -- repositionOverlay writes refs and DOM imperatively; the manual memo keeps its identity stable for the layout effect
+    [panel.placement, updateArrows, popoverWidth, panelRefs, panelTriggerRef],
   );
 
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   repositionRef.current = () => {
     repositionOverlay('wheel');
   };
@@ -941,6 +1089,7 @@ function FloatingComboboxCore({
     }
     grownRef.current = false;
     repositionOverlay('filter');
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filtered.length and loading are re-measure triggers for the panel height
   }, [open, panel.mounted, filtered.length, loading, repositionOverlay]);
 
   useEffect(() => {
@@ -952,16 +1101,17 @@ function FloatingComboboxCore({
   const loadMoreTriggeredRef = useRef(false);
 
   const repositionOverlayRef = useRef(repositionOverlay);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   repositionOverlayRef.current = repositionOverlay;
 
   const handleListScroll = useCallback(
-    (event: React.UIEvent) => {
-      const element = event.target as HTMLElement;
-      panel.updateArrows(element);
+    (event: React.UIEvent<HTMLElement>) => {
+      const element = event.currentTarget;
+      updateArrows(element);
 
-      const arrowDir = panel.arrowScrollDirRef.current;
+      const arrowDir = arrowScrollDirRef.current;
       if (arrowDir) {
-        panel.arrowScrollDirRef.current = null;
+        arrowScrollDirRef.current = null;
         lastScrollTopRef.current = element.scrollTop;
         growConstraintRef.current = arrowDir === 'down' ? 'no-down' : 'no-up';
         repositionOverlayRef.current('wheel');
@@ -981,30 +1131,33 @@ function FloatingComboboxCore({
         }
       }
     },
-    [panel.updateArrows, onLoadMore, hasMore, loading],
+    [updateArrows, arrowScrollDirRef, onLoadMore, hasMore, loading],
   );
 
   useEffect(() => {
     if (!open) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const frame = requestAnimationFrame(() => {
       const scrollElement = listScrollRef.current;
       if (scrollElement) {
-        panel.updateArrows(scrollElement);
+        updateArrows(scrollElement);
       }
     });
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [open, filtered, panel.updateArrows]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filtered is a trigger: a new list needs its scroll arrows re-measured
+  }, [open, filtered, updateArrows]);
 
   // Track mouse position when open. Use elementFromPoint as primary source for hover - mouseenter
   // lags behind React's async updates. Only sync when cursor is over OUR panel.
   // Sync synchronously (no rAF) so our update wins over any other handler.
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onMove = (e: MouseEvent) => {
       const { clientX: x, clientY: y } = e;
@@ -1012,7 +1165,7 @@ function FloatingComboboxCore({
       if (keyboardNavRef.current) {
         return;
       }
-      const floating = panel.refs.floating.current;
+      const floating = panelRefs.floating.current;
       if (!floating) {
         return;
       }
@@ -1020,22 +1173,22 @@ function FloatingComboboxCore({
       if (!el || !floating.contains(el)) {
         return;
       }
-      const row = el.closest?.('[data-combobox-index]');
-      const actualIndex = row?.getAttribute('data-combobox-index');
+      const row = el.closest?.<HTMLElement>(comboboxRowSelector);
+      const actualIndex = row?.dataset.comboboxIndex;
       const list = navigableOptionsRef.current;
       const len = list.length + (showCreateOptionRef.current ? 1 : 0);
       const activeIdx = activeIndexRef.current;
-      const n = actualIndex != null ? Number(actualIndex) : null;
+      const n = actualIndex == null ? null : Number(actualIndex);
       const next = n != null && n >= 0 && n < len ? n : activeIdx;
       if (next !== activeIdx) {
         setActiveIndex(next);
       }
     };
-    document.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mousemove', onMove);
     return () => {
       document.removeEventListener('mousemove', onMove);
     };
-  }, [open, panel.refs]);
+  }, [open, panelRefs]);
 
   // When filter/list changes: truncate refs, sync activeIndex with cursor.
   // Typing is keyboard-origin — do not drop the list ring on filter.
@@ -1048,24 +1201,25 @@ function FloatingComboboxCore({
 
     const rawPos = currentMousePosRef.current ?? lastMousePosRef.current;
     // (0,0) is the default init before any mousemove - treat as "no position"
-    const pos = rawPos && (rawPos.x > 0 || rawPos.y > 0) ? rawPos : null;
+    const pos = rawPos.x > 0 || rawPos.y > 0 ? rawPos : null;
     if (pos && typeof document !== 'undefined') {
       const el = document.elementFromPoint(pos.x, pos.y);
-      const row = el?.closest?.('[data-combobox-index]');
-      const idx = row?.getAttribute('data-combobox-index');
-      if (idx != null) {
+      const row = el?.closest?.<HTMLElement>(comboboxRowSelector);
+      const idx = row?.dataset.comboboxIndex;
+      if (idx == null) {
+        setActiveIndex(null);
+      } else {
         const n = Number(idx);
         if (n >= 0 && n < len) {
           setActiveIndex(n);
         } else {
           setActiveIndex(null);
         }
-      } else {
-        setActiveIndex(null);
       }
     } else {
       setActiveIndex(0);
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filter is the trigger: the list remounts per query and the highlight re-syncs to the cursor
   }, [filter, navigableOptions.length, showCreateOption]);
 
   const click = useClick(panel.context, { event: 'mousedown', keyboardHandlers: false });
@@ -1085,19 +1239,17 @@ function FloatingComboboxCore({
     virtual: true,
     loop: true,
     scrollItemIntoView: false,
-    focusItemOnHover: false, // We use elementFromPoint in mousemove handlers - floating-ui's indexOf can be stale after filter
+    // We use elementFromPoint in mousemove handlers - floating-ui's indexOf can be stale after filter
+    focusItemOnHover: false,
   });
 
   const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([click, dismiss, role, listNav]);
-
-  const lastSelectedIndexRef = useRef<number | null>(null);
-  const hasSelectedSinceOpenRef = useRef(false);
 
   const handleSelect = useCallback(
     (option: ComboboxOption, index: number, event?: React.MouseEvent) => {
       hasSelectedSinceOpenRef.current = true;
       if (multiple) {
-        const current = Array.isArray(value) ? value : value ? [value] : [];
+        const current = toValueArray(value);
         if (event?.shiftKey && lastSelectedIndexRef.current != null) {
           const from = Math.min(lastSelectedIndexRef.current, index);
           const to = Math.max(lastSelectedIndexRef.current, index);
@@ -1116,7 +1268,7 @@ function FloatingComboboxCore({
         setOpen(false);
       }
     },
-    [onValueChange, multiple, value, navigableOptions],
+    [onValueChange, multiple, value, navigableOptions, setOpen],
   );
 
   const handleListMouseMove = useCallback(
@@ -1127,12 +1279,12 @@ function FloatingComboboxCore({
       // Sync activeIndex from elementUnderCursor - list's own mousemove fires in correct context (works in iframes)
       if (!keyboardNavRef.current && typeof document !== 'undefined') {
         const el = document.elementFromPoint(clientX, clientY);
-        const row = el?.closest?.('[data-combobox-index]');
-        const actualIndex = row?.getAttribute('data-combobox-index');
+        const row = el?.closest?.<HTMLElement>(comboboxRowSelector);
+        const actualIndex = row?.dataset.comboboxIndex;
         const list = navigableOptionsRef.current;
         const len = list.length + (showCreateOptionRef.current ? 1 : 0);
         const activeIdx = activeIndexRef.current;
-        const n = actualIndex != null ? Number(actualIndex) : null;
+        const n = actualIndex == null ? null : Number(actualIndex);
         const next = n != null && n >= 0 && n < len ? n : activeIdx;
         if (next !== activeIdx) {
           setActiveIndex(next);
@@ -1154,19 +1306,39 @@ function FloatingComboboxCore({
     [setKeyboardNav],
   );
 
-  const handlersRef = useRef({} as ComboboxItemHandlers);
+  const handlersRef = useRef<ComboboxItemHandlers | null>(null);
 
   const handleSelectRef = useRef(handleSelect);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   handleSelectRef.current = handleSelect;
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
+    const commitActive = (key: string) => {
+      const idx = activeIndexRef.current;
+      const list = navigableOptionsRef.current;
+      const createIdx = showCreateOptionRef.current ? list.length : -1;
+      if (idx === createIdx && showCreateOptionRef.current) {
+        handleCreate();
+      } else if (key === 'Enter' && multipleRef.current && hasSelectedSinceOpenRef.current) {
+        setOpen(false);
+      } else if (idx != null && list[idx] !== undefined) {
+        handleSelectRef.current(list[idx], idx);
+        if (key === 'Enter' || !multipleRef.current) {
+          setOpen(false);
+        }
+      } else {
+        setOpen(false);
+      }
+    };
     const onKeyDown = (e: KeyboardEvent) => {
-      const floatingEl = panel.refs.floating.current;
-      const triggerEl = panel.triggerRef.current;
-      const target = e.target as Node | null;
-      const inPanel = target && (floatingEl?.contains(target) || triggerEl?.contains(target));
+      const floatingEl = panelRefs.floating.current;
+      const triggerEl = panelTriggerRef.current;
+      const target = isNode(e.target) ? e.target : null;
+      const inPanel =
+        target !== null && (floatingEl?.contains(target) === true || triggerEl?.contains(target) === true);
       if (!inPanel) {
         return;
       }
@@ -1175,47 +1347,25 @@ function FloatingComboboxCore({
         e.stopPropagation();
         setOpen(false);
       } else if (e.key === 'Enter' || e.key === ' ') {
-        const target = e.target as HTMLElement | null;
-        if (e.key === ' ' && target?.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox') {
+        if (e.key === ' ' && isTextEntryTarget(e.target)) {
           return;
         }
         e.preventDefault();
         e.stopPropagation();
-        const idx = activeIndexRef.current;
-        const list = navigableOptionsRef.current;
-        const createIdx = showCreateOptionRef.current ? list.length : -1;
-        if (idx === createIdx && showCreateOptionRef.current) {
-          handleCreate();
-        } else if (e.key === 'Enter' && multipleRef.current && hasSelectedSinceOpenRef.current) {
-          setOpen(false);
-        } else if (idx != null && list[idx]) {
-          handleSelectRef.current(list[idx], idx);
-          if (e.key === 'Enter' || !multipleRef.current) {
-            setOpen(false);
-          }
-        } else {
-          setOpen(false);
-        }
+        commitActive(e.key);
       }
     };
     document.addEventListener('keydown', onKeyDown, { capture: true });
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [open, showCreateOption, handleCreate, setOpen]);
+  }, [open, handleCreate, setOpen, panelRefs, panelTriggerRef]);
 
+  // oxlint-disable-next-line react/refs -- floating-ui's prop getter merges the reference ref callback; no ref is read here
   const referenceProps = getReferenceProps({
     ref: panel.setReferenceRef,
     onKeyDown(event: React.KeyboardEvent) {
-      if (
-        event.key === 'Enter' ||
-        event.code === 'Space' ||
-        event.key === ' ' ||
-        event.key === 'ArrowDown' ||
-        event.key === 'ArrowUp' ||
-        event.key === 'j' ||
-        event.key === 'k'
-      ) {
+      if (triggerOpenKeys.has(event.key) || event.code === 'Space') {
         event.preventDefault();
         setKeyboardNav(true);
         setOpen(true);
@@ -1228,15 +1378,7 @@ function FloatingComboboxCore({
   const activeDescendant =
     open && activeIndex != null && activeIndex >= 0 ? comboboxOptionId(id, activeIndex) : undefined;
 
-  const boxEventProps: Record<string, any> = {};
-  for (const [key, val] of Object.entries(referenceProps)) {
-    if (key === 'ref' || typeof val === 'function') {
-      boxEventProps[key] = val;
-    }
-    if (key.startsWith('aria-') || key === 'role' || key === 'tabIndex') {
-      boxEventProps[key] = val;
-    }
-  }
+  const boxEventProps = Object.fromEntries(Object.entries(referenceProps).filter(isTriggerBagEntry));
   boxEventProps.tabIndex = disabled ? -1 : (tabIndexOverride ?? 0);
   boxEventProps.role = 'combobox';
   boxEventProps['aria-haspopup'] = 'listbox';
@@ -1244,23 +1386,22 @@ function FloatingComboboxCore({
   boxEventProps['aria-controls'] = listboxId;
   if (hideSearch) {
     boxEventProps['aria-autocomplete'] = 'list';
-    if (activeDescendant) {
+    if (hasText(activeDescendant)) {
       boxEventProps['aria-activedescendant'] = activeDescendant;
     }
   }
-  if (id) {
+  if (hasText(id)) {
     boxEventProps.id = id;
   }
-  if (ariaLabel) {
+  if (hasText(ariaLabel)) {
     boxEventProps['aria-label'] = ariaLabel;
-  }
-  // A labelled trigger is already named: the sibling Label wires
-  // `aria-labelledby` onto this id itself, so naming it again here doubles the
-  // spoken name. Standalone triggers still need one (axe aria-input-field-name).
-  else if (!(hasLabel && id) && placeholder) {
+  } else if (!(hasLabel === true && hasText(id)) && hasText(placeholder)) {
+    // A labeled trigger is already named: the sibling Label wires
+    // `aria-labelledby` onto this id itself, so naming it again here doubles the
+    // spoken name. Standalone triggers still need one (axe aria-input-field-name).
     boxEventProps['aria-label'] = placeholder;
   }
-  if (describedBy) {
+  if (hasText(describedBy)) {
     boxEventProps['aria-describedby'] = describedBy;
   }
 
@@ -1278,19 +1419,16 @@ function FloatingComboboxCore({
         setKeyboardNav(true);
         lastKeyboardNavTimeRef.current = Date.now();
         lastMousePosRef.current = { ...currentMousePosRef.current };
-        setActiveIndex((prev) => {
-          const next = isDown ? (prev == null ? 0 : prev + 1) : prev == null ? totalNavigableItems - 1 : prev - 1;
-          return isDown ? (next >= totalNavigableItems ? 0 : next) : next < 0 ? totalNavigableItems - 1 : next;
-        });
+        setActiveIndex((prev) => stepActiveIndex(prev, isDown, totalNavigableItems));
       }
     },
     [totalNavigableItems, setKeyboardNav],
   );
 
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   handlersRef.current = {
     getItemProps,
     onSelect: handleSelect,
-    onItemHover: undefined,
     onItemKeyDown: handleItemKeyDown,
     knobProps,
     textColor,
@@ -1299,27 +1437,16 @@ function FloatingComboboxCore({
   };
 
   const handleSearchKeyDown = useCallback(
+    // oxlint-disable-next-line eslint/complexity -- flat key dispatch, one branch per key
     (event: React.KeyboardEvent) => {
       const isDown = event.key === 'ArrowDown' || event.key === 'j';
       const isUp = event.key === 'ArrowUp' || event.key === 'k';
-      if (isDown) {
+      if (isDown || isUp) {
         event.preventDefault();
         setKeyboardNav(true);
         lastKeyboardNavTimeRef.current = Date.now();
         lastMousePosRef.current = { ...currentMousePosRef.current };
-        setActiveIndex((prev) => {
-          const next = prev == null ? 0 : prev + 1;
-          return next >= totalNavigableItems ? 0 : next;
-        });
-      } else if (isUp) {
-        event.preventDefault();
-        setKeyboardNav(true);
-        lastKeyboardNavTimeRef.current = Date.now();
-        lastMousePosRef.current = { ...currentMousePosRef.current };
-        setActiveIndex((prev) => {
-          const next = prev == null ? totalNavigableItems - 1 : prev - 1;
-          return next < 0 ? totalNavigableItems - 1 : next;
-        });
+        setActiveIndex((prev) => stepActiveIndex(prev, isDown, totalNavigableItems));
       } else if (event.key === 'Home') {
         event.preventDefault();
         setKeyboardNav(true);
@@ -1341,7 +1468,7 @@ function FloatingComboboxCore({
           handleCreate();
         } else if (event.key === 'Enter' && multiple && hasSelectedSinceOpenRef.current) {
           setOpen(false);
-        } else if (activeIndex != null && navigableOptions[activeIndex]) {
+        } else if (activeIndex != null && navigableOptions[activeIndex] !== undefined) {
           handleSelect(navigableOptions[activeIndex], activeIndex);
           if (event.key === 'Enter' || !multiple) {
             setOpen(false);
@@ -1367,19 +1494,24 @@ function FloatingComboboxCore({
       multiple,
       filter,
       setKeyboardNav,
+      setOpen,
     ],
   );
 
+  // Multi-select reorders the list on selection, so a value change re-runs the scroll sync.
+  const multiValueDep = multiple ? value : undefined;
   // Scroll to keep active item in view. Defer to next frame to avoid racing with
   // focus/scroll from useListNavigation and to run after list reorder on selection.
   // Grow dropdown when scrolling via keyboard (same as wheel/hover-arrow).
   useEffect(() => {
     if (activeIndex == null) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const scrollContainer = listScrollRef.current;
     if (!scrollContainer) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const rafId = requestAnimationFrame(() => {
       const item = listItemsRef.current[activeIndex];
@@ -1413,8 +1545,20 @@ function FloatingComboboxCore({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [activeIndex, multiple ? value : undefined]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- multiValueDep is a trigger: multi-select reorders the list on selection, so the scroll sync re-runs
+  }, [activeIndex, multiValueDep]);
 
+  const showsValueLabel = !multiple && value !== undefined && value !== '' && hasText(valueLabel);
+  const hasSearchError = hasText(searchError);
+  const showOptionList = !hasSearchError && navigableOptions.length > 0;
+  const showCreateOnly = !hasSearchError && !showOptionList && showCreateOption;
+  const showLoadingRow = !hasSearchError && !showOptionList && !showCreateOnly && loading === true;
+  const showEmptyMessage = !hasSearchError && !showOptionList && !showCreateOnly && loading !== true;
+  const canClear = clearable === true && !multiple && !disabled;
+  const showClear = canClear && !Array.isArray(value) && hasText(value);
+  const showChips = multiple === true && selectedValues.length > 0;
+  const chipAlign = showChips ? 'center' : 'flex-start';
+  const tableCellProps = inTableCell ? {} : { borderWidth: knobProps.borderRadius.borderWidth };
   const triggerContent = triggerRender ? (
     // Stretch so custom triggers (e.g. Awesomebar) can own their height
     // instead of collapsing inside a shrink-wrapped View (SB-M-1703).
@@ -1449,32 +1593,29 @@ function FloatingComboboxCore({
       // focusable, so it keeps its ring.
       suppressFocusRing={open && !multiple}
       {...pickerTriggerContract(knobProps.control.height)}
-      {...(inTableCell
-        ? // Chromeless in cells.
-          {}
-        : {
-            borderWidth: knobProps.borderRadius.borderWidth,
-          })}>
+      // Chromeless in cells.
+      {...tableCellProps}>
       <SyncFocusToOpen open={open} />
       <View
         flex={1}
         paddingHorizontal="$3"
         paddingVertical="$2"
-        justifyContent={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}
-        alignItems={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}>
-        {multiple && selectedValues.length > 0 ? (
+        justifyContent={chipAlign}
+        alignItems={chipAlign}>
+        {showChips ? (
           <View
             flexDirection="row"
             flexWrap="nowrap"
             gap="$1.5"
             alignItems="center"
-            maxHeight={getFieldHeight(knobProps.sizeToken as SizeTokens, 1, hydrationTouch) * 0.75}
+            maxHeight={getFieldHeight(knobProps.sizeToken, 1, hydrationTouch) * 0.75}
             overflow="hidden"
             overflowX="auto">
+            {/* oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text */}
             {selectedValues.map((v) => (
               <Chip
                 key={v}
-                size={({ $3: '$2', $4: '$3', $5: '$4' }[knobProps.sizeToken] ?? '$3') as ChipProps['size']}
+                size={chipSizeFor(knobProps.sizeToken)}
                 color="gray"
                 onDismiss={
                   dismissible && !disabled
@@ -1492,14 +1633,14 @@ function FloatingComboboxCore({
             {...knobProps.controlType}
             fontFamily={knobProps.body.fontFamily}
             fontWeight={knobProps.body.fontWeight}
-            color={selectedOption || (!multiple && value && valueLabel) ? textColor : formCommonColors.muted}
+            color={selectedOption !== undefined || showsValueLabel ? textColor : formCommonColors.muted}
             numberOfLines={1}
             userSelect="none">
-            {selectedOption?.label ?? (!multiple && value && valueLabel ? valueLabel : placeholder)}
+            {selectedOption?.label ?? (showsValueLabel ? valueLabel : placeholder)}
           </Text>
         )}
       </View>
-      {clearable && !multiple && !disabled && typeof value === 'string' && value !== '' && (
+      {showClear && (
         <Button
           size={knobProps.control.height}
           chromeless
@@ -1513,18 +1654,23 @@ function FloatingComboboxCore({
           hoverStyle={{ opacity: 1 }}
           // useClick opens on mousedown at the trigger — swallow it so
           // clearing never toggles the dropdown.
-          onMouseDown={(e: any) => {
+          onMouseDown={(e: Pick<Event, 'stopPropagation' | 'preventDefault'>) => {
             e.stopPropagation();
             e.preventDefault();
           }}
-          onPress={(e: any) => {
+          onPress={(e: Partial<Pick<Event, 'stopPropagation'>>) => {
             e.stopPropagation?.();
             onValueChange?.('');
           }}
         />
       )}
-      <View paddingInlineEnd="$2" alignSelf="center">
-        <CaretDownIcon size={16} color={glyphColor} />
+      <View
+        paddingInlineEnd="$2"
+        alignSelf="center">
+        <CaretDownIcon
+          size={16}
+          color={glyphColor}
+        />
       </View>
     </InputParts.Box>
   );
@@ -1534,32 +1680,25 @@ function FloatingComboboxCore({
       {triggerContent}
 
       {panel.mounted && (
-        <PanelPortal anchor={panel.triggerRef.current}>
-          <FloatingFocusManager context={panel.context} modal={false} initialFocus={-1}>
+        // oxlint-disable-next-line react/refs -- the portal mounts only after the trigger is committed (panel.mounted), so the ref is populated
+        <PanelPortal anchor={panelTriggerRef.current}>
+          <FloatingFocusManager
+            context={panel.context}
+            modal={false}
+            initialFocus={-1}>
             <YStack
               outlineWidth={0}
               pointerEvents={panel.visible ? 'auto' : 'none'}
               {...getFloatingProps({
-                ref: panel.refs.setFloating,
+                ref: panelRefs.setFloating,
                 id: listboxId,
               })}
-              style={
-                {
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  zIndex: zIndex.dropdown,
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.04)',
-                  opacity: panel.visible ? 1 : 0,
-                  transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
-                  transition: panelTransition,
-                  transformOrigin: panel.placement.startsWith('top') ? 'bottom left' : 'top left',
-                  boxSizing: 'border-box',
-                } as any
-              }
+              style={{
+                ...floatingPanelStyle,
+                opacity: panel.visible ? 1 : 0,
+                transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
+                transformOrigin: panel.placement.startsWith('top') ? 'bottom left' : 'top left',
+              }}
               backgroundColor="$background"
               borderRadius={panel.dropdownRadius}
               borderWidth={panel.hasBorder ? knobProps.borderRadius.borderWidth : 0}
@@ -1582,26 +1721,27 @@ function FloatingComboboxCore({
                     </InputParts.Section>
                     <InputParts.Section>
                       <InputParts.Area
-                        ref={searchInputRef as any}
+                        ref={asTamaguiRef(searchInputRef)}
                         defaultValue=""
                         onChangeText={(text: string) => {
                           setInternalFilter(text);
                         }}
                         placeholder={searchPlaceholder}
-                        onKeyDown={handleSearchKeyDown as any}
+                        onKeyDown={handleSearchKeyDown}
                         aria-autocomplete="list"
                         aria-controls={listboxId}
                         aria-activedescendant={activeDescendant}
                         aria-expanded={open}
                       />
                     </InputParts.Section>
-                    {loading ? (
+                    {loading && (
                       <InputParts.Section>
                         <InputParts.Icon adornment="trailing">
                           <Spinner size="small" />
                         </InputParts.Icon>
                       </InputParts.Section>
-                    ) : filter ? (
+                    )}
+                    {!loading && filter !== '' && (
                       <InputParts.Section>
                         <InputParts.Button
                           onPress={() => {
@@ -1612,28 +1752,30 @@ function FloatingComboboxCore({
                           </InputParts.Icon>
                         </InputParts.Button>
                       </InputParts.Section>
-                    ) : null}
+                    )}
                   </InputParts.Box>
                 </InputParts>
               )}
 
               <YStack
-                ref={listScrollRef as any}
+                ref={asTamaguiRef(listScrollRef)}
                 overflow="scroll"
                 flex={1}
                 minHeight={0}
-                onScroll={handleListScroll as any}
+                onScroll={handleListScroll}
                 onMouseMove={handleListMouseMove}
-                onPointerDown={dragProps.onPointerDown}
+                onPointerDown={handleListPointerDown}
                 style={dragProps.style}>
                 <ScrollArrow
                   direction="up"
                   scrollRef={listScrollRef}
                   visible={panel.arrowUp}
-                  arrowScrollDirRef={panel.arrowScrollDirRef}
+                  arrowScrollDirRef={arrowScrollDirRef}
                 />
-                {searchError ? (
-                  <View {...knobProps.panelPadding} alignItems="center">
+                {hasSearchError && (
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Text
                       color={formCommonColors.error}
                       fontSize="$3"
@@ -1642,11 +1784,15 @@ function FloatingComboboxCore({
                       {searchError}
                     </Text>
                   </View>
-                ) : navigableOptions.length > 0 ? (
+                )}
+                {showOptionList && (
                   <Fragment key={filter}>
                     {groupedItems.map((item) =>
                       item.type === 'header' ? (
-                        <GroupHeader key={`header-${item.label}`} color={textColor} data-combobox-group-header="">
+                        <GroupHeader
+                          key={`header-${item.label}`}
+                          color={textColor}
+                          data-combobox-group-header="">
                           {item.label}
                         </GroupHeader>
                       ) : (
@@ -1665,7 +1811,9 @@ function FloatingComboboxCore({
                     )}
                     {showCreateOption && (
                       <ComboboxRow
+                        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
                         role="option"
+                        aria-selected={false}
                         tabIndex={-1}
                         id={comboboxOptionId(id, createOptionIndex)}
                         selected={false}
@@ -1678,16 +1826,19 @@ function FloatingComboboxCore({
                           createOptionIndex === activeIndex ? formInputColors.background.focus : undefined
                         }
                         hoverStyle={
-                          activeIndex != null
-                            ? {
+                          activeIndex == null
+                            ? undefined
+                            : {
                                 backgroundColor:
                                   createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                               }
-                            : undefined
                         }
                         onPress={handleCreate}
                         {...transitionProps(knobProps.transition)}>
-                        <PlusIcon size={14} color={knobProps.textAccentColor} />
+                        <PlusIcon
+                          size={14}
+                          color={knobProps.textAccentColor}
+                        />
                         <Text
                           fontFamily={knobProps.body.fontFamily}
                           fontWeight={knobProps.body.fontWeight}
@@ -1699,9 +1850,12 @@ function FloatingComboboxCore({
                       </ComboboxRow>
                     )}
                   </Fragment>
-                ) : showCreateOption ? (
+                )}
+                {showCreateOnly && (
                   <ComboboxRow
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
                     role="option"
+                    aria-selected={false}
                     tabIndex={-1}
                     id={comboboxOptionId(id, createOptionIndex)}
                     selected={false}
@@ -1712,19 +1866,22 @@ function FloatingComboboxCore({
                     {...listItemRingProps(createOptionIndex === activeIndex && listKeyboardRing)}
                     onPress={handleCreate}
                     hoverStyle={
-                      activeIndex != null
-                        ? {
+                      activeIndex == null
+                        ? { backgroundColor: formInputColors.background.focus }
+                        : {
                             backgroundColor:
                               createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                           }
-                        : { backgroundColor: formInputColors.background.focus }
                     }
                     backgroundColor={
                       createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'
                     }
                     pressStyle={{ backgroundColor: formInputColors.background.focus }}
                     {...transitionProps(knobProps.transition)}>
-                    <PlusIcon size={14} color={knobProps.textAccentColor} />
+                    <PlusIcon
+                      size={14}
+                      color={knobProps.textAccentColor}
+                    />
                     <Text
                       fontFamily={knobProps.body.fontFamily}
                       fontWeight={knobProps.body.fontWeight}
@@ -1734,14 +1891,20 @@ function FloatingComboboxCore({
                       {createLabel.replace('{value}', filter.trim())}
                     </Text>
                   </ComboboxRow>
-                ) : loading ? (
+                )}
+                {showLoadingRow && (
                   // Async search in flight with nothing loaded yet: a bounded
                   // loading row — never a premature "no results".
-                  <View {...knobProps.panelPadding} alignItems="center">
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Spinner size="small" />
                   </View>
-                ) : (
-                  <View {...knobProps.panelPadding} alignItems="center">
+                )}
+                {showEmptyMessage && (
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Text
                       color={formCommonColors.muted}
                       fontSize={knobProps.sizeToken}
@@ -1752,7 +1915,9 @@ function FloatingComboboxCore({
                   </View>
                 )}
                 {hasMore && loading && (
-                  <View padding="$2" alignItems="center">
+                  <View
+                    padding="$2"
+                    alignItems="center">
                     <Spinner size="small" />
                   </View>
                 )}
@@ -1760,7 +1925,7 @@ function FloatingComboboxCore({
                   direction="down"
                   scrollRef={listScrollRef}
                   visible={panel.arrowDown}
-                  arrowScrollDirRef={panel.arrowScrollDirRef}
+                  arrowScrollDirRef={arrowScrollDirRef}
                 />
               </YStack>
             </YStack>
@@ -1769,7 +1934,7 @@ function FloatingComboboxCore({
       )}
     </>
   );
-}
+};
 
 // ── Native Combobox (Sheet-based for iOS/Android) ─────────────
 
@@ -1791,26 +1956,28 @@ const comboboxSearchHeader = (
     height={knobProps.control.height}
     borderBottomWidth={1}
     borderBottomColor={formCommonColors.divider}>
-    <MagnifyingGlassIcon size={16} color={mutedColor as any} />
+    <MagnifyingGlassIcon
+      size={16}
+      color={mutedColor}
+    />
     <TInput
-      ref={inputRef as any}
+      ref={asTamaguiRef(inputRef)}
       unstyled
       flex={1}
       placeholder={searchPlaceholder}
       // iOS VoiceOver: name the search box (placeholder alone is value-only).
-      {...(!isWeb ? { accessibilityLabel: searchPlaceholder } : undefined)}
+      {...(isWeb ? undefined : { accessibilityLabel: searchPlaceholder })}
       value={filter}
       onChangeText={setFilter}
-      onKeyDown={onKeyDown as any}
+      onKeyDown={onKeyDown}
       fontFamily={knobProps.body.fontFamily}
       fontWeight={knobProps.body.fontWeight}
       color={textColor}
-      placeholderTextColor={mutedColor as any}
+      placeholderTextColor={toColorToken(mutedColor)}
       autoFocus
     />
-    {loading ? (
-      <Spinner size="small" />
-    ) : filter ? (
+    {loading && <Spinner size="small" />}
+    {!loading && filter !== '' && (
       <View
         onPress={() => {
           setFilter('');
@@ -1818,11 +1985,12 @@ const comboboxSearchHeader = (
         opacity={0.6}>
         <XIcon size={16} />
       </View>
-    ) : null}
+    )}
   </XStack>
 );
 
-function NativeComboboxCore({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- sheet-mode twin of FloatingComboboxCore; one component owns the sheet's refs and keyboard state
+const NativeComboboxCore = ({
   options,
   value,
   onValueChange,
@@ -1854,7 +2022,8 @@ function NativeComboboxCore({
   searchValue,
   open: openProp,
   onOpenChange,
-}: FloatingComboboxCoreProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component note above
+}: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -1865,20 +2034,20 @@ function NativeComboboxCore({
   const glyphColor = useGlyphColor();
   const [internalOpen, setInternalOpen] = useState(false);
   // Use external open state when provided (controlled), otherwise use internal state
-  const open = openProp !== undefined ? openProp : internalOpen;
+  const open = openProp ?? internalOpen;
   const setOpen = useCallback(
     (nextOpen: boolean) => {
-      if (openProp !== undefined) {
-        onOpenChange?.(nextOpen);
-      } else {
+      if (openProp === undefined) {
         setInternalOpen(nextOpen);
+      } else {
+        onOpenChange?.(nextOpen);
       }
     },
     [openProp, onOpenChange],
   );
   const [internalFilter, setInternalFilter] = useState('');
   // Use external searchValue when provided, otherwise use internal filter
-  const filter = searchValue !== undefined ? searchValue : internalFilter;
+  const filter = searchValue ?? internalFilter;
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
   const [listKeyboardRing, setListKeyboardRing] = useState(false);
   const setKeyboardNav = useCallback((next: boolean) => {
@@ -1889,7 +2058,7 @@ function NativeComboboxCore({
   const fieldA11y = useFieldA11y();
 
   const textColor = knobProps.textAccentColor;
-  const theme = useTheme();
+  const theme = useThemeTokens();
   const mutedColor = theme.color7?.val ?? '$color7';
   const markColor = useSelectedMarkColor();
 
@@ -1903,19 +2072,23 @@ function NativeComboboxCore({
     if (!multiple) {
       return [];
     }
-    const vals = Array.isArray(value) ? value : value ? [value] : [];
-    return [...vals].sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
-  }, [multiple, value, options]);
+    const vals = toValueArray(value);
+    return vals.toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- options is a deliberate trigger: the label cache (a ref) refreshes from new options and the sort must re-run
+  }, [multiple, value, options, getLabel]);
 
   const selectedOption = useMemo(
     () => (multiple ? undefined : options.find((o) => o.value === value)),
     [options, value, multiple],
   );
 
-  const selectedOptions = useMemo(
-    () => (multiple ? options.filter((o) => selectedValues.includes(o.value)) : []),
-    [options, selectedValues, multiple],
-  );
+  const selectedOptions = useMemo(() => {
+    if (!multiple) {
+      return [];
+    }
+    const selectedSet = new Set(selectedValues);
+    return options.filter((o) => selectedSet.has(o.value));
+  }, [options, selectedValues, multiple]);
 
   const isSelectedFn = useCallback(
     (optionValue: string) => (multiple ? selectedValues.includes(optionValue) : optionValue === value),
@@ -1927,7 +2100,7 @@ function NativeComboboxCore({
       if (!multiple) {
         return;
       }
-      const current = Array.isArray(value) ? value : value ? [value] : [];
+      const current = toValueArray(value);
       const next = current.filter((v) => v !== valueToRemove);
       onValueChange?.(next);
     },
@@ -1943,7 +2116,7 @@ function NativeComboboxCore({
       (option) =>
         option.label.toLowerCase().includes(query) ||
         option.value.toLowerCase().includes(query) ||
-        (option.keywords && option.keywords.toLowerCase().includes(query)),
+        option.keywords?.toLowerCase().includes(query) === true,
     );
   }, [options, filter, onSearch]);
 
@@ -1963,7 +2136,7 @@ function NativeComboboxCore({
     }
     const newOption = onCreate(typed);
     if (newOption && multiple) {
-      const current = Array.isArray(value) ? value : value ? [value] : [];
+      const current = toValueArray(value);
       if (!current.includes(newOption.value)) {
         onValueChange?.([...current, newOption.value]);
       }
@@ -1985,13 +2158,15 @@ function NativeComboboxCore({
   // only the search input.
   const hasScrollableContent = Boolean(onSearch) || filtered.length > 6;
   const sheetTransition = knobProps.transition ?? 'medium';
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TransitionProp is a token string or a config object; the sheet only takes the token
+  const sheetTransitionToken = typeof sheetTransition === 'string' ? sheetTransition : 'medium';
 
   // Selected item(s) at top when filter empty (single + multi); `stable` never rearranges
   const sortedFiltered = useMemo(() => {
     if (filter.trim()) {
       return filtered;
     }
-    const current = Array.isArray(value) ? value : value ? [value] : [];
+    const current = toValueArray(value);
     return orderOptionsBySelected(filtered, current, selectedOrder);
   }, [filtered, value, filter, selectedOrder]);
 
@@ -2006,7 +2181,8 @@ function NativeComboboxCore({
   const searchCleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!onSearch || !open) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const timerId = setTimeout(() => {
       searchCleanupRef.current?.();
@@ -2022,18 +2198,22 @@ function NativeComboboxCore({
 
   useEffect(() => {
     if (open) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(0);
       requestAnimationFrame(() => (hideSearch ? listRef.current?.focus() : searchInputRef.current?.focus()));
     } else {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setInternalFilter('');
     }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on open toggles only; hideSearch just picks the focus target at open time
   }, [open]);
 
   useEffect(() => {
     if (open) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- a new query re-homes the highlight to the first row
       setActiveIndex(0);
     }
-  }, [filter]);
+  }, [filter, open]);
 
   const totalItems = navigableOptions.length + (showCreateOption ? 1 : 0);
   const createOptionIndex = showCreateOption ? navigableOptions.length : -1;
@@ -2044,7 +2224,7 @@ function NativeComboboxCore({
   const handleSelect = useCallback(
     (option: ComboboxOption) => {
       if (multiple) {
-        const current = Array.isArray(value) ? value : value ? [value] : [];
+        const current = toValueArray(value);
         const next = current.includes(option.value)
           ? current.filter((v) => v !== option.value)
           : [...current, option.value];
@@ -2054,7 +2234,7 @@ function NativeComboboxCore({
         setOpen(false);
       }
     },
-    [onValueChange, multiple, value],
+    [onValueChange, multiple, value, setOpen],
   );
 
   const handleSearchKeyDown = useCallback(
@@ -2123,7 +2303,7 @@ function NativeComboboxCore({
         e.preventDefault();
         if (activeIndex === createOptionIndex && showCreateOption) {
           handleCreate();
-        } else if (activeIndex != null && activeIndex >= 0 && navigableOptions[activeIndex]) {
+        } else if (activeIndex != null && activeIndex >= 0 && navigableOptions[activeIndex] !== undefined) {
           handleSelect(navigableOptions[activeIndex]);
           if (e.key === 'Enter' || !multiple) {
             setOpen(false);
@@ -2141,28 +2321,29 @@ function NativeComboboxCore({
       handleSelect,
       multiple,
       setKeyboardNav,
+      setOpen,
     ],
   );
 
   // Document-level Enter/Space/Escape (sheet mode - catches keys when focus is on search or list)
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         setOpen(false);
       } else if (e.key === 'Enter' || e.key === ' ') {
-        const target = e.target as HTMLElement | null;
-        if (e.key === ' ' && target?.tagName === 'INPUT' && (target as HTMLInputElement).type !== 'checkbox') {
+        if (e.key === ' ' && isTextEntryTarget(e.target)) {
           return;
         }
         e.preventDefault();
         e.stopPropagation();
         if (activeIndex === createOptionIndex && showCreateOption) {
           handleCreate();
-        } else if (activeIndex != null && activeIndex >= 0 && navigableOptions[activeIndex]) {
+        } else if (activeIndex != null && activeIndex >= 0 && navigableOptions[activeIndex] !== undefined) {
           handleSelect(navigableOptions[activeIndex]);
           if (e.key === 'Enter' || !multiple) {
             setOpen(false);
@@ -2176,7 +2357,17 @@ function NativeComboboxCore({
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [open, activeIndex, createOptionIndex, showCreateOption, navigableOptions, handleCreate, handleSelect, multiple]);
+  }, [
+    open,
+    activeIndex,
+    createOptionIndex,
+    showCreateOption,
+    navigableOptions,
+    handleCreate,
+    handleSelect,
+    multiple,
+    setOpen,
+  ]);
 
   const handleOpenChange = useCallback(
     (val: boolean) => {
@@ -2185,7 +2376,7 @@ function NativeComboboxCore({
         onBlur?.();
       }
     },
-    [onBlur],
+    [onBlur, setOpen],
   );
 
   const searchHeader = hideSearch
@@ -2202,27 +2393,37 @@ function NativeComboboxCore({
         searchInputRef,
       );
 
+  const hasSearchError = hasText(searchError);
+  const showOptionList = !hasSearchError && navigableOptions.length > 0;
+  const showCreateOnly = !hasSearchError && !showOptionList && showCreateOption;
+  const showLoadingRow = !hasSearchError && !showOptionList && !showCreateOnly && loading === true;
+  const showEmptyMessage = !hasSearchError && !showOptionList && !showCreateOnly && loading !== true;
+
+  // role="listbox" is a valid ARIA role but outside RN's `Role` union; this web-only bag forwards it to the DOM node.
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type, anti-slop/no-known-value-widening -- untyped on purpose: the spread bypasses RN's Role union for a valid web-only ARIA role
+  const webListboxProps: Record<string, unknown> = {
+    tabIndex: 0,
+    onKeyDown: handleListKeyDown,
+    role: 'listbox',
+    id: listboxId,
+  };
+
   const listContent = (
     // tabIndex/onKeyDown are web-only: on iOS tabIndex makes the container an
     // accessibility element, which merges every option into one unactionable
     // VoiceOver blob.
     <View
-      ref={listRef as any}
-      {...(isWeb
-        ? // role="listbox" is a valid ARIA role but outside RN's `Role` union;
-          // this web-only bag forwards it to the DOM node (house Record cast).
-          ({
-            tabIndex: 0,
-            onKeyDown: handleListKeyDown,
-            role: 'listbox',
-            id: listboxId,
-          } as Record<string, unknown>)
-        : undefined)}
+      ref={asTamaguiRef(listRef)}
+      // role="listbox" is a valid ARIA role but outside RN's `Role` union;
+      // this web-only bag forwards it to the DOM node (house Record cast).
+      {...(isWeb ? webListboxProps : undefined)}
       outlineWidth={0}
       // Native sheet: flex={1} inside FloatingPanel ScrollView collapses rows.
     >
-      {searchError ? (
-        <View {...knobProps.panelPadding} alignItems="center">
+      {hasSearchError && (
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Text
             color={formCommonColors.error}
             fontSize="$3"
@@ -2231,13 +2432,14 @@ function NativeComboboxCore({
             {searchError}
           </Text>
         </View>
-      ) : navigableOptions.length > 0 ? (
+      )}
+      {showOptionList && (
         <>
           {navigableOptions.map((option, i) => {
             const selected = isSelectedFn(option.value);
             const active = i === activeIndex;
             const prevGroup = i > 0 ? navigableOptions[i - 1].group : undefined;
-            const showGroupHeader = option.group && option.group !== prevGroup;
+            const showGroupHeader = hasText(option.group) && option.group !== prevGroup;
             const optionRow = (
               <View
                 flexDirection="row"
@@ -2245,12 +2447,13 @@ function NativeComboboxCore({
                 gap="$2"
                 paddingHorizontal="$3"
                 id={comboboxOptionId(id, i)}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
                 role="option"
                 aria-selected={selected}
                 data-combobox-index={i}
                 data-active={active}
                 {...listItemRingProps(active && listKeyboardRing)}
-                {...(option.description
+                {...(hasText(option.description)
                   ? { minHeight: knobProps.control.height, paddingVertical: '$2' }
                   : { height: knobProps.control.height })}
                 onPress={
@@ -2264,26 +2467,22 @@ function NativeComboboxCore({
                   setKeyboardNav(false);
                   setActiveIndex(i);
                 }}
-                {...(!isWeb ? { pointerEvents: 'none' as const } : {})}
+                {...(isWeb ? {} : { pointerEvents: 'none' as const })}
                 hoverStyle={
-                  activeIndex != null
+                  activeIndex == null
                     ? {
-                        backgroundColor: active
-                          ? formInputColors.background.focus
-                          : selected
-                            ? formInputColors.background.base
-                            : 'transparent',
-                      }
-                    : {
                         backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
                       }
+                    : {
+                        backgroundColor: rowBackground(active, selected, 'transparent'),
+                      }
                 }
-                backgroundColor={
-                  active ? formInputColors.background.focus : selected ? formInputColors.background.base : 'transparent'
-                }
+                backgroundColor={rowBackground(active, selected, 'transparent')}
                 pressStyle={{ backgroundColor: formInputColors.background.focus }}>
-                {option.description ? (
-                  <YStack flex={1} minWidth={0}>
+                {hasText(option.description) ? (
+                  <YStack
+                    flex={1}
+                    minWidth={0}>
                     <Text
                       fontFamily={knobProps.body.fontFamily}
                       fontWeight={knobProps.body.fontWeight}
@@ -2309,13 +2508,20 @@ function NativeComboboxCore({
                     {option.label}
                   </Text>
                 )}
-                {selected && <CheckIcon size={14} color={markColor} />}
+                {selected && (
+                  <CheckIcon
+                    size={14}
+                    color={markColor}
+                  />
+                )}
               </View>
             );
             return (
               <View key={option.value}>
                 {showGroupHeader && (
-                  <GroupHeader color={textColor} data-combobox-group-header="">
+                  <GroupHeader
+                    color={textColor}
+                    data-combobox-group-header="">
                     {option.group}
                   </GroupHeader>
                 )}
@@ -2342,7 +2548,9 @@ function NativeComboboxCore({
               gap="$2"
               paddingHorizontal="$3"
               height={knobProps.control.height}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
               role="option"
+              aria-selected={false}
               id={comboboxOptionId(id, createOptionIndex)}
               data-combobox-index={createOptionIndex}
               data-active={createOptionIndex === activeIndex}
@@ -2353,16 +2561,19 @@ function NativeComboboxCore({
                 setActiveIndex(createOptionIndex);
               }}
               hoverStyle={
-                activeIndex != null
-                  ? {
+                activeIndex == null
+                  ? { backgroundColor: formInputColors.background.focus }
+                  : {
                       backgroundColor:
                         createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                     }
-                  : { backgroundColor: formInputColors.background.focus }
               }
               backgroundColor={createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'}
               pressStyle={{ backgroundColor: formInputColors.background.focus }}>
-              <PlusIcon size={14} color={textColor} />
+              <PlusIcon
+                size={14}
+                color={textColor}
+              />
               <Text
                 fontFamily={knobProps.body.fontFamily}
                 fontWeight={knobProps.body.fontWeight}
@@ -2374,14 +2585,17 @@ function NativeComboboxCore({
             </View>
           )}
         </>
-      ) : showCreateOption ? (
+      )}
+      {showCreateOnly && (
         <View
           flexDirection="row"
           alignItems="center"
           gap="$2"
           paddingHorizontal="$3"
           height={knobProps.control.height}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- listbox row on a Tamagui element; native <option> is only valid inside <select>
           role="option"
+          aria-selected={false}
           id={comboboxOptionId(id, createOptionIndex)}
           data-combobox-index={createOptionIndex}
           data-active={createOptionIndex === activeIndex}
@@ -2392,15 +2606,18 @@ function NativeComboboxCore({
             setActiveIndex(createOptionIndex);
           }}
           hoverStyle={
-            activeIndex != null
-              ? {
+            activeIndex == null
+              ? { backgroundColor: formInputColors.background.focus }
+              : {
                   backgroundColor: createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                 }
-              : { backgroundColor: formInputColors.background.focus }
           }
           backgroundColor={createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'}
           pressStyle={{ backgroundColor: formInputColors.background.focus }}>
-          <PlusIcon size={14} color={textColor} />
+          <PlusIcon
+            size={14}
+            color={textColor}
+          />
           <Text
             fontFamily={knobProps.body.fontFamily}
             fontWeight={knobProps.body.fontWeight}
@@ -2410,14 +2627,20 @@ function NativeComboboxCore({
             {createLabel.replace('{value}', filter.trim())}
           </Text>
         </View>
-      ) : loading ? (
+      )}
+      {showLoadingRow && (
         // Async search in flight with nothing loaded yet: a bounded loading
         // row — never a premature "no results".
-        <View {...knobProps.panelPadding} alignItems="center">
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Spinner size="small" />
         </View>
-      ) : (
-        <View {...knobProps.panelPadding} alignItems="center">
+      )}
+      {showEmptyMessage && (
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Text
             color={formCommonColors.muted}
             fontSize={knobProps.sizeToken}
@@ -2428,7 +2651,9 @@ function NativeComboboxCore({
         </View>
       )}
       {hasMore && loading && (
-        <View padding="$2" alignItems="center">
+        <View
+          padding="$2"
+          alignItems="center">
           <Spinner size="small" />
         </View>
       )}
@@ -2447,7 +2672,7 @@ function NativeComboboxCore({
           'aria-controls': listboxId,
           'aria-activedescendant': hideSearch ? activeDescendant : undefined,
           'aria-autocomplete': hideSearch ? ('list' as const) : undefined,
-          'aria-label': ariaLabel ?? (!hasLabel ? placeholder : undefined),
+          'aria-label': ariaLabel ?? (hasLabel ? undefined : placeholder),
           'aria-describedby': describedBy,
           tabIndex: disabled ? -1 : 0,
         }
@@ -2462,7 +2687,7 @@ function NativeComboboxCore({
       if (disabled) {
         return;
       }
-      if (['Enter', ' ', 'ArrowDown', 'ArrowUp', 'j', 'k'].includes(event.key) || event.code === 'Space') {
+      if (triggerOpenKeys.has(event.key) || event.code === 'Space') {
         event.preventDefault();
         setKeyboardNav(true);
         if (!open) {
@@ -2472,6 +2697,12 @@ function NativeComboboxCore({
     },
   };
 
+  const showsValueLabel = !multiple && value !== undefined && value !== '' && hasText(valueLabel);
+  const canClear = clearable === true && !multiple && !disabled;
+  const showClear = canClear && !Array.isArray(value) && hasText(value);
+  const showChips = multiple === true && selectedValues.length > 0;
+  const chipAlign = showChips ? 'center' : 'flex-start';
+  const tableCellProps = inTableCell ? {} : { borderWidth: knobProps.borderRadius.borderWidth };
   const triggerContent = triggerRender ? (
     <View
       data-testid="combobox-trigger"
@@ -2502,32 +2733,28 @@ function NativeComboboxCore({
       // panel attaches below instead, so it keeps its ring.
       suppressFocusRing={open && !multiple}
       {...pickerTriggerContract(knobProps.control.height)}
-      {...(inTableCell
-        ? // Chromeless in cells.
-          {}
-        : {
-            borderWidth: knobProps.borderRadius.borderWidth,
-          })}
+      // Chromeless in cells.
+      {...tableCellProps}
       {...triggerProps}>
       <View
         flex={1}
         paddingHorizontal="$3"
         paddingVertical="$2"
-        justifyContent={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}
-        alignItems={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}>
-        {multiple && selectedValues.length > 0 ? (
+        justifyContent={chipAlign}
+        alignItems={chipAlign}>
+        {showChips ? (
           <View
             flexDirection="row"
             flexWrap="nowrap"
             gap="$1.5"
             alignItems="center"
-            maxHeight={getFieldHeight(knobProps.sizeToken as SizeTokens, 1, hydrationTouch) * 0.75}
+            maxHeight={getFieldHeight(knobProps.sizeToken, 1, hydrationTouch) * 0.75}
             overflow="hidden"
             overflowX="auto">
             {selectedValues.map((v) => (
               <Chip
                 key={v}
-                size={({ $3: '$2', $4: '$3', $5: '$4' }[knobProps.sizeToken] ?? '$3') as ChipProps['size']}
+                size={chipSizeFor(knobProps.sizeToken)}
                 color="gray"
                 onDismiss={
                   dismissible && !disabled
@@ -2545,23 +2772,25 @@ function NativeComboboxCore({
             {...knobProps.controlType}
             fontFamily={knobProps.body.fontFamily}
             fontWeight={knobProps.body.fontWeight}
-            color={selectedOption || (!multiple && value && valueLabel) ? textColor : formCommonColors.muted}
+            color={selectedOption !== undefined || showsValueLabel ? textColor : formCommonColors.muted}
             numberOfLines={1}>
-            {selectedOption?.label ?? (!multiple && value && valueLabel ? valueLabel : placeholder)}
+            {selectedOption?.label ?? (showsValueLabel ? valueLabel : placeholder)}
           </Text>
         )}
       </View>
-      <View paddingInlineEnd="$2" alignSelf="center">
-        <CaretDownIcon size={16} color={glyphColor} />
+      <View
+        paddingInlineEnd="$2"
+        alignSelf="center">
+        <CaretDownIcon
+          size={16}
+          color={glyphColor}
+        />
       </View>
     </InputParts.Box>
   );
 
-  const triggerValueText = multiple
-    ? selectedValues.length > 0
-      ? selectedValues.map(getLabel).join(', ')
-      : placeholder
-    : (selectedOption?.label ?? placeholder);
+  const multiValueText = selectedValues.length > 0 ? selectedValues.map(getLabel).join(', ') : placeholder;
+  const triggerValueText = multiple ? multiValueText : (selectedOption?.label ?? placeholder);
 
   return (
     <FloatingPanel
@@ -2574,7 +2803,7 @@ function NativeComboboxCore({
       trigger={triggerContent}
       triggerSizing={triggerSizing}
       triggerEnd={
-        clearable && !multiple && !disabled && typeof value === 'string' && value !== '' ? (
+        showClear ? (
           <Button
             size={knobProps.sizeToken}
             chromeless
@@ -2595,9 +2824,9 @@ function NativeComboboxCore({
       scrollable={hasScrollableContent}
       disabled={disabled}
       contentPadding="none"
-      transition={typeof sheetTransition === 'string' ? sheetTransition : 'medium'}
+      transition={sheetTransitionToken}
       scrollViewProps={{
-        onScroll: (e: any) => {
+        onScroll: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
           if (!onLoadMore || !hasMore || loading) {
             return;
           }
@@ -2611,15 +2840,16 @@ function NativeComboboxCore({
       {listContent}
     </FloatingPanel>
   );
-}
+};
 
 // ── Combobox (public API) ─────────────────────────────────────
 
-export function Combobox({
+export const Combobox = ({
   options,
   value: valueProp,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored at the single emit site
   onValueChange,
   placeholder: placeholderProp,
   searchPlaceholder: searchPlaceholderProp,
@@ -2662,7 +2892,7 @@ export function Combobox({
   onOpenChange,
   'aria-label': ariaLabel,
   ...rest
-}: ComboboxProps) {
+}: ComboboxProps) => {
   const { t } = useTranslation();
   const placeholder = placeholderProp ?? t('Select...');
   const hasLabel = Boolean(label);
@@ -2672,7 +2902,7 @@ export function Combobox({
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   // Uncontrolled (no `value` prop, no form) still must reflect selections in
   // the trigger — callbacks alone leave the display frozen on the placeholder.
-  const [uncontrolledValue, setUncontrolledValue] = useState<string | string[] | undefined>(defaultValue);
+  const [uncontrolledValue, setUncontrolledValue] = useState<SelectionValue>(defaultValue);
   const isControlled = valueProp !== undefined;
   const [createdOptions, setCreatedOptions] = useState<ComboboxOption[]>([]);
   const knownOptions = useMemo(() => {
@@ -2685,7 +2915,7 @@ export function Combobox({
       ((typed: string) => {
         const created = onCreate(typed);
         if (created) {
-          setCreatedOptions((prev) => (prev.some((o) => o.value === created.value) ? prev : [...prev, created]));
+          setCreatedOptions((prev) => withCreatedOption(prev, created));
         }
         return created;
       }),
@@ -2694,21 +2924,31 @@ export function Combobox({
   const viewportGtSm = useViewportGtSm();
   // Sheet on native and below `$sm` (viewport < 640, OVERLAY_BREAKPOINT).
   // Floating from `$sm` up.
-  const effectiveGtSm = typeof window !== 'undefined' ? viewportGtSm : false;
+  const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
   const textColor = knobProps.textAccentColor;
 
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <InputParts size={sizeProp || knobProps.sizeToken}>
-        {label && <Skeleton variant="text" width="30%" height={14} />}
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <InputParts size={sizeProp ?? knobProps.sizeToken}>
+        {hasLabel && (
+          <Skeleton
+            variant="text"
+            width="30%"
+            height={14}
+          />
+        )}
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </InputParts>
     );
   }
 
-  const renderReadOnly = (selectValue: string | string[] | undefined) => {
+  const renderReadOnly = (selectValue: SelectionValue) => {
     if (multiple && Array.isArray(selectValue)) {
       const labels = selectValue.map((v) => knownOptions.find((o) => o.value === v)?.label ?? v).join(', ');
       return (
@@ -2723,9 +2963,9 @@ export function Combobox({
         </Text>
       );
     }
-    const sv = typeof selectValue === 'string' ? selectValue : undefined;
+    const sv = Array.isArray(selectValue) ? undefined : selectValue;
     const selected = knownOptions.find((option) => option.value === sv);
-    const displayText = selected?.label ?? (sv ? (valueLabel ?? sv) : '-');
+    const displayText = selected?.label ?? (hasText(sv) ? (valueLabel ?? sv) : '-');
     return (
       <Text
         fontSize={knobProps.sizeToken}
@@ -2740,9 +2980,9 @@ export function Combobox({
   };
 
   const renderComboboxContent = (
-    selectValue: string | string[] | undefined,
-    handleValueChange?: (value: any) => void,
-    handleBlur?: (...args: any[]) => void,
+    selectValue: SelectionValue,
+    handleValueChange?: (value: string | string[]) => void,
+    handleBlur?: (...args: never[]) => void,
   ) => {
     if (readOnly) {
       return renderReadOnly(selectValue);
@@ -2806,7 +3046,7 @@ export function Combobox({
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || !hasText(name)) {
     return (
       <FieldLayout
         id={id}
@@ -2816,12 +3056,12 @@ export function Combobox({
         helperText={helperText}
         required={required}
         size={sizeProp}
-        knobProps={knobProps as any}
+        knobProps={knobProps}
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}
         {...rest}>
-        <InputParts size={sizeProp || knobProps.sizeToken}>
+        <InputParts size={sizeProp ?? knobProps.sizeToken}>
           {renderComboboxContent(
             valueProp ?? uncontrolledValue,
             isControlled ? undefined : setUncontrolledValue,
@@ -2833,7 +3073,11 @@ export function Combobox({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
@@ -2845,15 +3089,15 @@ export function Combobox({
             helperText={helperText}
             required={required}
             size={sizeProp}
-            knobProps={knobProps as any}
+            knobProps={knobProps}
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}
             {...rest}>
-            <InputParts size={sizeProp || knobProps.sizeToken}>
+            <InputParts size={sizeProp ?? knobProps.sizeToken}>
               {renderComboboxContent(
                 field.state.value,
                 (value) => {
-                  field.handleChange(value as any);
+                  field.handleChange(value);
                 },
                 mergeFieldHandler(field, 'handleBlur', onBlur),
               )}
@@ -2863,4 +3107,4 @@ export function Combobox({
       }}
     </Field>
   );
-}
+};

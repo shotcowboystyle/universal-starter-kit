@@ -1,19 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useWorkspaceStore } from "@/stores/workspace-store";
-import { type Project } from "@/types/dbInterface";
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import type { Project } from '@/types/db-interface';
+import type { CreateProjectInput, UpdateProjectInput } from '@/types/project-api';
+
+type StoreState = ReturnType<typeof useWorkspaceStore.getState>;
+type CreateProjectFn = Parameters<StoreState['addProject']>[2];
+type UpdateProjectFn = Parameters<StoreState['updateProject']>[3];
+type DeleteProjectFn = Parameters<StoreState['removeProject']>[1];
+
+const getProjectsMock = vi.hoisted(() => vi.fn<(boardId: string) => Promise<Project[]>>());
 
 // Mock the API modules
-vi.mock("@/lib/api/projectApi", () => ({
+vi.mock(import('@/lib/api/project-api'), () => ({
   projectApi: {
-    getProjects: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn()
-  }
+    getProjectById: vi.fn<(id: string) => Promise<Project>>(),
+    getProjects: getProjectsMock,
+    createProject: vi.fn<(input: CreateProjectInput) => Promise<Project>>(),
+    updateProject: vi.fn<(id: string, input: UpdateProjectInput) => Promise<Project>>(),
+    deleteProject: vi.fn<(id: string) => Promise<void>>(),
+  },
 }));
 
-describe("workspace-store - Project actions", () => {
+describe('workspace-store - Project actions', () => {
   beforeEach(() => {
     // Reset the store before each test
     useWorkspaceStore.setState({
@@ -26,263 +35,253 @@ describe("workspace-store - Project actions", () => {
       teamBoards: [],
       filter: {
         status: null,
-        search: ""
-      }
+        search: '',
+      },
     });
     vi.clearAllMocks();
   });
 
-  describe("Project actions", () => {
-    it("should fetch and set projects", async () => {
-      const { projectApi } = await import("@/lib/api/projectApi");
+  describe('Project actions', () => {
+    it('should fetch and set projects', async () => {
+      const { projectApi } = await import('@/lib/api/project-api');
       const mockProjects: Project[] = [
         {
-          _id: "project-1",
-          title: "Project 1",
-          description: "Description 1",
-          board: "board-1",
-          owner: "user-1",
+          _id: 'project-1',
+          title: 'Project 1',
+          description: 'Description 1',
+          board: 'board-1',
+          owner: 'user-1',
           members: [],
           orderInBoard: 0,
           tasks: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
-      vi.mocked(projectApi.getProjects).mockResolvedValue(mockProjects);
+      vi.mocked(projectApi).getProjects.mockResolvedValue(mockProjects);
 
       const store = useWorkspaceStore.getState();
-      await store.fetchProjects("board-1");
+      await store.fetchProjects('board-1');
 
       const state = useWorkspaceStore.getState();
       expect(state.projects).toHaveLength(1);
-      expect(state.projects[0]._id).toBe("project-1");
+      expect(state.projects[0]._id).toBe('project-1');
       expect(state.isLoadingProjects).toBe(false);
     });
 
-    it("should handle fetch projects error", async () => {
-      const { projectApi } = await import("@/lib/api/projectApi");
-      vi.mocked(projectApi.getProjects).mockRejectedValue(new Error("Failed to fetch"));
+    it('should handle fetch projects error', async () => {
+      const { projectApi } = await import('@/lib/api/project-api');
+      vi.mocked(projectApi).getProjects.mockRejectedValue(new Error('Failed to fetch'));
 
       const store = useWorkspaceStore.getState();
-      await store.fetchProjects("board-1");
+      await store.fetchProjects('board-1');
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects).toEqual([]);
+      expect(state.projects).toStrictEqual([]);
       expect(state.isLoadingProjects).toBe(false);
     });
 
-    it("should not fetch projects if boardId is empty", async () => {
-      const { projectApi } = await import("@/lib/api/projectApi");
-
+    it('should not fetch projects if boardId is empty', async () => {
       const store = useWorkspaceStore.getState();
-      await store.fetchProjects("");
+      await store.fetchProjects('');
 
-      expect(projectApi.getProjects).not.toHaveBeenCalled();
+      expect(getProjectsMock).not.toHaveBeenCalled();
     });
 
-    it("should add a new project", async () => {
+    it('should add a new project', async () => {
       const mockProject: Project = {
-        _id: "project-new",
-        title: "New Project",
-        description: "New Description",
-        board: "board-1",
-        owner: "user-1",
+        _id: 'project-new',
+        title: 'New Project',
+        description: 'New Description',
+        board: 'board-1',
+        owner: 'user-1',
         members: [],
         orderInBoard: 0,
         tasks: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
-      const createProjectMock = vi.fn().mockResolvedValue(mockProject);
+      const createProjectMock = vi.fn<CreateProjectFn>().mockResolvedValue(mockProject);
 
       useWorkspaceStore.setState({
-        userId: "user-1",
-        currentBoardId: "board-1",
-        projects: []
+        userId: 'user-1',
+        currentBoardId: 'board-1',
+        projects: [],
       });
 
       const store = useWorkspaceStore.getState();
-      const projectId = await store.addProject("New Project", "New Description", createProjectMock);
+      const projectId = await store.addProject('New Project', 'New Description', createProjectMock);
 
-      expect(projectId).toBe("project-new");
+      expect(projectId).toBe('project-new');
       const state = useWorkspaceStore.getState();
       expect(state.projects).toHaveLength(1);
-      expect(state.projects[0].title).toBe("New Project");
+      expect(state.projects[0].title).toBe('New Project');
     });
 
-    it("should throw error when adding project without board selected", async () => {
-      const createProjectMock = vi.fn();
+    it('should throw error when adding project without board selected', async () => {
+      const createProjectMock = vi.fn<CreateProjectFn>();
 
       useWorkspaceStore.setState({
-        userId: "user-1",
-        currentBoardId: null
+        userId: 'user-1',
+        currentBoardId: null,
       });
 
       const store = useWorkspaceStore.getState();
 
-      await expect(
-        store.addProject("New Project", "Description", createProjectMock)
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("No board selected")
+      await expect(store.addProject('New Project', 'Description', createProjectMock)).rejects.toMatchObject({
+        message: expect.stringContaining('No board selected'),
       });
     });
 
-    it("should throw error when adding project without user authenticated", async () => {
-      const createProjectMock = vi.fn();
+    it('should throw error when adding project without user authenticated', async () => {
+      const createProjectMock = vi.fn<CreateProjectFn>();
 
       useWorkspaceStore.setState({
         userId: null,
-        currentBoardId: "board-1"
+        currentBoardId: 'board-1',
       });
 
       const store = useWorkspaceStore.getState();
 
-      await expect(
-        store.addProject("New Project", "Description", createProjectMock)
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("User not authenticated")
+      await expect(store.addProject('New Project', 'Description', createProjectMock)).rejects.toMatchObject({
+        message: expect.stringContaining('User not authenticated'),
       });
     });
 
-    it("should update a project", async () => {
+    it('should update a project', async () => {
       const mockProject: Project = {
-        _id: "project-1",
-        title: "Old Title",
-        description: "Old Description",
-        board: "board-1",
-        owner: "user-1",
+        _id: 'project-1',
+        title: 'Old Title',
+        description: 'Old Description',
+        board: 'board-1',
+        owner: 'user-1',
         members: [],
         orderInBoard: 0,
         tasks: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       useWorkspaceStore.setState({
-        userId: "user-1",
-        projects: [mockProject]
+        userId: 'user-1',
+        projects: [mockProject],
       });
 
-      const updateFn = vi.fn().mockResolvedValue({ ...mockProject, title: "New Title" });
+      const updateFn = vi.fn<UpdateProjectFn>().mockResolvedValue({ ...mockProject, title: 'New Title' });
 
       const store = useWorkspaceStore.getState();
-      await store.updateProject("project-1", "New Title", "New Description", updateFn);
+      await store.updateProject('project-1', 'New Title', 'New Description', updateFn);
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects[0].title).toBe("New Title");
-      expect(state.projects[0].description).toBe("New Description");
+      expect(state.projects[0].title).toBe('New Title');
+      expect(state.projects[0].description).toBe('New Description');
     });
 
-    it("should throw error when updating project without user authenticated", async () => {
+    it('should throw error when updating project without user authenticated', async () => {
       const mockProject: Project = {
-        _id: "project-1",
-        title: "Old Title",
-        description: "Old Description",
-        board: "board-1",
-        owner: "user-1",
+        _id: 'project-1',
+        title: 'Old Title',
+        description: 'Old Description',
+        board: 'board-1',
+        owner: 'user-1',
         members: [],
         orderInBoard: 0,
         tasks: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       useWorkspaceStore.setState({
         userId: null,
-        projects: [mockProject]
+        projects: [mockProject],
       });
 
-      const updateFn = vi.fn();
+      const updateFn = vi.fn<UpdateProjectFn>();
       const store = useWorkspaceStore.getState();
 
-      await expect(
-        store.updateProject("project-1", "New Title", "New Description", updateFn)
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("User not authenticated")
+      await expect(store.updateProject('project-1', 'New Title', 'New Description', updateFn)).rejects.toMatchObject({
+        message: expect.stringContaining('User not authenticated'),
       });
     });
 
-    it("should throw error when project update fails", async () => {
+    it('should throw error when project update fails', async () => {
       const mockProject: Project = {
-        _id: "project-1",
-        title: "Old Title",
-        description: "Old Description",
-        board: "board-1",
-        owner: "user-1",
+        _id: 'project-1',
+        title: 'Old Title',
+        description: 'Old Description',
+        board: 'board-1',
+        owner: 'user-1',
         members: [],
         orderInBoard: 0,
         tasks: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       useWorkspaceStore.setState({
-        userId: "user-1",
-        projects: [mockProject]
+        userId: 'user-1',
+        projects: [mockProject],
       });
 
-      const updateFn = vi.fn().mockRejectedValue(new Error("Update failed"));
+      const updateFn = vi.fn<UpdateProjectFn>().mockRejectedValue(new Error('Update failed'));
 
       const store = useWorkspaceStore.getState();
 
-      await expect(
-        store.updateProject("project-1", "New Title", "New Description", updateFn)
-      ).rejects.toMatchObject({
-        message: expect.stringContaining("Update failed")
+      await expect(store.updateProject('project-1', 'New Title', 'New Description', updateFn)).rejects.toMatchObject({
+        message: expect.stringContaining('Update failed'),
       });
     });
 
-    it("should remove a project", async () => {
+    it('should remove a project', async () => {
       const mockProject: Project = {
-        _id: "project-1",
-        title: "Project 1",
-        description: "Description 1",
-        board: "board-1",
-        owner: "user-1",
+        _id: 'project-1',
+        title: 'Project 1',
+        description: 'Description 1',
+        board: 'board-1',
+        owner: 'user-1',
         members: [],
         orderInBoard: 0,
         tasks: [],
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       useWorkspaceStore.setState({
-        projects: [mockProject]
+        projects: [mockProject],
       });
 
-      const deleteFn = vi.fn().mockResolvedValue(undefined);
+      const deleteFn = vi.fn<DeleteProjectFn>().mockResolvedValue();
 
       const store = useWorkspaceStore.getState();
-      await store.removeProject("project-1", deleteFn);
+      await store.removeProject('project-1', deleteFn);
 
       const state = useWorkspaceStore.getState();
       expect(state.projects).toHaveLength(0);
     });
 
-    it("should set projects directly", () => {
+    it('should set projects directly', () => {
       const mockProjects: Project[] = [
         {
-          _id: "project-1",
-          title: "Project 1",
-          description: "Description 1",
-          board: "board-1",
-          owner: "user-1",
+          _id: 'project-1',
+          title: 'Project 1',
+          description: 'Description 1',
+          board: 'board-1',
+          owner: 'user-1',
           members: [],
           orderInBoard: 0,
           tasks: [],
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
+          updatedAt: new Date().toISOString(),
+        },
       ];
 
       const store = useWorkspaceStore.getState();
       store.setProjects(mockProjects);
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects).toEqual(mockProjects);
+      expect(state.projects).toStrictEqual(mockProjects);
     });
   });
 });

@@ -1,83 +1,82 @@
 import axios from 'axios';
-import pg from 'pg';
+import { Client } from 'pg';
 
-export async function waitForFrappe(interval: number) {
+const envOr = (key: string, fallback: string): string => {
+  const value = process.env[key];
+  return value === undefined || value === '' ? fallback : value;
+};
+
+const sleep = async (ms: number): Promise<void> => {
+  // oxlint-disable-next-line promise/avoid-new -- setTimeout has no promise form that works with vitest fake timers
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+};
+
+const pollUntil = async (isReady: () => Promise<boolean>, interval: number): Promise<void> => {
+  if (await isReady()) {
+    return;
+  }
+  await sleep(interval);
+  await pollUntil(isReady, interval);
+};
+
+const isPingOk = async (url: string): Promise<boolean> => {
   try {
-    const res = await axios.get(`${process.env.BASE_URL || 'http://frappe.localhost'}/api/method/ping`);
-    if ((res?.status || 500) < 300) {
-      return;
-    }
-  } catch {}
-  await new Promise((resolve) => setTimeout(resolve, interval));
-  return waitForFrappe(interval);
-}
+    const res = await axios.get(url);
+    return res.status > 0 && res.status < 300;
+  } catch {
+    // Not reachable yet: report not-ready so the caller keeps polling
+    return false;
+  }
+};
 
-export async function waitForPostgres(interval: number) {
-  const client = new pg.Client({
-    database: process.env.POSTGRES_DATABASE || 'postgres',
-    host: process.env.POSTGRES_HOSTNAME || 'localhost',
-    password: process.env.POSTGRES_PASSWORD || 'postgres',
-    port: Number.parseInt(process.env.POSTGRES_PORT || '5432'),
-    user: process.env.POSTGRES_USERNAME || 'postgres',
+const canExecute = async <T>(execute: () => Promise<T>): Promise<boolean> => {
+  try {
+    await execute();
+    return true;
+  } catch {
+    // Not accepting queries yet: report not-ready so the caller keeps polling
+    return false;
+  }
+};
+
+export const waitForPostgres = async (interval: number): Promise<void> => {
+  const client = new Client({
+    database: envOr('POSTGRES_DATABASE', 'postgres'),
+    host: envOr('POSTGRES_HOSTNAME', 'localhost'),
+    password: envOr('POSTGRES_PASSWORD', 'postgres'),
+    port: Math.trunc(Number(envOr('POSTGRES_PORT', '5432'))),
+    user: envOr('POSTGRES_USERNAME', 'postgres'),
   });
   try {
     await client.connect();
-    while (true) {
-      try {
-        await client.query('SELECT 1');
-        return;
-      } catch {}
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    }
+    await pollUntil(async () => await canExecute(async () => await client.query('SELECT 1')), interval);
   } finally {
     await client.end();
   }
-}
+};
 
-export async function waitForMariaDB(interval: number) {
-  const mysql = require('mysql2/promise');
-  const connection = await mysql.createConnection({
-    host: process.env.MARIADB_HOSTNAME || 'localhost',
-    port: Number.parseInt(process.env.MARIADB_PORT || '3306'),
-    user: process.env.MARIADB_USERNAME || 'root',
-    password: process.env.MARIADB_PASSWORD || 'root',
-    database: process.env.MARIADB_DATABASE || 'frappe',
-  });
-  try {
-    while (true) {
-      try {
-        await connection.execute('SELECT 1');
-        return;
-      } catch {}
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    }
-  } finally {
-    await connection.end();
-  }
-}
+export const waitForKeycloak = async (interval: number): Promise<void> => {
+  await pollUntil(
+    async () =>
+      await isPingOk(
+        `${envOr('BASE_URL', 'http://localhost:8000')}/auth/realms/master/.well-known/openid-configuration`,
+      ),
+    interval,
+  );
+};
 
-export async function waitForKeycloak(interval: number) {
-  const baseUrl = process.env.BASE_URL || 'http://localhost:8000';
-  try {
-    const res = await axios.get(`${baseUrl}/auth/realms/master/.well-known/openid-configuration`);
-    if ((res?.status || 500) < 300) {
-      return;
-    }
-  } catch {}
-  await new Promise((resolve) => setTimeout(resolve, interval));
-  return waitForKeycloak(interval);
-}
-
-export function formatServiceList(services: readonly string[]): string {
+export const formatServiceList = (services: readonly string[]): string => {
   if (services.length === 1) {
     return services[0];
   }
   if (services.length === 2) {
     return `${services[0]} and ${services[1]}`;
   }
-  return `${services.slice(0, -1).join(', ')} and ${services[services.length - 1]}`;
-}
+  return `${services.slice(0, -1).join(', ')} and ${services.at(-1)}`;
+};
 
-export const waitServices = ['frappe', 'postgres', 'mariadb', 'keycloak'] as const;
+export const waitServices = ['postgres', 'keycloak'] as const;
 
 export type WaitService = (typeof waitServices)[number];

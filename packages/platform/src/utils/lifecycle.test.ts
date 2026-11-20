@@ -2,17 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { onAppFocus, onAppBlur, onOnline, onOffline, onVisibilityChange } from './lifecycle';
 
-describe('onAppFocus', () => {
+describe(onAppFocus, () => {
   it('calls callback on window focus', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onAppFocus(cb);
     window.dispatchEvent(new Event('focus'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 
   it('stops listening after cleanup', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onAppFocus(cb);
     cleanup();
     window.dispatchEvent(new Event('focus'));
@@ -20,17 +20,17 @@ describe('onAppFocus', () => {
   });
 });
 
-describe('onAppBlur', () => {
+describe(onAppBlur, () => {
   it('calls callback on window blur', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onAppBlur(cb);
     window.dispatchEvent(new Event('blur'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 
   it('stops listening after cleanup', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onAppBlur(cb);
     cleanup();
     window.dispatchEvent(new Event('blur'));
@@ -38,38 +38,38 @@ describe('onAppBlur', () => {
   });
 });
 
-describe('onOnline', () => {
+describe(onOnline, () => {
   it('calls callback on online event', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onOnline(cb);
     window.dispatchEvent(new Event('online'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 });
 
-describe('onOffline', () => {
+describe(onOffline, () => {
   it('calls callback on offline event', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<() => void>();
     const cleanup = onOffline(cb);
     window.dispatchEvent(new Event('offline'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 });
 
-describe('onVisibilityChange', () => {
+describe(onVisibilityChange, () => {
   it('calls callback with visibility state', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<(visible: boolean) => void>();
     const cleanup = onVisibilityChange(cb);
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(cb).toHaveBeenCalledTimes(1);
-    expect(typeof cb.mock.calls[0][0]).toBe('boolean');
+    expect(cb).toHaveBeenCalledOnce();
+    expect(cb.mock.calls[0][0]).toBeTypeOf('boolean');
     cleanup();
   });
 
   it('stops listening after cleanup', () => {
-    const cb = vi.fn();
+    const cb = vi.fn<(visible: boolean) => void>();
     const cleanup = onVisibilityChange(cb);
     cleanup();
     document.dispatchEvent(new Event('visibilitychange'));

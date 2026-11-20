@@ -1,18 +1,21 @@
 import { useResolvedKnobs, useChartPalette, normalizeToHex } from '@repo/theme';
 import { Pipette } from '@tamagui/lucide-icons-2';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type Popover, View, XStack, YStack, isWeb, useProps, useTheme } from 'tamagui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { View, XStack, YStack, isWeb, useProps, useTheme } from 'tamagui';
+import type { Popover, TamaguiElement } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
+import { hexAlphaByte, hexToHsv, hexToRgb, hsvToHex, normalizeHex, parseHex, rgbToHex } from './color';
 import {
   AlphaStrip,
   CHIP_PX,
@@ -23,13 +26,6 @@ import {
   SWATCH_PX,
   SaturationPanel,
   binaryRadius,
-  hexToHsv,
-  hexToRgb,
-  hsvToHex,
-  hexAlphaByte,
-  normalizeHex,
-  parseHex,
-  rgbToHex,
 } from './parts';
 
 // ---------------------------------------------------------------------------
@@ -37,6 +33,8 @@ import {
 // ---------------------------------------------------------------------------
 
 type InputProps = ComponentProps<typeof InputParts.Area>;
+
+type ColorFormat = 'hex' | 'rgb' | 'hsl';
 
 export type ColorPickerProps<
   TParentData = unknown,
@@ -52,7 +50,7 @@ export type ColorPickerProps<
 > &
   Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
     readOnly?: boolean;
-    format?: 'hex' | 'rgb' | 'hsl';
+    format?: ColorFormat;
     showAlpha?: boolean;
     presetColors?: string[];
     placeholder?: string;
@@ -76,54 +74,38 @@ export type ColorPickerProps<
 // Default preset colors
 // ---------------------------------------------------------------------------
 
-function useThemePresetColors(): string[] {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, anti-slop/no-runtime-typeof -- parse boundary: tamagui theme values are untyped (`any`); only string colors are usable
+const asColor = (val: unknown): string | undefined => (typeof val === 'string' ? val : undefined);
+
+const useThemePresetColors = (): string[] => {
   const palette = useChartPalette();
   const theme = useTheme();
   return useMemo(() => {
-    const ink = theme.color12?.val;
-    const mid = theme.color8?.val;
-    const paper = theme.color1?.val;
     const raw = [
       ...palette.categorical.slice(0, 8),
       palette.semantic.error,
       palette.semantic.success,
       palette.semantic.warning,
-      typeof ink === 'string' ? ink : undefined,
-      typeof mid === 'string' ? mid : undefined,
-      typeof paper === 'string' ? paper : undefined,
+      asColor(theme.color12?.val),
+      asColor(theme.color8?.val),
+      asColor(theme.color1?.val),
     ];
     const seen = new Set<string>();
     const out: string[] = [];
     for (const color of raw) {
-      if (typeof color !== 'string') {
-        continue;
+      const key = color === undefined ? undefined : normalizeToHex(color)?.toUpperCase();
+      if (key !== undefined && key !== '' && !seen.has(key)) {
+        seen.add(key);
+        out.push(key);
       }
-      const hex = normalizeToHex(color);
-      if (!hex) {
-        continue;
-      }
-      const key = hex.toUpperCase();
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      out.push(key);
     }
     return out;
   }, [palette, theme.color12, theme.color8, theme.color1]);
-}
+};
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-function rgbToHsl(
-  r: number,
-  g: number,
-  b: number,
-): {
-  h: number;
-  s: number;
-  l: number;
-} {
+const rgbToHsl = (r: number, g: number, b: number) => {
   const r1 = r / 255;
   const g1 = g / 255;
   const b1 = b / 255;
@@ -137,15 +119,18 @@ function rgbToHsl(
   if (d !== 0) {
     s = d / (1 - Math.abs(2 * l - 1));
     switch (max) {
-      case r1:
+      case r1: {
         h = ((g1 - b1) / d + (g1 < b1 ? 6 : 0)) * 60;
         break;
-      case g1:
+      }
+      case g1: {
         h = ((b1 - r1) / d + 2) * 60;
         break;
-      default:
+      }
+      default: {
         h = ((r1 - g1) / d + 4) * 60;
         break;
+      }
     }
   }
 
@@ -154,9 +139,9 @@ function rgbToHsl(
     s: Math.round(s * 100),
     l: Math.round(l * 100),
   };
-}
+};
 
-function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+const hslToRgb = (h: number, s: number, l: number) => {
   const h1 = ((h % 360) + 360) % 360;
   const s1 = clamp(s, 0, 100) / 100;
   const l1 = clamp(l, 0, 100) / 100;
@@ -199,7 +184,7 @@ function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: n
     g: Math.round((gp + m) * 255),
     b: Math.round((bp + m) * 255),
   };
-}
+};
 
 interface ParsedColor {
   hex: string;
@@ -207,55 +192,86 @@ interface ParsedColor {
   isValid: boolean;
 }
 
-function parseColorValue(value: string | undefined, format: 'hex' | 'rgb' | 'hsl'): ParsedColor {
-  if (!value) {
+const COLOR_FN = /^(?<name>rgba?|hsla?)\((?<args>[^()]*)\)$/iu;
+const UNSIGNED_INT = /^\d+$/u;
+const UNSIGNED_NUM = /^(?:\d+|\d*\.\d+)$/u;
+const SIGNED_NUM = /^-?(?:\d+|\d*\.\d+)$/u;
+
+/** Split `rgb(...)` / `hsl(...)` (and the `a` forms) into 3–4 trimmed arguments. */
+const colorFnArgs = (raw: string, fn: 'rgb' | 'hsl'): string[] | null => {
+  const groups = COLOR_FN.exec(raw)?.groups;
+  if (!groups?.name.toLowerCase().startsWith(fn)) {
+    return null;
+  }
+  const args = groups.args.split(',').map((arg) => arg.trim());
+  return args.length === 3 || args.length === 4 ? args : null;
+};
+
+const percentValue = (arg: string): string | null => {
+  const num = arg.endsWith('%') ? arg.slice(0, -1) : '';
+  return UNSIGNED_NUM.test(num) ? num : null;
+};
+
+const alphaFromArg = (arg: string | undefined): number =>
+  arg === undefined ? 100 : clamp(Math.round(Number(arg) * 100), 0, 100);
+
+const INVALID_COLOR: ParsedColor = { hex: '', alpha: 100, isValid: false };
+
+const isOptionalAlpha = (arg: string | undefined): boolean => arg === undefined || UNSIGNED_NUM.test(arg);
+
+const parseRgbFn = (raw: string): ParsedColor => {
+  const args = colorFnArgs(raw, 'rgb');
+  if (args === null) {
+    return INVALID_COLOR;
+  }
+  const [rArg, gArg, bArg] = args;
+  const aArg = args.at(3);
+  if (![rArg, gArg, bArg].every((arg) => UNSIGNED_INT.test(arg)) || !isOptionalAlpha(aArg)) {
+    return INVALID_COLOR;
+  }
+  const r = clamp(Number(rArg), 0, 255);
+  const g = clamp(Number(gArg), 0, 255);
+  const b = clamp(Number(bArg), 0, 255);
+  return { hex: rgbToHex(r, g, b), alpha: alphaFromArg(aArg), isValid: true };
+};
+
+const parseHslFn = (raw: string): ParsedColor => {
+  const args = colorFnArgs(raw, 'hsl');
+  if (args === null) {
+    return INVALID_COLOR;
+  }
+  const [hArg, sArg, lArg] = args;
+  const aArg = args.at(3);
+  const sNum = percentValue(sArg);
+  const lNum = percentValue(lArg);
+  if (!SIGNED_NUM.test(hArg) || sNum === null || lNum === null || !isOptionalAlpha(aArg)) {
+    return INVALID_COLOR;
+  }
+  const { r, g, b } = hslToRgb(Number(hArg), clamp(Number(sNum), 0, 100), clamp(Number(lNum), 0, 100));
+  return { hex: rgbToHex(r, g, b), alpha: alphaFromArg(aArg), isValid: true };
+};
+
+const parseColorValue = (value: string | undefined, format: ColorFormat): ParsedColor => {
+  const raw = value?.trim() ?? '';
+  if (raw === '') {
     return { hex: '', alpha: 100, isValid: true };
   }
-  const raw = value.trim();
-  if (!raw) {
-    return { hex: '', alpha: 100, isValid: true };
-  }
-
-  if (format === 'hex') {
-    const parsed = parseHex(raw);
-    if (!parsed) {
-      return { hex: '', alpha: 100, isValid: false };
-    }
-    return { hex: rgbToHex(parsed.r, parsed.g, parsed.b), alpha: parsed.alpha, isValid: true };
-  }
-
   if (format === 'rgb') {
-    const rgba = /^rgba?\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/i.exec(raw);
-    if (!rgba) {
-      return { hex: '', alpha: 100, isValid: false };
-    }
-    const r = clamp(Number.parseInt(rgba[1], 10), 0, 255);
-    const g = clamp(Number.parseInt(rgba[2], 10), 0, 255);
-    const b = clamp(Number.parseInt(rgba[3], 10), 0, 255);
-    const alpha = rgba[4] == null ? 100 : clamp(Math.round(Number.parseFloat(rgba[4]) * 100), 0, 100);
-    return { hex: rgbToHex(r, g, b), alpha, isValid: true };
+    return parseRgbFn(raw);
   }
-
-  const hsla =
-    /^hsla?\(\s*(-?[0-9]*\.?[0-9]+)\s*,\s*([0-9]*\.?[0-9]+)%\s*,\s*([0-9]*\.?[0-9]+)%(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/i.exec(
-      raw,
-    );
-  if (!hsla) {
-    return { hex: '', alpha: 100, isValid: false };
+  if (format === 'hsl') {
+    return parseHslFn(raw);
   }
-  const h = Number.parseFloat(hsla[1]);
-  const s = clamp(Number.parseFloat(hsla[2]), 0, 100);
-  const l = clamp(Number.parseFloat(hsla[3]), 0, 100);
-  const alpha = hsla[4] == null ? 100 : clamp(Math.round(Number.parseFloat(hsla[4]) * 100), 0, 100);
-  const { r, g, b } = hslToRgb(h, s, l);
-  return { hex: rgbToHex(r, g, b), alpha, isValid: true };
-}
+  const parsed = parseHex(raw);
+  if (!parsed) {
+    return INVALID_COLOR;
+  }
+  return { hex: rgbToHex(parsed.r, parsed.g, parsed.b), alpha: parsed.alpha, isValid: true };
+};
 
-function formatAlpha(alpha: number): string {
-  return (alpha / 100).toFixed(2).replace(/\.?0+$/, '');
-}
+const formatAlpha = (alpha: number): string => String(Number((alpha / 100).toFixed(2)));
 
-function serializeColorValue(hex: string, format: 'hex' | 'rgb' | 'hsl', alpha: number, includeAlpha: boolean): string {
+const serializeColorValue = (hex: string, format: ColorFormat, alpha: number, includeAlpha: boolean): string => {
   if (!hex) {
     return '';
   }
@@ -284,7 +300,7 @@ function serializeColorValue(hex: string, format: 'hex' | 'rgb' | 'hsl', alpha: 
     return `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, ${formatAlpha(alpha)})`;
   }
   return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // ColorBody — orchestrates the picker panel inside the popover
@@ -305,17 +321,16 @@ interface ColorBodyProps {
   onSelectPreset: (color: string) => void;
 }
 
-const panelSizeMap: Record<string, number> = {
-  small: 160,
-  medium: 192,
-  large: 224,
-};
+const panelSizeMap = new Map([
+  ['small', 160],
+  ['medium', 192],
+  ['large', 224],
+]);
 
-function unrecognizedColorError(format: 'hex' | 'rgb' | 'hsl'): string {
-  return t('Color must be a recognized {{format}} value', { format: format.toUpperCase() });
-}
+const unrecognizedColorError = (format: ColorFormat): string =>
+  t('Color must be a recognized {{format}} value', { format: format.toUpperCase() });
 
-function ColorBody({
+const ColorBody = ({
   hue,
   saturation,
   value,
@@ -328,10 +343,10 @@ function ColorBody({
   onChangeAlpha,
   onHexInput,
   onSelectPreset,
-}: ColorBodyProps) {
+}: ColorBodyProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
-  const panelSize = panelSizeMap[knobProps.size] ?? 192;
-  const previewSize = SWATCH_PX[knobProps.size] ?? 24;
+  const panelSize = panelSizeMap.get(knobProps.size) ?? 192;
+  const previewSize = SWATCH_PX.get(knobProps.size) ?? 24;
   const [hexInputValue, setHexInputValue] = useState(selectedColor);
   const [hexEditing, setHexEditing] = useState(false);
   useEffect(() => {
@@ -340,6 +355,7 @@ function ColorBody({
     if (hexEditing) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-chain-state-updates -- mirrors the committed color into the hex draft only once the user stops editing
     setHexInputValue(selectedColor);
   }, [selectedColor, hexEditing]);
 
@@ -361,11 +377,12 @@ function ColorBody({
   const handleEyeDropper = useCallback(async () => {
     if (typeof window !== 'undefined' && 'EyeDropper' in window) {
       try {
-        const eyeDropper = new (
-          window as Window & {
-            EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> };
-          }
-        ).EyeDropper();
+        // SAFETY: `'EyeDropper' in window` was checked above; the DOM lib does not type the EyeDropper API yet
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+        const { EyeDropper } = window as Window & {
+          EyeDropper: new () => { open: () => Promise<{ sRGBHex: string }> };
+        };
+        const eyeDropper = new EyeDropper();
         const result = await eyeDropper.open();
         onHexInput(result.sRGBHex.toUpperCase());
       } catch {
@@ -382,9 +399,22 @@ function ColorBody({
       {...knobProps.panelPadding}
       data-testid="color-picker-panel"
       data-dismiss-class="compose">
-      <XStack {...knobProps.gap} alignItems="stretch">
-        <SaturationPanel hue={hue} saturation={saturation} value={value} onChangeSV={onChangeSV} size={panelSize} />
-        <HueStrip hue={hue} onChangeHue={onChangeHue} height={panelSize} orientation="vertical" />
+      <XStack
+        {...knobProps.gap}
+        alignItems="stretch">
+        <SaturationPanel
+          hue={hue}
+          saturation={saturation}
+          value={value}
+          onChangeSV={onChangeSV}
+          size={panelSize}
+        />
+        <HueStrip
+          hue={hue}
+          onChangeHue={onChangeHue}
+          height={panelSize}
+          orientation="vertical"
+        />
         {showAlpha && (
           <AlphaStrip
             hue={hue}
@@ -408,7 +438,9 @@ function ColorBody({
         }}
       />
 
-      <XStack {...knobProps.gap} alignItems="center">
+      <XStack
+        {...knobProps.gap}
+        alignItems="center">
         <View
           width={previewSize}
           height={previewSize}
@@ -418,7 +450,9 @@ function ColorBody({
           backgroundColor={selectedColor}
           flexShrink={0}
         />
-        <InputParts size={knobProps.sizeToken} flex={1}>
+        <InputParts
+          size={knobProps.sizeToken}
+          flex={1}>
           <InputParts.Box>
             <InputParts.Area
               value={hexInputValue}
@@ -438,8 +472,10 @@ function ColorBody({
           <Button
             size={knobProps.sizeToken}
             chromeless
-            icon=<Pipette size={CHIP_PX[knobProps.size] ?? 18} />
-            onPress={handleEyeDropper}
+            icon=<Pipette size={CHIP_PX.get(knobProps.size) ?? 18} />
+            onPress={() => {
+              void handleEyeDropper();
+            }}
             cursor="pointer"
             aria-label={t('Eyedropper')}
             hoverStyle={{ opacity: 0.7 }}
@@ -448,11 +484,11 @@ function ColorBody({
       </XStack>
     </YStack>
   );
-}
+};
 
 interface ColorPickerControlProps {
   value: string;
-  format: 'hex' | 'rgb' | 'hsl';
+  format: ColorFormat;
   showAlpha: boolean;
   presetColors: string[];
   placeholder: string;
@@ -470,7 +506,19 @@ interface ColorPickerControlProps {
   onBlurControl?: () => void;
 }
 
-function ColorPickerControl({
+const describedByFor = (id: string | undefined, helperText: string | undefined, hasError: boolean) => {
+  const hasId = id !== undefined && id !== '';
+  const ids: string[] = [];
+  if (hasId && helperText !== undefined && helperText !== '') {
+    ids.push(`${id}-description`);
+  }
+  if (hasId && hasError) {
+    ids.push(`${id}-error`);
+  }
+  return ids.length > 0 ? ids.join(' ') : undefined;
+};
+
+const ColorPickerControl = ({
   value,
   format,
   showAlpha,
@@ -487,7 +535,7 @@ function ColorPickerControl({
   helperText,
   onValueChange,
   onBlurControl,
-}: ColorPickerControlProps) {
+}: ColorPickerControlProps) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
   const parsedInitial = parseColorValue(value, format);
@@ -496,7 +544,7 @@ function ColorPickerControl({
   const [hsv, setHsv] = useState(() => hexToHsv(initialColor || '#000000'));
   const [alpha, setAlpha] = useState(parsedInitial.alpha);
   const popoverRef = useRef<Popover>(null);
-  const triggerRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<TamaguiElement>(null);
 
   // Return focus to the trigger when the panel closes (Escape / outside click),
   // so keyboard users are not dropped back to the top of the document.
@@ -513,21 +561,26 @@ function ColorPickerControl({
       if (active && active !== document.body && !inClosingPanel) {
         return;
       }
-      triggerRef.current?.querySelector?.('input')?.focus();
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.querySelector('input')?.focus();
+      }
     });
   }, []);
 
   useEffect(() => {
     const parsed = parseColorValue(value, format);
     if (parsed.hex !== selectedColor) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- adopts the controlled `value` prop into picker state; local edits must not round-trip through it
       setSelectedColor(parsed.hex);
       if (parsed.hex) {
         setHsv(hexToHsv(parsed.hex));
       }
     }
     if (parsed.alpha !== alpha) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- see setSelectedColor above
       setAlpha(parsed.alpha);
     }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- sync only on prop changes; re-running on local selectedColor/alpha edits would snap lossy (hsl) picks back to the parsed prop
   }, [value, format]);
 
   const updateFromHsv = useCallback(
@@ -617,11 +670,13 @@ function ColorPickerControl({
     const displayValue = value || selectedColor || placeholder;
     return (
       <InputParts.Box theme={hasError ? 'error' : undefined}>
-        <View paddingInlineStart="$2" alignSelf="center">
+        <View
+          paddingInlineStart="$2"
+          alignSelf="center">
           <View
-            width={CHIP_PX[knobProps.size] ?? 18}
-            height={CHIP_PX[knobProps.size] ?? 18}
-            borderRadius={binaryRadius(knobProps.pointy, CHIP_PX[knobProps.size] ?? 18)}
+            width={CHIP_PX.get(knobProps.size) ?? 18}
+            height={CHIP_PX.get(knobProps.size) ?? 18}
+            borderRadius={binaryRadius(knobProps.pointy, CHIP_PX.get(knobProps.size) ?? 18)}
             borderWidth={1}
             borderColor="$color10"
             backgroundColor={displayValue || 'transparent'}
@@ -632,7 +687,7 @@ function ColorPickerControl({
           readOnly
           placeholder={placeholder}
           aria-readonly="true"
-          aria-required={required || undefined}
+          aria-required={required ?? undefined}
           aria-invalid={hasError || undefined}
         />
       </InputParts.Box>
@@ -657,13 +712,13 @@ function ColorPickerControl({
       // "Color, #EF4444": VO gets the field name + current hex on the native
       // trigger (mirrors the DatePicker/Select triggerA11y pattern).
       triggerA11y={{
-        label: a11yLabel || t('Color'),
+        label: a11yLabel ?? t('Color'),
         value: value || selectedColor || placeholder,
         hint: helperText,
       }}
       trigger={
         <ColorPickerInputTrigger
-          ref={triggerRef as never}
+          ref={triggerRef}
           value={value || selectedColor}
           placeholder={placeholder}
           disabled={disabled}
@@ -675,15 +730,11 @@ function ColorPickerControl({
           }}
           error={hasError}
           id={id}
-          // Labelled: the sibling Label wires `aria-labelledby` onto this id
+          // Labeled: the sibling Label wires `aria-labelledby` onto this id
           // itself — naming it here too doubles the spoken name.
           aria-label={hasLabel ? undefined : t('Color')}
-          aria-describedby={
-            [helperText && id ? `${id}-description` : undefined, hasError && id ? `${id}-error` : undefined]
-              .filter(Boolean)
-              .join(' ') || undefined
-          }
-          aria-required={required || undefined}
+          aria-describedby={describedByFor(id, helperText, hasError)}
+          aria-required={required ?? undefined}
           aria-invalid={hasError || undefined}
           inputProps={inputProps}
         />
@@ -691,19 +742,21 @@ function ColorPickerControl({
       {colorContent}
     </ColorPickerPopoverShell>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // ColorPicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function ColorPicker<
+export const ColorPicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: ColorPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: ColorPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
@@ -727,6 +780,7 @@ export function ColorPicker<
     onBlur,
     value: controlledValue,
     onChange,
+    // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored for back-compat
     onValueChange,
     skeleton,
     compact,
@@ -748,13 +802,17 @@ export function ColorPicker<
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
-  const [standaloneValue, setStandaloneValue] = useState<string>(
-    () => (controlledValue ?? (defaultValue as string)) || '',
-  );
+  const [standaloneValue, setStandaloneValue] = useState<string>(() => {
+    // SAFETY: a ColorPicker field stores its serialized color string, or nothing before a pick
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+    const seed = controlledValue ?? (defaultValue as string | undefined);
+    return seed ?? '';
+  });
 
   // Sync internal state when controlled value changes
   useEffect(() => {
     if (controlledValue !== undefined) {
+      // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
       setStandaloneValue(controlledValue);
     }
   }, [controlledValue]);
@@ -775,10 +833,16 @@ export function ColorPicker<
     // deterministic px width — never % — or it resolves against a width
     // computed without the % child and overflows. Radius matches the live
     // ColorPickerInputTrigger / swatch (`knobProps.borderRadius`).
-    const cellSize = size || knobProps.sizeToken;
+    const cellSize = size ?? knobProps.sizeToken;
     return (
       <InputParts size={cellSize}>
-        {label && <Skeleton variant="text" width={96} height={14} />}
+        {Boolean(label) && (
+          <Skeleton
+            variant="text"
+            width={96}
+            height={14}
+          />
+        )}
         <Skeleton
           variant="rounded"
           width={cellSize}
@@ -789,7 +853,7 @@ export function ColorPicker<
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     const effectiveValue = controlledValue ?? standaloneValue;
     const parsedStandalone = parseColorValue(effectiveValue, _format);
     const standaloneFormatError =
@@ -800,7 +864,7 @@ export function ColorPicker<
         id={id}
         label={label}
         labelProps={labelProps}
-        error={errorProp || standaloneFormatError}
+        error={errorProp ?? standaloneFormatError}
         helperText={helperText}
         required={required}
         size={size}
@@ -809,7 +873,7 @@ export function ColorPicker<
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>
+        <InputParts size={size ?? knobProps.sizeToken}>
           <ColorPickerControl
             value={effectiveValue}
             format={_format}
@@ -819,14 +883,19 @@ export function ColorPicker<
             disabled={disabled}
             readOnly={readOnly}
             inputProps={inputProps}
-            hasError={!!errorProp || !!standaloneFormatError}
+            hasError={Boolean(errorProp) || standaloneFormatError !== undefined}
             id={id}
             hasLabel={Boolean(label)}
+            // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is a ReactNode; only a plain string can serve as the native announcement
             a11yLabel={typeof label === 'string' ? label : undefined}
             helperText={helperText}
             onValueChange={handleStandaloneChange}
             required={required}
-            onBlurControl={() => onBlur?.(undefined as never)}
+            onBlurControl={() => {
+              // SAFETY: a panel close has no DOM FocusEvent; FieldLayout blur handlers never read the event
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+              onBlur?.(undefined as never);
+            }}
           />
         </InputParts>
       </FieldLayout>
@@ -843,7 +912,9 @@ export function ColorPicker<
       validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, errorProp);
-        const fieldValue = (field.state.value as string) || '';
+        // SAFETY: a ColorPicker field stores its serialized color string, or nothing before a pick
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+        const fieldValue = (field.state.value as string | undefined) ?? '';
         const parsedField = parseColorValue(fieldValue, _format);
         const fieldFormatError =
           fieldValue.trim() && !parsedField.isValid ? unrecognizedColorError(_format) : undefined;
@@ -853,7 +924,7 @@ export function ColorPicker<
             id={id}
             label={label}
             labelProps={labelProps}
-            error={resolvedError || fieldFormatError}
+            error={resolvedError ?? fieldFormatError}
             helperText={helperText}
             required={required}
             size={size}
@@ -861,7 +932,7 @@ export function ColorPicker<
             onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}>
-            <InputParts size={size || knobProps.sizeToken}>
+            <InputParts size={size ?? knobProps.sizeToken}>
               <ColorPickerControl
                 value={fieldValue}
                 format={_format}
@@ -871,12 +942,15 @@ export function ColorPicker<
                 disabled={disabled}
                 readOnly={readOnly}
                 inputProps={inputProps}
-                hasError={!!resolvedError || !!fieldFormatError}
+                hasError={Boolean(resolvedError) || fieldFormatError !== undefined}
                 id={id}
                 hasLabel={Boolean(label)}
+                // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is a ReactNode; only a plain string can serve as the native announcement
                 a11yLabel={typeof label === 'string' ? label : undefined}
                 helperText={helperText}
                 onValueChange={(newValue) => {
+                  // SAFETY: the picker only emits serialized color strings, which is this field's value type
+                  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TData is a deferred generic; the picker only emits strings
                   field.handleChange(newValue as TData);
                   // Form mode also notifies user callbacks (family norm).
                   emitValueChange(newValue);
@@ -890,4 +964,4 @@ export function ColorPicker<
       }}
     </Field>
   );
-}
+};

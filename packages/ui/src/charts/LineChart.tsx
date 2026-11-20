@@ -6,11 +6,11 @@ import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { XAxis, YAxis } from './Axis';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot, thinCategories } from './composeChart';
+import { computeCartesianPlot, thinCategories } from './compose-chart';
 import { createLinearScale, createPointScale, formatChartValue, getLinearTicks, valueDomain } from './math';
 import { AreaSeries, LineSeries } from './series';
 import type { ChartCurve, ChartDatum, ChartDatumEvents } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface LineChartProps extends ChartDatumEvents, Omit<YStackProps, 'children' | 'width' | 'height'> {
   data: ChartDatum[];
@@ -45,7 +45,7 @@ export interface LineChartProps extends ChartDatumEvents, Omit<YStackProps, 'chi
  * Single-series line chart over category points: d3 point/linear scales,
  * knob-driven chrome, palette identity stroke, 44px point hit targets.
  */
-export function LineChart({
+export const LineChart = ({
   data,
   height = 200,
   width,
@@ -67,7 +67,7 @@ export function LineChart({
   onDatumHoverIn,
   onDatumHoverOut,
   ...stackProps
-}: LineChartProps) {
+}: LineChartProps) => {
   const { t } = useTranslation();
   const { palette, labelFontSize } = useChartTheme();
   // One line = one series: explicit `color` is a data value and passes
@@ -82,10 +82,14 @@ export function LineChart({
       data,
       formatValue: valueFormatter,
     });
-  const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
+  const interactive = onDatumPress !== undefined || onDatumHoverIn !== undefined || onDatumHoverOut !== undefined;
 
   return (
-    <ChartDataFrame data={data} title={title} valueFormatter={valueFormatter} width={width}>
+    <ChartDataFrame
+      data={data}
+      title={title}
+      valueFormatter={valueFormatter}
+      width={width}>
       <ChartSurface
         label={ariaLabel}
         proof={{
@@ -175,11 +179,14 @@ export function LineChart({
       </ChartSurface>
     </ChartDataFrame>
   );
-}
+};
 
 export type AreaChartProps = Omit<LineChartProps, 'showArea'>;
 
 /** Area chart — the LineChart family with the area fill on by default. */
-export function AreaChart(props: AreaChartProps) {
-  return <LineChart showArea {...props} />;
-}
+export const AreaChart = (props: AreaChartProps) => (
+  <LineChart
+    showArea
+    {...props}
+  />
+);

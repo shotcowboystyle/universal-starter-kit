@@ -1,6 +1,6 @@
+// @vitest-environment happy-dom
+
 /**
- * @vitest-environment happy-dom
- *
  * DISABLED-VISIBLE: every intent Button reads disabled.
  *
  * The keepLabel wash paints the ACTIVE ramp's `$color3`/`$color6` with the
@@ -32,9 +32,8 @@ import type { ReactElement } from 'react';
 import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Button, type ButtonProps } from './index';
-
-afterEach(cleanup);
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 const houseConfig = createDefaultThemeConfig();
 const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
@@ -57,25 +56,29 @@ const VARIANTS: { name: string; props: Partial<ButtonProps> }[] = [
 const MIN_FILL_DELTA_E = 20;
 const MIN_OPACITY_DELTA = 0.3;
 
+const SCHEME_VARIANTS = SCHEMES.flatMap((scheme) => VARIANTS.map((variant) => ({ scheme, ...variant })));
+const DELTA_MATRIX = SCHEMES.flatMap((scheme) =>
+  DISABLED_STYLES.flatMap((disabledStyle) => VARIANTS.map((variant) => ({ scheme, disabledStyle, ...variant }))),
+);
+
 type Scheme = (typeof SCHEMES)[number];
 
-function houseRender(ui: ReactElement, scheme: Scheme, disabledStyle: string) {
-  return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) =>
+  render(
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <Preset overrides={{ disabledStyle: disabledStyle as 'keepLabel' | 'dimWhole' }}>
         <YStack backgroundColor="$background">{ui}</YStack>
       </Preset>
     </TamaguiProvider>,
   );
-}
 
-function injectedRuleValue(className: string, property: string): string {
-  for (const sheet of Array.from(document.styleSheets)) {
-    for (const rule of Array.from(sheet.cssRules)) {
-      if (!(rule instanceof CSSStyleRule)) {
-        continue;
-      }
-      if (!rule.selectorText.endsWith(`.${className}`)) {
+const injectedRuleValue = (className: string, property: string): string => {
+  for (const sheet of document.styleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (!(rule instanceof CSSStyleRule) || !rule.selectorText.endsWith(`.${className}`)) {
         continue;
       }
       const value = rule.style.getPropertyValue(property);
@@ -85,31 +88,31 @@ function injectedRuleValue(className: string, property: string): string {
     }
   }
   throw new Error(`no injected ${property} rule for .${className}`);
-}
+};
 
 /** The innermost Tamagui theme scope painting `el`, e.g. `accent_Button`. */
-function scopeOf(el: Element): string | null {
+const scopeOf = (el: Element): string | null => {
   for (let node = el.parentElement; node; node = node.parentElement) {
-    const names = Array.from(node.classList)
+    const names = [...node.classList]
       .filter((c) => c.startsWith('t_') && c !== 't_sub_theme')
       .map((c) => c.slice(2))
       .filter((c) => c !== 'light' && c !== 'dark');
     if (names.length) {
-      return names.sort((a, b) => b.length - a.length)[0];
+      return names.toSorted((a, b) => b.length - a.length)[0];
     }
   }
   return null;
-}
+};
 
-function resolveInScope(value: string, scheme: Scheme, scope: string | null): string {
-  const token = value.match(/^var\(--([\w-]+)\)$/)?.[1];
-  if (!token) {
+const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
+  const token = /^var\(--(?<token>[\w-]+)\)$/u.exec(value)?.groups?.token;
+  if (token === undefined) {
     return value;
   }
   const chain: string[] = [];
-  if (scope) {
+  if (scope !== null && scope !== '') {
     const parts = scope.split('_');
-    for (let i = parts.length; i > 0; i--) {
+    for (let i = parts.length; i > 0; i -= 1) {
       chain.push(`${scheme}_${parts.slice(0, i).join('_')}`);
     }
   }
@@ -121,27 +124,27 @@ function resolveInScope(value: string, scheme: Scheme, scope: string | null): st
     }
   }
   throw new Error(`--${token} resolves in none of ${chain.join(', ')}`);
-}
+};
 
 /** What `el` paints for one atomic property: `_bg-` → background-color. */
-function painted(el: Element, prefix: string, property: string, scheme: Scheme): string {
-  const cls = Array.from(el.classList).find(
-    (c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/.test(c),
-  );
-  if (!cls) {
+const painted = (el: Element, prefix: string, property: string, scheme: Scheme): string => {
+  const cls = [...el.classList].find((c) => c.startsWith(prefix) && !/^_[a-z]+-0(?:hover|active|focus|press)/u.test(c));
+  if (cls === undefined) {
     throw new Error(`${el.tagName} carries no ${prefix} class`);
   }
   return resolveInScope(injectedRuleValue(cls, property), scheme, scopeOf(el));
-}
+};
 
-function opacityOf(el: Element): number {
-  const cls = Array.from(el.classList).find((c) => c.startsWith('_o-'));
-  return cls ? Number(injectedRuleValue(cls, 'opacity')) : 1;
-}
+const opacityOf = (el: Element): number => {
+  const cls = [...el.classList].find((c) => c.startsWith('_o-'));
+  return cls === undefined ? 1 : Number(injectedRuleValue(cls, 'opacity'));
+};
 
-function toLab(color: string): [number, number, number] {
+const labF = (t: number) => (t > 216 / 24_389 ? Math.cbrt(t) : ((24_389 / 27) * t + 16) / 116);
+
+const toLab = (color: string): [number, number, number] => {
   const hex = normalizeToHex(color);
-  if (!hex) {
+  if (hex == null || hex === '') {
     throw new Error(`not an opaque color: ${color}`);
   }
   const lin = (i: number) => {
@@ -149,23 +152,24 @@ function toLab(color: string): [number, number, number] {
     return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
   };
   const [r, g, b] = [lin(1), lin(3), lin(5)];
-  const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116);
-  const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
-  const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
-  const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+  const x = labF((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+  const y = labF(0.2126 * r + 0.7152 * g + 0.0722 * b);
+  const z = labF((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
   return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
-}
+};
 
-function deltaE(a: string, b: string): number {
+const deltaE = (a: string, b: string): number => {
   const [p, q] = [toLab(a), toLab(b)];
   return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-}
+};
 
-function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonProps>) {
+const measure = (scheme: Scheme, disabledStyle: string, props: Partial<ButtonProps>) => {
   houseRender(
     <>
       <Button {...props}>Enabled</Button>
-      <Button {...props} disabled>
+      <Button
+        {...props}
+        disabled>
         Disabled
       </Button>
     </>,
@@ -174,8 +178,8 @@ function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonPro
   );
   const enabledLabel = screen.getByText('Enabled');
   const disabledLabel = screen.getByText('Disabled');
-  const enabled = enabledLabel.closest('[role=button]') as Element;
-  const disabled = disabledLabel.closest('[role=button]') as Element;
+  const enabled = enabledLabel.closest('[role=button]')!;
+  const disabled = disabledLabel.closest('[role=button]')!;
   const enabledFill = painted(enabled, '_bg-', 'background-color', scheme);
   const disabledFill = painted(disabled, '_bg-', 'background-color', scheme);
   const labelInk = painted(disabledLabel, '_col-', 'color', scheme);
@@ -187,32 +191,29 @@ function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonPro
     opacityDelta: opacityOf(enabled) - opacityOf(disabled),
     labelContrast: measureContrast({ foreground: labelInk, background: disabledFill }).ratio,
   };
-}
+};
 
 describe('a disabled intent Button differs from its enabled twin', () => {
-  for (const scheme of SCHEMES) {
-    for (const disabledStyle of DISABLED_STYLES) {
-      for (const variant of VARIANTS) {
-        it(`${scheme} ${disabledStyle} ${variant.name}: fill ΔE ≥ ${MIN_FILL_DELTA_E} or opacity delta ≥ ${MIN_OPACITY_DELTA}`, () => {
-          const m = measure(scheme, disabledStyle, variant.props);
-          const detail = `${m.enabledFill} -> ${m.disabledFill}: ΔE ${m.fillDeltaE.toFixed(1)}, opacity delta ${m.opacityDelta}`;
-          expect(m.fillDeltaE >= MIN_FILL_DELTA_E || m.opacityDelta >= MIN_OPACITY_DELTA, detail).toBe(true);
-        });
-      }
-    }
-  }
+  afterEach(cleanup);
+
+  it.each(DELTA_MATRIX)(
+    `$scheme $disabledStyle $name: fill ΔE ≥ ${MIN_FILL_DELTA_E} or opacity delta ≥ ${MIN_OPACITY_DELTA}`,
+    ({ scheme, disabledStyle, props }) => {
+      const m = measure(scheme, disabledStyle, props);
+      const detail = `${m.enabledFill} -> ${m.disabledFill}: ΔE ${m.fillDeltaE.toFixed(1)}, opacity delta ${m.opacityDelta}`;
+      expect(m.fillDeltaE >= MIN_FILL_DELTA_E || m.opacityDelta >= MIN_OPACITY_DELTA, detail).toBe(true);
+    },
+  );
 });
 
 describe('keepLabel keeps the disabled label ≥ 4.5:1 on its own fill', () => {
-  for (const scheme of SCHEMES) {
-    for (const variant of VARIANTS) {
-      it(`${scheme} ${variant.name}`, () => {
-        const m = measure(scheme, 'keepLabel', variant.props);
-        expect(
-          m.labelContrast,
-          `${m.labelInk} on ${m.disabledFill}: ${m.labelContrast.toFixed(2)}:1`,
-        ).toBeGreaterThanOrEqual(aaTextContrastRatio);
-      });
-    }
-  }
+  afterEach(cleanup);
+
+  it.each(SCHEME_VARIANTS)('$scheme $name', ({ scheme, props }) => {
+    const m = measure(scheme, 'keepLabel', props);
+    expect(
+      m.labelContrast,
+      `${m.labelInk} on ${m.disabledFill}: ${m.labelContrast.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(aaTextContrastRatio);
+  });
 });

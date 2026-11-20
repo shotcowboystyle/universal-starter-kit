@@ -1,6 +1,8 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { fireEvent } from '@testing-library/react';
+import type { ComponentProps } from 'react';
+import type { CheckedState, Checkbox as TamaguiCheckboxType } from 'tamagui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
@@ -9,8 +11,8 @@ import { Checkbox } from './Checkbox';
 
 import { Checkboxes } from './index';
 
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 
@@ -20,11 +22,12 @@ vi.mock('tamagui', async (importOriginal) => ({
 // press handler, and createCheckbox spreads it over its own toggle. A tap on
 // the box then does nothing while the label still works. The web renderer
 // here never takes that branch, so the spec pins the handlers that trigger it.
-const frameProps = vi.hoisted(() => [] as Record<string, unknown>[]);
+const frameProps = vi.hoisted((): ComponentProps<typeof TamaguiCheckboxType>[] => []);
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the mock swaps a styled component for a recording function, which the module-typed factory cannot express
 vi.mock('./CheckboxFieldFrame', async () => {
-  const { Checkbox: TamaguiCheckbox } = await vi.importActual<typeof import('tamagui')>('tamagui');
+  const { Checkbox: TamaguiCheckbox } = await vi.importActual<{ Checkbox: typeof TamaguiCheckboxType }>('tamagui');
   return {
-    CheckboxFieldFrame: (props: Record<string, unknown>) => {
+    CheckboxFieldFrame: (props: ComponentProps<typeof TamaguiCheckboxType>) => {
       frameProps.push(props);
       return <TamaguiCheckbox {...props} />;
     },
@@ -44,24 +47,33 @@ const nativeHandlerKeys = [
 
 const handlersOnLastFrame = () => nativeHandlerKeys.filter((key) => key in (frameProps.at(-1) ?? {}));
 
-function FormCheckbox({ onChange }: { onChange: (checked: unknown) => void }) {
+const FormCheckbox = ({ onChange }: { onChange: (checked: CheckedState) => void }) => {
   const form = useForm({ defaultValues: { terms: false } });
   return (
     <Form form={form}>
-      <Checkbox name="terms" label="Accept terms" onChange={onChange} />
+      <Checkbox
+        name="terms"
+        label="Accept terms"
+        onChange={onChange}
+      />
     </Form>
   );
-}
-
-beforeEach(() => {
-  frameProps.length = 0;
-});
+};
 
 describe('native Checkbox square tap', () => {
+  beforeEach(() => {
+    frameProps.length = 0;
+  });
+
   it('hands the standalone frame no handler that would clobber the toggle, and a tap toggles once', () => {
-    const onChange = vi.fn();
-    const result = renderWithProviders(<Checkbox label="Accept terms" onChange={onChange} />);
-    expect(handlersOnLastFrame()).toEqual([]);
+    const onChange = vi.fn<(checked: CheckedState) => void>();
+    const result = renderWithProviders(
+      <Checkbox
+        label="Accept terms"
+        onChange={onChange}
+      />,
+    );
+    expect(handlersOnLastFrame()).toStrictEqual([]);
     const box = result.getByRole('checkbox');
     fireEvent.click(box);
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
@@ -71,16 +83,18 @@ describe('native Checkbox square tap', () => {
   });
 
   it('hands the form-integrated frame no such handler either', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(checked: CheckedState) => void>();
     const result = renderWithProviders(<FormCheckbox onChange={onChange} />);
-    expect(handlersOnLastFrame()).toEqual([]);
+    expect(handlersOnLastFrame()).toStrictEqual([]);
     fireEvent.click(result.getByRole('checkbox'));
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
   });
 
   it('keeps the compound Checkboxes frame free of them too', () => {
     renderWithProviders(
-      <Checkboxes values={{ email: false }} onValuesChange={() => {}}>
+      <Checkboxes
+        values={{ email: false }}
+        onValuesChange={() => {}}>
         <Checkboxes.FocusGroup>
           <Checkboxes.FocusGroup.Item value="email">
             <Checkboxes.Checkbox aria-label="Email" />
@@ -89,6 +103,6 @@ describe('native Checkbox square tap', () => {
       </Checkboxes>,
     );
     expect(frameProps.length).toBeGreaterThan(0);
-    expect(handlersOnLastFrame()).toEqual([]);
+    expect(handlersOnLastFrame()).toStrictEqual([]);
   });
 });

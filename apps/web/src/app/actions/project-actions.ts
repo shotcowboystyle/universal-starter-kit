@@ -1,68 +1,73 @@
-"use server";
+'use server';
 
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { parseJson } from '@/lib/api/parse-json';
+import type { Project } from '@/types/db-interface';
+import type { UpdateProjectInput } from '@/types/project-api';
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = envApiUrl === undefined || envApiUrl === '' ? 'http://localhost:3001' : envApiUrl;
+
+const getAuthHeaders = async (): Promise<HeadersInit> => {
   const cookieStore = await cookies();
-  const token = cookieStore.get("jwt")?.value;
+  const token = cookieStore.get('jwt')?.value;
   return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` })
+    'Content-Type': 'application/json',
+    ...(token !== undefined && token !== '' && { Authorization: `Bearer ${token}` }),
   };
-}
+};
 
-export async function createProject(data: {
+export const createProject = async (data: {
   title: string;
   description?: string;
   boardId: string;
   owner: string;
   orderInBoard?: number;
-}) {
+}) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects`, {
-    method: "POST",
+    method: 'POST',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to create project");
+    throw new Error('Failed to create project');
   }
-  return response.json();
-}
+  return parseJson<Project>(await response.text());
+};
 
-export async function updateProject(id: string, data: Record<string, unknown>) {
+export const updateProject = async (id: string, data: UpdateProjectInput) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to update project");
+    throw new Error('Failed to update project');
   }
-  return response.json();
-}
+  return parseJson<Project>(await response.text());
+};
 
-export async function deleteProject(id: string) {
+export const deleteProject = async (id: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
-    method: "DELETE",
-    headers
+    method: 'DELETE',
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to delete project");
+    throw new Error('Failed to delete project');
   }
-}
+};
 
-export async function getProjects(boardId: string) {
+export const getProjects = async (boardId: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects?boardId=${boardId}`, {
-    headers
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to fetch projects");
+    throw new Error('Failed to fetch projects');
   }
-  return response.json();
-}
+  return parseJson<Project[]>(await response.text());
+};

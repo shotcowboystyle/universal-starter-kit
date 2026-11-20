@@ -1,4 +1,8 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strictNullChecks": true
+  },
   "extends": "expo/tsconfig.base"
 }

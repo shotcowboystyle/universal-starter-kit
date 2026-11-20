@@ -1,0 +1,43 @@
+# Dev Keycloak for __NAME__ (mpo init --keycloak).
+#
+#   docker compose -f docker/compose.keycloak.yaml up -d
+#
+# start-dev uses the embedded dev database (persisted in the named volume)
+# and imports docker/keycloak/realm.json on first boot — realm "__NAME__"
+# with the clients the KEYCLOAK_* env keys reference, plus a dev/dev user.
+# Admin console: http://localhost:8080/auth (admin/admin) — port movable
+# via KEYCLOAK_HTTP_PORT; keep KEYCLOAK_BASE_URL in .env in step.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # /auth keeps parity with KEYCLOAK_BASE_URL (and reverse-proxy setups).
+      KC_HTTP_RELATIVE_PATH: /auth
+    ports:
+      # Host port is parameterized because :8080 is the single most
+      # contested port on a dev machine (another Keycloak, another Tomcat,
+      # another anything). A yaml !override in a second compose file is NOT
+      # a reliable replacement — compose versions that don't support the
+      # tag drop the whole ports list silently and the container comes up
+      # healthy but unreachable (measured 2026-08-13).
+      - '${KEYCLOAK_HTTP_PORT:-8080}:8080'
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+      # The volume mounts at data/, NOT data/h2: the image ships no h2/
+      # subdirectory, so a mount there is created root-owned and Keycloak
+      # (uid 1000) dies at boot unable to open its own database — H2 90028,
+      # "Could not open file /opt/keycloak/data/h2/keycloakdb.mv.db",
+      # measured 2026-08-13 on quay.io/keycloak/keycloak:26.6. It reads
+      # like corruption and survives `down -v`, because the wipe recreates
+      # the same root-owned mount point. data/ exists in the image with
+      # keycloak ownership, so Docker seeds the volume correctly; the realm
+      # bind above simply layers inside it.
+      - keycloak:/opt/keycloak/data
+
+volumes:
+  keycloak: {}

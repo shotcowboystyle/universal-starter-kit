@@ -42,14 +42,14 @@ export default meta;
 
 type Story = StoryObj<typeof PageHeader>;
 
-function HeaderCanvas({ children }: { children: ReactNode }) {
-  return (
-    <Screen scroll={false} maxWidth={720}>
-      {children}
-      <Paragraph color="$color11">Page body shares the title inset. The hairline is edge-to-edge.</Paragraph>
-    </Screen>
-  );
-}
+const HeaderCanvas = ({ children }: { children: ReactNode }) => (
+  <Screen
+    scroll={false}
+    maxWidth={720}>
+    {children}
+    <Paragraph color="$color11">Page body shares the title inset. The hairline is edge-to-edge.</Paragraph>
+  </Screen>
+);
 
 export const Default: Story = {
   name: 'Main',
@@ -100,7 +100,7 @@ export const WithNav: Story = {
 };
 
 export const TitleOnly: Story = {
-  args: { subtitle: undefined },
+  args: { subtitle: '' },
   render: (args) => (
     <HeaderCanvas>
       <PageHeader {...args} />
@@ -114,7 +114,7 @@ export const TitleOnly: Story = {
  * per-instance eject back to the 64px hero scale for one marketing header.
  */
 export const DisplayScale: Story = {
-  args: { titleScale: 'display', subtitle: undefined, divider: false },
+  args: { titleScale: 'display', subtitle: '', divider: false },
   render: (args) => <PageHeader {...args} />,
 };
 
@@ -123,7 +123,7 @@ export const DisplayScale: Story = {
  * inside it, so a marketing surface asks once instead of per header.
  */
 export const HeroPresetSurface: Story = {
-  args: { subtitle: undefined, divider: false },
+  args: { subtitle: '', divider: false },
   render: (args) => (
     <Preset preset="hero">
       <PageHeader {...args} />
@@ -132,10 +132,13 @@ export const HeroPresetSurface: Story = {
 };
 
 export const NoTitle: Story = {
-  args: { title: undefined, subtitle: undefined },
+  args: { title: '', subtitle: '' },
   render: (args) => (
     <HeaderCanvas>
-      <PageHeader {...args} actions={<Button>Only action</Button>} />
+      <PageHeader
+        {...args}
+        actions={<Button>Only action</Button>}
+      />
     </HeaderCanvas>
   ),
 };
@@ -147,7 +150,11 @@ export const LongTitleNarrow: Story = {
       'A long subtitle as well, to make sure supporting copy wraps under the heading without overflowing horizontally',
   },
   render: (args) => (
-    <YStack maxWidth={320} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      maxWidth={320}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <PageHeader
         {...args}
         actions={

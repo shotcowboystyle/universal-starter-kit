@@ -4,16 +4,15 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { SkipLink } from './index';
 
-function renderWithTarget() {
-  return renderWithProviders(
+const renderWithTarget = () =>
+  renderWithProviders(
     <div>
       <SkipLink targetId="main-content">Skip to content</SkipLink>
       <div id="main-content">Main</div>
     </div>,
   );
-}
 
-describe('SkipLink', () => {
+describe(SkipLink, () => {
   it('renders an anchor pointing at the target id', () => {
     const { container } = renderWithTarget();
     const anchor = container.querySelector('a[href="#main-content"]');
@@ -23,29 +22,29 @@ describe('SkipLink', () => {
 
   it('is a real hash link with the skip-link class (GOV.UK / Primer)', () => {
     const { container } = renderWithTarget();
-    const anchor = container.querySelector('a.mp-skip-link') as HTMLAnchorElement;
+    const anchor = container.querySelector<HTMLAnchorElement>('a.mp-skip-link')!;
     expect(anchor).toBeTruthy();
     expect(anchor.getAttribute('href')).toBe('#main-content');
     expect(anchor.closest('nav')).toBeNull();
-    expect(document.getElementById('mp-skip-link-css')?.textContent).toContain(':focus-visible');
-    expect(document.getElementById('mp-skip-link-css')?.textContent).toContain('outline-offset');
+    expect(document.querySelector('#mp-skip-link-css')?.textContent).toContain(':focus-visible');
+    expect(document.querySelector('#mp-skip-link-css')?.textContent).toContain('outline-offset');
   });
 
   it('moves focus to the target on activation', () => {
     const { container } = renderWithTarget();
-    const anchor = container.querySelector('a[href="#main-content"]') as HTMLElement;
+    const anchor = container.querySelector<HTMLElement>('a[href="#main-content"]')!;
     fireEvent.click(anchor);
-    const target = document.getElementById('main-content') as HTMLElement;
+    const target = document.querySelector<HTMLElement>('#main-content')!;
     expect(target.getAttribute('tabindex')).toBe('-1');
     expect(document.activeElement).toBe(target);
   });
 
   it('strips the temporary tabindex and target class on blur (GOV.UK VoiceOver)', () => {
     const { container } = renderWithTarget();
-    fireEvent.click(container.querySelector('a[href="#main-content"]') as HTMLElement);
-    const target = document.getElementById('main-content') as HTMLElement;
+    fireEvent.click(container.querySelector<HTMLElement>('a[href="#main-content"]')!);
+    const target = document.querySelector<HTMLElement>('#main-content')!;
     expect(target.classList.contains('mp-skip-link-target')).toBe(true);
-    fireEvent.blur(target);
+    target.dispatchEvent(new FocusEvent('blur'));
     expect(target.hasAttribute('tabindex')).toBe(false);
     expect(target.classList.contains('mp-skip-link-target')).toBe(false);
   });
@@ -54,14 +53,16 @@ describe('SkipLink', () => {
     const { container } = renderWithProviders(
       <div>
         <SkipLink targetId="kept">Skip</SkipLink>
-        <div id="kept" tabIndex={-1}>
+        <div
+          id="kept"
+          tabIndex={-1}>
           Kept
         </div>
       </div>,
     );
-    const target = document.getElementById('kept') as HTMLElement;
-    fireEvent.click(container.querySelector('a[href="#kept"]') as HTMLElement);
-    fireEvent.blur(target);
+    const target = document.querySelector<HTMLElement>('#kept')!;
+    fireEvent.click(container.querySelector<HTMLElement>('a[href="#kept"]')!);
+    target.dispatchEvent(new FocusEvent('blur'));
     expect(target.getAttribute('tabindex')).toBe('-1');
   });
 
@@ -71,20 +72,22 @@ describe('SkipLink', () => {
     const node = (label ?? container.querySelector('a.mp-skip-link')) as HTMLElement;
     expect(node).toBeTruthy();
     const weight = node.style.fontWeight || getComputedStyle(node).fontWeight;
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(weight);
   });
 
   it('reports the focused target through onSkip', () => {
-    const onSkip = vi.fn();
+    const onSkip = vi.fn<(target: HTMLElement | null) => void>();
     const { container } = renderWithProviders(
       <div>
-        <SkipLink targetId="content-x" onSkip={onSkip}>
+        <SkipLink
+          targetId="content-x"
+          onSkip={onSkip}>
           Skip
         </SkipLink>
         <div id="content-x">X</div>
       </div>,
     );
-    fireEvent.click(container.querySelector('a[href="#content-x"]') as HTMLElement);
-    expect(onSkip).toHaveBeenCalledWith(document.getElementById('content-x'));
+    fireEvent.click(container.querySelector<HTMLElement>('a[href="#content-x"]')!);
+    expect(onSkip).toHaveBeenCalledWith(document.querySelector('#content-x'));
   });
 });

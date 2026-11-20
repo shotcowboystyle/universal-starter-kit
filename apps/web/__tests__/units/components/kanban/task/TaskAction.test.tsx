@@ -1,61 +1,94 @@
 import { renderWithProviders as render } from '@repo/test-utils';
+import type { QueryClient } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import type { useTranslations } from 'next-intl';
+import type { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskActions } from '@/components/kanban/task/TaskAction';
-import { TaskStatus } from '@/types/dbInterface';
+import { useDeleteTask, useTask, useUpdateTask } from '@/lib/api/tasks/queries';
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { TaskStatus } from '@/types/db-interface';
 
 // Mock dependencies
-vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(() => ({ userId: 'user-1' })),
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('@/stores/workspace-store'), () => ({
+  useWorkspaceStore: vi.fn<() => { userId: string }>(() => ({
+    userId: 'user-1',
+  })) as unknown as typeof useWorkspaceStore,
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as typeof useTranslations,
 }));
 
-vi.mock('sonner', () => ({
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('sonner'), () => ({
   toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+    success: vi.fn<(message: string) => void>(),
+    error: vi.fn<(message: string) => void>(),
+  } as unknown as typeof toast,
 }));
 
-vi.mock('@/lib/api/tasks/queries', () => ({
-  useTask: vi.fn(),
-  useUpdateTask: vi.fn(),
-  useDeleteTask: vi.fn(),
+vi.mock(import('@/lib/api/tasks/queries'), () => ({
+  useTask: vi.fn<typeof useTask>(),
+  useUpdateTask: vi.fn<typeof useUpdateTask>(),
+  useDeleteTask: vi.fn<typeof useDeleteTask>(),
 }));
 
-vi.mock('@/components/kanban/task/TaskForm', () => ({
+vi.mock(import('@/components/kanban/task/TaskForm'), () => ({
   TaskForm: ({ onSubmit, onCancel }: any) => (
     <div data-testid="task-form">
-      <button data-testid="form-submit" onClick={() => onSubmit({ title: 'Updated Task' })}>
+      <button
+        type="button"
+        data-testid="form-submit"
+        onClick={() => onSubmit({ title: 'Updated Task' })}>
         Submit
       </button>
-      <button data-testid="form-cancel" onClick={onCancel}>
+      <button
+        type="button"
+        data-testid="form-cancel"
+        onClick={onCancel}>
         Cancel
       </button>
     </div>
   ),
 }));
 
-vi.mock('@tanstack/react-query', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@tanstack/react-query')>()),
-  useQueryClient: vi.fn(() => ({
-    invalidateQueries: vi.fn(),
-    getQueryData: vi.fn(),
-    setQueryData: vi.fn(),
-    cancelQueries: vi.fn(),
-    removeQueries: vi.fn(),
-    refetchQueries: vi.fn(),
-    getQueryCache: vi.fn(() => ({
-      findAll: vi.fn(() => []),
-    })),
-  })),
+// SAFETY: the test double implements only the QueryClient members the code under test calls
+vi.mock(import('@tanstack/react-query'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useQueryClient: vi.fn<() => QueryClient>(
+    () =>
+      ({
+        invalidateQueries: vi.fn<() => void>(),
+        getQueryData: vi.fn<() => void>(),
+        setQueryData: vi.fn<() => void>(),
+        cancelQueries: vi.fn<() => void>(),
+        removeQueries: vi.fn<() => void>(),
+        refetchQueries: vi.fn<() => void>(),
+        getQueryCache: vi.fn<() => { findAll: () => never[] }>(() => ({
+          findAll: vi.fn<() => never[]>(() => []),
+        })),
+      }) as unknown as QueryClient,
+  ),
 }));
 
-describe('TaskActions', () => {
+const openMenu = async () => {
+  fireEvent.click(screen.getByTestId('task-actions-trigger'));
+  return within(await screen.findByRole('menu'));
+};
+
+// The alertdialog sits in a portal that testing-library's role query treats as inaccessible.
+const findConfirmDialog = async () =>
+  await waitFor(() => {
+    const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
+    expect(el).not.toBeNull();
+    return el!;
+  });
+
+describe(TaskActions, () => {
   const mockTask = {
     _id: 'task-1',
     title: 'Test Task',
@@ -82,11 +115,8 @@ describe('TaskActions', () => {
     dueDate: new Date('2025-12-31'),
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useTask, useUpdateTask, useDeleteTask } = await import('@/lib/api/tasks/queries');
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
 
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-1' } as any);
 
@@ -96,12 +126,12 @@ describe('TaskActions', () => {
     } as any);
 
     vi.mocked(useUpdateTask).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(mockTask),
+      mutateAsync: vi.fn<() => Promise<typeof mockTask>>().mockResolvedValue(mockTask),
       isPending: false,
     } as any);
 
     vi.mocked(useDeleteTask).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
+      mutateAsync: vi.fn<() => Promise<void>>().mockResolvedValue(),
       isPending: false,
     } as any);
   });
@@ -112,9 +142,7 @@ describe('TaskActions', () => {
   });
 
   it('should show loading state when task is loading', async () => {
-    const { useTask } = await import('@/lib/api/tasks/queries');
     vi.mocked(useTask).mockReturnValue({
-      data: undefined,
       isLoading: true,
     } as any);
 
@@ -129,7 +157,6 @@ describe('TaskActions', () => {
   });
 
   it('should render with assignee permissions', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-2' } as any);
 
     render(<TaskActions {...mockProps} />);
@@ -137,7 +164,6 @@ describe('TaskActions', () => {
   });
 
   it('should render with no permissions', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-3' } as any);
 
     render(<TaskActions {...mockProps} />);
@@ -145,9 +171,7 @@ describe('TaskActions', () => {
   });
 
   it('should return null when task not found and not loading', async () => {
-    const { useTask } = await import('@/lib/api/tasks/queries');
     vi.mocked(useTask).mockReturnValue({
-      data: undefined,
       isLoading: false,
     } as any);
 
@@ -161,125 +185,151 @@ describe('TaskActions', () => {
   });
 
   it('should render with dueDate', () => {
-    render(<TaskActions {...mockProps} dueDate={new Date('2025-12-31')} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        dueDate={new Date('2025-12-31')}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without dueDate', () => {
-    render(<TaskActions {...mockProps} dueDate={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        dueDate={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without assignee', () => {
-    render(<TaskActions {...mockProps} assigneeId={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        assigneeId={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render with description', () => {
-    render(<TaskActions {...mockProps} description="Test description" />);
+    render(
+      <TaskActions
+        {...mockProps}
+        description="Test description"
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without description', () => {
-    render(<TaskActions {...mockProps} description={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        description={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should handle different task statuses', () => {
-    render(<TaskActions {...mockProps} status={TaskStatus.IN_PROGRESS} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        status={TaskStatus.IN_PROGRESS}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
 
-    render(<TaskActions {...mockProps} status={TaskStatus.DONE} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        status={TaskStatus.DONE}
+      />,
+    );
     expect(screen.getAllByTestId('task-actions-trigger').length).toBeGreaterThan(0);
   });
 
   it('should handle onUpdate callback when provided', () => {
-    const mockOnUpdate = vi.fn();
-    render(<TaskActions {...mockProps} onUpdate={mockOnUpdate} />);
+    const mockOnUpdate = vi.fn<() => void>();
+    render(
+      <TaskActions
+        {...mockProps}
+        onUpdate={mockOnUpdate}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
-
-  const openMenu = async () => {
-    fireEvent.click(screen.getByTestId('task-actions-trigger'));
-    return within(await screen.findByRole('menu'));
-  };
-
-  // The alertdialog sits in a portal that testing-library's role query treats as inaccessible.
-  const findConfirmDialog = () =>
-    waitFor(() => {
-      const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
-      expect(el).not.toBeNull();
-      return el!;
-    });
 
   it('enables edit and delete for the creator', async () => {
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).not.toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   it('only enables edit for the assignee', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-2' } as any);
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).not.toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('disables both actions for other users', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-3' } as any);
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('opens the edit dialog and submits the update', async () => {
-    const { useUpdateTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /edit/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /edit/u }));
 
     const dialog = await screen.findByTestId('edit-task-dialog');
     expect(within(dialog).getByText('editTaskTitle')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByTestId('form-submit'));
 
     const { mutateAsync } = vi.mocked(useUpdateTask).mock.results[0].value;
-    await waitFor(() =>
+    await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'task-1', title: 'Updated Task', assigneeId: null }),
         expect.any(Object),
-      ),
-    );
+      );
+    });
   });
 
   it('confirms deletion through the destructive confirm dialog', async () => {
-    const { useDeleteTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /delete/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /delete/u }));
 
     const dialog = within(await findConfirmDialog());
     expect(dialog.getByText('confirmDeleteTitle')).toBeInTheDocument();
     fireEvent.click(dialog.getByText('delete'));
 
     const { mutateAsync } = vi.mocked(useDeleteTask).mock.results[0].value;
-    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('task-1', expect.any(Object)));
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith('task-1', expect.any(Object));
+    });
   });
 
   it('does not delete when the confirm dialog is cancelled', async () => {
-    const { useDeleteTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /delete/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /delete/u }));
 
     const dialog = within(await findConfirmDialog());
     fireEvent.click(dialog.getByText('cancel'));
 
-    await waitFor(() => expect(document.querySelector('[role="alertdialog"]')).toBeNull());
+    await waitFor(() => {
+      expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    });
     const { mutateAsync } = vi.mocked(useDeleteTask).mock.results[0].value;
     expect(mutateAsync).not.toHaveBeenCalled();
   });

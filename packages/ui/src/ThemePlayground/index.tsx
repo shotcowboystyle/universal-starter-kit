@@ -1,6 +1,7 @@
 import { PaletteIcon } from '@phosphor-icons/react';
 import { ThemeDevtoolsPanel } from '@repo/theme';
-import { Suspense, lazy, useState, type ComponentType } from 'react';
+import { Suspense, lazy, useState } from 'react';
+import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SizableText, Text, YStack } from 'tamagui';
 
@@ -16,13 +17,28 @@ export interface ThemePlaygroundProps {
  * The panel reads the reader's color scheme through `@vxrn/color-scheme`,
  * an optional peer: without it the panel still opens, minus the scheme row.
  */
+const loadColorScheme = async () => {
+  try {
+    return await import('@vxrn/color-scheme');
+  } catch {
+    // Safe to continue: the peer is optional; without it the panel just omits the scheme row.
+    return null;
+  }
+};
+
 const ScopedPanel = lazy(async (): Promise<{ default: ComponentType<object> }> => {
-  const scheme = await import('@vxrn/color-scheme').catch(() => undefined);
+  const scheme = await loadColorScheme();
   const useUserScheme = scheme?.useUserScheme;
   if (!useUserScheme) {
     return { default: () => <ThemeDevtoolsPanel /> };
   }
-  const Panel = () => <ThemeDevtoolsPanel useUserScheme={useUserScheme} devtoolsTheme={useUserScheme().value} />;
+  const Panel = () => (
+    <ThemeDevtoolsPanel
+      // oxlint-disable-next-line react/hooks -- the panel's API takes the hook itself as a prop and calls it
+      useUserScheme={useUserScheme}
+      devtoolsTheme={useUserScheme().value}
+    />
+  );
   return { default: Panel };
 });
 
@@ -31,7 +47,7 @@ const ScopedPanel = lazy(async (): Promise<{ default: ComponentType<object> }> =
  * preset and style knobs, restyling the page live. The panel stays mounted after the first open so closing the
  * sheet does not blank it mid-slide.
  */
-export function ThemePlayground({ testID }: ThemePlaygroundProps) {
+export const ThemePlayground = ({ testID }: ThemePlaygroundProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -65,10 +81,14 @@ export function ThemePlayground({ testID }: ThemePlaygroundProps) {
         scrollable
         header={
           <YStack>
-            <SizableText size="$6" fontWeight="700">
+            <SizableText
+              size="$6"
+              fontWeight="700">
               {t('Theme playground')}
             </SizableText>
-            <Text fontSize="$2" color="$color10">
+            <Text
+              fontSize="$2"
+              color="$color10">
               {t('Changes restyle the page live')}
             </Text>
           </YStack>
@@ -81,4 +101,4 @@ export function ThemePlayground({ testID }: ThemePlaygroundProps) {
       </SheetModal>
     </>
   );
-}
+};

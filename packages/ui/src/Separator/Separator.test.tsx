@@ -1,18 +1,17 @@
+// @vitest-environment jsdom
 /**
- * @vitest-environment jsdom
- *
  * Separator paints a line.
  *
  * What this locks: the house rule paints, at 1 CSS px, in $borderColor, in
  * both schemes, and cannot flex-grow (the raw primitive it
  * replaced declares `flex: 1`). Asserting a separator's height and never its
- * colour is how a transparent rule ships, so this spec asserts the painted
- * colour first.
+ * color is how a transparent rule ships, so this spec asserts the painted
+ * color first.
  *
- * (The ticket's "96 of 96 paint nothing" reading was a probe artefact — it
+ * Note: the ticket's "96 of 96 paint nothing" reading was a probe artifact — it
  * read borderTopWidth on a primitive that paints borderBottomWidth. See the
  * component header. The assertions below are unaffected: they are about what
- * the HOUSE rule paints, not about what the raw one did.)
+ * the HOUSE rule paints, not about what the raw one did.
  *
  * jsdom cannot CASCADE Tamagui's class-based CSS, so `getComputedStyle` on the
  * element reads nothing — but Tamagui does INJECT its atomic rules into
@@ -30,57 +29,55 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Separator } from './index';
 
-afterEach(cleanup);
-
-function getSeparator(container: HTMLElement): HTMLElement {
+const getSeparator = (container: HTMLElement): HTMLElement => {
   const el = container.querySelector('[role="separator"]');
   expect(el, "a Separator must render role='separator'").toBeTruthy();
   return el as HTMLElement;
-}
+};
 
-const escapeForRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+const readRules = (sheet: CSSStyleSheet): CSSRule[] => {
+  try {
+    return [...sheet.cssRules];
+  } catch {
+    // cross-origin sheet; nothing of ours lives there
+    return [];
+  }
+};
 
 /**
  * Every value Tamagui declared for `property` through one of THIS element's
  * atomic classes. Empty means the element does not carry that property at all.
  */
-function declared(el: HTMLElement, property: string): string[] {
-  const atoms = el.className.split(/\s+/).filter(Boolean);
+const declared = (el: HTMLElement, property: string): string[] => {
+  const atoms = el.className.split(/\s+/u).filter(Boolean);
+  const declRe = new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`, 'u');
   const values: string[] = [];
-  for (const sheet of Array.from(document.styleSheets)) {
-    let rules: CSSRuleList | undefined;
-    try {
-      rules = sheet.cssRules;
-    } catch {
-      continue; // cross-origin sheet; nothing of ours lives there
-    }
-    for (const rule of Array.from(rules ?? [])) {
-      const parsed = (rule.cssText ?? '').match(/^([^{]+)\{([^}]*)\}$/);
-      if (!parsed) {
-        continue;
-      }
-      const [, selector, body] = parsed;
-      const mine = atoms.some((atom) => new RegExp(`\\.${escapeForRegExp(atom)}(?![\\w-])`).test(selector));
-      if (!mine) {
-        continue;
-      }
-      const decl = body.match(new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`));
+  for (const sheet of document.styleSheets) {
+    for (const rule of readRules(sheet)) {
+      const groups = /^(?<selector>[^{]+)\{(?<body>[^}]*)\}$/u.exec(rule.cssText)?.groups;
+      const decl =
+        groups !== undefined &&
+        atoms.some((atom) => new RegExp(`\\.${escapeForRegExp(atom)}(?![\\w-])`, 'u').test(groups.selector))
+          ? declRe.exec(groups.body)
+          : null;
       if (decl) {
         values.push(decl[1].trim());
       }
     }
   }
   return values;
-}
+};
 
-/** Resolve a theme colour Variable to its raw value string. */
-function themeColorVal(scheme: 'light' | 'dark', key: string): string {
-  const themes = getConfig().themes as Record<string, Record<string, { val?: unknown }>>;
+/** Resolve a theme color Variable to its raw value string. */
+const themeColorVal = (scheme: 'light' | 'dark', key: string): string => {
+  const themes = getConfig().themes as Record<string, Record<string, { val?: string }>>;
   const variable = themes[scheme]?.[key];
-  return String(variable?.val ?? '');
-}
+  return variable?.val ?? '';
+};
 
-function isVisibleColor(value: string): boolean {
+const isVisibleColor = (value: string): boolean => {
   if (!value) {
     return false;
   }
@@ -88,22 +85,24 @@ function isVisibleColor(value: string): boolean {
     return false;
   }
   // rgba/hsla with a 0 alpha channel paints nothing.
-  return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/.test(value);
-}
+  return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/u.test(value);
+};
 
-describe('Separator — painted colour (the regression this component exists for)', () => {
+describe('Separator — painted color (the regression this component exists for)', () => {
+  afterEach(cleanup);
+
   it('paints its 1px box with the $borderColor token, not a transparent box', () => {
     const { container } = renderWithProviders(<Separator />);
     const separator = getSeparator(container);
     // PAINT: the declared background is the borderColor token, not transparent.
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
     // GEOMETRY: exactly 1 CSS px tall — never 0.5.
-    expect(declared(separator, 'height')).toEqual(['1px']);
+    expect(declared(separator, 'height')).toStrictEqual(['1px']);
   });
 
-  it('carries a visible $borderColor in BOTH schemes (token values are real colours)', () => {
+  it('carries a visible $borderColor in BOTH schemes (token values are real colors)', () => {
     // The component paints one token; the scheme resolves it. Prove the token
-    // itself is a visible colour on both sides so the indirection cannot hide
+    // itself is a visible color on both sides so the indirection cannot hide
     // a transparent value in either scheme.
     renderWithProviders(<Separator />);
     for (const scheme of ['light', 'dark'] as const) {
@@ -120,32 +119,36 @@ describe('Separator — painted colour (the regression this component exists for
       </Theme>,
     );
     const separator = getSeparator(container);
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
-    expect(declared(separator, 'height')).toEqual(['1px']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
+    expect(declared(separator, 'height')).toStrictEqual(['1px']);
   });
 });
 
-describe('Separator — quiet variant (opacity 0.5, never a lighter colour)', () => {
+describe('Separator — quiet variant (opacity 0.5, never a lighter color)', () => {
+  afterEach(cleanup);
+
   it('dims with opacity 0.5 and keeps the exact same paint token', () => {
     const { container } = renderWithProviders(<Separator quiet />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'opacity')).toEqual(['0.5']);
-    // Never a lighter colour: the paint token is unchanged from the default.
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
+    expect(declared(separator, 'opacity')).toStrictEqual(['0.5']);
+    // Never a lighter color: the paint token is unchanged from the default.
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
   });
 
   it('default separator carries no opacity dim', () => {
     const { container } = renderWithProviders(<Separator />);
-    expect(declared(getSeparator(container), 'opacity')).toEqual([]);
+    expect(declared(getSeparator(container), 'opacity')).toStrictEqual([]);
   });
 });
 
 describe('Separator — vertical (vertical separators are 1px wide)', () => {
+  afterEach(cleanup);
+
   it('is 1px wide, releases the horizontal height, and declares its orientation', () => {
     const { container } = renderWithProviders(<Separator vertical />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'width')).toEqual(['1px']);
-    expect(declared(separator, 'height')).toEqual(['auto']);
+    expect(declared(separator, 'width')).toStrictEqual(['1px']);
+    expect(declared(separator, 'height')).toStrictEqual(['auto']);
     expect(separator.getAttribute('aria-orientation')).toBe('vertical');
   });
 
@@ -156,20 +159,24 @@ describe('Separator — vertical (vertical separators are 1px wide)', () => {
 });
 
 describe('Separator — never leftover space', () => {
+  afterEach(cleanup);
+
   it('cannot grow or shrink (flex: none discipline on the painting edge)', () => {
     const { container } = renderWithProviders(<Separator />);
     const separator = getSeparator(container);
     // The raw primitive it replaced declares `flex: 1` — the defect this block
     // measures — so both ends of the flex story are pinned here.
-    expect(declared(separator, 'flex-grow')).toEqual(['0']);
-    expect(declared(separator, 'flex-shrink')).toEqual(['0']);
+    expect(declared(separator, 'flex-grow')).toStrictEqual(['0']);
+    expect(declared(separator, 'flex-shrink')).toStrictEqual(['0']);
   });
 });
 
 describe('Separator — consumer eject stays the last word (STD-EJECT-LAST)', () => {
+  afterEach(cleanup);
+
   it('an explicit backgroundColor prop wins over the house paint', () => {
     const { container } = renderWithProviders(<Separator backgroundColor="$red9" />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'background-color')).toEqual(['var(--red9)']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--red9)']);
   });
 });

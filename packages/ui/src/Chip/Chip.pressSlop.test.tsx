@@ -13,43 +13,48 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Chip } from './index';
 
-afterEach(cleanup);
-
 type Stop = 'none' | 'small' | 'medium' | 'large';
 
-function frameAt(borderWidth: Stop, props: { onPress?: () => void; disabled?: boolean } = { onPress: () => {} }) {
+const noop = (): void => undefined;
+
+const frameAt = (borderWidth: Stop, props?: { onPress?: () => void; disabled?: boolean }) => {
+  const chipProps = props ?? { onPress: noop };
   const result = renderWithProviders(
     <Preset overrides={{ borderWidth }}>
-      <Chip variant="outlined" {...props}>
+      <Chip
+        variant="outlined"
+        {...chipProps}>
         Fire
       </Chip>
     </Preset>,
   );
-  return result.container.querySelector('[data-chip]') as HTMLElement;
-}
+  return result.container.querySelector<HTMLElement>('[data-chip]')!;
+};
 
 describe('Chip pressable body slop', () => {
+  afterEach(cleanup);
+
   it('reaches half the chip-row gap past the painted box, vertically only', () => {
     const frame = frameAt('none');
     expect(frame.getAttribute('role')).toBe('button');
-    expect(frame.getAttribute('data-mp-press-slop')).toBe('3');
-    expect(frame.getAttribute('data-mp-press-axis')).toBe('vertical');
+    expect(frame.dataset.mpPressSlop).toBe('3');
+    expect(frame.dataset.mpPressAxis).toBe('vertical');
   });
 
   it("adds the frame's border back, so the reach past the box is the same at every stop", () => {
-    expect(frameAt('small').getAttribute('data-mp-press-slop')).toBe('4');
-    expect(frameAt('medium').getAttribute('data-mp-press-slop')).toBe('4');
-    expect(frameAt('large').getAttribute('data-mp-press-slop')).toBe('5');
+    expect(frameAt('small').dataset.mpPressSlop).toBe('4');
+    expect(frameAt('medium').dataset.mpPressSlop).toBe('4');
+    expect(frameAt('large').dataset.mpPressSlop).toBe('5');
   });
 
   it('a chip with no press handler has no target, so no slop', () => {
     const frame = frameAt('medium', {});
     expect(frame.getAttribute('role')).toBeNull();
-    expect(frame.getAttribute('data-mp-press-slop')).toBeNull();
+    expect(frame.dataset.mpPressSlop).toBeUndefined();
   });
 
   it('a disabled chip gates its target and drops the slop', () => {
-    const frame = frameAt('medium', { onPress: () => {}, disabled: true });
-    expect(frame.getAttribute('data-mp-press-slop')).toBeNull();
+    const frame = frameAt('medium', { onPress: noop, disabled: true });
+    expect(frame.dataset.mpPressSlop).toBeUndefined();
   });
 });

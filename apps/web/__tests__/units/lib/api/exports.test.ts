@@ -1,29 +1,28 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from 'vitest';
 
-import * as boardsIndex from "@/lib/api/boards";
-import * as projectsIndex from "@/lib/api/projects";
-import * as tasksIndex from "@/lib/api/tasks";
-import * as usersIndex from "@/lib/api/users";
-
-describe("API Exports", () => {
-  it("should export board API members", () => {
+describe('API Exports', () => {
+  it('should export board API members', async () => {
+    const boardsIndex = await import('@/lib/api/boards');
     expect(boardsIndex).toBeDefined();
     expect(boardsIndex.boardApi).toBeDefined();
     expect(boardsIndex.useBoards).toBeDefined();
   });
 
-  it("should export project API members", () => {
+  it('should export project API members', async () => {
+    const projectsIndex = await import('@/lib/api/projects');
     expect(projectsIndex).toBeDefined();
     // Assuming these exist based on naming conventions, otherwise this test will fail and I'll know what to fix
     expect(projectsIndex).toBeTruthy();
   });
 
-  it("should export task API members", () => {
+  it('should export task API members', async () => {
+    const tasksIndex = await import('@/lib/api/tasks');
     expect(tasksIndex).toBeDefined();
     expect(tasksIndex).toBeTruthy();
   });
 
-  it("should export user API members", () => {
+  it('should export user API members', async () => {
+    const usersIndex = await import('@/lib/api/users');
     expect(usersIndex).toBeDefined();
     expect(usersIndex).toBeTruthy();
   });

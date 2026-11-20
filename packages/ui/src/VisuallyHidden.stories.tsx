@@ -25,7 +25,9 @@ type Story = StoryObj<typeof VisuallyHidden>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack maxWidth={420} gap="$3">
+    <YStack
+      maxWidth={420}
+      gap="$3">
       <Text>Visible caption. The next node is in the tree and hidden from sight.</Text>
       <VisuallyHidden>Hidden label for assistive technology</VisuallyHidden>
     </YStack>

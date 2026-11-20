@@ -4,31 +4,24 @@ import {
   radiusClassProps,
   useReadableTextOn,
   wasKeyboardFocus,
-  type ControlStateProps,
-  type DisabledChromeProps,
-  type KnobProps,
-  type KnobRecipe,
   transitionProps,
 } from '@repo/theme';
+import type { ControlStateProps, DisabledChromeProps, KnobProps, KnobRecipe } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { useCallback, useRef, useState } from 'react';
-import type { FontSizeTokens, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
-import {
-  Label,
-  type RadioGroupProps as TamaguiRadioGroupProps,
-  RadioGroup as TamaguiRadioGroup,
-  View,
-  XStack,
-  YStack,
-  getVariableValue,
-  isWeb,
-  styled,
+import { Label, RadioGroup as TamaguiRadioGroup, View, XStack, YStack, getVariableValue, isWeb, styled } from 'tamagui';
+import type {
+  FontSizeTokens,
+  LabelProps,
+  SizeTokens,
+  TamaguiElement,
+  RadioGroupProps as TamaguiRadioGroupProps,
 } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
-import { choiceItemA11y, composeA11yName } from '../../shared/nativeA11y';
+import { Field, FieldLayout } from '../../FieldLayout';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
+import { choiceItemA11y, composeA11yName } from '../../shared/native-a-11y';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -57,6 +50,39 @@ const radioTargetSize = 44;
  * hit target stays transparent; this radius is the visible glyph + pip.
  */
 const radioDiscRadius = 1000;
+/** Deterministic skeleton label bar widths (see the skeleton branch). */
+const skeletonLabelWidths = [88, 64, 76];
+
+type BlurHandler = ComponentProps<typeof FieldLayout>['onBlur'];
+
+interface RadioA11yRefs {
+  'aria-labelledby'?: string;
+  'aria-describedby'?: string;
+}
+
+// The DOM invokes onKeyDown with the event; tamagui's prop type omits the parameter.
+// SAFETY: the DOM always invokes onKeyDown with a KeyboardEvent-shaped argument; only tamagui's prop type omits it
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- see SAFETY above
+const asKeyDownProp = (handler: (e: { key?: string }) => void): (() => void) => handler as unknown as () => void;
+
+// SAFETY: knobProps.sizeToken is always one of the theme's size token names
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+const toFontSizeToken = (token: string | number): FontSizeTokens => token as FontSizeTokens;
+
+/** Per-option accessible props: web carries an aria-label only when the option sets one; native gets the RN set. */
+const radioItemA11yProps = (
+  option: RadioGroupOption,
+  nativeLabel: string,
+  nativeHint: string | undefined,
+  selected: boolean,
+  isDisabled: boolean,
+) => {
+  if (!isWeb) {
+    return choiceItemA11y({ kind: 'radio', name: nativeLabel, selected, disabled: isDisabled, hint: nativeHint });
+  }
+  const { accessibilityLabel } = option;
+  return accessibilityLabel === undefined || accessibilityLabel === '' ? {} : { 'aria-label': accessibilityLabel };
+};
 const radioDiscIdentity = radiusClassProps('R-IDENTITY', 'radio disc');
 
 // The pressable/focusable role=radio element is a 44px transparent target;
@@ -147,7 +173,7 @@ export interface RadioGroupOption {
 export interface RadioGroupProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -166,7 +192,7 @@ export interface RadioGroupProps {
   onChange?: (value: string) => void;
   /** @deprecated Use `onChange` instead. Kept as an alias for the tamagui/Radix name. */
   onValueChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: BlurHandler;
   options?: RadioGroupOption[];
   orientation?: 'horizontal' | 'vertical';
   radioGroupProps?: Omit<TamaguiRadioGroupProps, 'value' | 'defaultValue' | 'id' | 'onValueChange' | 'children'>;
@@ -214,7 +240,7 @@ interface RadioOptionItemProps {
   /** The resolved native accessible name for this option. */
   nativeLabel: string;
   nativeHint?: string;
-  a11y?: { 'aria-labelledby'?: string; 'aria-describedby'?: string };
+  a11y?: RadioA11yRefs;
   selected: boolean;
   isTabStop?: boolean;
   knobProps: KnobProps;
@@ -222,7 +248,7 @@ interface RadioOptionItemProps {
   disabledChrome?: DisabledChromeProps;
   groupDisabled?: boolean;
   readOnly?: boolean;
-  elevationWrapperProps: Record<string, unknown>;
+  elevationWrapperProps: ReturnType<typeof getElevationWrapperProps>;
 }
 
 /**
@@ -230,7 +256,7 @@ interface RadioOptionItemProps {
  * Unselected = empty disc (Polaris/Spectrum boundary ring). Selected = accent
  * fill with an inverse inner pip (Primer). Keyboard ring on this glyph only.
  */
-function RadioOptionItem({
+const RadioOptionItem = ({
   option,
   itemId,
   nativeLabel,
@@ -244,17 +270,17 @@ function RadioOptionItem({
   groupDisabled,
   readOnly,
   elevationWrapperProps,
-}: RadioOptionItemProps) {
+}: RadioOptionItemProps) => {
   const [kbFocus, setKbFocus] = useState(false);
   ensureKeyboardModalityTracking();
   const detachKb = useRef<(() => void) | null>(null);
   const frameRef = useCallback((node: TamaguiElement | null) => {
     detachKb.current?.();
     detachKb.current = null;
-    if (!isWeb || !node) {
+    if (!isWeb || !(node instanceof HTMLElement)) {
       return;
     }
-    const el = node as unknown as HTMLElement;
+    const el = node;
     const onIn = () => {
       if (wasKeyboardFocus()) {
         setKbFocus(true);
@@ -263,6 +289,7 @@ function RadioOptionItem({
     const onOut = () => {
       setKbFocus(false);
     };
+    // oxlint-disable-next-line react-doctor/effect-needs-cleanup -- released through detachKb, which the next ref call (or unmount, ref=null) runs
     el.addEventListener('focusin', onIn);
     el.addEventListener('focusout', onOut);
     detachKb.current = () => {
@@ -274,10 +301,13 @@ function RadioOptionItem({
   const hoverProps = stripRadiusFromStateProps(control.hoverKnobProps);
   const pressProps = stripRadiusFromStateProps(control.pressKnobProps);
   const focusProps = stripRadiusFromStateProps(control.focusKnobProps);
+  const isDisabled = groupDisabled === true || option.disabled === true;
+
+  const hasElevation = elevationWrapperProps.elevation !== undefined;
 
   const glyph = (
     <RadioGlyph
-      size={knobProps.sizeToken as SizeTokens}
+      size={knobProps.sizeToken}
       borderWidth={radioRingWidth(knobProps.borderRadius.borderWidth)}
       borderRadius={radioDiscRadius}
       {...radioDiscIdentity}
@@ -308,10 +338,10 @@ function RadioOptionItem({
       {...(isWeb && isTabStop !== undefined ? { tabIndex: isTabStop ? 0 : -1 } : undefined)}
       borderRadius={radioDiscRadius}
       transition={knobProps.transition}
-      disabled={groupDisabled || option.disabled}
+      disabled={isDisabled}
       // Ring is text-free chrome — dim it while the
       // sibling label stays readable (read-only never dims).
-      {...(groupDisabled || option.disabled ? disabledChrome : undefined)}
+      {...(isDisabled ? disabledChrome : undefined)}
       pointerEvents={readOnly ? 'none' : undefined}
       {...a11y}
       // RN only exposes the radio when `accessible` is set, and the
@@ -319,17 +349,7 @@ function RadioOptionItem({
       // tamagui does not map them onto React Native's accessibility props, so
       // options came back as bare StaticText with no role and no checked
       // state. The RN prop names are the ones iOS actually reads.
-      {...(!isWeb
-        ? choiceItemA11y({
-            kind: 'radio',
-            name: nativeLabel,
-            selected,
-            disabled: Boolean(groupDisabled || option.disabled),
-            hint: nativeHint,
-          })
-        : option.accessibilityLabel
-          ? { 'aria-label': option.accessibilityLabel }
-          : {})}
+      {...radioItemA11yProps(option, nativeLabel, nativeHint, selected, isDisabled)}
       {...(hoverProps && {
         hoverStyle: {
           ...hoverProps,
@@ -351,8 +371,11 @@ function RadioOptionItem({
       })}
       focusVisibleStyle={{ backgroundColor: 'transparent', outlineWidth: 0 }}
       ref={isWeb ? frameRef : undefined}>
-      {elevationWrapperProps.elevation ? (
-        <View {...elevationWrapperProps} borderRadius={radioDiscRadius} pointerEvents="none">
+      {hasElevation ? (
+        <View
+          {...elevationWrapperProps}
+          borderRadius={radioDiscRadius}
+          pointerEvents="none">
           {glyph}
         </View>
       ) : (
@@ -360,9 +383,10 @@ function RadioOptionItem({
       )}
     </RadioItemFrame>
   );
-}
+};
 
-export function RadioGroup({
+// oxlint-disable-next-line react-doctor/no-giant-component -- one field shell: the standalone and form branches share the item renderers' closure over id, knobs and handlers
+export const RadioGroup = ({
   name,
   form: formProp,
   validators,
@@ -378,6 +402,7 @@ export function RadioGroup({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- `onValueChange` is a supported alias that must keep firing alongside `onChange`
   onValueChange,
   onBlur,
   options,
@@ -391,7 +416,7 @@ export function RadioGroup({
   accessibilityHint,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
-}: RadioGroupProps) {
+}: RadioGroupProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site below (same reconciliation as Switch).
   const handleValueChange = (val: string) => {
@@ -401,13 +426,12 @@ export function RadioGroup({
   // One name, two channels — tamagui drops `aria-label` on native, so
   // the prop and the attribute are reconciled here.
   const groupA11yName = accessibilityLabel ?? ariaLabel;
+  const hasGroupName = (groupA11yName ?? '') !== '';
+  const hasChildren = Boolean(children);
   // iOS reads elements, not containers, so an explicit group name rides in
   // front of each option's own name rather than sitting on the frame.
   const optionA11yName = (option: RadioGroupOption) =>
-    composeA11yName(
-      groupA11yName,
-      option.accessibilityLabel ?? (typeof option.label === 'string' ? option.label : String(option.value)),
-    );
+    composeA11yName(groupA11yName, option.accessibilityLabel ?? option.label);
   const { resolvedForm, knobProps, control, text, elevation, disabledState, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -415,6 +439,7 @@ export function RadioGroup({
   });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const elevationWrapperProps = getElevationWrapperProps(knobProps, elevation);
+  const resolvedSize = size ?? knobProps.sizeToken;
   // Uncontrolled state for card-mode whole-card press (and standalone use) —
   // without this, card body presses only fire parent handlers while Tamagui's
   // defaultValue-driven group stays stale.
@@ -432,13 +457,13 @@ export function RadioGroup({
   const frameRef = useCallback((node: TamaguiElement | null) => {
     wrapperTabIndexObserver.current?.disconnect();
     wrapperTabIndexObserver.current = null;
-    if (!isWeb || !node) {
+    if (!isWeb || !(node instanceof HTMLElement)) {
       return;
     }
-    const wrapper = (node as unknown as HTMLElement).parentElement;
+    const wrapper = node.parentElement;
     // The roving wrapper is role-less and carries data-orientation; anything
     // else means the structure changed and we must not touch it.
-    if (!wrapper || wrapper.getAttribute('role') || !wrapper.hasAttribute('data-orientation')) {
+    if (wrapper === null || (wrapper.getAttribute('role') ?? '') !== '' || wrapper.dataset.orientation === undefined) {
       return;
     }
     const strip = () => {
@@ -448,6 +473,7 @@ export function RadioGroup({
     };
     strip();
     const observer = new MutationObserver(strip);
+    // oxlint-disable-next-line react-doctor/effect-needs-cleanup -- disconnected through wrapperTabIndexObserver on the next ref call (or unmount, ref=null)
     observer.observe(wrapper, { attributes: true, attributeFilter: ['tabindex'] });
     wrapperTabIndexObserver.current = observer;
   }, []);
@@ -463,17 +489,36 @@ export function RadioGroup({
     // next item's control.
     const optionCount = options?.length ?? 3;
     const Container = orientation === 'horizontal' ? XStack : YStack;
-    const labelWidths = [88, 64, 76];
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <Container gap="$2">
           {Array.from({ length: optionCount }, (_, i) => (
-            <XStack key={i} gap="$2" alignItems="center">
+            <XStack
+              key={i}
+              gap="$2"
+              alignItems="center">
               {/* Mirror the 44px pressable target box around the 20px glyph */}
-              <View width={radioTargetSize} height={radioTargetSize} alignItems="center" justifyContent="center">
-                <Skeleton variant="circular" width={20} height={20} borderRadius={radioDiscRadius} />
+              <View
+                width={radioTargetSize}
+                height={radioTargetSize}
+                alignItems="center"
+                justifyContent="center">
+                <Skeleton
+                  variant="circular"
+                  width={20}
+                  height={20}
+                  borderRadius={radioDiscRadius}
+                />
               </View>
-              <Skeleton variant="text" width={labelWidths[i % labelWidths.length]} height={14} />
+              <Skeleton
+                variant="text"
+                width={skeletonLabelWidths[i % skeletonLabelWidths.length]}
+                height={14}
+              />
             </XStack>
           ))}
         </Container>
@@ -484,8 +529,9 @@ export function RadioGroup({
   const renderRadioItem = (
     option: RadioGroupOption,
     itemId: string,
-    a11y?: { 'aria-labelledby'?: string; 'aria-describedby'?: string },
-    selected?: boolean,
+    a11y?: RadioA11yRefs,
+    selected = false,
+    // oxlint-disable-next-line sonarjs/bool-param-default -- undefined means "tab order not managed" (callers pass children), which a default would erase
     isTabStop?: boolean,
   ) => (
     <RadioOptionItem
@@ -494,7 +540,7 @@ export function RadioGroup({
       nativeLabel={optionA11yName(option)}
       nativeHint={option.accessibilityHint ?? accessibilityHint}
       a11y={a11y}
-      selected={!!selected}
+      selected={selected}
       isTabStop={isTabStop}
       knobProps={knobProps}
       control={control}
@@ -505,8 +551,9 @@ export function RadioGroup({
     />
   );
 
+  // oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise in React 19 types; this renders synchronously
   const renderItems = (currentValue: string | undefined, emit: (val: string) => void) => {
-    if (children) {
+    if (hasChildren) {
       return children;
     }
     if (!options) {
@@ -515,12 +562,15 @@ export function RadioGroup({
     const Container = orientation === 'horizontal' ? XStack : YStack;
     // Exactly one radio stays tabbable: the checked enabled one, else the
     // first enabled one (WAI-ARIA radio-group pattern).
-    const checkedEnabled = options.findIndex((o) => o.value === currentValue && !(disabled || o.disabled));
-    const tabStopIndex = checkedEnabled >= 0 ? checkedEnabled : options.findIndex((o) => !(disabled || o.disabled));
+    const checkedEnabled = options.findIndex(
+      (o) => o.value === currentValue && !(disabled === true || o.disabled === true),
+    );
+    const tabStopIndex =
+      checkedEnabled === -1 ? options.findIndex((o) => !(disabled === true || o.disabled === true)) : checkedEnabled;
 
     if (card) {
       const layout = getCheckboxCardLayout(knobProps.space);
-      const descriptionSize = getCardDescriptionSize(size || knobProps.sizeToken);
+      const descriptionSize = getCardDescriptionSize(resolvedSize);
       return (
         <Container gap="$2">
           {options.map((option, index) => {
@@ -528,11 +578,13 @@ export function RadioGroup({
             // duplicate React keys / DOM ids.
             const itemId = `${id}-${index}-${option.value}`;
             const labelId = `${itemId}-label`;
-            const descriptionId = option.description ? `${itemId}-description` : undefined;
+            const hasDescription = (option.description ?? '') !== '';
+            const descriptionId = hasDescription ? `${itemId}-description` : undefined;
             const isSelected = currentValue === option.value;
-            const isDisabled = disabled || option.disabled;
+            const isDisabled = disabled === true || option.disabled === true;
             return (
               <CheckboxCardFrame
+                // oxlint-disable-next-line react-doctor/no-array-index-as-key -- option values may repeat; the index disambiguates the key
                 key={`${index}-${option.value}`}
                 active={isSelected}
                 {...layout}
@@ -553,7 +605,7 @@ export function RadioGroup({
                   itemId,
                   {
                     'aria-labelledby': labelId,
-                    ...(descriptionId && { 'aria-describedby': descriptionId }),
+                    ...(descriptionId === undefined ? undefined : { 'aria-describedby': descriptionId }),
                   },
                   isSelected,
                   index === tabStopIndex,
@@ -563,12 +615,14 @@ export function RadioGroup({
                       would otherwise override the styled bold default */}
                   <CheckboxCardLabel
                     id={labelId}
-                    size={(size || knobProps.sizeToken) as FontSizeTokens}
+                    size={toFontSizeToken(resolvedSize)}
                     fontWeight="600">
                     {option.label}
                   </CheckboxCardLabel>
-                  {option.description ? (
-                    <CheckboxCardDescription id={descriptionId} size={descriptionSize}>
+                  {hasDescription ? (
+                    <CheckboxCardDescription
+                      id={descriptionId}
+                      size={descriptionSize}>
                       {option.description}
                     </CheckboxCardDescription>
                   ) : null}
@@ -585,20 +639,24 @@ export function RadioGroup({
         {options.map((option, index) => {
           const itemId = `${id}-${index}-${option.value}`;
           return (
-            <XStack key={`${index}-${option.value}`} gap="$2" alignItems="center">
+            <XStack
+              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- option values may repeat; the index disambiguates the key
+              key={`${index}-${option.value}`}
+              gap="$2"
+              alignItems="center">
               {renderRadioItem(option, itemId, undefined, currentValue === option.value, index === tabStopIndex)}
               <Label
                 htmlFor={itemId}
                 // On native the radio itself now carries this text as
                 // its accessible name, so leaving the Label in the tree reads
                 // every option twice. Web keeps the label/control association.
-                {...(!isWeb
-                  ? {
+                {...(isWeb
+                  ? undefined
+                  : {
                       accessibilityElementsHidden: true,
                       importantForAccessibility: 'no-hide-descendants' as const,
-                    }
-                  : undefined)}
-                size={(size || knobProps.sizeToken) as FontSizeTokens}
+                    })}
+                size={toFontSizeToken(resolvedSize)}
                 {...knobProps.body}
                 color={knobProps.textAccentColor}
                 hoverStyle={{ color: knobProps.textAccentColor, ...text.hoverKnobProps }}
@@ -620,8 +678,8 @@ export function RadioGroup({
   const renderRadioGroup = (
     radioValue: string | undefined,
     handleChange?: (val: string) => void,
-    handleBlur?: (...args: any[]) => void,
-    hasError?: boolean,
+    handleBlur?: BlurHandler,
+    hasError = false,
   ) => {
     const emit = (val: string) => {
       if (disabled || readOnly) {
@@ -649,13 +707,13 @@ export function RadioGroup({
       if (!options || disabled || readOnly) {
         return;
       }
-      const key = e.key;
+      const { key } = e;
       if (key !== 'ArrowDown' && key !== 'ArrowUp' && key !== 'ArrowLeft' && key !== 'ArrowRight') {
         return;
       }
       setTimeout(() => {
-        const active = document.activeElement as HTMLElement | null;
-        if (!active?.id || !active.id.startsWith(`${id}-`)) {
+        const { activeElement: active } = document;
+        if (!(active instanceof HTMLElement) || !active.id.startsWith(`${id}-`)) {
           return;
         }
         if (active.getAttribute('role') !== 'radio') {
@@ -675,17 +733,19 @@ export function RadioGroup({
         id={id}
         {...valueProps}
         onValueChange={emit}
-        {...(handleBlur ? { onBlur: handleBlur } : undefined)}
-        {...(isWeb && options && !children ? { onKeyDown: handleArrowSelect as unknown as () => void } : undefined)}
-        aria-required={required || undefined}
+        {...(handleBlur === undefined ? undefined : { onBlur: handleBlur })}
+        {...(isWeb && options !== undefined && !hasChildren
+          ? { onKeyDown: asKeyDownProp(handleArrowSelect) }
+          : undefined)}
+        aria-required={required === true || undefined}
         aria-invalid={hasError || undefined}
-        aria-readonly={readOnly || undefined}
+        aria-readonly={readOnly === true || undefined}
         // Web reads the attribute, Android reads the RN prop off the
         // container. iOS reads neither, which is why the name is also prefixed
         // onto every option above.
-        {...(groupA11yName ? { 'aria-label': groupA11yName } : undefined)}
-        {...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : undefined)}
-        {...(!isWeb && groupA11yName
+        {...(hasGroupName ? { 'aria-label': groupA11yName } : undefined)}
+        {...((ariaLabelledBy ?? '') === '' ? undefined : { 'aria-labelledby': ariaLabelledBy })}
+        {...(!isWeb && hasGroupName
           ? { accessibilityLabel: groupA11yName, accessibilityRole: 'radiogroup' as const }
           : undefined)}>
         {renderItems(radioValue, emit)}
@@ -693,8 +753,8 @@ export function RadioGroup({
     );
   };
 
-  if (!resolvedForm || !name) {
-    const currentValue = value !== undefined ? value : internalValue;
+  if (!resolvedForm || name === undefined || name === '') {
+    const currentValue = value ?? internalValue;
     return (
       <FieldLayout
         id={id}
@@ -708,17 +768,22 @@ export function RadioGroup({
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        {renderRadioGroup(currentValue, undefined, onBlur, !!error)}
+        {renderRadioGroup(currentValue, undefined, onBlur, Boolean(error))}
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
+        // SAFETY: a RadioGroup field holds the selected option's string value, or nothing before a selection
         const fieldValue = field.state.value as string | undefined;
-        const currentValue = value !== undefined ? value : fieldValue;
+        const currentValue = value ?? fieldValue;
         return (
           <FieldLayout
             id={id}
@@ -734,17 +799,17 @@ export function RadioGroup({
             {renderRadioGroup(
               currentValue,
               (val) => {
-                field.handleChange(val as any);
+                field.handleChange(val);
               },
               mergeFieldHandler(field, 'handleBlur', onBlur),
-              !!resolvedError,
+              Boolean(resolvedError),
             )}
           </FieldLayout>
         );
       }}
     </Field>
   );
-}
+};
 
 RadioGroup.Item = TamaguiRadioGroup.Item;
 RadioGroup.Indicator = TamaguiRadioGroup.Indicator;

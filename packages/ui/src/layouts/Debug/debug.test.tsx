@@ -1,52 +1,19 @@
+import { config } from '@repo/platform';
 import { renderWithProviders } from '@repo/test-utils';
-import { act, cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { Paragraph } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DebugLayout } from './index';
 
-vi.mock('@repo/platform', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@repo/platform')>();
-  return {
-    ...actual,
-    config: { get: () => '1' },
-  };
-});
-
-vi.mock('i18next', () => ({
-  default: {
-    languages: ['en', 'es', 'fr'],
-    language: 'en',
-    on: vi.fn(),
-    off: vi.fn(),
-    changeLanguage: vi.fn(),
-  },
-}));
-
-vi.mock('@repo/i18n', () => ({
-  useLanguage: () => ['en', vi.fn()],
-}));
-
-vi.mock('tamagui', async () => {
-  const actual = await vi.importActual('tamagui');
-  return {
-    ...(actual as any),
-    Select: {
-      Item: ({ children, value, index }: any) => (
-        <Paragraph data-testid={`select-item-${value}`} data-index={index}>
-          {children}
-        </Paragraph>
-      ),
-      ItemText: ({ children }: any) => <Paragraph data-testid="select-item-text">{children}</Paragraph>,
-    },
-  };
-});
-
-describe('DebugLayout', () => {
+describe(DebugLayout, () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.spyOn(config, 'get').mockReturnValue('1');
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    vi.restoreAllMocks();
+    cleanup();
+  });
 
   it('renders children correctly', () => {
     renderWithProviders(
@@ -76,19 +43,7 @@ describe('DebugLayout', () => {
     expect(screen.getByText('Responsive Content')).toBeInTheDocument();
   });
 
-  // Skipped: opening the debug popover triggers @tamagui/use-presence which uses a nested React (Invalid hook call)
-  it.skip('handles scheme changes correctly', async () => {
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Theme Test</Paragraph>
-      </DebugLayout>,
-    );
-    const debugCircle = screen.getByTestId('debug-circle');
-    expect(debugCircle).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.click(debugCircle);
-    });
-  });
+  // Popover-open interactions are not covered: opening the debug popover triggers @tamagui/use-presence, which uses a nested React (Invalid hook call)
 
   it('renders with custom size', () => {
     const customSize = 24;
@@ -103,34 +58,6 @@ describe('DebugLayout', () => {
     expect(debugContainer).toBeInTheDocument();
   });
 
-  it.skip('shows and hides popover content on click', async () => {
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Content</Paragraph>
-      </DebugLayout>,
-    );
-    const debugCircle = screen.getByTestId('debug-circle');
-    expect(debugCircle).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.click(debugCircle);
-    });
-    const popoverContent = screen.getByTestId('debug-circle').closest('[data-state="open"]');
-    expect(popoverContent).toBeInTheDocument();
-  });
-
-  it.skip('handles color theme changes correctly', async () => {
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Color Theme Test</Paragraph>
-      </DebugLayout>,
-    );
-    const debugCircle = screen.getByTestId('debug-circle');
-    expect(debugCircle).toBeInTheDocument();
-    await act(async () => {
-      fireEvent.click(debugCircle);
-    });
-  });
-
   it('handles missing theme names gracefully', () => {
     renderWithProviders(
       <DebugLayout>
@@ -138,35 +65,6 @@ describe('DebugLayout', () => {
       </DebugLayout>,
     );
     expect(screen.getByTestId('debug-circle')).toBeInTheDocument();
-  });
-
-  it.skip('handles empty theme arrays', async () => {
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Empty Theme Test</Paragraph>
-      </DebugLayout>,
-    );
-    const debugButton = screen.getByTestId('debug-circle');
-    expect(debugButton).toBeTruthy();
-    fireEvent.click(debugButton);
-    const popoverContent = await screen.findByRole('dialog');
-    expect(popoverContent).toBeInTheDocument();
-  });
-
-  it.skip('handles undefined i18n languages', async () => {
-    vi.mock('i18next', () => ({
-      default: { languages: undefined },
-    }));
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Content</Paragraph>
-      </DebugLayout>,
-    );
-    const debugButton = screen.getByTestId('debug-circle');
-    expect(debugButton).toBeTruthy();
-    fireEvent.click(debugButton);
-    const popoverContent = await screen.findByRole('dialog');
-    expect(popoverContent).toBeInTheDocument();
   });
 
   it('should render debug button', () => {
@@ -209,17 +107,5 @@ describe('DebugLayout', () => {
     expect(screen.getByTestId('debug-layout-root')).toBeInTheDocument();
     expect(screen.getByTestId('child')).toBeInTheDocument();
     expect(screen.getByTestId('debug-circle')).toBeInTheDocument();
-  });
-
-  it.skip('should open popover when debug button is clicked', async () => {
-    renderWithProviders(
-      <DebugLayout>
-        <Paragraph>Test Content</Paragraph>
-      </DebugLayout>,
-    );
-    const debugButton = screen.getByTestId('debug-circle');
-    fireEvent.click(debugButton);
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog).toBeInTheDocument();
   });
 });

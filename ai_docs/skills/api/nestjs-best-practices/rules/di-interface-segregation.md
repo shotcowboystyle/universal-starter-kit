@@ -43,12 +43,12 @@ export class OrdersService {
 // Testing is painful - must mock unused methods
 const mockNotificationService = {
   sendEmail: vi.fn(),
-  sendSms: vi.fn(),           // Never used, but required
-  sendPush: vi.fn(),          // Never used, but required
-  sendSlack: vi.fn(),         // Never used, but required
-  logNotification: vi.fn(),   // Never used, but required
+  sendSms: vi.fn(), // Never used, but required
+  sendPush: vi.fn(), // Never used, but required
+  sendSlack: vi.fn(), // Never used, but required
+  logNotification: vi.fn(), // Never used, but required
   getDeliveryStatus: vi.fn(), // Never used, but required
-  retryFailed: vi.fn(),       // Never used, but required
+  retryFailed: vi.fn(), // Never used, but required
   scheduleNotification: vi.fn(), // Never used, but required
 };
 ```

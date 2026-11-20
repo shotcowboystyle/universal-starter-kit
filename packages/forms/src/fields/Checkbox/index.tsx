@@ -2,7 +2,7 @@ import { CheckIcon as CheckRegular } from '@phosphor-icons/react';
 import { useReadableTextOn, useResolvedKnobs, wasKeyboardFocus } from '@repo/theme';
 import type { RovingFocusGroupProps, RovingFocusItemProps } from '@tamagui/roving-focus';
 import { RovingFocusGroup } from '@tamagui/roving-focus';
-import type { ElementRef, KeyboardEvent, PropsWithChildren } from 'react';
+import type { ComponentRef, KeyboardEvent, PropsWithChildren } from 'react';
 import { forwardRef, useState } from 'react';
 import type { CheckedState, YStackProps } from 'tamagui';
 import {
@@ -17,7 +17,7 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { formSelectedColors } from '../../shared/colorRamps';
+import { formSelectedColors } from '../../shared/color-ramps';
 
 import {
   CheckboxGlyphBox,
@@ -45,12 +45,21 @@ const CheckboxesContext = createStyledContext<{
   onValuesChange: (values: Record<string, boolean>) => void;
 }>({
   values: {},
+  // oxlint-disable-next-line eslint/no-empty-function -- context default used without a provider: there is no value state to notify
   onValuesChange: () => {},
 });
 
-const FocusGroup = forwardRef<ElementRef<typeof View>, RovingFocusGroupProps>((props, ref) => {
+const FocusGroup = forwardRef<ComponentRef<typeof View>, RovingFocusGroupProps>(function FocusGroup(props, ref) {
   const { knobProps } = useResolvedKnobs();
-  return <RovingFocusGroup gap={knobProps.gap.gap} focusable outlineWidth={0} {...props} ref={ref} />;
+  return (
+    <RovingFocusGroup
+      gap={knobProps.gap.gap}
+      focusable
+      outlineWidth={0}
+      {...props}
+      ref={ref}
+    />
+  );
 });
 
 const FocusItemContext = createStyledContext({
@@ -58,46 +67,53 @@ const FocusItemContext = createStyledContext({
   kbFocus: false,
 });
 
-const FocusGroupItem = forwardRef<any, RovingFocusItemProps & { value: string }>((itemProps, ref) => {
-  const { value, ...props } = itemProps;
-  const { values, onValuesChange } = CheckboxesContext.useStyledContext();
-  const [kbFocus, setKbFocus] = useState(false);
+const FocusGroupItem = forwardRef<ComponentRef<typeof RovingFocusGroup.Item>, RovingFocusItemProps & { value: string }>(
+  function FocusGroupItem(itemProps, ref) {
+    const { value, ...props } = itemProps;
+    const { values, onValuesChange } = CheckboxesContext.useStyledContext();
+    const [kbFocus, setKbFocus] = useState(false);
 
-  const combinedProps = {
-    focusable: true,
-    flexShrink: 1,
-    ...(isWeb && {
-      onFocus: () => {
-        if (wasKeyboardFocus()) {
-          setKbFocus(true);
-        }
+    const combinedProps = {
+      focusable: true,
+      flexShrink: 1,
+      ...(isWeb && {
+        onFocus: () => {
+          if (wasKeyboardFocus()) {
+            setKbFocus(true);
+          }
+        },
+        onBlur: () => {
+          setKbFocus(false);
+        },
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.code === 'Space') {
+            e.preventDefault();
+            onValuesChange({ ...values, [value]: !values[value] });
+          }
+        },
+      }),
+      onPress: () => {
+        onValuesChange({ ...values, [value]: !values[value] });
       },
-      onBlur: () => {
-        setKbFocus(false);
-      },
-      onKeyDown: (e: KeyboardEvent) => {
-        if (e.key === 'Enter' || e.code === 'Space') {
-          e.preventDefault();
-          onValuesChange({ ...values, [value]: !values[value] });
-        }
-      },
-    }),
-    onPress: () => {
-      onValuesChange({ ...values, [value]: !values[value] });
-    },
-    ...props,
-    outlineWidth: 0,
-    focusStyle: { zIndex: 1, outlineWidth: 0 },
-    focusVisibleStyle: { outlineWidth: 0 },
-    'data-checkbox-focus-item': 'true',
-  };
+      ...props,
+      outlineWidth: 0,
+      focusStyle: { zIndex: 1, outlineWidth: 0 },
+      focusVisibleStyle: { outlineWidth: 0 },
+      'data-checkbox-focus-item': 'true',
+    };
 
-  return (
-    <FocusItemContext.Provider value={value} kbFocus={kbFocus}>
-      <RovingFocusGroup.Item ref={ref} {...combinedProps} />
-    </FocusItemContext.Provider>
-  );
-});
+    return (
+      <FocusItemContext.Provider
+        value={value}
+        kbFocus={kbFocus}>
+        <RovingFocusGroup.Item
+          ref={ref}
+          {...combinedProps}
+        />
+      </FocusItemContext.Provider>
+    );
+  },
+);
 
 const RadiusGroup = styled(Group, {
   orientation: 'vertical',
@@ -116,40 +132,44 @@ export type CheckboxesProps<K extends string> = {
 const CheckboxesImp = <K extends string>(checkboxesProps: PropsWithChildren<CheckboxesProps<K>>) => {
   const { values, onValuesChange, ...props } = checkboxesProps;
   return (
-    <CheckboxesContext.Provider values={values} onValuesChange={onValuesChange}>
+    <CheckboxesContext.Provider
+      values={values}
+      onValuesChange={onValuesChange}>
       <View {...props} />
     </CheckboxesContext.Provider>
   );
 };
 
 const CheckboxesCheckbox = TamaguiCheckbox.styleable((checkboxProps, ref) => {
-  const { checked: _userChecked, onCheckedChange: onCheckedChangeProp, children, ...props } = checkboxProps;
+  const props = checkboxProps;
   const { values, onValuesChange } = CheckboxesContext.useStyledContext();
   const { value: focusItemValue, kbFocus: itemKbFocus } = FocusItemContext.useStyledContext();
   const { knobProps } = useResolvedKnobs();
   const [kbFocus, setKbFocus] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const isMarked = Boolean(values[focusItemValue]);
+  const isMarked = values[focusItemValue];
   const radiusToken = knobProps.borderRadius.borderRadius;
   const cappedRadius = clampCheckboxGlyphRadius(radiusToken, { pointy: knobProps.pointy });
   const glyphSize = getCheckboxGlyphSize(knobProps.sizeToken);
   const boxBorderWidth = getCheckboxBoxBorderWidth(knobProps.borderRadius.borderWidth);
   const inFocusGroup = Boolean(focusItemValue);
-  const ringFocus = kbFocus || !!itemKbFocus;
+  const ringFocus = kbFocus || itemKbFocus;
+  const ariaLabel = props['aria-label'];
+  const ariaLabelledBy = props['aria-labelledby'];
   const hasName =
-    (props as Record<string, unknown>)['aria-label'] || (props as Record<string, unknown>)['aria-labelledby'];
+    (ariaLabel !== undefined && ariaLabel !== '') || (ariaLabelledBy !== undefined && ariaLabelledBy !== '');
   const fallbackName = focusItemValue
-    ? focusItemValue.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+    ? focusItemValue.replaceAll(/[-_]+/gu, ' ').replace(/^\w/u, (c) => c.toUpperCase())
     : undefined;
   const combinedProps = {
-    ...(!hasName && fallbackName ? { 'aria-label': fallbackName } : undefined),
+    ...(!hasName && fallbackName !== undefined ? { 'aria-label': fallbackName } : undefined),
     ...props,
     checked: values[focusItemValue],
     onCheckedChange: (checked: CheckedState) => {
-      onCheckedChangeProp?.(checked);
+      checkboxProps.onCheckedChange?.(checked);
       onValuesChange({
         ...values,
-        [focusItemValue]: typeof checked === 'boolean' ? checked : !values[focusItemValue],
+        [focusItemValue]: checked === 'indeterminate' ? !values[focusItemValue] : checked,
       });
     },
   };
@@ -163,8 +183,8 @@ const CheckboxesCheckbox = TamaguiCheckbox.styleable((checkboxProps, ref) => {
       {...combinedProps}
       {...checkboxTargetFrameProps}
       {...checkboxKbFocusHandlers(setKbFocus, setHovered, {
-        onFocus: (combinedProps as { onFocus?: (...args: any[]) => void }).onFocus,
-        onBlur: (combinedProps as { onBlur?: (...args: any[]) => void }).onBlur,
+        onFocus: combinedProps.onFocus,
+        onBlur: combinedProps.onBlur,
       })}
       {...(inFocusGroup ? { tabIndex: -1 } : undefined)}>
       <CheckboxGlyphBox
@@ -175,7 +195,7 @@ const CheckboxesCheckbox = TamaguiCheckbox.styleable((checkboxProps, ref) => {
         borderWidth={boxBorderWidth}
         borderRadius={cappedRadius === 0 ? 0 : cappedRadius}
         transition={knobProps.transition}>
-        {children}
+        {checkboxProps.children}
       </CheckboxGlyphBox>
     </CheckboxFieldFrame>
   );
@@ -201,21 +221,37 @@ const CheckboxCard = CheckboxCardFrame.styleable<{ unstyled?: boolean; active?: 
 
 const CheckboxCardDescriptionSized = CheckboxCardDescription.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <CheckboxCardDescription ref={ref} size={getCardDescriptionSize(knobProps.sizeToken)} {...props} />;
+  return (
+    <CheckboxCardDescription
+      ref={ref}
+      size={getCardDescriptionSize(knobProps.sizeToken)}
+      {...props}
+    />
+  );
 });
 
 const CheckboxesIndicator = TamaguiCheckbox.Indicator.styleable((indicatorProps, ref) => {
-  const { children, ...props } = indicatorProps;
+  const props = indicatorProps;
   const onMark = useReadableTextOn(formSelectedColors.mark);
   const { knobProps } = useResolvedKnobs();
   const iconSize = getCheckboxIconSize(getCheckboxGlyphSize(knobProps.sizeToken));
   return (
-    <TamaguiCheckbox.Indicator ref={ref} {...props} pointerEvents="none">
-      {children ?? <CheckRegular size={iconSize} pointerEvents="none" {...(onMark ? { color: onMark } : undefined)} />}
+    <TamaguiCheckbox.Indicator
+      ref={ref}
+      {...props}
+      pointerEvents="none">
+      {indicatorProps.children ?? (
+        <CheckRegular
+          size={iconSize}
+          pointerEvents="none"
+          {...(onMark == null || onMark === '' ? undefined : { color: onMark })}
+        />
+      )}
     </TamaguiCheckbox.Indicator>
   );
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- compound component object re-exported through the Checkbox barrel
 export const Checkboxes = withStaticProperties(CheckboxesImp, {
   Group: withStaticProperties(RadiusGroup, {
     Item: Group.Item,

@@ -33,7 +33,12 @@ export const Default: Story = {
 };
 
 export const Empty: Story = {
-  render: () => <Panel width={220} height={80} />,
+  render: () => (
+    <Panel
+      width={220}
+      height={80}
+    />
+  ),
 };
 
 export const Nested: Story = {
@@ -51,7 +56,10 @@ export const InteractiveContent: Story = {
   render: () => (
     <Panel maxWidth={420}>
       <SizableText fontWeight="600">Interactive content</SizableText>
-      <Input placeholder="Focus me" inputProps={{ 'aria-label': 'Focus demo' }} />
+      <Input
+        placeholder="Focus me"
+        inputProps={{ 'aria-label': 'Focus demo' }}
+      />
       <XStack gap="$2">
         <Button>Cancel</Button>
         <Button>Submit</Button>
@@ -63,7 +71,9 @@ export const InteractiveContent: Story = {
 export const Overflow: Story = {
   render: () => (
     <YStack maxWidth={300}>
-      <Panel maxHeight={160} overflow="hidden">
+      <Panel
+        maxHeight={160}
+        overflow="hidden">
         {Array.from({ length: 12 }).map((_, i) => (
           <Paragraph key={i}>Overflowing panel line {i + 1}.</Paragraph>
         ))}

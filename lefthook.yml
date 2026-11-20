@@ -1,33 +1,35 @@
-# root is relative to git repo root — required because
-# the git root is ~ (home dir) while the project lives in a subdirectory.
-root: "www/shotcowboystyle/universal-starter-kit/"
-
 pre-commit:
   parallel: true
   commands:
-    oxfmt:
-      glob: "**/*.{js,jsx,ts,tsx,css,scss}"
-      run: npx oxfmt --no-error-on-unmatched-pattern --config ./.config/oxfmtrc.json {staged_files}
-      stage_fixed: true
-    oxlint:
-      glob: "**/*.{js,jsx,ts,tsx}"
-      run: npx oxlint --config ./.config/oxlintrc.json --fix {staged_files}
-      stage_fixed: true
     cspell:
-      glob: "**/*.{ts,tsx,js,jsx,md}"
+      glob: '**/*.{ts,tsx,js,jsx,md}'
       run: npx cspell lint --no-progress --no-must-find-files --config ./.config/cspell.json {staged_files}
     markdownlint:
-      glob: "**/*.md"
+      glob: '**/*.md'
       run: npx markdownlint-cli2 --config ./.config/.markdownlint-cli2.jsonc {staged_files}
     yamllint:
-      glob: "**/*.{yml,yaml}"
-      exclude: "pnpm-lock.yaml"
+      glob: '**/*.{yml,yaml}'
+      exclude: 'pnpm-lock.yaml'
       run: npx yamllint -c ./.config/yamllint.yml {staged_files}
     betterleaks:
       run: betterleaks git . --staged --verbose --config ./.config/gitleaks.toml
       skip:
         - merge
         - rebase
+  jobs:
+    # Format only, then check. Never `ultracite fix` here: oxlint marks
+    # prefer-nullish-coalescing / prefer-dom-node-dataset fixes as safe,
+    # but they change runtime behavior (`'' || x` vs `'' ?? x`).
+    - name: ultracite
+      group:
+        piped: true
+        jobs:
+          - run: pnpm exec oxfmt --no-error-on-unmatched-pattern --write {staged_files}
+            glob: ['*.js', '*.jsx', '*.ts', '*.tsx', '*.mts', '*.json', '*.jsonc', '*.css']
+            stage_fixed: true
+          # Staged files may all be lint-ignored (e.g. CLI templates).
+          - run: pnpm exec ultracite check --no-error-on-unmatched-pattern {staged_files}
+            glob: ['*.js', '*.jsx', '*.ts', '*.tsx', '*.mts']
 
 commit-msg:
   commands:

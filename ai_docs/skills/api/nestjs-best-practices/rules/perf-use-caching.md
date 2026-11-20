@@ -50,9 +50,7 @@ export class UsersService {
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        stores: [
-          new KeyvRedis(config.get('REDIS_URL')),
-        ],
+        stores: [new KeyvRedis(config.get('REDIS_URL'))],
         ttl: 60 * 1000, // Default 60s
       }),
     }),
@@ -116,10 +114,7 @@ export class CacheInvalidationService {
   @OnEvent('product.updated')
   @OnEvent('product.deleted')
   async invalidateProductCaches(event: ProductEvent) {
-    await Promise.all([
-      this.cache.del('products:popular'),
-      this.cache.del(`product:${event.productId}`),
-    ]);
+    await Promise.all([this.cache.del('products:popular'), this.cache.del(`product:${event.productId}`)]);
   }
 }
 ```

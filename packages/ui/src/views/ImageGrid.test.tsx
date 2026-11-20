@@ -1,20 +1,17 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { describe, expect, it } from 'vitest';
 
 import { ImageGrid } from './ImageGrid';
 
-const here = dirname(fileURLToPath(import.meta.url));
-
 describe('ImageGrid live-media tile', () => {
   it('does not paint a status pip; tile radius stays UNCLAMPED', () => {
-    const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf8');
-    expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/);
+    const src = readFileSync(path.join(import.meta.dirname, 'ImageGrid.tsx'), 'utf-8');
+    expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/u);
     expect(src).toContain('knobProps.borderRadius');
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
 
     renderWithProviders(
       <ImageGrid
@@ -27,11 +24,11 @@ describe('ImageGrid live-media tile', () => {
         height={400}
       />,
     );
-    const cells = document.querySelectorAll('[role="gridcell"]');
-    expect(cells.length).toBe(2);
+    const cells = document.querySelectorAll<HTMLElement>('[role="gridcell"]');
+    expect(cells).toHaveLength(2);
     for (const cell of cells) {
       expect(cell.querySelector('[data-status-pip]')).toBeNull();
-      expect(cell.getAttribute('data-media-tile')).toBe('image-grid');
+      expect(cell.dataset.mediaTile).toBe('image-grid');
     }
   });
 });

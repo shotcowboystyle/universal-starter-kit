@@ -2,7 +2,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Text, YStack, isWeb } from 'tamagui';
 
-import { formReadableMaxWidth } from './formSpacing';
+import { formReadableMaxWidth } from './form-spacing';
 
 export interface FormSectionProps {
   /** Section heading / legend. */
@@ -30,6 +30,9 @@ export interface FormSectionProps {
   compact?: boolean;
 }
 
+// Web legend stretched to a full row; `float` is CSS-only so the object is not literal-typed against RN styles.
+const LEGEND_STYLE = { padding: 0, marginBottom: 0, float: 'left', width: '100%' } as const;
+
 /**
  * Labeled form section with semantic gap rhythm.
  *
@@ -40,7 +43,7 @@ export interface FormSectionProps {
  * Gallery **Fieldset** is this component (also
  * exported as {@link Fieldset}).
  */
-export function FormSection({
+export const FormSection = ({
   label,
   children,
   maxWidth = formReadableMaxWidth,
@@ -48,10 +51,41 @@ export function FormSection({
   testID,
   fieldset = true,
   compact,
-}: FormSectionProps) {
+}: FormSectionProps) => {
   const useFieldset = fieldset && isWeb;
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const resolvedGap = gap ?? knobProps.gap.gap;
+
+  const renderLegend = () => {
+    if (label === undefined || label === '') {
+      return null;
+    }
+    if (useFieldset) {
+      return (
+        <Text
+          render="legend"
+          data-mpo-legend=""
+          {...knobProps.label}
+          fontWeight="400"
+          color={knobProps.textAccentColor}
+          // legend is inline by default; stretch to a full heading row
+          style={LEGEND_STYLE}>
+          {label}
+        </Text>
+      );
+    }
+    return (
+      <Text
+        {...knobProps.label}
+        fontWeight="400"
+        color={knobProps.textAccentColor}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Text also renders on native, where role + aria-level is the only heading API
+        role="heading"
+        aria-level={3}>
+        {label}
+      </Text>
+    );
+  };
 
   return (
     <YStack
@@ -62,7 +96,7 @@ export function FormSection({
       data-density={knobProps.density}
       data-size={knobProps.size}
       data-testid={testID}
-      gap={resolvedGap as never}
+      gap={resolvedGap}
       width="100%"
       maxWidth={maxWidth === 'fluid' ? undefined : maxWidth}
       alignSelf={maxWidth === 'fluid' ? undefined : 'flex-start'}
@@ -74,39 +108,20 @@ export function FormSection({
               margin: 0,
               minWidth: 0,
               padding: 0,
-            } as Record<string, unknown>,
+            },
           }
         : {})}>
-      {label ? (
-        useFieldset ? (
-          <Text
-            render="legend"
-            data-mpo-legend=""
-            {...knobProps.label}
-            fontWeight="400"
-            color={knobProps.textAccentColor}
-            // legend is inline by default; stretch to a full heading row
-            style={{ padding: 0, marginBottom: 0, float: 'left', width: '100%' } as never}>
-            {label}
-          </Text>
-        ) : (
-          <Text {...knobProps.label} fontWeight="400" color={knobProps.textAccentColor} role="heading" aria-level={3}>
-            {label}
-          </Text>
-        )
-      ) : null}
+      {renderLegend()}
       {children}
     </YStack>
   );
-}
+};
 
 /**
  * Gallery Fieldset — semantic fieldset/legend grouping.
  * Named export of {@link FormSection} (same API, form-section rhythm tokens).
  */
-export function Fieldset(props: FormSectionProps) {
-  return <FormSection {...props} />;
-}
+export const Fieldset = (props: FormSectionProps) => <FormSection {...props} />;
 export type FieldsetProps = FormSectionProps;
 
 export interface FormSectionStackProps {
@@ -120,7 +135,7 @@ export interface FormSectionStackProps {
 }
 
 /** Stacks FormSections with section > field spacing. */
-export function FormSectionStack({ children, gap }: FormSectionStackProps) {
+export const FormSectionStack = ({ children, gap }: FormSectionStackProps) => {
   const { knobProps } = useResolvedKnobs();
   const resolvedGap = gap ?? knobProps.gapLg.gap;
   return (
@@ -129,11 +144,11 @@ export function FormSectionStack({ children, gap }: FormSectionStackProps) {
       data-section-gap={String(resolvedGap)}
       data-density={knobProps.density}
       data-size={knobProps.size}
-      gap={resolvedGap as never}
+      gap={resolvedGap}
       width="100%">
       {children}
     </YStack>
   );
-}
+};
 
-export { formFieldGap, formReadableMaxWidth, formSectionGap } from './formSpacing';
+export { formFieldGap, formReadableMaxWidth, formSectionGap } from './form-spacing';

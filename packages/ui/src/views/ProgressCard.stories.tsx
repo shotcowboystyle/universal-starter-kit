@@ -37,7 +37,9 @@ export const Main: Story = {
     },
   },
   render: (args) => (
-    <YStack width={280} padding="$4">
+    <YStack
+      width={280}
+      padding="$4">
       <ProgressCard {...args} />
     </YStack>
   ),
@@ -45,7 +47,9 @@ export const Main: Story = {
 
 export const NumberFormat: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
+    <YStack
+      width={280}
+      padding="$4">
       <ProgressCard
         config={{
           id: 'seats',

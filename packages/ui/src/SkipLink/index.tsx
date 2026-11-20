@@ -1,6 +1,6 @@
 import { zIndex } from '@repo/forms';
 import { FOCUS_RING_MIN_WIDTH, FOCUS_VISIBLE_RING, useResolvedKnobs } from '@repo/theme';
-import { type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode, RefObject } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, YStack, getTokenValue, isWeb, styled } from 'tamagui';
 
@@ -82,35 +82,42 @@ const skipLinkCss = `.mp-skip-link {
   outline: none;
 }`;
 
-function ensureSkipLinkStyles() {
+const ensureSkipLinkStyles = () => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(SKIP_LINK_STYLE_ID)) {
+  if (document.querySelector(`#${SKIP_LINK_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
   tag.id = SKIP_LINK_STYLE_ID;
   tag.textContent = skipLinkCss;
-  document.head.appendChild(tag);
-}
+  document.head.append(tag);
+};
 
-function resolveRadiusPx(token: string | number | undefined): number | undefined {
-  if (typeof token === 'number' && Number.isFinite(token)) {
-    return token;
+const resolveRadiusPx = (token: string | number | undefined): number | undefined => {
+  if (token === undefined) {
+    return undefined;
   }
-  if (typeof token !== 'string' || token.length === 0) {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public number | token-string prop; there is no I/O boundary to parse at
+  if (typeof token === 'number') {
+    return Number.isFinite(token) ? token : undefined;
+  }
+  if (token.length === 0) {
     return undefined;
   }
   try {
-    const value = getTokenValue(token as Parameters<typeof getTokenValue>[0], 'radius');
+    // SAFETY: a non-empty string here is a theme radius token name; getTokenValue returns undefined-like values for unknown names, which the numeric check below rejects
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token names arrive as plain strings from the knob recipe, not as the generated token union
+    const value: unknown = getTokenValue(token as Parameters<typeof getTokenValue>[0], 'radius');
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- getTokenValue's declared union is wider than the numeric px the caller needs
     return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
   } catch {
     return undefined;
   }
-}
+};
 
-function focusSkipTarget(target: HTMLElement) {
+const focusSkipTarget = (target: HTMLElement) => {
   const hadTabIndex = target.hasAttribute('tabindex');
   if (!hadTabIndex) {
     target.setAttribute('tabindex', '-1');
@@ -125,7 +132,7 @@ function focusSkipTarget(target: HTMLElement) {
   };
   target.addEventListener('blur', cleanup);
   target.focus();
-}
+};
 
 // ── SkipLink Component ────────────────────────────────────────
 
@@ -136,7 +143,7 @@ function focusSkipTarget(target: HTMLElement) {
  * target — GOV.UK's VoiceOver pattern: temporary `tabindex="-1"`, stripped
  * on blur, no ring on the landmark. Renders nothing on native.
  */
-export function SkipLink({ targetId, targetRef, children = 'Skip to content', onSkip }: SkipLinkProps) {
+export const SkipLink = ({ targetId, targetRef, children = 'Skip to content', onSkip }: SkipLinkProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'SkipLink' });
   if (!isWeb) {
     return null;
@@ -144,22 +151,30 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
   ensureSkipLinkStyles();
 
   const radiusPx = resolveRadiusPx(knobProps.elevatedSurface.borderRadius);
-  const href = targetId ? `#${targetId}` : '#';
+  const hasTargetId = targetId !== undefined && targetId !== '';
+  const href = hasTargetId ? `#${targetId}` : '#';
+
+  const linkStyle: (CSSProperties & { '--mp-skip-link-radius': string }) | undefined =
+    radiusPx === undefined ? undefined : { borderRadius: radiusPx, '--mp-skip-link-radius': `${radiusPx}px` };
 
   const handleActivate = (event: MouseEvent<HTMLAnchorElement>) => {
     let target: HTMLElement | null = null;
-    if (targetRef?.current) {
+    if (targetRef?.current != null) {
       event.preventDefault();
-      const current = targetRef.current;
-      if (typeof (current as { focus?: () => void }).focus === 'function') {
+      const { current } = targetRef;
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- targetRef accepts any focusable-shaped object, so `focus` must be probed at runtime
+      if (typeof current.focus === 'function') {
+        // SAFETY: consumers pass DOM elements (focusSkipTarget needs hasAttribute/classList); the focus probe above only rules out non-focusable refs
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the ref type admits any `{ focus }` shape for native-friendly typing, but web callers always supply an element
         target = current as HTMLElement;
       }
-    } else if (targetId && typeof document !== 'undefined') {
+    } else if (hasTargetId && typeof document !== 'undefined') {
+      // oxlint-disable-next-line unicorn/prefer-query-selector -- targetId is an arbitrary consumer id; querySelector would need CSS escaping and could throw on valid ids
       target = document.getElementById(targetId);
     } else {
       event.preventDefault();
     }
-    if (target) {
+    if (target != null) {
       focusSkipTarget(target);
     }
     onSkip?.(target instanceof HTMLElement ? target : null);
@@ -169,25 +184,23 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
     <a
       className="mp-skip-link"
       href={href}
-      style={
-        typeof radiusPx === 'number'
-          ? ({
-              borderRadius: radiusPx,
-              ['--mp-skip-link-radius']: `${radiusPx}px`,
-            } as CSSProperties)
-          : undefined
-      }
+      style={linkStyle}
       onClick={handleActivate}>
       <SkipLinkSurface
         {...knobProps.elevatedSurface}
         borderWidth={Math.max(knobProps.elevatedSurface.borderWidth, 1)}
         elevation={knobProps.elevatedSurface.elevation ?? '$2'}>
-        <SizableText {...knobProps.body} {...knobProps.label} fontWeight="400" color="$color12" whiteSpace="nowrap">
+        <SizableText
+          {...knobProps.body}
+          {...knobProps.label}
+          fontWeight="400"
+          color="$color12"
+          whiteSpace="nowrap">
           {children}
         </SizableText>
       </SkipLinkSurface>
     </a>
   );
-}
+};
 
 export type SkipLinkSurfaceProps = GetProps<typeof SkipLinkSurface>;

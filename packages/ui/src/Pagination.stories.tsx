@@ -4,7 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import { Pagination, type PaginationProps } from './Pagination';
+import { Pagination } from './Pagination';
+import type { PaginationProps } from './Pagination';
 
 const meta: Meta<typeof Pagination> = {
   title: 'Components/Pagination',
@@ -42,7 +43,7 @@ type Story = StoryObj<typeof Pagination>;
 // Rest on a middle step: at index 0 the prev arrow is a bare-disabled Button
 // at rest, which trips the `[theme]` guardrail and demos
 // nothing — both arrows live shows the full control.
-function ControlledPagination(props: Omit<PaginationProps, 'activeIndex' | 'onChange'>) {
+const ControlledPagination = (props: Omit<PaginationProps, 'activeIndex' | 'onChange'>) => {
   const [activeIndex, setActiveIndex] = useState(1);
   return (
     <Pagination
@@ -54,7 +55,7 @@ function ControlledPagination(props: Omit<PaginationProps, 'activeIndex' | 'onCh
       }}
     />
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',
@@ -63,60 +64,93 @@ export const Default: Story = {
 
 export const Playground: Story = {
   args: { total: 5, activeIndex: 1 },
-  render: (args) => <Pagination onChange={action('onChange')} {...args} />,
+  render: (args) => (
+    <Pagination
+      onChange={action('onChange')}
+      {...args}
+    />
+  ),
 };
 
 export const ThreeSteps: Story = {
   render: () => <ControlledPagination total={3} />,
 };
 
+const WithCompletedStepsDemo = () => {
+  const [activeIndex, setActiveIndex] = useState(2);
+  return (
+    <Pagination
+      total={5}
+      activeIndex={activeIndex}
+      onChange={setActiveIndex}
+      completedSteps={new Set([0, 1])}
+    />
+  );
+};
+
 export const WithCompletedSteps: Story = {
-  render: () => {
-    const [activeIndex, setActiveIndex] = useState(2);
-    return (
-      <Pagination total={5} activeIndex={activeIndex} onChange={setActiveIndex} completedSteps={new Set([0, 1])} />
-    );
-  },
+  render: () => <WithCompletedStepsDemo />,
 };
 
 export const BarsVariant: Story = {
-  render: () => <ControlledPagination total={5} variant="bars" />,
+  render: () => (
+    <ControlledPagination
+      total={5}
+      variant="bars"
+    />
+  ),
 };
 
 export const AllowJumpTo: Story = {
-  render: () => <ControlledPagination total={5} allowJumpTo />,
+  render: () => (
+    <ControlledPagination
+      total={5}
+      allowJumpTo
+    />
+  ),
+};
+
+const WithSubmitDemo = () => {
+  const [activeIndex, setActiveIndex] = useState(1);
+  const total = 4;
+  return (
+    <YStack
+      gap="$4"
+      alignItems="center">
+      <Pagination
+        total={total}
+        activeIndex={activeIndex}
+        onChange={setActiveIndex}
+        isLastStep={activeIndex === total - 1}
+        onSubmit={() => action('onSubmit')()}
+        completedSteps={new Set(Array.from({ length: activeIndex }, (_, i) => i))}
+      />
+      <Text
+        color="$color11"
+        fontSize="$3">
+        Step {activeIndex + 1} of {total}
+        {activeIndex === total - 1 ? ' — right arrow becomes submit' : ''}
+      </Text>
+    </YStack>
+  );
 };
 
 export const WithSubmit: Story = {
-  render: () => {
-    const [activeIndex, setActiveIndex] = useState(1);
-    const total = 4;
-    return (
-      <YStack gap="$4" alignItems="center">
-        <Pagination
-          total={total}
-          activeIndex={activeIndex}
-          onChange={setActiveIndex}
-          isLastStep={activeIndex === total - 1}
-          onSubmit={() => action('onSubmit')()}
-          completedSteps={new Set(Array.from({ length: activeIndex }, (_, i) => i))}
-        />
-        <Text color="$color11" fontSize="$3">
-          Step {activeIndex + 1} of {total}
-          {activeIndex === total - 1 ? ' — right arrow becomes submit' : ''}
-        </Text>
-      </YStack>
-    );
-  },
+  render: () => <WithSubmitDemo />,
 };
 
 export const Disabled: Story = {
-  render: () => <ControlledPagination total={5} disabled />,
+  render: () => (
+    <ControlledPagination
+      total={5}
+      disabled
+    />
+  ),
 };
 
 // ── Numbered (table & data idiom) ──────────────────────────────
 
-function ControlledNumbered(props: Omit<PaginationProps, 'page' | 'onPageChange' | 'variant'>) {
+const ControlledNumbered = (props: Omit<PaginationProps, 'page' | 'onPageChange' | 'variant'>) => {
   // Middle page: page 1 rests with prev/first bare-disabled.
   const [page, setPage] = useState(2);
   return (
@@ -130,10 +164,22 @@ function ControlledNumbered(props: Omit<PaginationProps, 'page' | 'onPageChange'
       }}
     />
   );
-}
+};
 
 export const NumberedFewPages: Story = {
   render: () => <ControlledNumbered total={5} />,
+};
+
+const NumberedDemo = () => {
+  const [page, setPage] = useState(5);
+  return (
+    <Pagination
+      variant="numbered"
+      total={20}
+      page={page}
+      onPageChange={setPage}
+    />
+  );
 };
 
 export const NumberedManyPages: Story = {
@@ -144,10 +190,7 @@ export const NumberedManyPages: Story = {
       },
     },
   },
-  render: () => {
-    const [page, setPage] = useState(5);
-    return <Pagination variant="numbered" total={20} page={page} onPageChange={setPage} />;
-  },
+  render: () => <NumberedDemo />,
 };
 
 export const NumberedWithSummary: Story = {
@@ -158,11 +201,25 @@ export const NumberedWithSummary: Story = {
       },
     },
   },
-  render: () => <ControlledNumbered total={13} totalItems={312} pageSize={25} showSummary />,
+  render: () => (
+    <ControlledNumbered
+      total={13}
+      totalItems={312}
+      pageSize={25}
+      showSummary
+    />
+  ),
 };
 
 export const NumberedUncontrolled: Story = {
-  render: () => <Pagination variant="numbered" total={9} defaultPage={3} onPageChange={action('onPageChange')} />,
+  render: () => (
+    <Pagination
+      variant="numbered"
+      total={9}
+      defaultPage={3}
+      onPageChange={action('onPageChange')}
+    />
+  ),
 };
 
 export const NumberedRadiusNone: Story = {
@@ -181,7 +238,12 @@ export const NumberedRadiusNone: Story = {
 };
 
 export const NumberedDisabled: Story = {
-  render: () => <ControlledNumbered total={8} disabled />,
+  render: () => (
+    <ControlledNumbered
+      total={8}
+      disabled
+    />
+  ),
 };
 
 export const NumberedFirstLast: Story = {
@@ -194,27 +256,53 @@ export const NumberedFirstLast: Story = {
       },
     },
   },
-  render: () => <ControlledNumbered total={20} showFirstLast />,
+  render: () => (
+    <ControlledNumbered
+      total={20}
+      showFirstLast
+    />
+  ),
 };
 
 export const AllStates: Story = {
   render: () => (
-    <YStack gap="$6" alignItems="center">
-      <YStack gap="$2" alignItems="center">
+    <YStack
+      gap="$6"
+      alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Text fontWeight="400">Dots (default)</Text>
         <ControlledPagination total={5} />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Text fontWeight="400">Bars</Text>
-        <ControlledPagination total={5} variant="bars" />
+        <ControlledPagination
+          total={5}
+          variant="bars"
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Text fontWeight="400">With completed steps</Text>
-        <Pagination total={5} activeIndex={3} onChange={action('onChange')} completedSteps={new Set([0, 1, 2])} />
+        <Pagination
+          total={5}
+          activeIndex={3}
+          onChange={action('onChange')}
+          completedSteps={new Set([0, 1, 2])}
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Text fontWeight="400">Disabled</Text>
-        <ControlledPagination total={5} disabled />
+        <ControlledPagination
+          total={5}
+          disabled
+        />
       </YStack>
     </YStack>
   ),
@@ -223,7 +311,11 @@ export const AllStates: Story = {
 export const Simple: Story = {
   render: () => (
     <YStack width={249}>
-      <Pagination variant="simple" total={100} defaultPage={50} />
+      <Pagination
+        variant="simple"
+        total={100}
+        defaultPage={50}
+      />
     </YStack>
   ),
 };

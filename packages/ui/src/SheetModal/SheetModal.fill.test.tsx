@@ -15,38 +15,42 @@
  */
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { Text } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SheetModal as NativeSheetModal } from './index.native';
 
-import { SheetModal as WebSheetModal, type SheetModalProps } from './index';
+import { SheetModal as WebSheetModal } from './index';
+import type { SheetModalProps } from './index';
 
-vi.mock('react-native-web', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('react-native')>()),
+vi.mock(import('react-native-web'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the module must report no ActionSheetIOS; null would still be a present export
   ActionSheetIOS: undefined,
-  Modal: ({ children }: { children: import('react').ReactNode }) => children,
+  Modal: ({ children }: { children: ReactElement }) => children,
 }));
-
-afterEach(cleanup);
 
 /** Tamagui emits atomic classes; `flex: 1` is grow+shrink+basis together. */
 const flexOne = ['_fg-1', '_fs-1', '_fb-0px'];
 const minZero = '_mih-0px';
 
-function classes(element: HTMLElement) {
-  return element.className.split(/\s+/);
-}
+const classes = (element: HTMLElement) => element.className.split(/\s+/u);
 
-function renderNative(props: Partial<SheetModalProps> = {}) {
-  return renderWithProviders(
-    <NativeSheetModal open onOpenChange={() => {}} header={<Text>Move to project</Text>} {...props}>
+const renderNative = (props: Partial<SheetModalProps> = {}) =>
+  renderWithProviders(
+    <NativeSheetModal
+      open
+      onOpenChange={() => {}}
+      header={<Text>Move to project</Text>}
+      {...props}>
       <Text>row</Text>
     </NativeSheetModal>,
   );
-}
 
 describe('native fill allocates the sheet body', () => {
+  afterEach(cleanup);
+
   it('turns the existing cap into a definite frame height only when filling', () => {
     const filled = renderNative({ fill: true }).getByTestId('sheet-modal-frame');
     expect(filled.style.height).not.toBe('');
@@ -61,7 +65,7 @@ describe('native fill allocates the sheet body', () => {
     const view = renderNative({ fill: true });
     for (const id of ['sheet-modal-surface', 'sheet-modal-content']) {
       const link = classes(view.getByTestId(id));
-      expect(link, `${id} grows`).toEqual(expect.arrayContaining(flexOne));
+      expect(link, `${id} grows`).toStrictEqual(expect.arrayContaining(flexOne));
       expect(link, `${id} can collapse`).toContain(minZero);
     }
     const body = view.getByTestId('sheet-modal-body');
@@ -109,20 +113,25 @@ describe('native fill allocates the sheet body', () => {
  * fill only has to open the body chain inside it. tamagui renders the sheet
  * through a portal AND inline, so every query here is plural on purpose.
  */
-function renderWeb(props: Partial<SheetModalProps> = {}) {
-  return renderWithProviders(
-    <WebSheetModal open onOpenChange={() => {}} header={<Text>Move to project</Text>} {...props}>
+const renderWeb = (props: Partial<SheetModalProps> = {}) =>
+  renderWithProviders(
+    <WebSheetModal
+      open
+      onOpenChange={() => {}}
+      header={<Text>Move to project</Text>}
+      {...props}>
       <Text>row</Text>
     </WebSheetModal>,
   );
-}
 
 describe('web fill opens the body inside the snapped frame', () => {
+  afterEach(cleanup);
+
   it('mounts a growing body slot only when filling', () => {
     const filled = renderWeb({ fill: true }).getAllByTestId('sheet-modal-body');
     expect(filled.length).toBeGreaterThan(0);
     for (const slot of filled) {
-      expect(classes(slot)).toEqual(expect.arrayContaining(flexOne));
+      expect(classes(slot)).toStrictEqual(expect.arrayContaining(flexOne));
       expect(classes(slot)).toContain(minZero);
     }
     cleanup();
@@ -133,7 +142,7 @@ describe('web fill opens the body inside the snapped frame', () => {
     const view = renderWeb({ fill: true, scrollable: true });
     const bodies = view.getAllByTestId('sheet-modal-body');
     const scrollers = view.getAllByTestId('sheet-modal-scroll');
-    expect(scrollers.length).toBe(bodies.length);
+    expect(scrollers).toHaveLength(bodies.length);
     for (const body of bodies) {
       expect(body.querySelectorAll('[data-testid="sheet-modal-scroll"]')).toHaveLength(1);
     }

@@ -6,43 +6,59 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BoardActions } from '@/components/kanban/board/BoardActions';
 import { useRouter } from '@/i18n/navigation';
 import { useDeleteBoard, useUpdateBoard } from '@/lib/api/boards/queries';
-import type { Board } from '@/types/dbInterface';
+import type { Board } from '@/types/db-interface';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock(import('next-intl'), async () => {
+  const { mockUseTranslations } = await import('../../../../helpers/key-translator');
+  return { useTranslations: mockUseTranslations };
+});
+
+vi.mock(import('@/i18n/navigation'), () => ({
+  useRouter: vi.fn<typeof useRouter>(),
 }));
 
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: vi.fn(),
+vi.mock(import('sonner'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    toast: Object.assign(vi.fn<typeof actual.toast>(), actual.toast, {
+      success: vi.fn<typeof actual.toast.success>(),
+      error: vi.fn<typeof actual.toast.error>(),
+    }),
+  };
+});
+
+vi.mock(import('@/lib/api/boards/queries'), () => ({
+  useDeleteBoard: vi.fn<typeof useDeleteBoard>(),
+  useUpdateBoard: vi.fn<typeof useUpdateBoard>(),
 }));
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock('@/lib/api/boards/queries', () => ({
-  useDeleteBoard: vi.fn(),
-  useUpdateBoard: vi.fn(),
-}));
+interface UpdateBoardVars {
+  id: string;
+  title: string;
+  description?: string;
+}
 
 interface MutationOptions {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }
 
+const openMenu = async () => {
+  fireEvent.click(screen.getByTestId('board-option-button'));
+  await screen.findByRole('menu');
+};
+
 // Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
 // hidden for role queries, so locate it directly.
-const findConfirmDialog = () =>
-  waitFor(() => {
+const findConfirmDialog = async () =>
+  await waitFor(() => {
     const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
     expect(el).toBeTruthy();
     return el!;
   });
 
-describe('BoardActions', () => {
+describe(BoardActions, () => {
   const mockBoard: Board = {
     _id: 'board-1',
     title: 'Test Board',
@@ -54,27 +70,22 @@ describe('BoardActions', () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const router = { push: vi.fn(), refresh: vi.fn() };
-  const updateMutateAsync = vi.fn();
-  const deleteMutateAsync = vi.fn();
+  const router = { push: vi.fn<(href: string) => void>(), refresh: vi.fn<() => void>() };
+  const updateMutateAsync = vi.fn<(vars: UpdateBoardVars, options: MutationOptions) => Promise<void>>();
+  const deleteMutateAsync = vi.fn<(id: string, options: MutationOptions) => Promise<void>>();
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useRouter).mockReturnValue(router as any);
-    updateMutateAsync.mockImplementation(async (_vars: unknown, options: MutationOptions) => {
+    updateMutateAsync.mockImplementation(async (_vars: UpdateBoardVars, options: MutationOptions) => {
       options.onSuccess?.();
     });
     deleteMutateAsync.mockImplementation(async (_id: string, options: MutationOptions) => {
       options.onSuccess?.();
     });
     vi.mocked(useUpdateBoard).mockReturnValue({ mutateAsync: updateMutateAsync } as any);
-    vi.mocked(useDeleteBoard).mockReturnValue({ mutate: vi.fn(), mutateAsync: deleteMutateAsync } as any);
+    vi.mocked(useDeleteBoard).mockReturnValue({ mutate: vi.fn<() => void>(), mutateAsync: deleteMutateAsync } as any);
   });
-
-  const openMenu = async () => {
-    fireEvent.click(screen.getByTestId('board-option-button'));
-    await screen.findByRole('menu');
-  };
 
   it('renders the default actions trigger', () => {
     renderWithProviders(<BoardActions board={mockBoard} />);
@@ -86,7 +97,9 @@ describe('BoardActions', () => {
   it('uses a custom trigger when children are given', () => {
     renderWithProviders(
       <BoardActions board={mockBoard}>
-        <button type="button" data-testid="custom-trigger">
+        <button
+          type="button"
+          data-testid="custom-trigger">
           Custom Trigger
         </button>
       </BoardActions>,
@@ -122,7 +135,7 @@ describe('BoardActions', () => {
       );
     });
     expect(toast.success).toHaveBeenCalledWith('boardUpdated');
-    expect(router.refresh).toHaveBeenCalled();
+    expect(router.refresh).toHaveBeenCalledWith();
     await waitFor(() => {
       expect(screen.queryByText('editBoardTitle')).not.toBeInTheDocument();
     });
@@ -143,8 +156,13 @@ describe('BoardActions', () => {
   });
 
   it('deletes the board after confirmation', async () => {
-    const onDelete = vi.fn();
-    renderWithProviders(<BoardActions board={mockBoard} onDelete={onDelete} />);
+    const onDelete = vi.fn<() => void>();
+    renderWithProviders(
+      <BoardActions
+        board={mockBoard}
+        onDelete={onDelete}
+      />,
+    );
     await openMenu();
     fireEvent.click(screen.getByTestId('delete-board-button'));
 
@@ -156,7 +174,7 @@ describe('BoardActions', () => {
     await waitFor(() => {
       expect(deleteMutateAsync).toHaveBeenCalledWith('board-1', expect.any(Object));
     });
-    expect(onDelete).toHaveBeenCalled();
+    expect(onDelete).toHaveBeenCalledWith();
     expect(toast.success).toHaveBeenCalledWith('boardDeleted');
     expect(router.push).toHaveBeenCalledWith('/boards');
   });

@@ -1,24 +1,65 @@
-import { TaskStatus } from "@repo/store";
-import { Text, View, useTheme } from "@tamagui/core";
-import { Image } from "expo-image";
-import { Link, useLocalSearchParams, Stack, useRouter } from "expo-router";
-import { useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { TaskStatus } from '@repo/store';
+import type { Board } from '@repo/store';
+import { Text, View, useTheme } from '@tamagui/core';
+import { Image } from 'expo-image';
+import { Link, useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { RefreshControl, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 
-import { BoardActions } from "@/components/board-actions";
-import { ProjectColumn } from "@/components/project-column";
-import { useBoard } from "@/hooks/use-boards";
-import { useProjects } from "@/hooks/use-projects";
+import { BoardActions } from '@/components/board-actions';
+import { ProjectColumn } from '@/components/project-column';
+import { useBoard } from '@/hooks/use-boards';
+import { useProjects } from '@/hooks/use-projects';
 
-const STATUS_FILTERS: (TaskStatus | null)[] = [
-  null,
-  TaskStatus.TODO,
-  TaskStatus.IN_PROGRESS,
-  TaskStatus.DONE
-];
+const STATUS_FILTERS: (TaskStatus | null)[] = [null, TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
-export default function BoardDetailScreen() {
+const NEW_PROJECT_BORDER_COLOR = 'rgba(255, 255, 255, 0.15)';
+
+const getNewProjectButtonStyle = (backgroundColor: string) =>
+  ({
+    flexShrink: 0,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: NEW_PROJECT_BORDER_COLOR,
+    backgroundColor,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  }) as const;
+
+const renderBackButton = (router: ReturnType<typeof useRouter>) => (
+  <Pressable
+    onPress={() => {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
+    }}
+    style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 16, paddingLeft: 8 }}
+    hitSlop={8}>
+    <Image
+      source="sf:chevron.left"
+      style={{ width: 18, height: 22 }}
+      tintColor="hsl(180, 20%, 100%)"
+    />
+  </Pressable>
+);
+
+const renderBoardActions = (board: Board | undefined) =>
+  board === undefined ? null : (
+    <BoardActions
+      boardId={board._id}
+      boardTitle={board.title}
+    />
+  );
+
+const BoardDetailScreen = () => {
   const { boardId } = useLocalSearchParams<{ boardId: string }>();
   const router = useRouter();
   const theme = useTheme();
@@ -26,13 +67,13 @@ export default function BoardDetailScreen() {
     data: board,
     isLoading: isBoardLoading,
     refetch: refetchBoard,
-    isRefetching: isBoardRefetching
+    isRefetching: isBoardRefetching,
   } = useBoard(boardId);
   const {
     data: projects = [],
     isLoading: isProjectsLoading,
     refetch: refetchProjects,
-    isRefetching: isProjectsRefetching
+    isRefetching: isProjectsRefetching,
   } = useProjects(boardId);
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<TaskStatus | null>(null);
@@ -41,56 +82,42 @@ export default function BoardDetailScreen() {
   const isRefetching = isBoardRefetching || isProjectsRefetching;
 
   const handleRefresh = () => {
-    refetchBoard();
-    refetchProjects();
+    void refetchBoard();
+    void refetchProjects();
   };
 
   const sortedProjects = useMemo(
-    () => [...projects].sort((a, b) => (a.orderInBoard || 0) - (b.orderInBoard || 0)),
-    [projects]
+    () => projects.toSorted((a, b) => (a.orderInBoard ?? 0) - (b.orderInBoard ?? 0)),
+    [projects],
   );
 
-  const statusLabels: Record<string, string> = {
-    ALL: t("kanban.task.total"),
-    TODO: t("kanban.task.statusTodo"),
-    IN_PROGRESS: t("kanban.task.statusInProgress"),
-    DONE: t("kanban.task.statusDone")
+  const statusLabels: Record<TaskStatus | 'ALL', string> = {
+    ALL: t('kanban.task.total'),
+    TODO: t('kanban.task.statusTodo'),
+    IN_PROGRESS: t('kanban.task.statusInProgress'),
+    DONE: t('kanban.task.statusDone'),
   };
 
   const primaryColor = theme.primary.val;
   const cardColor = theme.card.val;
 
   return (
-    <View flex={1} backgroundColor="$background">
+    <View
+      flex={1}
+      backgroundColor="$background">
       <Stack.Screen
         options={{
-          title: board?.title || t("kanban.title"),
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace("/(tabs)");
-                }
-              }}
-              style={{ flexDirection: "row", alignItems: "center", paddingRight: 16, paddingLeft: 8 }}
-              hitSlop={8}
-            >
-              <Image
-                source="sf:chevron.left"
-                style={{ width: 18, height: 22 }}
-                tintColor="hsl(180, 20%, 100%)"
-              />
-            </Pressable>
-          ),
-          headerRight: () =>
-            board ? <BoardActions boardId={board._id} boardTitle={board.title} /> : null
+          title: board?.title !== undefined && board.title !== '' ? board.title : t('kanban.title'),
+          headerLeft: () => renderBackButton(router),
+          headerRight: () => renderBoardActions(board),
         }}
       />
 
       {isLoading && !isRefetching ? (
-        <View flex={1} alignItems="center" justifyContent="center">
+        <View
+          flex={1}
+          alignItems="center"
+          justifyContent="center">
           <ActivityIndicator size="large" />
         </View>
       ) : (
@@ -102,38 +129,35 @@ export default function BoardDetailScreen() {
             contentContainerStyle={{
               paddingHorizontal: 12,
               paddingVertical: 8,
-              alignItems: "center",
-              gap: 8
-            }}
-          >
+              alignItems: 'center',
+              gap: 8,
+            }}>
             {STATUS_FILTERS.map((status) => {
               const isActive = statusFilter === status;
               const label = status === null ? statusLabels.ALL : statusLabels[status];
               return (
                 <Pressable
-                  key={status ?? "ALL"}
+                  key={status ?? 'ALL'}
                   onPress={() => {
                     setStatusFilter(status);
                   }}
                   style={{
                     flexShrink: 0,
                     height: 34,
-                    justifyContent: "center",
+                    justifyContent: 'center',
                     paddingHorizontal: 14,
                     borderRadius: 17,
-                    borderCurve: "continuous",
+                    borderCurve: 'continuous',
                     borderWidth: 1,
-                    borderColor: isActive ? primaryColor : "rgba(255, 255, 255, 0.15)",
-                    backgroundColor: isActive ? primaryColor : cardColor
-                  }}
-                >
+                    borderColor: isActive ? primaryColor : 'rgba(255, 255, 255, 0.15)',
+                    backgroundColor: isActive ? primaryColor : cardColor,
+                  }}>
                   <Text
                     style={{
                       fontSize: 13,
-                      fontWeight: "600",
-                      color: isActive ? "hsl(180, 10%, 98%)" : "hsl(180, 25%, 85%)"
-                    }}
-                  >
+                      fontWeight: '600',
+                      color: isActive ? 'hsl(180, 10%, 98%)' : 'hsl(180, 25%, 85%)',
+                    }}>
                     {label}
                   </Text>
                 </Pressable>
@@ -141,30 +165,17 @@ export default function BoardDetailScreen() {
             })}
 
             {/* New Project Button */}
-            <Link href={`/projects/new?boardId=${boardId}`} asChild>
-              <Pressable
-                style={{
-                  flexShrink: 0,
-                  height: 34,
-                  justifyContent: "center",
-                  paddingHorizontal: 14,
-                  borderRadius: 17,
-                  borderCurve: "continuous",
-                  borderWidth: 1,
-                  borderColor: "rgba(255, 255, 255, 0.15)",
-                  backgroundColor: cardColor,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4
-                }}
-              >
+            <Link
+              href={`/projects/new?boardId=${boardId}`}
+              asChild>
+              <Pressable style={getNewProjectButtonStyle(cardColor)}>
                 <Image
                   source="sf:plus"
                   style={{ width: 12, height: 12 }}
                   tintColor="hsl(180, 25%, 85%)"
                 />
-                <Text style={{ fontSize: 13, fontWeight: "600", color: "hsl(180, 25%, 85%)" }}>
-                  {t("kanban.project.addProject")}
+                <Text style={{ fontSize: 13, fontWeight: '600', color: 'hsl(180, 25%, 85%)' }}>
+                  {t('kanban.project.addProject')}
                 </Text>
               </Pressable>
             </Link>
@@ -172,16 +183,24 @@ export default function BoardDetailScreen() {
 
           {/* Projects Vertical List — matches web mobile view layout */}
           {sortedProjects.length === 0 ? (
-            <View flex={1} alignItems="center" justifyContent="center" padding={20}>
-              <Text color="$mutedForeground" style={{ fontSize: 16, textAlign: "center" }}>
-                {t("kanban.noBoardsFound")}
+            <View
+              flex={1}
+              alignItems="center"
+              justifyContent="center"
+              padding={20}>
+              <Text
+                color="$mutedForeground"
+                style={{ fontSize: 16, textAlign: 'center' }}>
+                {t('kanban.noBoardsFound')}
               </Text>
             </View>
           ) : (
             <ScrollView
               contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 24, gap: 16 }}
-              refreshControl=<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
-            >
+              refreshControl=<RefreshControl
+                refreshing={isRefetching}
+                onRefresh={handleRefresh}
+              />>
               {sortedProjects.map((project) => (
                 <ProjectColumn
                   key={project._id}
@@ -196,4 +215,6 @@ export default function BoardDetailScreen() {
       )}
     </View>
   );
-}
+};
+
+export default BoardDetailScreen;

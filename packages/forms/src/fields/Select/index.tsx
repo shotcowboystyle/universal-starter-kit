@@ -8,31 +8,33 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
+import type { useResolvedKnobs } from '@repo/theme';
 import {
+  useTouchSurface,
   ensureKeyboardModalityTracking,
   keyboardFocusRingProps,
   menuRowFrame,
   sizeRecipeForToken,
   useGlyphColor,
-  useResolvedKnobs,
   wasKeyboardFocus,
   transitionProps,
 } from '@repo/theme';
-import type { KeyboardEvent, MouseEvent, ReactNode, RefObject, UIEvent } from 'react';
+import type { FocusEvent, KeyboardEvent, MouseEvent, PointerEvent, ReactNode, RefObject, UIEvent } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, memo } from 'react';
 // `react-native` aliases to react-native-web on the web, and RNW 0.21 exports
 // no ActionSheetIOS at all — a NAMED import of it is a hard SyntaxError that
 // kills the whole preview bundle, so every Forms story renders blank. The
 // sheet is reached only under shouldUseIosNativeSelect (iOS, never web), so
 // read it off the namespace and let it be undefined where it does not exist.
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- the namespace import is deliberate: a named ActionSheetIOS import is a hard SyntaxError under react-native-web
 import * as ReactNative from 'react-native';
 import { Platform, Pressable as RNPressable } from 'react-native';
-import type { LabelProps, SizeTokens } from 'tamagui';
+import type { LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { Paragraph, Text, View, YStack, isWeb, styled, useTheme } from 'tamagui';
 
-import { Chip, type ChipProps } from '../../Chip';
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
+import { Chip } from '../../Chip';
+import type { ChipProps } from '../../Chip';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
 import {
   FloatingPanel,
   useFloatingPanel,
@@ -42,13 +44,13 @@ import {
 } from '../../FloatingPanel';
 import { PanelPortal } from '../../FloatingPanel/PanelPortal';
 import { Input as InputParts, FocusContext } from '../../InputParts';
-import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/colorRamps';
-import { warnSelectTooFewOptions } from '../../shared/devWarn';
-import { ScrollArrow } from '../../shared/floatingList';
-import { pickerTriggerContract } from '../../shared/pickerTriggerContract';
+import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/color-ramps';
+import { warnSelectTooFewOptions } from '../../shared/dev-warn';
+import { ScrollArrow } from '../../shared/floating-list';
+import { pickerTriggerContract } from '../../shared/picker-trigger-contract';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
-import { useDragScroll } from '../../shared/useDragScroll';
+import { useIsInTableCell } from '../../shared/table-cell-context';
+import { useDragScroll } from '../../shared/use-drag-scroll';
 import {
   getFieldError,
   getFieldHeight,
@@ -56,13 +58,15 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
-import { zIndex } from '../../shared/zIndex';
+import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
-import { shouldUseIosNativeSelect } from '../nativeSelect';
-import { orderOptionsBySelected, type SelectedOrder } from '../selectedOrder';
+import { shouldUseIosNativeSelect } from '../native-select';
+import { orderOptionsBySelected } from '../selected-order';
+import type { SelectedOrder } from '../selected-order';
 
 /** Undefined on web (RNW ships no ActionSheetIOS); real on iOS. */
+// SAFETY: react-native-web's namespace has no ActionSheetIOS export, so the member is optional at runtime even though the native typings declare it.
 const actionSheetIOS = (ReactNative as { ActionSheetIOS?: typeof ReactNative.ActionSheetIOS }).ActionSheetIOS;
 
 // ── Types ─────────────────────────────────────────────────────
@@ -77,7 +81,7 @@ export interface SelectOption {
 export interface SelectProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -96,7 +100,7 @@ export interface SelectProps {
   onChange?: (value: string | string[]) => void;
   /** @deprecated Use `onChange` instead. Kept as an alias for the tamagui/Radix name. */
   onValueChange?: (value: string | string[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: (...args: never[]) => void;
   options: SelectOption[];
   placeholder?: string;
   groupLabel?: string;
@@ -160,7 +164,7 @@ const SelectRow = styled(View, {
       false: {},
     },
     size: {
-      '...size': (val: any) => ({ height: val }),
+      '...size': (val: number | string) => ({ height: val }),
     },
   } as const,
 });
@@ -180,6 +184,20 @@ const GroupHeader = styled(Text, {
 
 // ── Helper to group options ───────────────────────────────────
 
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+interface ThemeToken {
+  val?: string;
+}
+
+/** The Tamagui theme looked up by token name; entries are resolved Variables carrying `val`. */
+const useThemeTokens = (): Readonly<Record<string, ThemeToken | undefined>> => useTheme();
+
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- an open bag of DOM attributes that React Native's View props cannot type
+type DomAttributeBag = Record<string, unknown>;
+
+type SelectValue = string | string[] | undefined;
+
 interface GroupedOption {
   type: 'option';
   option: SelectOption;
@@ -193,11 +211,13 @@ interface GroupHeaderItem {
 
 type GroupedItem = GroupedOption | GroupHeaderItem;
 
-function groupOptions(options: SelectOption[]): {
+interface GroupedOptions {
   items: GroupedItem[];
   flatOptions: SelectOption[];
-} {
-  const hasGroups = options.some((o) => o.group);
+}
+
+const groupOptions = (options: SelectOption[]): GroupedOptions => {
+  const hasGroups = options.some((o) => hasText(o.group));
   if (!hasGroups) {
     return {
       items: options.map((option, index) => ({
@@ -209,18 +229,21 @@ function groupOptions(options: SelectOption[]): {
     };
   }
 
-  // Separate grouped and ungrouped options
-  const ungrouped = options.filter((o) => !o.group);
-  const grouped = options.filter((o) => o.group);
-
-  // Group by group label
+  // Separate ungrouped options and group the rest by group label
+  const ungrouped: SelectOption[] = [];
   const groups = new Map<string, SelectOption[]>();
-  for (const option of grouped) {
-    const groupLabel = option.group!;
-    if (!groups.has(groupLabel)) {
-      groups.set(groupLabel, []);
+  for (const option of options) {
+    const groupLabel = option.group;
+    if (!hasText(groupLabel)) {
+      ungrouped.push(option);
+      continue;
     }
-    groups.get(groupLabel)!.push(option);
+    const bucket = groups.get(groupLabel);
+    if (bucket === undefined) {
+      groups.set(groupLabel, [option]);
+    } else {
+      bucket.push(option);
+    }
   }
 
   // Build result
@@ -234,19 +257,67 @@ function groupOptions(options: SelectOption[]): {
   }
 
   // Add grouped options with headers
-  for (const [groupLabel, groupOptions] of groups) {
+  for (const [groupLabel, members] of groups) {
     items.push({ type: 'header', label: groupLabel });
-    for (const option of groupOptions) {
+    for (const option of members) {
       items.push({ type: 'option', option, flatIndex: flatOptions.length });
       flatOptions.push(option);
     }
   }
 
   return { items, flatOptions };
-}
+};
+
+/** Selected-value chips sit one step below the control height they live in. */
+const chipSizeForControl = (sizeToken: string): ChipProps['size'] => {
+  switch (sizeToken) {
+    case '$3': {
+      return '$2';
+    }
+    case '$4': {
+      return '$3';
+    }
+    case '$5': {
+      return '$4';
+    }
+    default: {
+      return '$3';
+    }
+  }
+};
+
+const toValueArray = (value: SelectValue): string[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return hasText(value) ? [value] : [];
+};
+
+/** Wraps around: forward past the last row lands on 0, backward past 0 on the last row. */
+const stepIndex = (index: number, forward: boolean, count: number): number => {
+  if (forward) {
+    return index + 1 >= count ? 0 : index + 1;
+  }
+  return index - 1 < 0 ? count - 1 : index - 1;
+};
+
+const isDownKey = (k: string) => k === 'ArrowDown' || k === 'j';
+const isUpKey = (k: string) => k === 'ArrowUp' || k === 'k';
+const isActivateKey = (event: KeyboardEvent) => event.key === 'Enter' || event.code === 'Space' || event.key === ' ';
+const isTriggerOpenKey = (event: KeyboardEvent) => isActivateKey(event) || isDownKey(event.key) || isUpKey(event.key);
+
+const hoverBackground = (selected: boolean) =>
+  selected ? formInputColors.background.base : formInputColors.background.focus;
+
+const rowBackground = (active: boolean, selected: boolean) => {
+  if (active) {
+    return formInputColors.background.focus;
+  }
+  return selected ? formInputColors.background.base : 'transparent';
+};
 
 /** Trigger rings on keyboard-origin only; list rows inherit that modality. */
-function useSelectKeyboardRing() {
+const useSelectKeyboardRing = () => {
   const [kbTrigger, setKbTrigger] = useState(false);
   const [kbNav, setKbNav] = useState(false);
   if (isWeb) {
@@ -272,17 +343,17 @@ function useSelectKeyboardRing() {
     onTriggerBlur,
     onTriggerPointerDown,
   };
-}
+};
 
-function selectTriggerRingProps(kbTrigger: boolean, open: boolean) {
+const selectTriggerRingProps = (kbTrigger: boolean, open: boolean) => {
   if (kbTrigger && !open) {
     return { ...keyboardFocusRingProps, 'data-kb-ring': 'true' as const };
   }
   // Focus modality owns the outline; the control recipe owns trigger shape.
-  return { ...selectOutlineRest, 'data-kb-ring': undefined };
-}
+  return { ...selectOutlineRest };
+};
 
-function selectItemRingProps(isActive: boolean, kbNav: boolean) {
+const selectItemRingProps = (isActive: boolean, kbNav: boolean) => {
   if (isActive && kbNav) {
     return {
       ...keyboardFocusRingProps,
@@ -295,8 +366,8 @@ function selectItemRingProps(isActive: boolean, kbNav: boolean) {
       },
     };
   }
-  return { ...selectRowOutlineRest, 'data-kb-ring': undefined };
-}
+  return { ...selectRowOutlineRest };
+};
 
 /**
  * Resolve the selected-mark token to a real paint.
@@ -313,34 +384,41 @@ function selectItemRingProps(isActive: boolean, kbNav: boolean) {
  * declared once in colorRamps, and degrading to `$color` ink rather than black
  * when a narrow sub-theme has no accent step.
  */
-function useSelectedMarkColor(): string {
-  const theme = useTheme();
-  const entry = (theme as unknown as Record<string, { val?: string } | undefined>)[formSelectedColors.mark.slice(1)];
+const useSelectedMarkColor = (): string => {
+  const theme = useThemeTokens();
+  const entry = theme[formSelectedColors.mark.slice(1)];
   return entry?.val ?? theme.color?.val ?? 'currentColor';
-}
+};
 
 /** Paints the Input.Box ring via FocusContext — keyboard-origin only. */
-function SyncKeyboardFocusToBox({ active }: { active: boolean }) {
+const SyncKeyboardFocusToBox = ({ active }: { active: boolean }) => {
   const { setFocused } = FocusContext.useStyledContext();
   useEffect(() => {
     setFocused(active);
   }, [active, setFocused]);
   return null;
+};
+
+interface OverlayStyle {
+  top: number;
+  maxHeight: number;
 }
 
+type SelectKnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
+
 interface SelectItemHandlers {
-  getItemProps: any;
+  getItemProps: ReturnType<typeof useInteractions>['getItemProps'];
   handleSelect: (index: number, event?: MouseEvent) => void;
   setOpen: (open: boolean) => void;
-  knobProps: any;
-  textColor: any;
+  knobProps: SelectKnobProps;
+  textColor: SelectKnobProps['textAccentColor'];
   /** Selected mark, already resolved to a paint. */
   markColor: string;
   allowSelectRef: RefObject<boolean>;
   allowMouseUpRef: RefObject<boolean>;
   selectTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
   isTypingRef: { current: { isTyping: boolean } };
-  listItemsRef: RefObject<Array<HTMLElement | null>>;
+  listItemsRef: RefObject<(HTMLElement | null)[]>;
   multiple?: boolean;
   kbNav: boolean;
   setKbNav: (next: boolean) => void;
@@ -370,12 +448,11 @@ const SelectItem = memo(function SelectItem({
   optionCount: number;
 }) {
   const ctx = handlers.current;
-  const isDown = (k: string) => k === 'ArrowDown' || k === 'j';
-  const isUp = (k: string) => k === 'ArrowUp' || k === 'k';
   return (
     <SelectRow
-      ref={(node: any) => {
-        ctx.listItemsRef.current[index] = node;
+      ref={(node: TamaguiElement | null) => {
+        // oxlint-disable-next-line react/immutability -- ctx.listItemsRef is a ref object owned by the parent; registering the row element is the point of a callback ref
+        ctx.listItemsRef.current[index] = node instanceof HTMLElement ? node : null;
       }}
       {...ctx.getItemProps({
         onKeyDown(event: KeyboardEvent) {
@@ -386,21 +463,14 @@ const SelectItem = memo(function SelectItem({
             if (event.key === 'Enter' || event.code === 'Enter' || !ctx.multiple) {
               ctx.setOpen(false);
             }
-          } else if (isDown(event.key) || isUp(event.key)) {
+          } else if (isDownKey(event.key) || isUpKey(event.key)) {
             event.preventDefault();
             event.stopPropagation();
             ctx.setKbNav(true);
             if (optionCount === 0) {
               return;
             }
-            const nextIndex = isDown(event.key)
-              ? index + 1 >= optionCount
-                ? 0
-                : index + 1
-              : index - 1 < 0
-                ? optionCount - 1
-                : index - 1;
-            setActiveIndex(nextIndex);
+            setActiveIndex(stepIndex(index, isDownKey(event.key), optionCount));
             setControlledScrolling(true);
           }
         },
@@ -416,29 +486,30 @@ const SelectItem = memo(function SelectItem({
           ctx.setKbNav(false);
           // A press on a mounted row is a new gesture, not the release that
           // opened this covering panel. Arm immediately, regardless of time.
+          // oxlint-disable-next-line react/immutability -- ref objects owned by the parent; event handlers flip them to arm selection
           ctx.allowMouseUpRef.current = true;
           ctx.allowSelectRef.current = true;
         },
         onMouseUp() {
           if (!ctx.allowMouseUpRef.current) {
+            // oxlint-disable-next-line react/immutability -- ref objects owned by the parent; event handlers flip them to arm selection
             ctx.allowMouseUpRef.current = true;
             ctx.allowSelectRef.current = true;
             return;
           }
-          if (!ctx.multiple) {
-            if (ctx.allowSelectRef.current) {
-              ctx.handleSelect(index);
-            }
+          if (!ctx.multiple && ctx.allowSelectRef.current) {
+            ctx.handleSelect(index);
           }
-          if (ctx.selectTimeoutRef.current) {
+          if (ctx.selectTimeoutRef.current !== null) {
             clearTimeout(ctx.selectTimeoutRef.current);
           }
           ctx.selectTimeoutRef.current = setTimeout(() => {
             ctx.allowSelectRef.current = true;
-          });
+          }, 0);
         },
       })}
       {...selectItemRingProps(Boolean(isActive), ctx.kbNav)}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a styled View row inside a floating listbox; a native <option> cannot be styled or placed outside <select>
       role="option"
       tabIndex={-1}
       selected={isSelected}
@@ -458,16 +529,12 @@ const SelectItem = memo(function SelectItem({
       {...(suppressHover
         ? {
             hoverStyle: {
-              backgroundColor: isActive
-                ? formInputColors.background.focus
-                : isSelected
-                  ? formInputColors.background.base
-                  : 'transparent',
+              backgroundColor: rowBackground(isActive === true, isSelected),
             },
           }
         : {
             hoverStyle: {
-              backgroundColor: isSelected ? formInputColors.background.base : formInputColors.background.focus,
+              backgroundColor: hoverBackground(isSelected),
             },
           })}
       {...transitionProps(ctx.knobProps.transition)}>
@@ -479,7 +546,12 @@ const SelectItem = memo(function SelectItem({
         flex={1}>
         {option.label}
       </Text>
-      {isSelected && <CheckIcon size={14} color={ctx.markColor} />}
+      {isSelected && (
+        <CheckIcon
+          size={14}
+          color={ctx.markColor}
+        />
+      )}
     </SelectRow>
   );
 });
@@ -488,23 +560,24 @@ const SelectItem = memo(function SelectItem({
 
 interface FloatingSelectCoreProps {
   options: SelectOption[];
-  value: string | string[] | undefined;
+  value: SelectValue;
   onValueChange?: (value: string | string[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: (...args: never[]) => void;
   placeholder: string;
   disabled?: boolean;
   id?: string;
   'aria-label'?: string;
   /** When true, FieldLayout rendered `${id}-label` — wire aria-labelledby. */
   hasLabel?: boolean;
-  knobProps: ReturnType<typeof useResolvedKnobs>['knobProps'];
+  knobProps: SelectKnobProps;
   groupLabel?: string;
   multiple?: boolean;
   selectedOrder?: SelectedOrder;
   dismissible?: boolean;
   native?: boolean;
 }
-function FloatingSelectCore({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one cohesive floating-listbox state machine (positioning, drag-scroll, typeahead, keyboard); splitting it would scatter refs that must stay in lock-step
+const FloatingSelectCore = ({
   options,
   value,
   onValueChange,
@@ -519,7 +592,8 @@ function FloatingSelectCore({
   multiple,
   selectedOrder,
   dismissible,
-}: FloatingSelectCoreProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component-level note: positioning and keyboard handling share state
+}: FloatingSelectCoreProps) => {
   const hydrationTouch = useTouchSurface();
   const inTableCell = useIsInTableCell();
   const describedBy = useFieldDescribedBy();
@@ -539,8 +613,7 @@ function FloatingSelectCore({
     if (!multiple) {
       return [];
     }
-    const vals = Array.isArray(value) ? value : value ? [value] : [];
-    return [...vals].sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
+    return toValueArray(value).toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
   }, [multiple, value, getLabel]);
 
   // Group options for rendering with headers
@@ -562,8 +635,7 @@ function FloatingSelectCore({
       if (!multiple) {
         return;
       }
-      const current = Array.isArray(value) ? value : value ? [value] : [];
-      const next = current.filter((v) => v !== valueToRemove);
+      const next = toValueArray(value).filter((v) => v !== valueToRemove);
       onValueChange?.(next);
     },
     [multiple, value, onValueChange],
@@ -571,14 +643,17 @@ function FloatingSelectCore({
 
   const textColor = knobProps.textAccentColor;
   const markColor = useSelectedMarkColor();
+  const hasChips = multiple === true && selectedValues.length > 0;
+  const chipAlign = hasChips ? 'center' : 'flex-start';
 
-  const listItemsRef = useRef<Array<HTMLElement | null>>([]);
-  const listContentRef = useRef<Array<string | null>>(options.map((option) => option.label));
+  const listItemsRef = useRef<(HTMLElement | null)[]>([]);
+  // oxlint-disable-next-line react-doctor/rerender-lazy-ref-init -- cheap map over the options; the effect below keeps it current
+  const listContentRef = useRef<(string | null)[]>(options.map((option) => option.label));
   const allowSelectRef = useRef(false);
   const allowMouseUpRef = useRef(true);
   const selectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef({ isTyping: false });
-  const overlayStyle = useRef<Record<string, any> | null>(null);
+  const overlayStyle = useRef<OverlayStyle | null>(null);
 
   useEffect(() => {
     listContentRef.current = options.map((option) => option.label);
@@ -590,8 +665,7 @@ function FloatingSelectCore({
       sortedOptionsRef.current = options;
       return;
     }
-    const selected = Array.isArray(value) ? value : value ? [value] : [];
-    sortedOptionsRef.current = orderOptionsBySelected(options, selected, selectedOrder);
+    sortedOptionsRef.current = orderOptionsBySelected(options, toValueArray(value), selectedOrder);
   }, [options, value, multiple, selectedOrder]);
 
   const programmaticScrollRef = useRef(0);
@@ -623,62 +697,71 @@ function FloatingSelectCore({
     },
   });
 
+  const { refs: panelRefs, triggerRef, initializingRef, arrowScrollDirRef, updateArrows, placement } = panel;
+
   const { scrollRef: dragScrollRef, dragProps } = useDragScroll({
     direction: 'vertical',
     onDragEnd: () => {
       // The following mouseup finishes scrolling; it must not pick a row.
       allowSelectRef.current = false;
       allowMouseUpRef.current = false;
-      if (selectTimeoutRef.current) {
+      if (selectTimeoutRef.current !== null) {
         clearTimeout(selectTimeoutRef.current);
       }
       selectTimeoutRef.current = setTimeout(() => {
         allowSelectRef.current = true;
         allowMouseUpRef.current = true;
-      });
+      }, 0);
     },
   });
 
   // Sync drag scroll ref with floating ref
   useEffect(() => {
-    if (panel.refs.floating.current) {
-      dragScrollRef.current = panel.refs.floating.current;
+    if (panelRefs.floating.current) {
+      dragScrollRef.current = panelRefs.floating.current;
     }
-  }, [panel.refs.floating.current, dragScrollRef]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the floating node itself: it is attached after mount, and a ref's .current is the only signal
+  }, [panelRefs.floating.current, dragScrollRef]);
 
   useEffect(() => {
     if (open) {
-      setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- the highlighted row must reset to the selection whenever the listbox opens; open is driven by floating-ui so there is no event to hang this on
+      setActiveIndex(Math.max(selectedIndex, 0));
     } else {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- clearing keyboard highlight state when the listbox closes
       setActiveIndex(null);
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- same close-time reset as the highlight above
       setControlledScrolling(false);
     }
   }, [open, selectedIndex]);
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one imperative pass that pins/grows the overlay against the viewport; the branches share many locals
   const repositionOverlay = useCallback(() => {
-    const dropdownElement = panel.refs.floating.current;
-    const selectedItemIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    const dropdownElement = panelRefs.floating.current;
+    const selectedItemIndex = Math.max(selectedIndex, 0);
     const selectedItem = listItemsRef.current[selectedItemIndex];
-    const trigger = panel.triggerRef.current;
+    const trigger = triggerRef.current;
     if (!dropdownElement || !selectedItem || !trigger) {
       return;
     }
 
-    const isInitial = panel.initializingRef.current;
+    const isInitial = initializingRef.current;
     if (isInitial) {
       dropdownElement.style.transition = 'none';
     }
 
     if (pinnedTopRef.current === 0 && pinnedHeightRef.current === 0) {
-      programmaticScrollRef.current++;
+      programmaticScrollRef.current += 1;
       dropdownElement.scrollTop = 0;
     }
 
     const triggerBounds = trigger.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const computedStyle = getComputedStyle(dropdownElement);
-    const borderTopWidth = parseFloat(computedStyle.borderTopWidth) || 0;
-    const borderBottomWidth = parseFloat(computedStyle.borderBottomWidth) || 0;
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- parseFloat of a computed border width yields NaN for '' and must fall back to 0
+    const borderTopWidth = Number.parseFloat(computedStyle.borderTopWidth) || 0;
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- same NaN fallback as the top border
+    const borderBottomWidth = Number.parseFloat(computedStyle.borderBottomWidth) || 0;
     const totalBorderWidth = borderTopWidth + borderBottomWidth;
     const scrollContentHeight = dropdownElement.scrollHeight;
     const totalContentHeight = scrollContentHeight + totalBorderWidth;
@@ -692,10 +775,10 @@ function FloatingSelectCore({
     let idealTop: number;
     if (selectedIndex >= 0) {
       idealTop = triggerBounds.top - selectedItem.offsetTop;
-    } else if (panel.placement.startsWith('top')) {
+    } else if (placement.startsWith('top')) {
       idealTop = triggerBounds.bottom - totalContentHeight;
     } else {
-      idealTop = triggerBounds.top - (selectedItem.offsetTop ?? 0);
+      idealTop = triggerBounds.top - selectedItem.offsetTop;
     }
     const idealBottom = idealTop + totalContentHeight;
     const pinnedTop = Math.max(panelViewportPadding, idealTop);
@@ -735,11 +818,7 @@ function FloatingSelectCore({
     // When grown but content is shorter than viewport: anchor dropdown to bottom (gap above), dropup to top (gap below)
     const availableViewport = viewportHeight - 2 * panelViewportPadding;
     if ((grownRef.current || growUpOnlyRef.current || growDownOnlyRef.current) && height < availableViewport) {
-      if (panel.placement.startsWith('top')) {
-        top = panelViewportPadding;
-      } else {
-        top = viewportHeight - panelViewportPadding - height;
-      }
+      top = placement.startsWith('top') ? panelViewportPadding : viewportHeight - panelViewportPadding - height;
     }
 
     const cachedOverlayStyle = overlayStyle.current;
@@ -760,7 +839,7 @@ function FloatingSelectCore({
         const neededScroll = top + selectedItem.offsetTop - triggerBounds.top;
         const clampedScrollTop = Math.max(0, Math.min(neededScroll, maxScrollTop));
         if (Math.abs(dropdownElement.scrollTop - clampedScrollTop) > 0.5) {
-          programmaticScrollRef.current++;
+          programmaticScrollRef.current += 1;
           dropdownElement.scrollTop = clampedScrollTop;
         }
         if (Math.abs(neededScroll - clampedScrollTop) > 0.5) {
@@ -776,23 +855,20 @@ function FloatingSelectCore({
       }
     }
 
-    panel.initializingRef.current = false;
+    initializingRef.current = false;
 
     void dropdownElement.offsetHeight;
     if (isInitial) {
       dropdownElement.style.transition = panelTransition;
     }
     requestAnimationFrame(() => {
-      if (dropdownElement) {
-        panel.updateArrows(dropdownElement);
-        requestAnimationFrame(() => {
-          if (dropdownElement) {
-            panel.updateArrows(dropdownElement);
-          }
-        });
-      }
+      updateArrows(dropdownElement);
+      requestAnimationFrame(() => {
+        updateArrows(dropdownElement);
+      });
     });
-  }, [selectedIndex, panel.refs, panel.updateArrows, panel.placement, options.length]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- options.length re-pins the overlay when the row count changes even though the body never reads it
+  }, [selectedIndex, panelRefs, updateArrows, placement, options.length, triggerRef, initializingRef]);
 
   repositionRef.current = repositionOverlay;
 
@@ -809,7 +885,7 @@ function FloatingSelectCore({
         setActiveIndex(index);
       } else {
         const matchedOption = options[index];
-        if (matchedOption) {
+        if (matchedOption != null) {
           onValueChange?.(matchedOption.value);
         }
       }
@@ -858,20 +934,22 @@ function FloatingSelectCore({
         allowMouseUpRef.current = true;
       }, 300);
       return () => {
-        if (selectTimeoutRef.current) {
+        if (selectTimeoutRef.current !== null) {
           clearTimeout(selectTimeoutRef.current);
         }
       };
     }
     allowSelectRef.current = false;
     allowMouseUpRef.current = true;
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on the open path; a bare return trips consistent-return
+    return undefined;
   }, [open]);
 
   useEffect(() => {
     if (!open || activeIndex == null) {
       return;
     }
-    const floatingElement = panel.refs.floating.current;
+    const floatingElement = panelRefs.floating.current;
     const itemElement = listItemsRef.current[activeIndex];
     if (controlledScrolling && floatingElement && itemElement) {
       const containerRect = floatingElement.getBoundingClientRect();
@@ -885,10 +963,10 @@ function FloatingSelectCore({
     requestAnimationFrame(() => {
       listItemsRef.current[activeIndex]?.focus({ preventScroll: true });
       if (floatingElement) {
-        panel.updateArrows(floatingElement);
+        updateArrows(floatingElement);
       }
     });
-  }, [open, controlledScrolling, activeIndex, panel.refs, panel.updateArrows]);
+  }, [open, controlledScrolling, activeIndex, panelRefs, updateArrows]);
 
   const lastSelectedIndexRef = useRef<number | null>(null);
   const valueRef = useRef(value);
@@ -898,12 +976,11 @@ function FloatingSelectCore({
     (index: number, event?: MouseEvent) => {
       const displayOptions = sortedOptionsRef.current;
       const option = displayOptions[index];
-      if (!option) {
+      if (option == null) {
         return;
       }
       if (multiple) {
-        const latestValue = valueRef.current;
-        const current = Array.isArray(latestValue) ? latestValue : latestValue ? [latestValue] : [];
+        const current = toValueArray(valueRef.current);
         if (event?.shiftKey && lastSelectedIndexRef.current != null) {
           const from = Math.min(lastSelectedIndexRef.current, index);
           const to = Math.max(lastSelectedIndexRef.current, index);
@@ -930,13 +1007,15 @@ function FloatingSelectCore({
     (option: SelectOption) => {
       const displayOptions = sortedOptionsRef.current;
       const index = displayOptions.findIndex((o) => o.value === option.value);
-      if (index >= 0) {
+      if (index !== -1) {
         handleSelect(index);
       }
     },
     [handleSelect],
   );
 
+  // SAFETY: the empty bag is replaced with the full handler set on the next line, before any row can read it.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- placeholder until the assignment below
   const handlersRef = useRef({} as SelectItemHandlers);
   handlersRef.current = {
     getItemProps,
@@ -958,25 +1037,25 @@ function FloatingSelectCore({
   const referenceProps = getReferenceProps({
     ref: panel.setReferenceRef,
     onKeyDown(event: KeyboardEvent) {
-      if (
-        event.key === 'Enter' ||
-        event.code === 'Space' ||
-        event.key === ' ' ||
-        event.key === 'ArrowDown' ||
-        event.key === 'ArrowUp' ||
-        event.key === 'j' ||
-        event.key === 'k'
-      ) {
+      if (isTriggerOpenKey(event)) {
         event.preventDefault();
         setKbNav(true);
         setOpen(true);
-        setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+        setActiveIndex(Math.max(selectedIndex, 0));
       }
     },
   });
 
-  const boxEventProps: Record<string, any> = {};
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- floating-ui's prop getter returns an open bag of DOM handlers and aria attributes; only the subset forwarded to the trigger is copied
+  const boxEventProps: Record<string, unknown> = {};
+  // SAFETY: getReferenceProps returns plain DOM event handlers; the three below are the only ones the trigger wraps.
+  const referenceHandlers = referenceProps as {
+    onFocus?: (e: FocusEvent<HTMLDivElement>) => void;
+    onBlur?: (e: FocusEvent<HTMLDivElement>) => void;
+    onPointerDown?: (e: PointerEvent<HTMLDivElement>) => void;
+  };
   for (const [key, val] of Object.entries(referenceProps)) {
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- prop-bag values are untyped; only function values are event handlers to forward
     if (key === 'ref' || typeof val === 'function') {
       boxEventProps[key] = val;
     }
@@ -989,36 +1068,39 @@ function FloatingSelectCore({
   boxEventProps['aria-haspopup'] = 'listbox';
   boxEventProps['aria-expanded'] = open;
   boxEventProps['aria-autocomplete'] = 'none';
-  if (id) {
+  if (hasText(id)) {
     boxEventProps.id = id;
   }
-  if (ariaLabel) {
+  if (hasText(ariaLabel)) {
     boxEventProps['aria-label'] = ariaLabel;
   }
-  // A labelled trigger is already named: the sibling Label wires
+  // A labeled trigger is already named: the sibling Label wires
   // `aria-labelledby` onto this id itself, so naming it again here doubles the
   // spoken name. Standalone triggers (no label) still need one (axe button-name).
-  else if (!(hasLabel && id) && placeholder) {
+  else if (!(hasLabel === true && hasText(id)) && placeholder) {
     boxEventProps['aria-label'] = placeholder;
   }
-  if (describedBy) {
+  if (hasText(describedBy)) {
     boxEventProps['aria-describedby'] = describedBy;
   }
 
   const handleScroll = useCallback(
     (event: UIEvent) => {
-      const el = event.target as HTMLElement;
-      panel.updateArrows(el);
-      if (panel.initializingRef.current || programmaticScrollRef.current > 0) {
+      const el = event.target;
+      if (!(el instanceof HTMLElement)) {
+        return;
+      }
+      updateArrows(el);
+      if (initializingRef.current || programmaticScrollRef.current > 0) {
         if (programmaticScrollRef.current > 0) {
-          programmaticScrollRef.current--;
+          programmaticScrollRef.current -= 1;
         }
         lastScrollTopRef.current = el.scrollTop;
         return;
       }
-      const arrowDir = panel.arrowScrollDirRef.current;
-      if (arrowDir) {
-        panel.arrowScrollDirRef.current = null;
+      const arrowDir = arrowScrollDirRef.current;
+      if (arrowDir !== null) {
+        arrowScrollDirRef.current = null;
         lastScrollTopRef.current = el.scrollTop;
         if (arrowDir === 'down') {
           growUpOnlyRef.current = true;
@@ -1035,27 +1117,47 @@ function FloatingSelectCore({
         repositionOverlay();
       }
     },
-    [panel.updateArrows, repositionOverlay],
+    [updateArrows, repositionOverlay, initializingRef, arrowScrollDirRef],
   );
+
+  const captureFocusProps = { onFocusCapture: onTriggerFocus };
+  const pinnedOverlay = overlayStyle.current;
+  const floatingStyle = panel.floatingStyleRef.current;
+  const multipleOptions = sortedOptionsRef.current;
+  const multipleRows = multipleOptions.map((option, i) => (
+    <SelectItem
+      key={option.value}
+      option={option}
+      index={i}
+      isSelected={isSelected(option.value)}
+      isActive={i === activeIndex}
+      suppressHover={activeIndex != null}
+      handlers={handlersRef}
+      setActiveIndex={setActiveIndex}
+      setControlledScrolling={setControlledScrolling}
+      optionCount={multipleOptions.length}
+    />
+  ));
+  const pinnedMaxHeightStyle = pinnedOverlay === null ? undefined : { maxHeight: pinnedOverlay.maxHeight };
 
   return (
     <>
       <InputParts.Box
         {...boxEventProps}
         {...selectTriggerRingProps(kbTrigger, open)}
-        onFocus={(e: any) => {
-          boxEventProps.onFocus?.(e);
+        onFocus={(e: FocusEvent<HTMLDivElement>) => {
+          referenceHandlers.onFocus?.(e);
           onTriggerFocus();
         }}
         // XGroup types omit capture-phase handlers; forwarded to the DOM node at
         // runtime (same pattern as AdaptivePopup/FloatingPanel onClickCapture).
-        {...({ onFocusCapture: onTriggerFocus } as Record<string, unknown>)}
-        onBlur={(e: any) => {
-          boxEventProps.onBlur?.(e);
+        {...captureFocusProps}
+        onBlur={(e: FocusEvent<HTMLDivElement>) => {
+          referenceHandlers.onBlur?.(e);
           onTriggerBlur();
         }}
-        onPointerDown={(e: any) => {
-          boxEventProps.onPointerDown?.(e);
+        onPointerDown={(e: PointerEvent<HTMLDivElement>) => {
+          referenceHandlers.onPointerDown?.(e);
           onTriggerPointerDown();
         }}
         data-testid="select-trigger"
@@ -1068,33 +1170,29 @@ function FloatingSelectCore({
         size={knobProps.sizeToken}
         {...pickerTriggerContract(knobProps.control.height)}
         paddingHorizontal={knobProps.panelPadding.padding}
-        {...(inTableCell
-          ? // Chromeless in cells.
-            {}
-          : {
-              borderWidth: knobProps.borderRadius.borderWidth,
-            })}>
+        // Chromeless in cells.
+        {...(inTableCell ? {} : { borderWidth: knobProps.borderRadius.borderWidth })}>
         <SyncKeyboardFocusToBox active={kbTrigger && !open} />
         <View
           flex={1}
           // The Box owns the same horizontal inset as the option rows.
           minWidth={0}
           paddingVertical="$2"
-          justifyContent={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}
-          alignItems={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}>
-          {multiple && selectedValues.length > 0 ? (
+          justifyContent={chipAlign}
+          alignItems={chipAlign}>
+          {hasChips ? (
             <View
               flexDirection="row"
               flexWrap="nowrap"
               gap="$1.5"
               alignItems="center"
-              maxHeight={getFieldHeight(knobProps.sizeToken as SizeTokens, 1, hydrationTouch) * 0.75}
+              maxHeight={getFieldHeight(knobProps.sizeToken, 1, hydrationTouch) * 0.75}
               overflow="hidden"
               overflowX="auto">
               {selectedValues.map((v) => (
                 <Chip
                   key={v}
-                  size={({ $3: '$2', $4: '$3', $5: '$4' }[knobProps.sizeToken] ?? '$3') as ChipProps['size']}
+                  size={chipSizeForControl(knobProps.sizeToken)}
                   color="gray"
                   onDismiss={
                     dismissible && !disabled
@@ -1119,14 +1217,22 @@ function FloatingSelectCore({
             </Text>
           )}
         </View>
-        <View flexShrink={0} alignSelf="center">
-          <CaretDownIcon size={16} color={glyphColor} />
+        <View
+          flexShrink={0}
+          alignSelf="center">
+          <CaretDownIcon
+            size={16}
+            color={glyphColor}
+          />
         </View>
       </InputParts.Box>
 
       {panel.mounted && (
         <PanelPortal anchor={panel.triggerRef.current}>
-          <FloatingFocusManager context={panel.context} modal={false} initialFocus={-1}>
+          <FloatingFocusManager
+            context={panel.context}
+            modal={false}
+            initialFocus={-1}>
             <YStack
               outlineWidth={0}
               pointerEvents={panel.visible ? 'auto' : 'none'}
@@ -1134,13 +1240,13 @@ function FloatingSelectCore({
                 ref: panel.refs.setFloating,
                 style: {
                   position: panel.strategy,
-                  top: overlayStyle.current?.top ?? panel.y ?? 0,
+                  top: pinnedOverlay?.top ?? panel.y ?? 0,
                   left: panel.x ?? 0,
-                  scrollbarWidth: 'none' as any,
+                  scrollbarWidth: 'none',
                   zIndex: zIndex.dropdown,
                   overflow: 'auto',
-                  ...panel.floatingStyleRef.current,
-                  ...(overlayStyle.current ? { maxHeight: overlayStyle.current.maxHeight } : {}),
+                  ...floatingStyle,
+                  ...pinnedMaxHeightStyle,
                   boxShadow: '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.04)',
                   opacity: panel.visible ? 1 : 0,
                   transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
@@ -1155,24 +1261,22 @@ function FloatingSelectCore({
                   if (count === 0) {
                     return;
                   }
-                  const isDown = e.key === 'ArrowDown' || e.key === 'j';
-                  const isUp = e.key === 'ArrowUp' || e.key === 'k';
-                  if (isDown) {
+                  if (isDownKey(e.key)) {
                     e.preventDefault();
                     e.stopPropagation();
                     setKbNav(true);
-                    setActiveIndex((prev) => (prev == null ? 0 : prev + 1 >= count ? 0 : prev + 1));
-                  } else if (isUp) {
+                    setActiveIndex((prev) => (prev == null ? 0 : stepIndex(prev, true, count)));
+                  } else if (isUpKey(e.key)) {
                     e.preventDefault();
                     e.stopPropagation();
                     setKbNav(true);
-                    setActiveIndex((prev) => (prev == null ? count - 1 : prev - 1 < 0 ? count - 1 : prev - 1));
+                    setActiveIndex((prev) => (prev == null ? count - 1 : stepIndex(prev, false, count)));
                   } else if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
                     e.preventDefault();
                     e.stopPropagation();
                     if (activeIndex != null) {
                       const option = flatOptions[activeIndex];
-                      if (option) {
+                      if (option != null) {
                         handleSelectByOption(option);
                       }
                       if (e.key === 'Enter' || e.code === 'Enter' || !multiple) {
@@ -1198,26 +1302,15 @@ function FloatingSelectCore({
                 visible={panel.arrowUp}
                 arrowScrollDirRef={panel.arrowScrollDirRef}
               />
-              {groupLabel && (
-                <GroupHeader color={textColor} paddingHorizontal={knobProps.panelPadding.padding}>
+              {hasText(groupLabel) && (
+                <GroupHeader
+                  color={textColor}
+                  paddingHorizontal={knobProps.panelPadding.padding}>
                   {groupLabel}
                 </GroupHeader>
               )}
               {multiple
-                ? sortedOptionsRef.current.map((option, i) => (
-                    <SelectItem
-                      key={option.value}
-                      option={option}
-                      index={i}
-                      isSelected={isSelected(option.value)}
-                      isActive={i === activeIndex}
-                      suppressHover={activeIndex != null}
-                      handlers={handlersRef}
-                      setActiveIndex={setActiveIndex}
-                      setControlledScrolling={setControlledScrolling}
-                      optionCount={sortedOptionsRef.current.length}
-                    />
-                  ))
+                ? multipleRows
                 : groupedItems.map((item) =>
                     item.type === 'header' ? (
                       <GroupHeader
@@ -1253,11 +1346,12 @@ function FloatingSelectCore({
       )}
     </>
   );
-}
+};
 
 // ── Native Select (Sheet-based for iOS/Android) ──────────────
 
-function NativeSelectCore({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- sheet + iOS action-sheet + web listbox variants share one set of selection state; splitting would duplicate the keyboard/selection wiring
+const NativeSelectCore = ({
   options,
   value,
   onValueChange,
@@ -1273,7 +1367,8 @@ function NativeSelectCore({
   selectedOrder,
   dismissible,
   native,
-}: FloatingSelectCoreProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component-level note: three presentations of one selection state machine
+}: FloatingSelectCoreProps) => {
   const hydrationTouch = useTouchSurface();
   const describedBy = useFieldDescribedBy();
   const fieldA11y = useFieldA11y();
@@ -1281,13 +1376,14 @@ function NativeSelectCore({
   const glyphColor = useGlyphColor();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
-  const listRef = useRef<HTMLElement | null>(null);
+  const listRef = useRef<TamaguiElement | null>(null);
   const listboxId = `${id}-listbox`;
   const optionId = (index: number) => `${listboxId}-option-${index}`;
   const { kbTrigger, kbNav, setKbNav, onTriggerFocus, onTriggerBlur, onTriggerPointerDown } = useSelectKeyboardRing();
 
   const labelCacheRef = useRef<Map<string, string>>(new Map());
   for (const o of options) {
+    // oxlint-disable-next-line react/refs -- the label cache must absorb the current options in this same render so chips for values that left `options` keep their label
     labelCacheRef.current.set(o.value, o.label);
   }
   const getLabel = useCallback((v: string) => labelCacheRef.current.get(v) ?? v, []);
@@ -1296,8 +1392,8 @@ function NativeSelectCore({
     if (!multiple) {
       return [];
     }
-    const vals = Array.isArray(value) ? value : value ? [value] : [];
-    return [...vals].sort((a, b) => getLabel(a).localeCompare(getLabel(b)));
+    // oxlint-disable-next-line react/refs -- getLabel reads the render-time label cache above
+    return toValueArray(value).toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
   }, [multiple, value, getLabel]);
 
   const selectedOption = useMemo(
@@ -1315,8 +1411,7 @@ function NativeSelectCore({
       if (!multiple) {
         return;
       }
-      const current = Array.isArray(value) ? value : value ? [value] : [];
-      const next = current.filter((v) => v !== valueToRemove);
+      const next = toValueArray(value).filter((v) => v !== valueToRemove);
       onValueChange?.(next);
     },
     [multiple, value, onValueChange],
@@ -1326,19 +1421,21 @@ function NativeSelectCore({
     if (!multiple) {
       return options;
     }
-    const selected = Array.isArray(value) ? value : value ? [value] : [];
-    return orderOptionsBySelected(options, selected, selectedOrder);
+    return orderOptionsBySelected(options, toValueArray(value), selectedOrder);
   }, [options, value, multiple, selectedOrder]);
 
   const textColor = knobProps.textAccentColor;
   const markColor = useSelectedMarkColor();
+  const hasChips = multiple === true && selectedValues.length > 0;
+  const chipAlign = hasChips ? 'center' : 'flex-start';
   const sheetTransition = knobProps.transition ?? 'medium';
   const hasScrollableContent = displayOptions.length > 6;
 
   const selectedIndex = displayOptions.findIndex((o) => o.value === value);
   useEffect(() => {
     if (open) {
-      setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates, react/set-state-in-effect -- the highlighted row must reset to the selection each time the sheet opens; open is driven by FloatingPanel so there is no event to hang this on
+      setActiveIndex(selectedIndex === -1 ? 0 : selectedIndex);
       requestAnimationFrame(() => listRef.current?.focus());
     }
   }, [open, selectedIndex]);
@@ -1346,7 +1443,7 @@ function NativeSelectCore({
   const handleSelect = useCallback(
     (optionValue: string) => {
       if (multiple) {
-        const current = Array.isArray(value) ? value : value ? [value] : [];
+        const current = toValueArray(value);
         const next = current.includes(optionValue)
           ? current.filter((v) => v !== optionValue)
           : [...current, optionValue];
@@ -1366,16 +1463,14 @@ function NativeSelectCore({
       if (count === 0) {
         return;
       }
-      const isDown = e.key === 'ArrowDown' || e.key === 'j';
-      const isUp = e.key === 'ArrowUp' || e.key === 'k';
-      if (isDown) {
+      if (isDownKey(e.key)) {
         e.preventDefault();
         setKbNav(true);
         setActiveIndex((prev) => {
           const next = prev == null ? 0 : prev + 1;
           return next >= count ? 0 : next;
         });
-      } else if (isUp) {
+      } else if (isUpKey(e.key)) {
         e.preventDefault();
         setKbNav(true);
         setActiveIndex((prev) => {
@@ -1387,7 +1482,7 @@ function NativeSelectCore({
         e.stopPropagation();
         if (activeIndex != null) {
           const option = displayOptions[activeIndex];
-          if (option) {
+          if (option != null) {
             handleSelect(option.value);
           }
         }
@@ -1395,6 +1490,24 @@ function NativeSelectCore({
     },
     [displayOptions, activeIndex, handleSelect, setKbNav],
   );
+
+  const listboxDomProps = {
+    id: listboxId,
+    role: 'listbox' as const,
+    'aria-label': ariaLabel ?? fieldA11y?.label ?? placeholder,
+    'aria-multiselectable': multiple === true ? true : undefined,
+    'aria-hidden': !open,
+    'aria-activedescendant':
+      activeIndex != null && displayOptions[activeIndex] != null ? optionId(activeIndex) : undefined,
+    tabIndex: open ? 0 : -1,
+    onKeyDown: handleListKeyDown,
+    onFocus: () => {
+      setKbNav(wasKeyboardFocus());
+    },
+  };
+  // SAFETY: these are DOM-only listbox attributes; the bag is only spread when isWeb, where View renders a div that accepts them.
+  // oxlint-disable-next-line anti-slop/no-known-value-widening -- RN's Role type omits listbox, so the typed props would not compile on View
+  const webListboxProps = isWeb ? (listboxDomProps as DomAttributeBag) : undefined;
 
   const listContent = (
     // Native sheet path: do NOT set flex={1} — inside FloatingPanel's
@@ -1404,26 +1517,11 @@ function NativeSelectCore({
     // accessibility element, which merges every option into one unactionable
     // VoiceOver blob.
     <View
-      ref={listRef as any}
+      ref={listRef}
       // React Native's Role type omits listbox; these are DOM-only attributes.
-      {...(isWeb
-        ? ({
-            id: listboxId,
-            role: 'listbox' as const,
-            'aria-label': ariaLabel ?? fieldA11y?.label ?? placeholder,
-            'aria-multiselectable': multiple || undefined,
-            'aria-hidden': !open,
-            'aria-activedescendant':
-              activeIndex != null && displayOptions[activeIndex] ? optionId(activeIndex) : undefined,
-            tabIndex: open ? 0 : -1,
-            onKeyDown: handleListKeyDown,
-            onFocus: () => {
-              setKbNav(wasKeyboardFocus());
-            },
-          } as Record<string, unknown>)
-        : undefined)}
+      {...webListboxProps}
       outlineStyle="none">
-      {groupLabel && (
+      {hasText(groupLabel) && (
         <Text
           paddingHorizontal={knobProps.panelPadding.padding}
           paddingVertical="$2"
@@ -1468,22 +1566,10 @@ function NativeSelectCore({
                 : undefined
             }
             {...(isWeb ? selectItemRingProps(active, kbNav) : undefined)}
-            hoverStyle={
-              activeIndex != null
-                ? {
-                    backgroundColor: active
-                      ? formInputColors.background.focus
-                      : selected
-                        ? formInputColors.background.base
-                        : 'transparent',
-                  }
-                : {
-                    backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
-                  }
-            }
-            backgroundColor={
-              active ? formInputColors.background.focus : selected ? formInputColors.background.base : 'transparent'
-            }
+            hoverStyle={{
+              backgroundColor: activeIndex == null ? hoverBackground(selected) : rowBackground(active, selected),
+            }}
+            backgroundColor={rowBackground(active, selected)}
             pressStyle={{ backgroundColor: formInputColors.background.focus }}
             // Native: parent RNPressable owns the hit; disable child stealing.
             pointerEvents={isWeb ? undefined : 'none'}>
@@ -1495,7 +1581,12 @@ function NativeSelectCore({
               flex={1}>
               {option.label}
             </Text>
-            {selected && <CheckIcon size={14} color={markColor} />}
+            {selected && (
+              <CheckIcon
+                size={14}
+                color={markColor}
+              />
+            )}
           </View>
         );
         if (isWeb) {
@@ -1518,11 +1609,9 @@ function NativeSelectCore({
     </View>
   );
 
-  const triggerValueText = multiple
-    ? selectedValues.length > 0
-      ? selectedValues.map(getLabel).join(', ')
-      : placeholder
-    : (selectedOption?.label ?? placeholder);
+  // oxlint-disable-next-line react/refs -- getLabel reads the render-time label cache
+  const multipleText = selectedValues.length > 0 ? selectedValues.map(getLabel).join(', ') : placeholder;
+  const triggerValueText = multiple ? multipleText : (selectedOption?.label ?? placeholder);
 
   if (shouldUseIosNativeSelect({ native, multiple, isWeb, os: Platform.OS })) {
     const openNative = () => {
@@ -1559,14 +1648,15 @@ function NativeSelectCore({
           {...pickerTriggerContract(knobProps.control.height)}
           paddingHorizontal={knobProps.panelPadding.padding}
           pointerEvents="none"
-          {...(inTableCell
-            ? {}
-            : {
-                borderWidth: knobProps.borderRadius.borderWidth,
-              })}
+          {...(inTableCell ? {} : { borderWidth: knobProps.borderRadius.borderWidth })}
           data-testid="select-trigger"
           id={id}>
-          <View flex={1} minWidth={0} paddingVertical="$2" justifyContent="flex-start" alignItems="flex-start">
+          <View
+            flex={1}
+            minWidth={0}
+            paddingVertical="$2"
+            justifyContent="flex-start"
+            alignItems="flex-start">
             <Text
               {...knobProps.controlType}
               fontFamily={knobProps.body.fontFamily}
@@ -1576,7 +1666,9 @@ function NativeSelectCore({
               {triggerValueText}
             </Text>
           </View>
-          <View flexShrink={0} alignSelf="center">
+          <View
+            flexShrink={0}
+            alignSelf="center">
             <CaretDownIcon size={16} />
           </View>
         </InputParts.Box>
@@ -1605,11 +1697,7 @@ function NativeSelectCore({
           size={knobProps.sizeToken}
           {...pickerTriggerContract(knobProps.control.height)}
           paddingHorizontal={knobProps.panelPadding.padding}
-          {...(inTableCell
-            ? {}
-            : {
-                borderWidth: knobProps.borderRadius.borderWidth,
-              })}
+          {...(inTableCell ? {} : { borderWidth: knobProps.borderRadius.borderWidth })}
           {...(isWeb ? selectTriggerRingProps(kbTrigger, open) : undefined)}
           data-testid="select-trigger"
           id={id}
@@ -1626,10 +1714,10 @@ function NativeSelectCore({
                 'aria-controls': open ? listboxId : undefined,
                 'aria-autocomplete': 'none',
                 // Standalone (no label): fall back to placeholder so the
-                // trigger still has a name (axe button-name). Labelled: the
+                // trigger still has a name (axe button-name). Labeled: the
                 // sibling Label wires `aria-labelledby` onto this id itself —
                 // naming it here too doubles the spoken name.
-                'aria-label': ariaLabel ?? (!hasLabel ? placeholder : undefined),
+                'aria-label': ariaLabel ?? (hasLabel ? undefined : placeholder),
                 'aria-describedby': describedBy,
                 tabIndex: disabled ? -1 : 0,
               }
@@ -1661,21 +1749,22 @@ function NativeSelectCore({
             // The Box owns the same horizontal inset as the option rows.
             minWidth={0}
             paddingVertical="$2"
-            justifyContent={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}
-            alignItems={multiple && selectedValues.length > 0 ? 'center' : 'flex-start'}>
-            {multiple && selectedValues.length > 0 ? (
+            justifyContent={chipAlign}
+            alignItems={chipAlign}>
+            {hasChips ? (
               <View
                 flexDirection="row"
                 flexWrap="nowrap"
                 gap="$1.5"
                 alignItems="center"
-                maxHeight={getFieldHeight(knobProps.sizeToken as SizeTokens, 1, hydrationTouch) * 0.75}
+                maxHeight={getFieldHeight(knobProps.sizeToken, 1, hydrationTouch) * 0.75}
                 overflow="hidden"
                 overflowX="auto">
+                {/* oxlint-disable-next-line react/refs -- getLabel reads the render-time label cache so chips keep labels for values that left `options` */}
                 {selectedValues.map((v) => (
                   <Chip
                     key={v}
-                    size={({ $3: '$2', $4: '$3', $5: '$4' }[knobProps.sizeToken] ?? '$3') as ChipProps['size']}
+                    size={chipSizeForControl(knobProps.sizeToken)}
                     color="gray"
                     onDismiss={
                       dismissible && !disabled
@@ -1699,23 +1788,29 @@ function NativeSelectCore({
               </Text>
             )}
           </View>
-          <View flexShrink={0} alignSelf="center">
-            <CaretDownIcon size={16} color={glyphColor} />
+          <View
+            flexShrink={0}
+            alignSelf="center">
+            <CaretDownIcon
+              size={16}
+              color={glyphColor}
+            />
           </View>
         </InputParts.Box>
       }
       scrollable={hasScrollableContent}
       disabled={disabled}
       contentPadding="none"
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TransitionProp also admits animation-config objects, which FloatingPanel's string-only transition cannot take
       transition={typeof sheetTransition === 'string' ? sheetTransition : 'medium'}>
       {listContent}
     </FloatingPanel>
   );
-}
+};
 
 // ── Select (public API) ──────────────────────────────────────
 
-export function Select({
+export const Select = ({
   name,
   form: formProp,
   validators,
@@ -1731,6 +1826,7 @@ export function Select({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored; both callbacks fire from emitValueChange
   onValueChange,
   onBlur,
   options,
@@ -1744,7 +1840,7 @@ export function Select({
   native,
   'aria-label': ariaLabel,
   ...rest
-}: SelectProps) {
+}: SelectProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site in renderSelectContent (same reconciliation as Switch).
   const emitValueChange = (val: string | string[]) => {
@@ -1760,9 +1856,10 @@ export function Select({
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   // Uncontrolled (no `value` prop, no form) still must reflect selections in
   // the trigger — callbacks alone leave the display frozen on the placeholder.
-  const [uncontrolledValue, setUncontrolledValue] = useState<string | string[] | undefined>(defaultValue);
+  const [uncontrolledValue, setUncontrolledValue] = useState<SelectValue>(defaultValue);
   const isControlled = value !== undefined;
   const hasLabel = Boolean(label);
+  const resolvedSize = sizeProp ?? knobProps.sizeToken;
 
   // Short single-select lists prefer RadioGroup.
   warnSelectTooFewOptions({
@@ -1774,22 +1871,26 @@ export function Select({
   const viewportGtSm = useViewportGtSm();
   // Sheet on native and below `$sm` (viewport < 640, OVERLAY_BREAKPOINT).
   // Floating from `$sm` up.
-  const effectiveGtSm = typeof window !== 'undefined' ? viewportGtSm : false;
+  const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
 
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <InputParts size={sizeProp || knobProps.sizeToken}>
-        {label && (
+      <InputParts size={resolvedSize}>
+        {hasLabel && (
           <Skeleton
             variant="text"
             width="30%"
             // Label bone tracks the recipe type channel (skeleton mirrors anatomy).
-            height={sizeRecipeForToken(String(sizeProp || knobProps.sizeToken)).fontSize}
+            height={sizeRecipeForToken(String(resolvedSize)).fontSize}
           />
         )}
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </InputParts>
     );
   }
@@ -1810,9 +1911,9 @@ export function Select({
         </Paragraph>
       );
     }
-    const sv = typeof selectValue === 'string' ? selectValue : undefined;
+    const sv = Array.isArray(selectValue) ? undefined : selectValue;
     const selectedOption = options.find((option) => option.value === sv);
-    const displayText = selectedOption?.label ?? (sv || '-');
+    const displayText = selectedOption?.label ?? (hasText(sv) ? sv : '-');
     return (
       <Paragraph
         fontSize={knobProps.sizeToken}
@@ -1832,8 +1933,8 @@ export function Select({
 
   const renderSelectContent = (
     selectValue: string | string[] | undefined,
-    handleValueChange?: (val: any) => void,
-    handleBlur?: (...args: any[]) => void,
+    handleValueChange?: (val: string | string[]) => void,
+    handleBlur?: (...args: never[]) => void,
   ) => {
     if (readOnly) {
       return renderReadOnly(selectValue);
@@ -1866,7 +1967,7 @@ export function Select({
     );
   };
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || !hasText(name)) {
     return (
       <FieldLayout
         id={id}
@@ -1876,12 +1977,12 @@ export function Select({
         helperText={helperText}
         required={required}
         size={sizeProp}
-        knobProps={knobProps as any}
+        knobProps={knobProps}
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}
         {...rest}>
-        <InputParts size={sizeProp || knobProps.sizeToken}>
+        <InputParts size={resolvedSize}>
           {renderSelectContent(value ?? uncontrolledValue, isControlled ? undefined : setUncontrolledValue, onBlur)}
         </InputParts>
       </FieldLayout>
@@ -1889,7 +1990,11 @@ export function Select({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
@@ -1901,15 +2006,15 @@ export function Select({
             helperText={helperText}
             required={required}
             size={sizeProp}
-            knobProps={knobProps as any}
+            knobProps={knobProps}
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}
             {...rest}>
-            <InputParts size={sizeProp || knobProps.sizeToken}>
+            <InputParts size={resolvedSize}>
               {renderSelectContent(
                 field.state.value,
                 (val) => {
-                  field.handleChange(val as any);
+                  field.handleChange(val);
                 },
                 mergeFieldHandler(field, 'handleBlur', onBlur),
               )}
@@ -1919,4 +2024,4 @@ export function Select({
       }}
     </Field>
   );
-}
+};

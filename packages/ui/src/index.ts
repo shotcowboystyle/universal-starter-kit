@@ -1,4 +1,7 @@
-export * from './Alert';
+import type { shorthands as _shorthands } from '@tamagui/shorthands';
+
+export { Alert } from './Alert';
+export type { AlertFrameProps, AlertIntent, AlertProps } from './Alert';
 export {
   SortableList,
   SortableHandle,
@@ -7,42 +10,514 @@ export {
   useSortableRows,
 } from './SortableList';
 export type { SortableListProps, SortableDisabledStyle, SortableSession, UseSortableRowsOptions } from './SortableList';
-export * from './Badge';
-export * from './Carousel';
-export * from './Chip';
-export * from './CopyField';
-export * from './DotIndicator';
-export * from './DropdownMenu';
-export * from './ContextMenu';
-export * from './Meter';
-export * from './ProgressSteps';
-export * from './TreeSelect';
-export * from './Quote';
-export * from './ThemePlayground';
-export * from './Skeleton';
-export * from './SkipLink';
-export * from './Toast';
-export * from './Video';
-export * from './feedback';
-export * from './actions';
-export * from './Wheel';
-export * from './ErrorBoundary/index';
-export * from './code/index';
+export { Badge } from './Badge';
+export type {
+  BadgeColor,
+  BadgeIndicatorProps,
+  BadgePosition,
+  BadgeProps,
+  BadgeVariant,
+  BadgeWrapperProps,
+} from './Badge';
+export { Carousel } from './Carousel';
+export type { CarouselContainerProps, CarouselProps, CarouselSlideProps } from './Carousel';
+export { Chip, ChipFrame, chipIconSize, ChipText, chipTextSize, chipTone } from './Chip';
+export type { ChipColor, ChipFrameProps, ChipProps, ChipSize, ChipTone, ChipVariant } from './Chip';
+export { CopyField } from './CopyField';
+export type { CopyFieldProps } from './CopyField';
+export { DotIndicator } from './DotIndicator';
+export type { DotIdiom, DotIndicatorProps, DotProps, DotsContainerProps, DotVariant } from './DotIndicator';
+export { DropdownMenu } from './DropdownMenu';
+export type {
+  DropdownMenuCheckboxItemProps,
+  DropdownMenuCloseAutoFocusEvent,
+  DropdownMenuContentProps,
+  DropdownMenuEntry,
+  DropdownMenuItemProps,
+  DropdownMenuItemSpec,
+  DropdownMenuLabelProps,
+  DropdownMenuPlacement,
+  DropdownMenuProps,
+  DropdownMenuRowProps,
+  DropdownMenuSeparatorProps,
+  DropdownMenuTriggerProps,
+} from './DropdownMenu';
+export { ContextMenu } from './ContextMenu';
+export type {
+  ContextMenuCheckboxItemProps,
+  ContextMenuContentProps,
+  ContextMenuEntry,
+  ContextMenuItemProps,
+  ContextMenuItemSpec,
+  ContextMenuLabelProps,
+  ContextMenuProps,
+  ContextMenuSeparatorProps,
+  ContextMenuTriggerProps,
+} from './ContextMenu';
+export {
+  formatMeterValue,
+  Meter,
+  METER_RADIUS_CLASS,
+  METER_ZONE_PAINT,
+  meterTrackHeightPx,
+  resolveMeterRailRadius,
+  resolveMeterZone,
+} from './Meter';
+export type { MeterFormat, MeterLayout, MeterProps, MeterZone } from './Meter';
+export { ProgressSteps } from './ProgressSteps';
+export type { ProgressStep, ProgressStepsProps } from './ProgressSteps';
+export { TreeSelect } from './TreeSelect';
+export type { TreeSelectNode, TreeSelectProps } from './TreeSelect';
+export { Quote } from './Quote';
+export type { QuoteProps } from './Quote';
+export { ThemePlayground } from './ThemePlayground';
+export type { ThemePlaygroundProps } from './ThemePlayground';
+export { Skeleton, SkeletonCircle, SkeletonGroup, SkeletonText } from './Skeleton';
+export type { SkeletonFrameProps, SkeletonProps, SkeletonTextSize, SkeletonVariant } from './Skeleton';
+export { SkipLink } from './SkipLink';
+export type { SkipLinkProps, SkipLinkSurfaceProps } from './SkipLink';
+export {
+  dismissAllToasts,
+  dismissToast,
+  nativeToastA11y,
+  nativeToastControlA11y,
+  showToast,
+  TOAST_ACTION_MIN_MS,
+  TOAST_DEFAULT_MS,
+  TOAST_ERROR_MS,
+  TOAST_WARNING_MS,
+} from './Toast';
+export type {
+  ToastActionOptions,
+  ToastEntry,
+  ToastIntent,
+  ToastPlacement,
+  ToastShowOptions,
+  UseToastResult,
+} from './Toast';
+export { Video } from './Video';
+export type { VideoProps } from './Video';
+export {
+  ConfirmDialog,
+  dismissFeedback,
+  dismissFeedbackByRegion,
+  dismissFeedbackBySurface,
+  getFeedback,
+  notify,
+  NotifyHost,
+  NotifyRegion,
+  pushFeedback,
+  resetFeedback,
+  routeNotify,
+  subscribeFeedback,
+} from './feedback';
+export type {
+  ConfirmDialogProps,
+  FeedbackEntry,
+  NotifyAction,
+  NotifyEvent,
+  NotifyHostProps,
+  NotifyRoute,
+  NotifyScope,
+  NotifySeverity,
+  NotifySurface,
+  NotifyToastIntent,
+} from './feedback';
+export {
+  __resetActionDevWarnSeen,
+  ActionBar,
+  actionDevWarn,
+  DestructiveAction,
+  formatActionLabel,
+  resolveDestructiveSeverity,
+  severityRequiresConfirm,
+  severityUsesDangerTone,
+} from './actions';
+export type {
+  ActionBarAlign,
+  ActionBarProps,
+  ActionDevWarnCode,
+  ActionDevWarnDetail,
+  ActionLabelParts,
+  DestructiveActionProps,
+  DestructiveConfirmContext,
+  DestructiveSeverity,
+  DestructiveSeverityHints,
+} from './actions';
+export { Wheel } from './Wheel';
+export type { WheelContainerProps, WheelHighlightEdges, WheelItem, WheelItemProps, WheelProps } from './Wheel';
+export { ErrorBoundary } from './ErrorBoundary/index';
+export type { ErrorBoundaryProps } from './ErrorBoundary/index';
+export {
+  Code,
+  CodeBlock,
+  CodeInline,
+  highlightCode,
+  HighlightedCode,
+  houseSyntaxTheme,
+  Pre,
+  ShikiContext,
+  useShikiTokens,
+} from './code/index';
+export type {
+  CodeBlockProps,
+  CodeInlineProps,
+  CodeProps,
+  HighlightedCodeProps,
+  HighlightLine,
+  HighlightToken,
+  HouseSyntaxTheme,
+  HouseSyntaxThemeSetting,
+  ShikiContextValue,
+} from './code/index';
 // Forms are now in @repo/forms package
 // Table components live outside this package (out of scope)
-export * from './hooks/index';
-export * from './icons/index';
-export * from './images/index';
-export * from './layouts/index';
+export {
+  composeDocumentTitle,
+  copyToClipboard,
+  DOCUMENT_TITLE_SEPARATOR,
+  useAssets,
+  useClipboard,
+  useDirection,
+  useDocumentTitle,
+} from './hooks/index';
+export type {
+  Direction,
+  DocumentTitlePart,
+  DocumentTitleTrail,
+  UseClipboardOptions,
+  UseDocumentTitleOptions,
+} from './hooks/index';
+export { CheckRegular, Eye, EyeOff, Github, Info, Mail, MinusRegular, Pencil, themed } from './icons/index';
+export { Svg, SvgUri } from './images/index';
+export type { SvgProps, SvgUriProps } from './images/index';
+export {
+  __resetAsyncDevWarnSeen,
+  AsyncBoundary,
+  AsyncSkeleton,
+  Attachments,
+  Breadcrumbs,
+  CONTENT_MAX_WIDTH,
+  createWithDebugLayout,
+  DebugLayout,
+  DetailPageLayout,
+  EmptyState,
+  FeedLayout,
+  formatRelativeTimestamp,
+  getEntryDisplayName,
+  KeyboardAvoidingWrapper,
+  ListDetailLayout,
+  ListPageLayout,
+  PageHeader,
+  PageHeadingScope,
+  PageSection,
+  PaneScaffold,
+  prettifyAuthorName,
+  ReadingWidth,
+  resolveAsyncStatus,
+  SafeAreaWrapper,
+  Screen,
+  ScreenToolbar,
+  SettingsPageLayout,
+  Sidebar,
+  SupportingPaneLayout,
+  Tags,
+  threadEntries,
+  Timeline,
+  Toolbar,
+  useAsyncBoundary,
+  useAsyncCount,
+  usePageChromeInset,
+  useRegisterPageHeading,
+  ViewSwitcher,
+  withDebugLayout,
+} from './layouts/index';
+export type {
+  AsyncBoundaryContextValue,
+  AsyncBoundaryLayout,
+  AsyncBoundaryProps,
+  AsyncStatus,
+  AttachmentItem,
+  AttachmentsProps,
+  BreadcrumbItem,
+  BreadcrumbsProps,
+  DebugLayoutProps,
+  DetailPageLayoutProps,
+  EmptyStateProps,
+  FeedLayoutProps,
+  KeyboardAvoidingBehavior,
+  KeyboardAvoidingWrapperProps,
+  ListDetailLayoutProps,
+  ListPageLayoutProps,
+  PageHeaderProps,
+  PageHeadingLevel,
+  PageHeadingScopeProps,
+  PageSectionProps,
+  PaneOrientation,
+  PaneRole,
+  PaneScaffoldProps,
+  ReadingWidthProps,
+  SafeAreaEdge,
+  SafeAreaMode,
+  SafeAreaWrapperProps,
+  ScreenProps,
+  ScreenToolbarProps,
+  SettingsPageLayoutProps,
+  SidebarItem,
+  SidebarProps,
+  SidebarSection,
+  SupportingPaneLayoutProps,
+  TagItem,
+  TagsProps,
+  TagVariant,
+  TimelineEntry,
+  TimelineEntryType,
+  TimelineHeadingLevel,
+  TimelineProps,
+  TimelineThread,
+  ToolbarAction,
+  ToolbarActionVariant,
+  ToolbarProps,
+  VersionChange,
+  ViewOption,
+  ViewSwitcherProps,
+} from './layouts/index';
 // MDX components live outside this package (out of scope)
-export * from './surfaces';
-export * from './views/index';
+export {
+  DialogRegionContext,
+  DialogShowFocus,
+  KnobCard,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of DialogContent kept for existing consumers
+  KnobDialogContent,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of Panel kept for existing consumers
+  KnobPanel,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of PopoverContent kept for existing consumers
+  KnobPopoverContent,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of SheetFrame kept for existing consumers
+  KnobSheetFrame,
+  useDialogRegionContext,
+  useIsInDialogRegion,
+} from './surfaces';
+export type { DialogRegionContextValue, KnobCardProps } from './surfaces';
+export { SheetModal } from './SheetModal';
+export type { SheetModalProps } from './SheetModal';
+export {
+  addDays,
+  aggregateData,
+  alignMatrixRange,
+  approximateTextWidth,
+  arcCentroid,
+  arcPath,
+  AreaChart,
+  areaPath,
+  AreaSeries,
+  BarChart,
+  barGeometry,
+  BarSeries,
+  bucketName,
+  bucketStart,
+  calculatePercentageChange,
+  calculateTrend,
+  Calendar,
+  ChartCard,
+  ChartDataView,
+  ChartSurface,
+  clampResizeDayDelta,
+  computeCartesianPlot,
+  computeEventMoveRange,
+  computeGanttRange,
+  computeMatrixRange,
+  computeResizeRange,
+  createBandScale,
+  createLinearScale,
+  createPointScale,
+  createRangeFromDrag,
+  createTimeScale,
+  Dashboard,
+  dateLineX,
+  dateToX,
+  dayDiff,
+  describeChart,
+  describeDatum,
+  dxToDayDelta,
+  eventAccessibleLabel,
+  eventChipTextColor,
+  findDayKeyAtPoint,
+  formatAxisTick,
+  formatChartValue,
+  formatRangeLabel,
+  formatSpanLabel,
+  formatTimeRangeLabel,
+  ganttTaskAccessibleLabel,
+  GanttView,
+  generateBuckets,
+  generateTicks,
+  getLinearTicks,
+  getTimeTicks,
+  ImageGrid,
+  isBoundedSpan,
+  isEternalSpan,
+  Kanban,
+  KPICard,
+  layoutDayBlocks,
+  LineChart,
+  linePath,
+  LineSeries,
+  List,
+  ListCard,
+  ListRow,
+  ListRowMeta,
+  localDateKey,
+  matrixCellIntensity,
+  matrixCellKey,
+  matrixMaxValue,
+  MatrixView,
+  moveFocusDate,
+  moveFocusSlot,
+  moveRangeToSlot,
+  MS_PER_DAY,
+  nextBucketStart,
+  normalizeSpanEdges,
+  openBarGeometry,
+  openSpanExtent,
+  openSpanExtents,
+  openSpanLabelParts,
+  PieChart,
+  PieSeries,
+  pieSlices,
+  ProgressCard,
+  rangeDays,
+  renumberIdx,
+  ReportBuilder,
+  resizeSpanByDays,
+  resolveSeriesFills,
+  resolveTrendColor,
+  scrollAnchorX,
+  shiftSpanByDays,
+  ShortcutCard,
+  snapMinutes,
+  spanInclusiveDays,
+  Sparkline,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  summarizeMatrixCells,
+  thinCategories,
+  todayLineX,
+  TreeView,
+  truncateLabel,
+  useChartTheme,
+  useListItemState,
+  valueDomain,
+  XAxis,
+  xToDate,
+  YAxis,
+} from './views/index';
+export type {
+  ArcPathInput,
+  AreaChartProps,
+  AreaPathOptions,
+  AreaSeriesProps,
+  BandScaleInput,
+  BarChartProps,
+  BarSeriesProps,
+  CalendarDayLayout,
+  CalendarEvent,
+  CalendarEventDraft,
+  CalendarEventMoveRange,
+  CalendarProps,
+  CalendarRange,
+  CalendarViewType,
+  CartesianPlotInput,
+  ChartCardProps,
+  ChartConfig,
+  ChartCurve,
+  ChartDataPoint,
+  ChartDataViewProps,
+  ChartDatum,
+  ChartDatumEvents,
+  ChartSize,
+  ChartSurfaceProps,
+  ChartTheme,
+  ChartType,
+  DashboardListItem,
+  DashboardProps,
+  DashboardWidget,
+  DescribeChartInput,
+  DescribeDatumInput,
+  GanttBarGeometry,
+  GanttItemMoveRange,
+  GanttOpenBarGeometry,
+  GanttOpenSpan,
+  GanttRange,
+  GanttResizeEdge,
+  GanttSpan,
+  GanttSpanRef,
+  GanttTask,
+  GanttTaskSpan,
+  GanttTick,
+  GanttViewProps,
+  GanttZoom,
+  GroupByConfig,
+  ImageGridHotkeys,
+  ImageGridProps,
+  KanbanColumn,
+  KanbanHotkeys,
+  KanbanProps,
+  KPICardConfig,
+  KPICardProps,
+  LinearScaleInput,
+  LineChartProps,
+  LinePathOptions,
+  LineSeriesProps,
+  ListCardProps,
+  ListConfig,
+  ListHotkeys,
+  ListItemState,
+  ListProps,
+  ListRowProps,
+  MatrixBucket,
+  MatrixBucketRule,
+  MatrixCell,
+  MatrixCellRef,
+  MatrixCellSummary,
+  MatrixIntent,
+  MatrixLegendItem,
+  MatrixRange,
+  MatrixRow,
+  MatrixViewProps,
+  PieChartProps,
+  PieSeriesProps,
+  PieSlice,
+  PieSliceOptions,
+  PixelPoint,
+  PlotArea,
+  PointScaleInput,
+  ProgressCardProps,
+  ProgressConfig,
+  ReportBuilderProps,
+  ReportColumn,
+  SeriesFillsInput,
+  ShortcutCardProps,
+  ShortcutConfig,
+  SparklineProps,
+  TimedBlockLayout,
+  TimeScaleInput,
+  TreeNode,
+  TreeViewDisplay,
+  TreeViewHotkeys,
+  TreeViewProps,
+  TrendDirection,
+  ValueDomainOptions,
+  XAxisProps,
+  YAxisProps,
+} from './views/index';
 // Wizard is house-only: nothing in the curated ./tamagui surface shadows these
 // names, so without an explicit export the component is unreachable from the
 // package; consumers import all four names.
 export { Wizard } from './Wizard';
 export type { WizardFormLike, WizardProps, WizardStatus, WizardStep } from './Wizard';
-export { unwrapText } from './utils/unwrapText';
+export { unwrapText } from './utils/unwrap-text';
 export { Pagination, getPaginationItems } from './Pagination';
 export type { PaginationProps, PaginationItem } from './Pagination';
 export { Accordion, useAccordionTriggerInk } from './Accordion';
@@ -83,7 +558,98 @@ export {
 // export that leaked raw interactive primitives (Checkbox, Switch, Select, …)
 // under the house package name. See ./tamagui.ts for the allowlist rules and
 // tamagui.test.ts for the guardrail locking it.
-export * from './tamagui';
+export {
+  AlertDialog,
+  AnimatePresence,
+  Circle,
+  Collapsible,
+  createStyledContext,
+  Dialog,
+  getToken,
+  getTokens,
+  getTokenValue,
+  Group,
+  isClient,
+  isWeb,
+  LinearGradient,
+  ListItem,
+  Popover,
+  Portal,
+  PortalProvider,
+  ScrollView,
+  Sheet,
+  Spacer,
+  Square,
+  styled,
+  TamaguiAnchor,
+  TamaguiButton,
+  TamaguiCheckbox,
+  TamaguiH1,
+  TamaguiH2,
+  TamaguiH3,
+  TamaguiH4,
+  TamaguiH5,
+  TamaguiH6,
+  TamaguiHeading,
+  TamaguiInput,
+  TamaguiLabel,
+  TamaguiParagraph,
+  TamaguiProgress,
+  TamaguiProvider,
+  TamaguiRadioGroup,
+  TamaguiSelect,
+  TamaguiSeparator,
+  TamaguiSizableText,
+  TamaguiSlider,
+  TamaguiSpinner,
+  TamaguiSwitch,
+  TamaguiText,
+  TamaguiTextArea,
+  TamaguiToggleGroup,
+  Theme,
+  Unspaced,
+  useControllableState,
+  useDidFinishSSR,
+  useEvent,
+  useMedia,
+  usePropsAndStyle,
+  useTheme,
+  useThemeName,
+  View,
+  VisuallyHidden,
+  withStaticProperties,
+  XGroup,
+  XStack,
+  YGroup,
+  YStack,
+} from './tamagui';
+export type {
+  CircleProps,
+  ColorTokens,
+  DialogProps,
+  FontSizeTokens,
+  GetProps,
+  GetRef,
+  GroupProps,
+  LinearGradientProps,
+  ListItemProps,
+  PopoverProps,
+  RadiusTokens,
+  ScrollViewProps,
+  SheetProps,
+  SizeTokens,
+  SpaceTokens,
+  SquareProps,
+  TamaguiConfig,
+  TamaguiElement,
+  TamaguiProviderProps,
+  TamaguiTextElement,
+  ThemeName,
+  ThemeProps,
+  ViewProps,
+  XStackProps,
+  YStackProps,
+} from './tamagui';
 
 // The local Toast module (star-exported above) must win over any toast names;
 // re-export it explicitly so the bare `Toast` name is unambiguous.
@@ -142,19 +708,19 @@ export type { HeadingProps } from './Heading';
 // catalog part, and this one resolved to a raw primitive; and
 // the raw primitive is a `flex: 1` item, so the rule can absorb free space.
 // The house rule is a painted 1px line in $borderColor (measured law:
-// 1px never 0.5px; quiet = opacity 0.5, never a lighter colour) that cannot
+// 1px never 0.5px; quiet = opacity 0.5, never a lighter color) that cannot
 // flex-grow. The curated ./tamagui surface no longer exports the bare name;
 // raw stays reachable as TamaguiSeparator.
 //
 // Correction 2026-09-01: the ticket's "96 of 96 paint nothing" was a probe
-// artefact, not a defect — see ./Separator/index.tsx for the measurement.
+// artifact, not a defect — see ./Separator/index.tsx for the measurement.
 export { Separator } from './Separator';
 export type { SeparatorProps } from './Separator';
 
 export type { ImageProps } from './images/Image';
 export { Image } from './images/Image';
 
-// The semantic colour tiers and the section-heading metrics the catalog
+// The semantic color tiers and the section-heading metrics the catalog
 // paints with. Named exports, not a star, so the curated surface stays
 // explicit — these are token maps, not catalog parts: they render
 // nothing and a consumer spreads them onto its own frames exactly as the
@@ -164,7 +730,7 @@ export { Image } from './images/Image';
 // tokens by hand instead of importing the layer that defines them.
 // A semantic layer whose own header says "use these instead of hardcoding $color3, $color10" has
 // to be importable by a stable name.
-export { componentColors, sectionHeading } from './componentColors';
+export { componentColors, sectionHeading } from './component-colors';
 
 // ---------------------------------------------------------------------------
 // Tamagui shorthand type augmentation
@@ -176,7 +742,6 @@ export { componentColors, sectionHeading } from './componentColors';
 // createTamagui config to avoid triggering TamaDefer resolution changes
 // that break styled() component types across workspace boundaries.
 // ---------------------------------------------------------------------------
-import type { shorthands as _shorthands } from '@tamagui/shorthands';
 declare module '@tamagui/web' {
   interface TamaguiCustomConfig {
     shorthands: typeof _shorthands;

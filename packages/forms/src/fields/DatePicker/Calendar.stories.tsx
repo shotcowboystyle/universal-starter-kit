@@ -1,6 +1,6 @@
 import { action } from '@repo/storybook';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
 import { Calendar } from './Calendar';
@@ -36,7 +36,10 @@ type Story = StoryObj<typeof Calendar>;
 export const Baseline: Story = {
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -45,7 +48,10 @@ export const SingleMode: Story = {
   args: { mode: 'single', showTabs: false },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -54,7 +60,10 @@ export const MultipleMode: Story = {
   args: { mode: 'multiple', showTabs: false, limit: 3 },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -63,7 +72,10 @@ export const RangeMode: Story = {
   args: { mode: 'range', showTabs: false },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -91,26 +103,27 @@ export const MinMax: Story = {
   },
 };
 
+const Example = () => {
+  const pinned = useMemo(() => [new Date(2026, 7, 5), new Date(2026, 7, 12)], []);
+  const [attempts, setAttempts] = useState(0);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={720}>
+      <Calendar
+        mode="range"
+        showTabs={false}
+        selectedDates={pinned}
+        onDatesChange={(dates) => {
+          setAttempts((a) => a + 1);
+          action('onDatesChange')(dates);
+        }}
+      />
+      <Text>{`attempts:${attempts}`}</Text>
+    </YStack>
+  );
+};
+
 export const ControlledRejection: Story = {
-  render: () => {
-    const Example = () => {
-      const [pinned] = useState(() => [new Date(2026, 7, 5), new Date(2026, 7, 12)]);
-      const [attempts, setAttempts] = useState(0);
-      return (
-        <YStack gap="$4" maxWidth={720}>
-          <Calendar
-            mode="range"
-            showTabs={false}
-            selectedDates={pinned}
-            onDatesChange={(dates) => {
-              setAttempts((a) => a + 1);
-              action('onDatesChange')(dates);
-            }}
-          />
-          <Text>{`attempts:${attempts}`}</Text>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <Example />,
 };

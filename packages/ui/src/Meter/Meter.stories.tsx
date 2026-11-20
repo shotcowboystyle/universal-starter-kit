@@ -3,6 +3,8 @@ import { YStack } from 'tamagui';
 
 import { Meter } from './index';
 
+const DISK_LABEL = 'Disk usage';
+
 const meta: Meta<typeof Meter> = {
   title: 'Components/Meter',
   component: Meter,
@@ -37,7 +39,7 @@ type Story = StoryObj<typeof Meter>;
 export const Default: Story = {
   name: 'Main',
   args: {
-    label: 'Disk usage',
+    label: DISK_LABEL,
     value: 6.2,
     min: 0,
     max: 8,
@@ -52,11 +54,49 @@ export const Default: Story = {
 
 export const Thresholds: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={360}>
-      <Meter label="Disk usage" value={5} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Disk usage" value={6.8} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Disk usage" value={7.8} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Battery" value={9} min={0} max={100} low={10} high={20} optimum={100} format="percent" />
+    <YStack
+      gap="$4"
+      maxWidth={360}>
+      <Meter
+        label={DISK_LABEL}
+        value={5}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label={DISK_LABEL}
+        value={6.8}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label={DISK_LABEL}
+        value={7.8}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label="Battery"
+        value={9}
+        min={0}
+        max={100}
+        low={10}
+        high={20}
+        optimum={100}
+        format="percent"
+      />
     </YStack>
   ),
 };
@@ -85,7 +125,7 @@ export const Unknown: Story = {
 
 export const Loading: Story = {
   args: {
-    label: 'Disk usage',
+    label: DISK_LABEL,
     min: 0,
     max: 8,
     unit: 'GB',
@@ -95,7 +135,7 @@ export const Loading: Story = {
 
 export const Disabled: Story = {
   args: {
-    label: 'Disk usage',
+    label: DISK_LABEL,
     value: 6.2,
     min: 0,
     max: 8,
@@ -109,7 +149,7 @@ export const Disabled: Story = {
 
 export const Inline: Story = {
   args: {
-    label: 'Disk usage',
+    label: DISK_LABEL,
     value: 6.2,
     min: 0,
     max: 8,

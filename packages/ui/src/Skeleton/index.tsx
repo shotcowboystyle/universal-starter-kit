@@ -1,5 +1,6 @@
 import { radiusClassProps, sizeRecipeForToken, useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GetProps } from 'tamagui';
 import { View, styled, isWeb } from 'tamagui';
@@ -16,18 +17,21 @@ const AnnounceCtx = createContext(true);
 // ramp. $3/$4 are lossless vs the old handwritten map; $5 moves with the
 // recipe's larger lg type (body 14→16, display 28→32).
 const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
-const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
+const skeletonCircleTokenUp = new Map([
+  ['$3', '$4'],
+  ['$4', '$5'],
+  ['$5', '$6'],
+]);
 
-function skeletonCircleSize(sizeToken: string): number {
-  return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-}
+const skeletonCircleSize = (sizeToken: string): number =>
+  sizeRecipeForToken(skeletonCircleTokenUp.get(sizeToken) ?? '$5').height;
 
 const SHIMMER_STYLE_ID = '__mp-skeleton-shimmer';
-function ensureShimmerStyles() {
+const ensureShimmerStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(SHIMMER_STYLE_ID)) {
+  if (document.querySelector(`#${SHIMMER_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -39,8 +43,8 @@ function ensureShimmerStyles() {
     '@media (prefers-reduced-motion:reduce){.mp-skeleton-pulse{animation:none!important;mask-image:none}}',
     '@media (forced-colors:active){.mp-skeleton-bone{outline:1px solid transparent;outline-offset:-1px}}',
   ].join('');
-  document.head.appendChild(style);
-}
+  document.head.append(style);
+};
 
 const SkeletonFrame = styled(View, {
   name: 'Skeleton',
@@ -77,13 +81,33 @@ export interface SkeletonProps extends Omit<GetProps<typeof SkeletonFrame>, 'var
   label?: string;
 }
 
-function resolveTextHeight(sizeToken: string, textSize: SkeletonTextSize) {
-  const known = (SKELETON_SIZE_TOKENS as readonly string[]).includes(sizeToken) ? sizeToken : '$4';
+const resolveTextHeight = (sizeToken: string, textSize: SkeletonTextSize) => {
+  const known = SKELETON_SIZE_TOKENS.some((token) => token === sizeToken) ? sizeToken : '$4';
   const body = sizeRecipeForToken(known).fontSize - 2;
   return textSize === 'display' ? body * 2 : body;
-}
+};
 
-export function Skeleton({
+// Decorative bones hide from AT; the announcing root exposes one polite status.
+// Every key is always present so the spread overrides any caller-supplied value.
+const liveRegionProps = (decorative: boolean, accessibleName: string) => ({
+  'aria-hidden': decorative ? true : undefined,
+  role: decorative ? undefined : ('status' as const),
+  'aria-busy': decorative ? undefined : true,
+  'aria-live': decorative ? undefined : ('polite' as const),
+  'aria-label': decorative ? undefined : accessibleName,
+});
+
+const boneRadiusProps = (variant: SkeletonVariant, themedRadius: number | string | undefined) => {
+  if (variant === 'circular') {
+    return { borderRadius: 1000, ...radiusClassProps('R-PILL', 'SkeletonCircle') };
+  }
+  if (variant === 'rectangular') {
+    return { borderRadius: 0 };
+  }
+  return { borderRadius: themedRadius };
+};
+
+export const Skeleton = ({
   variant = 'text',
   width,
   height,
@@ -92,7 +116,7 @@ export function Skeleton({
   label,
   className,
   ...props
-}: SkeletonProps) {
+}: SkeletonProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const shouldAnnounce = useContext(AnnounceCtx);
@@ -114,45 +138,37 @@ export function Skeleton({
     .filter(Boolean)
     .join(' ');
 
-  const radiusProps =
-    variant === 'circular'
-      ? { borderRadius: 1000, ...radiusClassProps('R-PILL', 'SkeletonCircle') }
-      : variant === 'rectangular'
-        ? { borderRadius: 0 }
-        : { borderRadius: knobProps.borderRadius.borderRadius };
+  const radiusProps = boneRadiusProps(variant, knobProps.borderRadius.borderRadius);
+  const textHeight = variant === 'text' ? resolveTextHeight(knobProps.sizeToken, 'body') : undefined;
+  let dataHeight: string | undefined;
+  if (height != null) {
+    dataHeight = String(height);
+  } else if (textHeight !== undefined) {
+    dataHeight = String(textHeight);
+  }
 
   return (
     <SkeletonFrame
       variant={variant}
       width={width}
-      height={height ?? (variant === 'text' ? resolveTextHeight(knobProps.sizeToken, 'body') : undefined)}
+      height={height ?? textHeight}
       {...radiusProps}
       {...props}
       {...(isWeb ? { className: boneClass } : undefined)}
-      {...(style ? { style } : undefined)}
+      {...(style == null ? undefined : { style })}
       pointerEvents="none"
       data-skeleton=""
       data-skeleton-variant={variant}
       data-animate={pulsing ? 'true' : 'false'}
-      data-width={width != null ? String(width) : undefined}
-      data-height={
-        height != null
-          ? String(height)
-          : variant === 'text'
-            ? String(resolveTextHeight(knobProps.sizeToken, 'body'))
-            : undefined
-      }
-      aria-hidden={decorative ? true : undefined}
-      role={decorative ? undefined : 'status'}
-      aria-busy={decorative ? undefined : true}
-      aria-live={decorative ? undefined : 'polite'}
-      aria-label={decorative ? undefined : (label ?? t('Loading'))}
+      data-width={width == null ? undefined : String(width)}
+      data-height={dataHeight}
+      {...liveRegionProps(decorative, label ?? t('Loading'))}
       accessibilityElementsHidden={decorative}
     />
   );
-}
+};
 
-export function SkeletonText({
+export const SkeletonText = ({
   lines = 1,
   gap: gapProp,
   lastLineWidth = '70%',
@@ -169,14 +185,20 @@ export function SkeletonText({
   gap?: string | number;
   lastLineWidth?: string | number;
   size?: SkeletonTextSize;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const shouldAnnounce = useContext(AnnounceCtx);
-  const count = Math.max(0, Math.floor(Number(lines) || 0));
+  const count = Math.max(0, Number.isNaN(lines) ? 0 : Math.floor(lines));
   const lineHeight = height ?? resolveTextHeight(knobProps.sizeToken, textSize);
   const gap = gapProp ?? knobProps.gap.gap;
   const decorative = !shouldAnnounce;
+  const lineWidth = (i: number) => {
+    if (count === 1) {
+      return width ?? lastLineWidth;
+    }
+    return i === count - 1 ? lastLineWidth : '100%';
+  };
 
   if (count === 0) {
     return null;
@@ -190,11 +212,7 @@ export function SkeletonText({
         gap={gap}
         data-skeleton-text=""
         data-lines={String(count)}
-        aria-hidden={decorative ? true : undefined}
-        role={decorative ? undefined : 'status'}
-        aria-busy={decorative ? undefined : true}
-        aria-live={decorative ? undefined : 'polite'}
-        aria-label={decorative ? undefined : (label ?? t('Loading'))}>
+        {...liveRegionProps(decorative, label ?? t('Loading'))}>
         {Array.from({ length: count }, (_, i) => (
           <Skeleton
             key={i}
@@ -202,15 +220,15 @@ export function SkeletonText({
             animate={animate}
             style={style}
             height={lineHeight}
-            width={count === 1 ? (width ?? lastLineWidth) : i === count - 1 ? lastLineWidth : '100%'}
+            width={lineWidth(i)}
           />
         ))}
       </View>
     </AnnounceCtx.Provider>
   );
-}
+};
 
-export function SkeletonCircle({ size: sizeProp, label, ...props }: SkeletonProps & { size?: number }) {
+export const SkeletonCircle = ({ size: sizeProp, label, ...props }: SkeletonProps & { size?: number }) => {
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const diameter = Math.max(0, sizeProp ?? skeletonCircleSize(knobProps.sizeToken));
   return (
@@ -225,18 +243,19 @@ export function SkeletonCircle({ size: sizeProp, label, ...props }: SkeletonProp
       data-diameter={String(diameter)}
     />
   );
-}
+};
 
-export function SkeletonGroup({
+export const SkeletonGroup = ({
   children,
   label,
   ...props
-}: GetProps<typeof View> & { children?: ReactNode; label?: string }) {
+}: GetProps<typeof View> & { children?: ReactNode; label?: string }) => {
   const { t } = useTranslation();
   return (
     <AnnounceCtx.Provider value={false}>
       <View
         {...props}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View does not render <output>; role carries the live-region semantics on web and native
         role="status"
         aria-busy={true}
         aria-live="polite"
@@ -246,7 +265,7 @@ export function SkeletonGroup({
       </View>
     </AnnounceCtx.Provider>
   );
-}
+};
 
 Skeleton.Text = SkeletonText;
 Skeleton.Circle = SkeletonCircle;

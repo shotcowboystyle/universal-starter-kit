@@ -1,35 +1,56 @@
 // @vitest-environment jsdom
 import { renderWithProviders } from '@repo/test-utils';
+import type { AnyFormApi } from '@tanstack/react-form';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor, within } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../Button';
+import type { ContextualSaveBarProps } from '../ContextualSaveBar';
 import { Input } from '../fields/Input';
 
 import { Form, useFormContext } from './index';
 
 const refusal = 'The record changed. Refresh and retry.';
 
+interface NameValues {
+  name: string;
+}
+
+type SavedHandler = NonNullable<ContextualSaveBarProps['onSaved']>;
+
+const probe = new Map<'form', AnyFormApi>();
+
+const DirtyProbe = () => {
+  const form = useFormContext();
+  useEffect(() => {
+    probe.set('form', form);
+  }, [form]);
+  return null;
+};
+
+const buttonNames = { html: 'Submit HTML', action: 'Submit action', save: 'Save' } as const;
+
 describe('shared form submission outcome', () => {
   it.each(['html', 'action', 'save', 'shortcut'] as const)(
     '%s submission exposes failure, retains edits and can retry without changing its success policy',
     async (route) => {
-      const submit = vi.fn().mockRejectedValueOnce(new Error(refusal)).mockResolvedValue(undefined);
-      const saved = vi.fn();
-      let isDirty = () => false;
-      function DirtyProbe() {
-        const form = useFormContext();
-        isDirty = () => form.state.isDirty;
-        return null;
-      }
+      const submit = vi
+        .fn<(values: NameValues) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(refusal))
+        .mockResolvedValue();
+      const saved = vi.fn<SavedHandler>();
       const view = renderWithProviders(
         <Form
           formOptions={{ defaultValues: { name: 'Original' } }}
           onSubmit={submit}
           saveBar={{ forceVisible: true, onSaved: saved }}>
           <DirtyProbe />
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
           <button type="submit">Submit HTML</button>
           <Button action="submit">Submit action</Button>
         </Form>,
@@ -39,21 +60,17 @@ describe('shared form submission outcome', () => {
         if (route === 'shortcut') {
           fireEvent.keyDown(document, { key: 's', ctrlKey: true });
         } else {
-          fireEvent.click(
-            view.getByRole('button', {
-              name: route === 'html' ? 'Submit HTML' : route === 'action' ? 'Submit action' : 'Save',
-            }),
-          );
+          fireEvent.click(view.getByRole('button', { name: buttonNames[route] }));
         }
       };
       await act(async () => {
         activate();
       });
       await waitFor(() => {
-        expect(view.getByText(/Couldn't save/).textContent).toContain(refusal);
+        expect(view.getByText(/Couldn't save/u).textContent).toContain(refusal);
       });
       expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
-      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledOnce();
       expect(saved).not.toHaveBeenCalled();
       await act(async () => {
         activate();
@@ -62,25 +79,24 @@ describe('shared form submission outcome', () => {
         expect(submit).toHaveBeenCalledTimes(2);
       });
       await waitFor(() => {
-        expect(view.queryByText(/Couldn't save/)).toBeNull();
+        expect(view.queryByText(/Couldn't save/u)).toBeNull();
       });
       expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
       expect(saved).toHaveBeenCalledTimes(route === 'save' || route === 'shortcut' ? 1 : 0);
-      expect(isDirty()).toBe(route === 'html' || route === 'action');
+      expect(probe.get('form')?.state.isDirty).toBe(route === 'html' || route === 'action');
     },
   );
 
   it('allows only one transport call when HTML, action and Save activate together', async () => {
-    let finish!: () => void;
-    const submit = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          finish = resolve;
-        }),
-    );
-    const saved = vi.fn();
+    const gate = Promise.withResolvers<null>();
+    const submit = vi.fn<(values: NameValues) => Promise<void>>(async () => {
+      await gate.promise;
+    });
+    const saved = vi.fn<SavedHandler>();
     const view = renderWithProviders(
-      <Form onSubmit={submit} saveBar={{ forceVisible: true, onSaved: saved }}>
+      <Form
+        onSubmit={submit}
+        saveBar={{ forceVisible: true, onSaved: saved }}>
         <button type="submit">Submit HTML</button>
         <Button action="submit">Submit action</Button>
       </Form>,
@@ -92,49 +108,62 @@ describe('shared form submission outcome', () => {
       fireEvent.keyDown(document, { key: 's', ctrlKey: true });
     });
     await waitFor(() => {
-      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledOnce();
     });
     await act(async () => {
-      finish();
+      gate.resolve(null);
     });
-    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledOnce();
     expect(saved).not.toHaveBeenCalled();
   });
 
   it('routes explicit form targets and standalone actions to the matching form only', async () => {
-    const firstSubmit = vi.fn();
-    const secondSubmit = vi.fn().mockRejectedValue(new Error(refusal));
-    function Harness() {
+    const firstSubmit = vi.fn<(props: { value: NameValues }) => void>();
+    const secondSubmit = vi.fn<(props: { value: NameValues }) => Promise<void>>().mockRejectedValue(new Error(refusal));
+    const Harness = () => {
       const first = useForm({
-        defaultValues: { name: 'First' } as Record<string, unknown>,
+        defaultValues: { name: 'First' },
         onSubmit: firstSubmit,
       });
       const second = useForm({
-        defaultValues: { name: 'Second' } as Record<string, unknown>,
+        defaultValues: { name: 'Second' },
         onSubmit: secondSubmit,
       });
       return (
         <>
-          <Form form={first} saveBar={{ forceVisible: true }} testID="first">
-            <Button action="submit" form={second}>
+          <Form
+            form={first}
+            saveBar={{ forceVisible: true }}
+            testID="first">
+            <Button
+              action="submit"
+              form={second}>
               Target second
             </Button>
           </Form>
-          <Form form={second} saveBar={{ forceVisible: true }} testID="second">
-            <Input name="name" label="Second name" />
+          <Form
+            form={second}
+            saveBar={{ forceVisible: true }}
+            testID="second">
+            <Input
+              name="name"
+              label="Second name"
+            />
           </Form>
-          <Button action="submit" form={second}>
+          <Button
+            action="submit"
+            form={second}>
             Standalone submit
           </Button>
         </>
       );
-    }
+    };
     const view = renderWithProviders(<Harness />);
     await act(async () => fireEvent.click(view.getByRole('button', { name: 'Target second' })));
     await waitFor(() => {
-      expect(within(view.getByTestId('second')).getByText(/Couldn't save/)).toBeTruthy();
+      expect(within(view.getByTestId('second')).getByText(/Couldn't save/u)).toBeTruthy();
     });
-    expect(within(view.getByTestId('first')).queryByText(/Couldn't save/)).toBeNull();
+    expect(within(view.getByTestId('first')).queryByText(/Couldn't save/u)).toBeNull();
     await act(async () => fireEvent.click(view.getByRole('button', { name: 'Standalone submit' })));
     await waitFor(() => {
       expect(secondSubmit).toHaveBeenCalledTimes(2);
@@ -143,8 +172,8 @@ describe('shared form submission outcome', () => {
   });
 
   it('does not mark a form-level validation refusal saved', async () => {
-    const submit = vi.fn();
-    const saved = vi.fn();
+    const submit = vi.fn<(values: NameValues) => void>();
+    const saved = vi.fn<SavedHandler>();
     const view = renderWithProviders(
       <Form
         formOptions={{
@@ -153,7 +182,10 @@ describe('shared form submission outcome', () => {
         }}
         onSubmit={submit}
         saveBar={{ forceVisible: true, onSaved: saved }}>
-        <Input name="name" label="Name" />
+        <Input
+          name="name"
+          label="Name"
+        />
       </Form>,
     );
     fireEvent.change(view.getByLabelText('Name'), { target: { value: 'Edited' } });

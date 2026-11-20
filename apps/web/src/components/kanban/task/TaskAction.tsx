@@ -3,20 +3,20 @@
 import type { Task } from '@repo/store';
 import { Button, ConfirmDialog, Dialog, DialogContent, DialogOverlay, DropdownMenu, Text } from '@repo/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import type { QueryKey } from '@tanstack/react-query';
+import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import { Ellipsis } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { TaskForm } from '@/components/kanban/task/TaskForm';
 import { useDeleteTask, useTask, useUpdateTask } from '@/lib/api/tasks/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { TaskStatus } from '@/types/dbInterface';
-import { TASK_KEYS } from '@/types/taskApi';
-import { TaskFormSchema } from '@/types/taskForm';
+import type { TaskStatus } from '@/types/db-interface';
+import { TASK_KEYS } from '@/types/task-api';
+import type { TaskFormSchema } from '@/types/task-form';
 
 interface TaskActionsProps {
   id: string;
@@ -30,7 +30,169 @@ interface TaskActionsProps {
   onUpdate?: () => void;
 }
 
-export function TaskActions({
+interface TaskScope {
+  queryClient: QueryClient;
+  id: string;
+  boardId: string;
+  projectId: string;
+}
+
+const RELATED_ROOT_KEYS = new Set<unknown>(['tasks', 'board', 'project']);
+
+const emptyToNull = (value?: string | null) => (value === undefined || value === null || value === '' ? null : value);
+
+const relatedKeys = ({ id, boardId, projectId }: TaskScope): QueryKey[] => [
+  TASK_KEYS.detail(id),
+  TASK_KEYS.lists(),
+  ['board', boardId, 'tasks'],
+  ['project', projectId, 'tasks'],
+];
+
+const cancelAndRemoveQueries = (queryClient: QueryClient, queryKey: QueryKey) => {
+  void queryClient.cancelQueries({ queryKey });
+  queryClient.removeQueries({ queryKey });
+};
+
+const removeTaskFromQueries = (queryClient: QueryClient, queryKey: QueryKey, taskId: string) => {
+  queryClient.setQueryData<Task[] | undefined>(queryKey, (old) => {
+    if (!Array.isArray(old)) {
+      return old;
+    }
+    return old.filter((item) => item._id !== taskId);
+  });
+};
+
+const refreshAfterUpdate = async (scope: TaskScope, onUpdate?: () => void) => {
+  const { queryClient, id } = scope;
+  // Invalidate the specific task and task lists
+  void queryClient.invalidateQueries({ queryKey: TASK_KEYS.detail(id), refetchType: 'all' });
+  void queryClient.invalidateQueries({ queryKey: TASK_KEYS.lists(), refetchType: 'active' });
+
+  const keys = relatedKeys(scope);
+  await Promise.all(
+    keys.map(async (queryKey) => {
+      await queryClient.invalidateQueries({ queryKey });
+    }),
+  );
+  await Promise.all(
+    keys.map(async (queryKey) => {
+      await queryClient.refetchQueries({ queryKey });
+    }),
+  );
+
+  // Call parent component callback
+  if (onUpdate) {
+    onUpdate();
+  }
+
+  // Force re-render
+  for (const { queryKey } of queryClient.getQueryCache().findAll()) {
+    if (Array.isArray(queryKey) && (queryKey[0] === 'board' || queryKey[0] === 'project' || queryKey[0] === 'tasks')) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  }
+};
+
+const removeTaskOptimistically = (scope: TaskScope) => {
+  const { queryClient, id, boardId, projectId } = scope;
+  try {
+    // Cancel any ongoing requests for this task
+    void queryClient.cancelQueries({ queryKey: TASK_KEYS.detail(id) });
+
+    removeTaskFromQueries(queryClient, TASK_KEYS.lists(), id);
+    removeTaskFromQueries(queryClient, ['board', boardId, 'tasks'], id);
+    removeTaskFromQueries(queryClient, ['project', projectId, 'tasks'], id);
+
+    cancelAndRemoveQueries(queryClient, TASK_KEYS.detail(id));
+    // Also remove any other potential queries that might contain this task
+    cancelAndRemoveQueries(queryClient, ['task', id, 'details']);
+  } catch (error) {
+    console.error('Error during optimistic update:', error);
+  }
+};
+
+const cleanupAfterDelete = async (scope: TaskScope, onUpdate?: () => void) => {
+  const { queryClient, id, boardId, projectId } = scope;
+  try {
+    // Invalidate all related queries to ensure data consistency
+    await Promise.all(
+      [TASK_KEYS.lists(), ['board', boardId, 'tasks'], ['project', projectId, 'tasks']].map(async (queryKey) => {
+        await queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+      }),
+    );
+
+    // Ensure task detail queries are removed
+    cancelAndRemoveQueries(queryClient, TASK_KEYS.detail(id));
+    cancelAndRemoveQueries(queryClient, ['task', id, 'details']);
+
+    // Call parent's update callback if provided
+    if (onUpdate) {
+      try {
+        onUpdate();
+      } catch (updateError) {
+        console.error('Error in onUpdate callback:', updateError);
+      }
+    }
+  } catch (cleanupError) {
+    console.error('Error during cleanup after successful delete:', cleanupError);
+  }
+};
+
+const restoreAfterDeleteError = (scope: TaskScope, previousTask: Task | undefined, refresh: () => void) => {
+  const { queryClient, id } = scope;
+  // Restore the task data
+  if (previousTask) {
+    queryClient.setQueryData(TASK_KEYS.detail(id), previousTask);
+  }
+
+  // Invalidate all relevant queries to restore correct state
+  try {
+    void queryClient.invalidateQueries({
+      predicate: (query) => {
+        const [head] = query.queryKey;
+        const firstKey: unknown = Array.isArray(head) ? head[0] : head;
+        return RELATED_ROOT_KEYS.has(firstKey);
+      },
+      refetchType: 'active',
+    });
+  } catch (invalidateError) {
+    console.error('Error during query invalidation:', invalidateError);
+    refresh();
+  }
+};
+
+interface DefaultValuesInput extends Omit<TaskActionsProps, 'id' | 'onUpdate'> {
+  task: Task | undefined;
+}
+
+// Prepare default values for the form
+const buildDefaultValues = ({
+  title,
+  description,
+  status,
+  dueDate,
+  assigneeId,
+  projectId,
+  boardId,
+  task,
+}: DefaultValuesInput) => {
+  const hasAssignee = assigneeId !== undefined && assigneeId !== '';
+  // Prefer the fetched task's assignee so the picker can show the name immediately
+  const fetchedAssignee = task?.assignee?._id === assigneeId ? task?.assignee : undefined;
+  return {
+    title,
+    description: description ?? '',
+    status,
+    dueDate: dueDate ? new Date(dueDate) : undefined,
+    assignee: hasAssignee
+      ? { _id: assigneeId, name: fetchedAssignee?.name ?? null, email: fetchedAssignee?.email }
+      : undefined,
+    projectId,
+    boardId,
+  };
+};
+
+export const TaskActions = ({
   id,
   title,
   description,
@@ -40,7 +202,7 @@ export function TaskActions({
   projectId,
   boardId,
   onUpdate,
-}: TaskActionsProps) {
+}: TaskActionsProps) => {
   // State for dialogs and component state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -55,8 +217,8 @@ export function TaskActions({
   const { data: task, isLoading: isLoadingTask } = useTask(id, {
     // Disable the query if the task is marked as deleted
     enabled: !isDeleted,
-    // Don't retry if the task is not found (404)
-    retry: true, // Let the hook handle the retry logic
+    // Let the hook handle the retry logic; don't retry if the task is not found (404)
+    retry: true,
   });
 
   // Query and mutation hooks
@@ -78,97 +240,38 @@ export function TaskActions({
   const canEdit = isCreator || isAssignee;
   const canDelete = isCreator;
 
-  // Prepare default values for the form
-  const defaultValues = {
+  const defaultValues = buildDefaultValues({
     title,
-    description: description || '',
-    status: status,
-    dueDate: dueDate ? new Date(dueDate) : undefined,
-    // Prefer the fetched task's assignee so the picker can show the name immediately
-    assignee: assigneeId
-      ? {
-          _id: assigneeId,
-          name: task?.assignee?._id === assigneeId ? (task.assignee.name ?? null) : null,
-          email: task?.assignee?._id === assigneeId ? task.assignee.email : undefined,
-        }
-      : undefined,
+    description,
+    status,
+    dueDate,
+    assigneeId,
     projectId,
     boardId,
-  };
+    task,
+  });
+
+  const taskScope: TaskScope = { queryClient, id, boardId, projectId };
 
   // Handle form submission
   const handleSubmit = async (values: z.infer<typeof TaskFormSchema>) => {
     try {
-      const { title, description, status, dueDate, assignee } = values;
-
       // The current user ID is now handled by the useUpdateTask hook
-
       await updateTaskMutation.mutateAsync(
         {
           id,
-          title,
-          description: description || null,
-          status,
-          dueDate: dueDate || null,
-          assigneeId: assignee?._id || null,
+          title: values.title,
+          description: emptyToNull(values.description),
+          status: values.status,
+          dueDate: values.dueDate ?? null,
+          assigneeId: emptyToNull(values.assignee?._id),
           // lastModifier is now handled by the useUpdateTask hook
         },
         {
-          onSuccess: async (_data) => {
-            // Invalidate both the specific task and task lists
-            queryClient.invalidateQueries({
-              queryKey: TASK_KEYS.detail(id),
-              refetchType: 'all',
-            });
-            queryClient.invalidateQueries({
-              queryKey: TASK_KEYS.lists(),
-              refetchType: 'active',
-            });
-
-            toast.success(t('updateSuccess', { title }));
+          onSuccess: () => {
+            toast.success(t('updateSuccess', { title: values.title }));
             setIsEditDialogOpen(false);
-
-            // Invalidate all related queries
-            await Promise.all([
-              queryClient.invalidateQueries({ queryKey: TASK_KEYS.detail(id) }),
-              queryClient.invalidateQueries({ queryKey: TASK_KEYS.lists() }),
-              queryClient.invalidateQueries({
-                queryKey: ['board', boardId, 'tasks'],
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['project', projectId, 'tasks'],
-              }),
-            ]);
-
-            // Refetch all related queries
-            const refetchPromises = [
-              queryClient.refetchQueries({ queryKey: TASK_KEYS.detail(id) }),
-              queryClient.refetchQueries({ queryKey: TASK_KEYS.lists() }),
-              queryClient.refetchQueries({
-                queryKey: ['board', boardId, 'tasks'],
-              }),
-              queryClient.refetchQueries({
-                queryKey: ['project', projectId, 'tasks'],
-              }),
-            ];
-
-            await Promise.all(refetchPromises);
-
-            // Call parent component callback
-            if (onUpdate) {
-              onUpdate();
-            }
-
-            // Force re-render
-            const queryCache = queryClient.getQueryCache();
-            queryCache.findAll().forEach(({ queryKey }) => {
-              if (
-                Array.isArray(queryKey) &&
-                (queryKey[0] === 'board' || queryKey[0] === 'project' || queryKey[0] === 'tasks')
-              ) {
-                queryClient.invalidateQueries({ queryKey });
-              }
-            });
+            void refreshAfterUpdate(taskScope, onUpdate);
           },
           onError: (error) => {
             console.error('Error updating task:', error);
@@ -182,140 +285,55 @@ export function TaskActions({
     }
   };
 
+  const handleDeleteSuccess = async () => {
+    await cleanupAfterDelete(taskScope, onUpdate);
+    toast.success(t('deleteSuccess'));
+  };
+
   // Handle task deletion
   const handleDelete = async () => {
     try {
-      // 1. Save current task data for rollback
-      const previousTask = queryClient.getQueryData(TASK_KEYS.detail(id));
+      // Save current task data for rollback
+      const previousTask = queryClient.getQueryData<Task>(TASK_KEYS.detail(id));
 
-      // 2. Create a function to safely update queries
-      const updateQueries = (queryKey: QueryKey, taskId: string) => {
-        queryClient.setQueryData<Task[] | undefined>(queryKey, (old) => {
-          if (!old || !Array.isArray(old)) {
-            return old;
-          }
-          return old.filter((task) => task._id !== taskId);
-        });
-      };
-
-      // 3. Create a function to safely cancel and remove queries
-      const cancelAndRemoveQueries = (queryKey: QueryKey) => {
-        queryClient.cancelQueries({ queryKey });
-        queryClient.removeQueries({ queryKey });
-      };
-
-      // 4. Optimistically update all related queries
-      try {
-        // Cancel any ongoing requests for this task
-        queryClient.cancelQueries({ queryKey: TASK_KEYS.detail(id) });
-
-        // Update all list queries
-        updateQueries(TASK_KEYS.lists(), id);
-        updateQueries(['board', boardId, 'tasks'], id);
-        updateQueries(['project', projectId, 'tasks'], id);
-
-        // Remove the task detail query
-        cancelAndRemoveQueries(TASK_KEYS.detail(id));
-
-        // Also remove any other potential queries that might contain this task
-        cancelAndRemoveQueries(['task', id, 'details']);
-      } catch (error) {
-        console.error('Error during optimistic update:', error);
-      }
+      removeTaskOptimistically(taskScope);
 
       // Mark as deleted immediately to prevent any further fetches
       setIsDeleted(true);
 
-      // 5. Execute the delete mutation
       await deleteTaskMutation.mutateAsync(id, {
-        onSuccess: async () => {
-          try {
-            // Invalidate all related queries to ensure data consistency
-            await Promise.all([
-              queryClient.invalidateQueries({
-                queryKey: TASK_KEYS.lists(),
-                refetchType: 'active' as const,
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['board', boardId, 'tasks'],
-                refetchType: 'active' as const,
-              }),
-              queryClient.invalidateQueries({
-                queryKey: ['project', projectId, 'tasks'],
-                refetchType: 'active' as const,
-              }),
-            ]);
-
-            // Ensure task detail queries are removed
-            cancelAndRemoveQueries(TASK_KEYS.detail(id));
-            cancelAndRemoveQueries(['task', id, 'details']);
-
-            // Call parent's update callback if provided
-            if (onUpdate) {
-              try {
-                await onUpdate();
-              } catch (updateError) {
-                console.error('Error in onUpdate callback:', updateError);
-              }
-            }
-
-            toast.success(t('deleteSuccess'));
-          } catch (cleanupError) {
-            console.error('Error during cleanup after successful delete:', cleanupError);
-            toast.success(t('deleteSuccess'));
-          }
+        onSuccess: () => {
+          void handleDeleteSuccess();
         },
         onError: (error) => {
           console.error('Error in delete mutation:', error);
-
-          // Restore the task data
-          if (previousTask) {
-            queryClient.setQueryData(TASK_KEYS.detail(id), previousTask);
-          }
-
-          // Invalidate all relevant queries to restore correct state
-          try {
-            queryClient.invalidateQueries({
-              predicate: (query) => {
-                const queryKey = query.queryKey as readonly (string | readonly string[])[];
-                const firstKey = Array.isArray(queryKey[0]) ? queryKey[0][0] : queryKey[0];
-                return ['tasks', 'board', 'project'].includes(firstKey as string);
-              },
-              refetchType: 'active' as const,
-            });
-          } catch (invalidateError) {
-            console.error('Error during query invalidation:', invalidateError);
+          restoreAfterDeleteError(taskScope, previousTask, () => {
             router.refresh();
-          }
-
+          });
           toast.error(t('deleteError'));
         },
       });
     } catch (error) {
       console.error('Error in delete handler:', error);
       toast.error(t('deleteError'));
-    } finally {
-      setShowDeleteDialog(false);
     }
+    setShowDeleteDialog(false);
   };
 
   // Loading and error states
   if (isLoadingTask && !isDeleted) {
     return (
-      <Text paddingHorizontal="$2" paddingVertical="$1.5">
+      <Text
+        paddingHorizontal="$2"
+        paddingVertical="$1.5">
         Loading...
       </Text>
     );
   }
 
-  if ((!task && !isDeleted) || isDeleted) {
-    // If task is deleted or not found, and we're not in a loading state,
-    // return null to unmount the component
-    return null;
-  }
-
-  // If we don't have task data, don't render anything
-  if (!task) {
+  // If task is deleted or not found, and we're not in a loading state,
+  // return null to unmount the component
+  if (!task || isDeleted) {
     return null;
   }
 
@@ -331,7 +349,11 @@ export function TaskActions({
         }}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" width="90%" maxWidth={448} testID="edit-task-dialog">
+          <DialogContent
+            key="content"
+            width="90%"
+            maxWidth={448}
+            testID="edit-task-dialog">
             <Dialog.Title size="$7">{t('editTaskTitle')}</Dialog.Title>
             <Dialog.Description>{t('editTaskDescription')}</Dialog.Description>
             <TaskForm
@@ -353,7 +375,9 @@ export function TaskActions({
             label: t('edit'),
             disabled: !canEdit,
             disabledReason: tKanban('noPermission'),
-            onSelect: () => setIsEditDialogOpen(true),
+            onSelect: () => {
+              setIsEditDialogOpen(true);
+            },
           },
           { separator: true },
           {
@@ -361,10 +385,18 @@ export function TaskActions({
             destructive: true,
             disabled: !canDelete,
             disabledReason: tKanban('noPermission'),
-            onSelect: () => setShowDeleteDialog(true),
+            onSelect: () => {
+              setShowDeleteDialog(true);
+            },
           },
         ]}>
-        <Button chromeless size="$2" icon={Ellipsis} aria-label={t('actions')} testID="task-actions-trigger" />
+        <Button
+          chromeless
+          size="$2"
+          icon={Ellipsis}
+          aria-label={t('actions')}
+          testID="task-actions-trigger"
+        />
       </DropdownMenu>
 
       <ConfirmDialog
@@ -375,8 +407,10 @@ export function TaskActions({
         body={t('confirmDeleteDescription', { title })}
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
-        onConfirm={handleDelete}
+        onConfirm={() => {
+          void handleDelete();
+        }}
       />
     </>
   );
-}
+};

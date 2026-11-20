@@ -1,6 +1,6 @@
-import { createAuthStore } from "@repo/store";
+import { createAuthStore } from '@repo/store';
 
-export type { AuthState } from "@repo/store";
+export type { AuthState } from '@repo/store';
 
 /**
  * Web auth store — uses localStorage by default (Zustand's built-in default).

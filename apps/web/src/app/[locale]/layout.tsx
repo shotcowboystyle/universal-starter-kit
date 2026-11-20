@@ -1,5 +1,5 @@
 import { Analytics } from '@vercel/analytics/react';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Roboto } from 'next/font/google';
@@ -23,11 +23,9 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export function generateStaticParams() {
-  return routing.locales.map((locale) => ({ locale }));
-}
+export const generateStaticParams = () => routing.locales.map((locale) => ({ locale }));
 
-export async function generateMetadata({ params }: Omit<Props, 'children'>): Promise<Metadata> {
+export const generateMetadata = async ({ params }: Omit<Props, 'children'>): Promise<Metadata> => {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
 
@@ -35,11 +33,12 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
     title: t('title'),
     description: t('description'),
   };
-}
+};
 
-export default async function LocaleLayout({ children, params }: Readonly<Props>) {
+const LocaleLayout = async ({ children, params }: Readonly<Props>) => {
   const { locale } = await params;
   // Enable static rendering
+  // oxlint-disable-next-line typescript/no-deprecated -- migrating to next/root-params is a routing change beyond lint scope
   setRequestLocale(locale);
 
   if (!hasLocale(routing.locales, locale)) {
@@ -49,10 +48,19 @@ export default async function LocaleLayout({ children, params }: Readonly<Props>
   const messages = await getCachedMessages(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className={roboto.className} suppressHydrationWarning>
-        <NextTopLoader color="#2563eb" showSpinner={false} />
-        <NextIntlClientProvider locale={locale} messages={messages}>
+    <html
+      lang={locale}
+      suppressHydrationWarning>
+      <body
+        className={roboto.className}
+        suppressHydrationWarning>
+        <NextTopLoader
+          color="#2563eb"
+          showSpinner={false}
+        />
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages}>
           {/* Tamagui's styled contexts call Math.random() while rendering and the
               scheme cookie is request data; cacheComponents allows both only
               below a Suspense boundary. */}
@@ -66,4 +74,6 @@ export default async function LocaleLayout({ children, params }: Readonly<Props>
       </body>
     </html>
   );
-}
+};
+
+export default LocaleLayout;

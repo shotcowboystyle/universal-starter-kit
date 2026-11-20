@@ -1,141 +1,149 @@
-import { HttpException, HttpStatus } from "@nestjs/common";
-import { ArgumentsHost } from "@nestjs/common/interfaces";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
+import type { ArgumentsHost } from '@nestjs/common/interfaces';
+import type { Response } from 'express';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AllExceptionsFilter } from "../../../src/common/filters/all-exceptions.filter";
+import { AllExceptionsFilter } from '../../../src/common/filters/all-exceptions.filter';
 
-describe("AllExceptionsFilter", () => {
+const createResponse = () => ({
+  status: vi.fn<Response['status']>().mockReturnThis(),
+  json: vi.fn<Response['json']>().mockReturnThis(),
+});
+
+describe(AllExceptionsFilter, () => {
   let filter: AllExceptionsFilter;
-  let mockResponse: Record<string, ReturnType<typeof vi.fn>>;
+  let handle: (exception: Error | string | null, host: ArgumentsHost) => void;
+  let mockResponse: ReturnType<typeof createResponse>;
   let mockHost: ArgumentsHost;
 
   beforeEach(() => {
     filter = new AllExceptionsFilter();
+    // Bound once so Nest's `catch` hook is not mistaken for Promise#catch at each call site
+    // oxlint-disable-next-line github/no-then -- Nest ExceptionFilter#catch, not Promise#catch
+    handle = filter.catch.bind(filter);
 
-    mockResponse = {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn().mockReturnThis()
-    };
+    mockResponse = createResponse();
 
     mockHost = {
-      switchToHttp: vi.fn().mockReturnValue({
-        getResponse: vi.fn().mockReturnValue(mockResponse)
-      })
+      switchToHttp: vi.fn<() => { getResponse: () => typeof mockResponse }>().mockReturnValue({
+        getResponse: vi.fn<() => typeof mockResponse>().mockReturnValue(mockResponse),
+      }),
     } as unknown as ArgumentsHost;
   });
 
-  it("should be defined", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should be defined', () => {
     expect(filter).toBeDefined();
   });
 
-  describe("HttpException handling", () => {
-    it("should handle HttpException with string response", () => {
-      const exception = new HttpException("Bad request", HttpStatus.BAD_REQUEST);
+  describe('HttpException handling', () => {
+    it('should handle HttpException with string response', () => {
+      const exception = new HttpException('Bad request', HttpStatus.BAD_REQUEST);
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.BAD_REQUEST,
-        message: "Bad request"
+        message: 'Bad request',
       });
     });
 
-    it("should handle HttpException with object response", () => {
+    it('should handle HttpException with object response', () => {
       const exception = new HttpException(
-        { error: "Validation failed", details: "Field is required" },
-        HttpStatus.BAD_REQUEST
+        { error: 'Validation failed', details: 'Field is required' },
+        HttpStatus.BAD_REQUEST,
       );
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.BAD_REQUEST,
-        error: "Validation failed",
-        details: "Field is required"
+        error: 'Validation failed',
+        details: 'Field is required',
       });
     });
 
-    it("should handle HttpException with array response", () => {
-      const exception = new HttpException(["error1", "error2"], HttpStatus.BAD_REQUEST);
+    it('should handle HttpException with array response', () => {
+      const exception = new HttpException(['error1', 'error2'], HttpStatus.BAD_REQUEST);
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.BAD_REQUEST,
-        0: "error1",
-        1: "error2"
+        0: 'error1',
+        1: 'error2',
       });
     });
   });
 
-  describe("non-HttpException handling", () => {
-    it("should handle generic Error with 500 status", () => {
-      const exception = new Error("Something went wrong");
+  describe('non-HttpException handling', () => {
+    it('should handle generic Error with 500 status', () => {
+      const exception = new Error('Something went wrong');
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: "Internal server error"
+        message: 'Internal server error',
       });
     });
 
-    it("should handle unknown exception type", () => {
-      const exception = "Unknown error string";
+    it('should handle unknown exception type', () => {
+      const exception = 'Unknown error string';
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: "Internal server error"
+        message: 'Internal server error',
       });
     });
 
-    it("should handle null exception", () => {
-      filter.catch(null, mockHost);
+    it('should handle null exception', () => {
+      handle(null, mockHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
       expect(mockResponse.json).toHaveBeenCalledWith({
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-        message: "Internal server error"
+        message: 'Internal server error',
       });
     });
   });
 
-  describe("logging for 5xx errors", () => {
-    it("should log error for 500 status", () => {
-      const exception = new Error("Server error");
-      const loggerSpy = vi.spyOn(filter["logger"], "error");
+  describe('logging for 5xx errors', () => {
+    it('should log error for 500 status', () => {
+      const exception = new Error('Server error');
+      const loggerSpy = vi.spyOn(Logger.prototype, 'error');
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
-      expect(loggerSpy).toHaveBeenCalledWith(
-        "Unhandled exception: Server error",
-        expect.any(String)
-      );
+      expect(loggerSpy).toHaveBeenCalledWith('Unhandled exception: Server error', expect.any(String));
     });
 
-    it("should not log error for 400 status", () => {
-      const exception = new HttpException("Bad request", HttpStatus.BAD_REQUEST);
-      const loggerSpy = vi.spyOn(filter["logger"], "error");
+    it('should not log error for 400 status', () => {
+      const exception = new HttpException('Bad request', HttpStatus.BAD_REQUEST);
+      const loggerSpy = vi.spyOn(Logger.prototype, 'error');
 
-      filter.catch(exception, mockHost);
+      handle(exception, mockHost);
 
       expect(loggerSpy).not.toHaveBeenCalled();
     });
 
-    it("should handle non-Error 5xx exceptions in logging", () => {
-      const exception = { status: 500, message: "Weird error" };
-      const loggerSpy = vi.spyOn(filter["logger"], "error");
+    it('should handle non-Error 5xx exceptions in logging', () => {
+      const exception = { status: 500, message: 'Weird error' };
+      const loggerSpy = vi.spyOn(Logger.prototype, 'error');
 
-      filter.catch(exception as any, mockHost);
+      handle(exception as any, mockHost);
 
-      expect(loggerSpy).toHaveBeenCalledWith("Unhandled exception: Unknown error", undefined);
+      expect(loggerSpy).toHaveBeenCalledWith('Unhandled exception: Unknown error', undefined);
     });
   });
 });

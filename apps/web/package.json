@@ -1,6 +1,6 @@
 {
   "name": "web",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "private": true,
   "author": {
     "name": "curt.blanton",
@@ -9,8 +9,6 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json apps/web",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "playwright": "npx playwright test",
     "start": "next start",
     "test": "vitest run --coverage",

@@ -27,10 +27,7 @@ export class OrdersService {
 
     for (const item of items) {
       await this.orderItemModel.create({ orderId: order._id, ...item });
-      await this.inventoryModel.updateOne(
-        { productId: item.productId },
-        { $inc: { stock: -item.quantity } },
-      );
+      await this.inventoryModel.updateOne({ productId: item.productId }, { $inc: { stock: -item.quantity } });
     }
 
     await this.paymentService.charge(order._id);
@@ -63,16 +60,10 @@ export class OrdersService {
 
     await session.withTransaction(async () => {
       // All operations use the same session
-      [order] = await this.orderModel.create(
-        [{ userId, status: 'pending' }],
-        { session },
-      );
+      [order] = await this.orderModel.create([{ userId, status: 'pending' }], { session });
 
       for (const item of items) {
-        await this.orderItemModel.create(
-          [{ orderId: order._id, ...item }],
-          { session },
-        );
+        await this.orderItemModel.create([{ orderId: order._id, ...item }], { session });
         await this.inventoryModel.updateOne(
           { productId: item.productId },
           { $inc: { stock: -item.quantity } },
@@ -100,11 +91,7 @@ export class TransferService {
 
     try {
       // Debit source account
-      await this.accountModel.updateOne(
-        { _id: fromId },
-        { $inc: { balance: -amount } },
-        { session },
-      );
+      await this.accountModel.updateOne({ _id: fromId }, { $inc: { balance: -amount } }, { session });
 
       // Verify sufficient funds
       const source = await this.accountModel.findById(fromId).session(session);
@@ -113,17 +100,10 @@ export class TransferService {
       }
 
       // Credit destination account
-      await this.accountModel.updateOne(
-        { _id: toId },
-        { $inc: { balance: amount } },
-        { session },
-      );
+      await this.accountModel.updateOne({ _id: toId }, { $inc: { balance: amount } }, { session });
 
       // Log the transaction
-      await this.transactionLogModel.create(
-        [{ fromId, toId, amount, timestamp: new Date() }],
-        { session },
-      );
+      await this.transactionLogModel.create([{ fromId, toId, amount, timestamp: new Date() }], { session });
 
       await session.commitTransaction();
     } catch (error) {
@@ -144,19 +124,13 @@ export class UsersService {
     @InjectModel(Profile.name) private profileModel: Model<Profile>,
   ) {}
 
-  async createWithProfile(
-    userData: CreateUserDto,
-    profileData: CreateProfileDto,
-  ): Promise<User> {
+  async createWithProfile(userData: CreateUserDto, profileData: CreateProfileDto): Promise<User> {
     const session = await this.connection.startSession();
     let user: User;
 
     await session.withTransaction(async () => {
       [user] = await this.userModel.create([userData], { session });
-      await this.profileModel.create(
-        [{ ...profileData, userId: user._id }],
-        { session },
-      );
+      await this.profileModel.create([{ ...profileData, userId: user._id }], { session });
     });
 
     session.endSession();

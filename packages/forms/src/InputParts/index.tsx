@@ -18,14 +18,20 @@ import {
   warnOutlineNone,
   warnPositiveTabIndex,
   warnSizeRecipeEscape,
-  type RecipeFamilyName,
 } from '@repo/theme';
+import type { SizeRecipeFamilyName } from '@repo/theme';
 import { getFontSized } from '@tamagui/get-font-sized';
-import type { SizeVariantSpreadFunction } from '@tamagui/web';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import type { ComponentProps, Ref, RefObject } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ChangeEvent, ComponentProps, FocusEvent, ReactElement, RefObject } from 'react';
 import { Pressable as RNPressable } from 'react-native';
-import type { ColorTokens, FontSizeTokens, InputKeyboardType, InputTextContentType, TamaguiElement } from 'tamagui';
+import type {
+  ColorTokens,
+  FontSizeTokens,
+  SizeTokens,
+  InputKeyboardType,
+  InputTextContentType,
+  TamaguiElement,
+} from 'tamagui';
 import {
   Button as TButton,
   Input as TInput,
@@ -41,10 +47,11 @@ import {
   useTheme,
 } from 'tamagui';
 
-import { useFieldA11y, useFieldDescribedBy } from '../fieldLayout';
-import { formButtonColors, formCommonColors, formInputColors } from '../shared/colorRamps';
-import { useControlGrouped } from '../shared/groupContext';
-import { useIsInTableCell } from '../shared/tableCellContext';
+import { useFieldA11y, useFieldDescribedBy } from '../FieldLayout';
+import { formButtonColors, formCommonColors, formInputColors } from '../shared/color-ramps';
+import { useControlGrouped } from '../shared/group-context';
+import { useIsInTableCell } from '../shared/table-cell-context';
+import { ThemedTextArea } from '../themed-primitives';
 
 /**
  * Native-only accessible name/hint from the field context. Web keeps its
@@ -52,48 +59,54 @@ import { useIsInTableCell } from '../shared/tableCellContext';
  * control itself. Spread BEFORE consumer props so an explicit
  * accessibilityLabel / aria-label ejects.
  */
-function useNativeFieldA11yProps() {
+const isNumber = (value: unknown): value is number => typeof value === 'number';
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const useNativeFieldA11yProps = (): { accessibilityLabel?: string; accessibilityHint?: string } | undefined => {
   const fieldA11y = useFieldA11y();
-  if (isWeb || !fieldA11y) {
+  if (isWeb || fieldA11y == null) {
     return undefined;
   }
+  const { label, description } = fieldA11y;
   return {
-    ...(fieldA11y.label ? { accessibilityLabel: fieldA11y.label } : undefined),
-    ...(fieldA11y.description ? { accessibilityHint: fieldA11y.description } : undefined),
+    ...(label != null && label !== '' ? { accessibilityLabel: label } : undefined),
+    ...(description != null && description !== '' ? { accessibilityHint: description } : undefined),
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
 
-const defaultContextValues = {
-  size: '$true' as FontSizeTokens,
-  scaleIcon: 1,
-  touch: !isWeb && isTouchSurface(),
-  color: undefined as ColorTokens | string | undefined,
-};
-
-export const InputContext = createStyledContext<{
+interface InputContextValue {
   size: FontSizeTokens;
   scaleIcon: number;
   touch: boolean;
-  color?: ColorTokens | string;
-}>(defaultContextValues);
+  color?: string;
+}
+
+const defaultContextValues: InputContextValue = {
+  size: '$true',
+  scaleIcon: 1,
+  touch: !isWeb && isTouchSurface(),
+};
+
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const InputContext = createStyledContext<InputContextValue>(defaultContextValues);
 
 /** Square end-cap of recipe.height — generated, never handwritten. */
-function endCapVariantsFromHeights(heightVariants: Record<string, { height: number }>) {
-  return Object.fromEntries(
+const endCapVariantsFromHeights = (heightVariants: Record<string, { height: number }>) =>
+  Object.fromEntries(
     Object.entries(heightVariants).map(([token, { height }]) => [
       token,
       { height, width: height, paddingHorizontal: 0 as const },
     ]),
   );
-}
 
 const sizeRecipeEndCapVariants = endCapVariantsFromHeights(recipeFamilies.control.heightVariants);
 
-function sizeRecipeBoxFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeBoxFallback = (val: SizeTokens | undefined, extras: { props: { touch?: boolean } }) => {
   const recipe = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
@@ -102,36 +115,37 @@ function sizeRecipeBoxFallback(val: unknown, extras: { props: { touch?: boolean 
     paddingHorizontal: recipe.paddingHorizontal,
     gap: recipe.gap,
   };
-}
+};
 
-function sizeRecipeTypeFallback(val: unknown, extras: { props: { touch?: boolean } }) {
-  return {
-    fontSize: sizeRecipeForToken(String(val ?? '$true'), {
-      touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
-    }).fontSize,
-  };
-}
+const sizeRecipeTypeFallback = (val: SizeTokens | undefined, extras: { props: { touch?: boolean } }) => ({
+  fontSize: sizeRecipeForToken(String(val ?? '$true'), {
+    touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
+  }).fontSize,
+});
 
-function sizeRecipeIconFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeIconFallback = (val: SizeTokens | undefined, extras: { props: { touch?: boolean } }) => {
   const { iconSize } = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
   return { width: iconSize, height: iconSize };
-}
+};
 
-function sizeRecipeEndCapFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeEndCapFallback = (val: SizeTokens | undefined, extras: { props: { touch?: boolean } }) => {
   const { height } = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
   return { height, width: height, paddingHorizontal: 0 };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Focus forwarding
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const FocusContext = createStyledContext({
-  setFocused: (_val: boolean) => {},
+  setFocused: (_val: boolean) => {
+    // Default outside Input.Box: nothing to focus-track.
+  },
   focused: false,
 });
 
@@ -164,7 +178,7 @@ export const useForwardFocus = (target: RefObject<TamaguiElement | null>) => {
  * near-white, so the ring flashes white while settling. Scope the frame
  * transition to non-outline paint props instead.
  */
-const inputFrameCssTimings: Record<string, string> = {
+const inputFrameCssTimings = {
   bouncy: 'ease-in 200ms',
   lazy: 'ease-in 600ms',
   slow: 'ease-in 500ms',
@@ -173,16 +187,22 @@ const inputFrameCssTimings: Record<string, string> = {
   tooltip: 'ease-in 400ms',
   snappy: 'ease-out 80ms',
   gentle: 'ease-in-out 450ms',
-};
+} as const;
 
-export function getInputFrameTransitionProps(transition: string | undefined) {
-  if (!transition) {
+const isNamedTransition = (name: string): name is keyof typeof inputFrameCssTimings =>
+  Object.hasOwn(inputFrameCssTimings, name);
+
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const getInputFrameTransitionProps = (
+  transition: string | undefined,
+): { transition: string } | { style: { transition: string } } | undefined => {
+  if (transition === undefined || transition === '') {
     return undefined;
   }
   if (!isWeb) {
     return { transition };
   }
-  const timing = inputFrameCssTimings[transition] ?? inputFrameCssTimings.quick;
+  const timing = isNamedTransition(transition) ? inputFrameCssTimings[transition] : inputFrameCssTimings.quick;
   return {
     // Prefer explicit CSS over Tamagui's `transition: all` named prop.
     style: {
@@ -196,19 +216,19 @@ export function getInputFrameTransitionProps(transition: string | undefined) {
       ].join(', '),
     },
   };
-}
+};
 
 /** Resting outline: transparent + 0 width so blur never lands on theme `$outlineColor`. */
 const inputOutlineRest = {
   outlineWidth: 0,
   outlineColor: 'transparent',
-  outlineStyle: 'solid' as any,
+  outlineStyle: 'solid',
 } as const;
 
 const inputOutlineFocus = {
   outlineColor: '$outlineColor',
   outlineWidth: 2,
-  outlineStyle: 'solid' as any,
+  outlineStyle: 'solid',
   // Inset: Input.Box clips children with overflow:hidden; an outer +2px
   // ring is severed (clipping carve-out).
   outlineOffset: -2,
@@ -230,18 +250,19 @@ const AREA_NO_OUTLINE = {
 
 type BoxOverflow = 'hidden' | 'visible';
 
-export function boxRingMode(overflow: BoxOverflow, paintsRing: boolean): 'inset' | 'outset' | undefined {
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const boxRingMode = (overflow: BoxOverflow, paintsRing: boolean): 'inset' | 'outset' | undefined => {
   if (!paintsRing) {
     return undefined;
   }
   return overflow === 'hidden' ? 'inset' : 'outset';
-}
+};
 
-export function boxRingOffset(mode: 'inset' | 'outset' | undefined): number {
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const boxRingOffset = (mode: 'inset' | 'outset' | undefined): number =>
   // Both branches are sanctioned offsets: the clipping inset when the
   // Box clips its adornments, the shape halo when it does not.
-  return mode === 'outset' ? FOCUS_RING_HALO_OFFSET : FOCUS_RING_CLIPPED_OFFSET;
-}
+  mode === 'outset' ? FOCUS_RING_HALO_OFFSET : FOCUS_RING_CLIPPED_OFFSET;
 
 export const inputPartsRingCss = `/* LC-71: ring on Box (adornments inside); Area never outlines.
    Inset iff the Box clips (overflow:hidden). Do not :has(:focus-visible) on
@@ -277,37 +298,49 @@ input[data-mp-input-area] {
 
 const INPUT_PARTS_RING_STYLE_ID = 'mp-input-parts-ring-anatomy';
 
-export function ensureInputPartsFocusRing(): void {
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const ensureInputPartsFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(INPUT_PARTS_RING_STYLE_ID)) {
+  if (document.querySelector(`#${INPUT_PARTS_RING_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
   tag.id = INPUT_PARTS_RING_STYLE_ID;
   tag.textContent = inputPartsRingCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
+};
+
+interface WebBoxRingAttrs {
+  className?: string;
+  'data-mp-input-box': 'true';
+  'data-mp-ring'?: 'inset' | 'outset';
 }
 
-function webBoxRingAttrs(
+interface WebAreaAttrs {
+  className: string;
+  'data-mp-input-area': 'true';
+}
+
+const webBoxRingAttrs = (
   overflow: BoxOverflow,
   paintsRing: boolean,
   extraClass?: string,
-): Record<string, unknown> | undefined {
+): WebBoxRingAttrs | undefined => {
   if (!isWeb) {
     return undefined;
   }
   const mode = boxRingMode(overflow, paintsRing);
   const className = [paintsRing ? 'mp-composite-ring' : undefined, extraClass].filter(Boolean).join(' ');
   return {
-    ...(className ? { className } : undefined),
+    ...(className === '' ? undefined : { className }),
     'data-mp-input-box': 'true',
-    ...(mode ? { 'data-mp-ring': mode } : undefined),
+    ...(mode === undefined ? undefined : { 'data-mp-ring': mode }),
   };
-}
+};
 
-function webAreaAttrs(extraClass?: string): Record<string, unknown> | undefined {
+const webAreaAttrs = (extraClass?: string): WebAreaAttrs | undefined => {
   if (!isWeb) {
     return undefined;
   }
@@ -316,8 +349,9 @@ function webAreaAttrs(extraClass?: string): Record<string, unknown> | undefined 
     className,
     'data-mp-input-area': 'true',
   };
-}
+};
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const defaultInputGroupStyles = {
   size: '$true',
   fontFamily: '$body',
@@ -370,7 +404,7 @@ const InputGroupFrame = styled(XGroup, {
   overflow: 'hidden',
   // className on XGroup is best-effort (often dropped). The styleable
   // spread stamps data-mp-input-box / data-mp-ring; CSS keys off those.
-  ...(isWeb ? { className: 'mp-composite-ring' } : {}),
+  ...(isWeb ? { className: 'mp-composite-ring' } : undefined),
 
   variants: {
     touch: { true: {}, false: {} },
@@ -378,7 +412,7 @@ const InputGroupFrame = styled(XGroup, {
       false: defaultInputGroupStyles,
     },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       ...(recipeFamilies.control.boxVariants ?? sizeRecipeBoxVariants),
@@ -397,22 +431,115 @@ const InputGroupFrame = styled(XGroup, {
  * XGroup chrome (buttons that must stay tappable — clear, chip dismiss —
  * should sit outside InputParts.Box, e.g. FloatingPanel triggerEnd).
  */
-function wrapNativePressable(onPress: ((e?: any) => void) | undefined, disabled: boolean | undefined, node: ReactNode) {
+type PressHandler = ComponentProps<typeof RNPressable>['onPress'];
+
+const wrapNativePressable = (node: ReactElement, onPress?: PressHandler, disabled = false): ReactElement => {
   if (isWeb || !onPress) {
     return node;
   }
   return (
     <RNPressable
       onPress={onPress}
-      disabled={!!disabled}
+      disabled={disabled}
       accessibilityRole="button"
       style={disabled ? { opacity: 0.5 } : undefined}>
-      <View pointerEvents="none" collapsable={false} width="100%">
+      <View
+        pointerEvents="none"
+        collapsable={false}
+        width="100%">
         {node}
       </View>
     </RNPressable>
   );
-}
+};
+
+type FrameSizeProps = Pick<ComponentProps<typeof InputGroupFrame>, 'height' | 'paddingHorizontal'>;
+
+type RadiusKnob = ReturnType<typeof useResolvedKnobs>['knobProps']['borderRadius']['borderRadius'];
+
+const isRadiusToken = (token: RadiusKnob): token is keyof typeof SIZE_RECIPE_RADIUS_TOKEN_TO_STOP =>
+  Object.hasOwn(SIZE_RECIPE_RADIUS_TOKEN_TO_STOP, token);
+
+/** Medium (size-table) corners; undefined when the knob picked another radius stop. */
+const resolveTableRadius = (
+  radiusToken: RadiusKnob,
+  sizeToken: string,
+  family: SizeRecipeFamilyName,
+): { borderRadius: number } | undefined => {
+  const radiusStop = isRadiusToken(radiusToken) ? SIZE_RECIPE_RADIUS_TOKEN_TO_STOP[radiusToken] : undefined;
+  if (radiusStop !== undefined && radiusStop !== 'medium') {
+    return undefined;
+  }
+  return {
+    borderRadius: resolveControlRadius(sizeRecipeForToken(sizeToken, { family }), 'medium').radius,
+  };
+};
+
+const resolveBoxOverflow = (paintsRing: boolean, hasElevation: boolean, hasWebPressSlop: boolean): BoxOverflow => {
+  const elevationClipsShadow = hasElevation && !isWeb;
+  return paintsRing && !elevationClipsShadow && !hasWebPressSlop ? 'hidden' : 'visible';
+};
+
+/** Splits explicit numeric height/padding (escape hatch) from pass-through values. */
+const resolveSizeOverrides = (
+  { height, paddingHorizontal }: FrameSizeProps,
+  sizeRecipeEscape: string | undefined,
+  fieldInset: number,
+) => {
+  const escaped = sizeRecipeEscape !== undefined && sizeRecipeEscape.trim().length > 0;
+  const paddingPassesThrough = !isNumber(paddingHorizontal) && paddingHorizontal != null;
+  return {
+    escapeOverride: escaped
+      ? {
+          ...(isNumber(height) ? { height } : undefined),
+          ...(isNumber(paddingHorizontal) ? { paddingHorizontal } : undefined),
+        }
+      : undefined,
+    passthrough: {
+      ...(!isNumber(height) && height != null ? { height } : undefined),
+      ...(paddingPassesThrough ? { paddingHorizontal } : undefined),
+    },
+    insetPad: escaped || paddingPassesThrough ? undefined : { paddingHorizontal: fieldInset },
+  };
+};
+
+// Covered by an overlay panel (see `suppressFocusRing` doc): keep the focus
+// border color but draw no ring on either focus path. This is an intentional
+// a11y exception: the open panel is the focus affordance while it covers this
+// box. Hoisted so the JSX spread does not re-specify focusStyle /
+// focusVisibleStyle literally (TS2783 under the build tsconfig).
+const SUPPRESSED_RING_PROPS = {
+  focusStyle: { borderColor: formInputColors.border.focus, ...inputOutlineRest },
+  focusVisibleStyle: {
+    borderColor: formInputColors.border.focus,
+    ...inputOutlineRest,
+  },
+};
+
+type ResolvedControl = ReturnType<typeof useResolvedKnobs>['control'];
+
+const resolveFocusRingProps = (ringed: boolean, control: ResolvedControl, ringMode: ReturnType<typeof boxRingMode>) =>
+  ringed
+    ? {
+        // Text-entry carve-out: inner Area focus means typing
+        // is next, so the Box rings on any focus — including click.
+        // CSS `[data-mp-ring]` is the sync path; this is the token-
+        // resolved backup (and the native path). Button-like Boxes
+        // (Select) do not set `focused` (no Area onFocus).
+        borderColor: formInputColors.border.focus,
+        ...ensureFocusVisibleRing({
+          ...inputOutlineFocus,
+          ...control.focusKnobProps,
+          ...control.focusVisibleKnobProps,
+          outlineOffset: boxRingOffset(ringMode),
+        }),
+      }
+    : {
+        // Explicit rest — avoid leaving theme `$outlineColor` (near-white in
+        // dark) as the computed outline-color while width settles.
+        // Keep outline-transparent rest (border-flicker fix); do not warn.
+        ...inputOutlineRest,
+      };
 
 const InputGroupImpl = InputGroupFrame.styleable<{
   /**
@@ -427,15 +554,19 @@ const InputGroupImpl = InputGroupFrame.styleable<{
    * Size-recipe family. Input stays on `"control"` (same as Button default).
    * No per-input tweaks.
    */
-  recipeFamily?: RecipeFamilyName;
+  recipeFamily?: SizeRecipeFamilyName;
   /**
    * Opt-in to an explicit numeric `height` / `paddingHorizontal`. Required
    * when those props are numbers; without it DEV-warns `size-recipe-escape`
    * and the size recipe still wins.
    */
   sizeRecipeEscape?: string;
+  onPress?: PressHandler;
+  disabled?: boolean;
+  'data-mp-press-slop'?: string;
 }>((groupProps, forwardedRef) => {
   const {
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- tamagui types styled-component `children` as any
     children,
     onPress,
     disabled,
@@ -445,12 +576,7 @@ const InputGroupImpl = InputGroupFrame.styleable<{
     height: heightProp,
     paddingHorizontal: paddingHorizontalProp,
     ...props
-  } = groupProps as typeof groupProps & {
-    onPress?: (e?: any) => void;
-    disabled?: boolean;
-    height?: unknown;
-    paddingHorizontal?: unknown;
-  };
+  } = groupProps;
   const [focused, setFocused] = useState(false);
   const hydrationTouch = useTouchSurface();
   const { knobProps, control, disabledState } = useResolvedKnobs();
@@ -464,22 +590,22 @@ const InputGroupImpl = InputGroupFrame.styleable<{
   // with the shadow (iOS masks the layer's own drop shadow). Web box-shadow
   // paints outside overflow:hidden, so the ring clip can stay.
   const paintsRing = !grouped && !inTableCell;
-  const hasElevation = knobProps.elevation != null;
-  const hasWebPressSlop = isWeb && (props as { 'data-mp-press-slop'?: string })['data-mp-press-slop'] != null;
-  const boxOverflow: BoxOverflow = paintsRing && !(hasElevation && !isWeb) && !hasWebPressSlop ? 'hidden' : 'visible';
+  const hasWebPressSlop = isWeb && props['data-mp-press-slop'] != null;
+  const boxOverflow = resolveBoxOverflow(paintsRing, knobProps.elevation != null, hasWebPressSlop);
   const ringMode = boxRingMode(boxOverflow, paintsRing);
   if (isWeb) {
     ensureCompositeFocusRing();
     ensureInputPartsFocusRing();
   }
-  const boxRingAttrs = webBoxRingAttrs(boxOverflow, paintsRing, (props as { className?: string }).className);
+  const boxRingAttrs = webBoxRingAttrs(boxOverflow, paintsRing, props.className);
 
   // DEV guardrails (tree-shaken in production).
   warnPositiveTabIndex({
-    value: (props as { tabIndex?: number | string }).tabIndex,
+    value: props.tabIndex,
     component: 'Input.Box',
   });
-  warnOutlineNone((props as { focusVisibleStyle?: object }).focusVisibleStyle, {
+  const focusVisibleStyle: object | undefined = props.focusVisibleStyle ?? undefined;
+  warnOutlineNone(focusVisibleStyle, {
     component: 'Input.Box',
   });
   warnSizeRecipeEscape({
@@ -487,9 +613,9 @@ const InputGroupImpl = InputGroupFrame.styleable<{
     paddingHorizontal: paddingHorizontalProp,
     sizeRecipeEscape,
     component: 'Input.Box',
-    id: typeof (props as { id?: string }).id === 'string' ? (props as { id?: string }).id : undefined,
+    id: isString(props.id) ? props.id : undefined,
   });
-  const sizeToken = String((props as { size?: unknown }).size ?? knobProps.sizeToken);
+  const sizeToken = String(props.size ?? knobProps.sizeToken);
   const familyRecipe = sizeRecipeForToken(sizeToken, {
     touch: hydrationTouch,
     family: recipeFamily,
@@ -502,45 +628,27 @@ const InputGroupImpl = InputGroupFrame.styleable<{
           paddingHorizontal: familyRecipe.paddingHorizontal,
           gap: familyRecipe.gap,
         };
-  const radiusToken = knobProps.borderRadius.borderRadius;
-  const radiusStop =
-    typeof radiusToken === 'string'
-      ? SIZE_RECIPE_RADIUS_TOKEN_TO_STOP[radiusToken as keyof typeof SIZE_RECIPE_RADIUS_TOKEN_TO_STOP]
-      : undefined;
-  const sizeTableRadius =
-    radiusStop === 'medium' || radiusStop == null
-      ? {
-          borderRadius: resolveControlRadius(sizeRecipeForToken(sizeToken, { family: recipeFamily }), 'medium').radius,
-        }
-      : undefined;
-  const sizeRecipeEscaped = typeof sizeRecipeEscape === 'string' && sizeRecipeEscape.trim().length > 0;
-  const sizeRecipeEscapeOverride = sizeRecipeEscaped
-    ? {
-        ...(typeof heightProp === 'number' ? { height: heightProp } : undefined),
-        ...(typeof paddingHorizontalProp === 'number' ? { paddingHorizontal: paddingHorizontalProp } : undefined),
-      }
-    : undefined;
-  const passthroughSizeProps = {
-    ...(typeof heightProp !== 'number' && heightProp != null ? { height: heightProp } : undefined),
-    ...(typeof paddingHorizontalProp !== 'number' && paddingHorizontalProp != null
-      ? { paddingHorizontal: paddingHorizontalProp }
-      : undefined),
-  };
+  const sizeTableRadius = resolveTableRadius(knobProps.borderRadius.borderRadius, sizeToken, recipeFamily);
   // Text-field inset, not the button ladder padX. Multiline Box
   // (height="auto") leaves padX to ThemedTextArea so padX === padY.
   const fieldInset = heightProp === 'auto' ? 0 : textFieldInset(familyRecipe);
-  const insetPadProps =
-    sizeRecipeEscaped || (typeof paddingHorizontalProp !== 'number' && paddingHorizontalProp != null)
-      ? undefined
-      : { paddingHorizontal: fieldInset };
+  const {
+    escapeOverride: sizeRecipeEscapeOverride,
+    passthrough: passthroughSizeProps,
+    insetPad: insetPadProps,
+  } = resolveSizeOverrides(
+    { height: heightProp, paddingHorizontal: paddingHorizontalProp },
+    sizeRecipeEscape,
+    fieldInset,
+  );
 
   // Chromeless rendering inside table cells
   if (inTableCell) {
     return (
-      <FocusContext.Provider focused={focused} setFocused={setFocused}>
+      <FocusContext.Provider
+        focused={focused}
+        setFocused={setFocused}>
         {wrapNativePressable(
-          onPress,
-          disabled,
           <InputGroupFrame
             touch={hydrationTouch}
             ref={forwardedRef}
@@ -571,6 +679,8 @@ const InputGroupImpl = InputGroupFrame.styleable<{
             overflow={boxOverflow}>
             {children}
           </InputGroupFrame>,
+          onPress,
+          disabled,
         )}
       </FocusContext.Provider>
     );
@@ -578,8 +688,6 @@ const InputGroupImpl = InputGroupFrame.styleable<{
 
   if (grouped) {
     return wrapNativePressable(
-      onPress,
-      disabled,
       <InputGroupFrame
         touch={hydrationTouch}
         ref={forwardedRef}
@@ -597,30 +705,18 @@ const InputGroupImpl = InputGroupFrame.styleable<{
         overflow={boxOverflow}>
         {children}
       </InputGroupFrame>,
+      onPress,
+      disabled,
     );
   }
 
-  // Covered by an overlay panel (see prop doc): keep the focus border color
-  // but draw no ring on either focus path. This is an intentional a11y
-  // exception — the open panel is the focus affordance while it covers this
-  // box. Hoisted (with `undefined` in the union) so the JSX spread does not
-  // re-specify focusStyle/focusVisibleStyle literally (TS2783 under the
-  // build tsconfig).
-  const suppressedRingProps = suppressFocusRing
-    ? {
-        focusStyle: { borderColor: formInputColors.border.focus, ...inputOutlineRest },
-        focusVisibleStyle: {
-          borderColor: formInputColors.border.focus,
-          ...inputOutlineRest,
-        },
-      }
-    : undefined;
+  const suppressedRingProps = suppressFocusRing ? SUPPRESSED_RING_PROPS : undefined;
 
   return (
-    <FocusContext.Provider focused={focused} setFocused={setFocused}>
+    <FocusContext.Provider
+      focused={focused}
+      setFocused={setFocused}>
       {wrapNativePressable(
-        onPress,
-        disabled,
         <InputGroupFrame
           touch={hydrationTouch}
           ref={forwardedRef}
@@ -628,10 +724,11 @@ const InputGroupImpl = InputGroupFrame.styleable<{
           size={knobProps.sizeToken}
           {...controlFragment}
           backgroundColor={knobProps.inputBackground}
+          // oxlint-disable-next-line sonarjs/no-undefined-assignment -- explicit undefined clears a prop-level elevation; null would not
           {...(knobProps.elevation == null ? { elevation: undefined } : knobProps.elevationChrome)}
           {...knobProps.borderRadius}
           {...sizeTableRadius}
-          {...getInputFrameTransitionProps(typeof knobProps.transition === 'string' ? knobProps.transition : undefined)}
+          {...getInputFrameTransitionProps(isString(knobProps.transition) ? knobProps.transition : undefined)}
           hoverStyle={{
             borderColor: formInputColors.border.hover,
             ...control.hoverKnobProps,
@@ -655,27 +752,7 @@ const InputGroupImpl = InputGroupFrame.styleable<{
           {...sizeRecipeEscapeOverride}
           {...framePressProps}
           {...boxRingAttrs}
-          {...(focused && !suppressFocusRing
-            ? {
-                // Text-entry carve-out: inner Area focus means typing
-                // is next, so the Box rings on any focus — including click.
-                // CSS `[data-mp-ring]` is the sync path; this is the token-
-                // resolved backup (and the native path). Button-like Boxes
-                // (Select) do not set `focused` (no Area onFocus).
-                borderColor: formInputColors.border.focus,
-                ...ensureFocusVisibleRing({
-                  ...inputOutlineFocus,
-                  ...control.focusKnobProps,
-                  ...control.focusVisibleKnobProps,
-                  outlineOffset: boxRingOffset(ringMode),
-                }),
-              }
-            : {
-                // Explicit rest — avoid leaving theme `$outlineColor` (near-white in
-                // dark) as the computed outline-color while width settles.
-                // Keep outline-transparent rest (border-flicker fix); do not warn.
-                ...inputOutlineRest,
-              })}
+          {...resolveFocusRingProps(focused && !suppressFocusRing, control, ringMode)}
           {...suppressedRingProps}
           // DISABLED-VISIBLE: the input frame is text-bearing chrome —
           // keepLabel washes fill/border (value text keeps >= AA) and
@@ -690,6 +767,8 @@ const InputGroupImpl = InputGroupFrame.styleable<{
           overflow={boxOverflow}>
           {children}
         </InputGroupFrame>,
+        onPress,
+        disabled,
       )}
     </FocusContext.Provider>
   );
@@ -699,6 +778,7 @@ const InputGroupImpl = InputGroupFrame.styleable<{
 // Input size variant helper
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const KEYBOARD_TO_INPUT_MODE = {
   'phone-pad': 'tel',
   'number-pad': 'numeric',
@@ -707,6 +787,7 @@ export const KEYBOARD_TO_INPUT_MODE = {
   numeric: 'numeric',
 } as const;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const INPUT_MODE_TO_KEYBOARD = {
   tel: 'phone-pad',
   numeric: 'number-pad',
@@ -731,22 +812,31 @@ export type MappedKeyboardType = (typeof INPUT_MODE_TO_KEYBOARD)[keyof typeof IN
  */
 export type InputModeValue = ComponentProps<typeof TInput>['inputMode'];
 
-export function mapKeyboardTypeToInputMode(keyboardType?: string): MappedInputMode | undefined {
-  if (!keyboardType) {
+const isKeyboardType = (value: string): value is keyof typeof KEYBOARD_TO_INPUT_MODE =>
+  Object.hasOwn(KEYBOARD_TO_INPUT_MODE, value);
+
+const isInputMode = (value: string): value is keyof typeof INPUT_MODE_TO_KEYBOARD =>
+  Object.hasOwn(INPUT_MODE_TO_KEYBOARD, value);
+
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const mapKeyboardTypeToInputMode = (keyboardType?: string): MappedInputMode | undefined => {
+  if (keyboardType === undefined || !isKeyboardType(keyboardType)) {
     return undefined;
   }
-  return KEYBOARD_TO_INPUT_MODE[keyboardType as keyof typeof KEYBOARD_TO_INPUT_MODE];
-}
+  return KEYBOARD_TO_INPUT_MODE[keyboardType];
+};
 
-export function mapInputModeToKeyboardType(inputMode?: string): MappedKeyboardType | undefined {
-  if (!inputMode) {
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const mapInputModeToKeyboardType = (inputMode?: string): MappedKeyboardType | undefined => {
+  if (inputMode === undefined || !isInputMode(inputMode)) {
     return undefined;
   }
-  return INPUT_MODE_TO_KEYBOARD[inputMode as keyof typeof INPUT_MODE_TO_KEYBOARD];
-}
+  return INPUT_MODE_TO_KEYBOARD[inputMode];
+};
 
-export const inputSizeVariant: SizeVariantSpreadFunction<any> = (val = '$true', extras) => {
-  const recipe = sizeRecipeForToken(String(val || '$true'), {
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
+export const inputSizeVariant = (val: SizeTokens | undefined, extras?: { props: { touch?: boolean } }) => {
+  const recipe = sizeRecipeForToken(val === undefined || val === '' ? '$true' : String(val), {
     touch: extras?.props.touch ?? (!isWeb && isTouchSurface()),
   });
   return {
@@ -771,17 +861,17 @@ const InputFrame = styled(TInput, {
   paddingHorizontal: 0,
   paddingVertical: 0,
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
+  outlineStyle: 'none',
   outlineColor: 'transparent',
-  ...(isWeb ? { className: 'mp-input-area' } : {}),
+  ...(isWeb ? { className: 'mp-input-area' } : undefined),
   focusStyle: {
     outlineWidth: 0,
-    outlineStyle: 'none' as any,
+    outlineStyle: 'none',
     outlineColor: 'transparent',
   },
   focusVisibleStyle: {
     outlineWidth: 0,
-    outlineStyle: 'none' as any,
+    outlineStyle: 'none',
     outlineColor: 'transparent',
   },
   variants: {
@@ -791,10 +881,83 @@ const InputFrame = styled(TInput, {
       '...size': sizeRecipeTypeFallback,
     },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
   } as const,
 });
+
+const isObjectLike = (value: unknown): value is object => typeof value === 'object' && value !== null;
+
+interface AreaChangeEvent {
+  target?: EventTarget | number | null;
+  nativeEvent?: Event | { text?: string };
+}
+
+/** Web: `target.value`. Native: `nativeEvent.text`. */
+const readChangeText = ({ target, nativeEvent }: AreaChangeEvent): string => {
+  if (isObjectLike(target) && 'value' in target && isString(target.value)) {
+    return target.value;
+  }
+  return isObjectLike(nativeEvent) && 'text' in nativeEvent && isString(nativeEvent.text) ? nativeEvent.text : '';
+};
+
+const AUTO_COMPLETE_BY_CONTENT_TYPE = {
+  emailAddress: 'email',
+  password: 'current-password',
+  telephoneNumber: 'tel',
+  oneTimeCode: 'one-time-code',
+} as const;
+
+const hasAutoComplete = (
+  textContentType: InputTextContentType | undefined,
+): textContentType is keyof typeof AUTO_COMPLETE_BY_CONTENT_TYPE =>
+  textContentType !== undefined && Object.hasOwn(AUTO_COMPLETE_BY_CONTENT_TYPE, textContentType);
+
+const autoCompleteFor = (textContentType: InputTextContentType | undefined) =>
+  hasAutoComplete(textContentType) ? AUTO_COMPLETE_BY_CONTENT_TYPE[textContentType] : undefined;
+
+type AreaDims = Pick<
+  ComponentProps<typeof InputFrame>,
+  'flex' | 'width' | 'minWidth' | 'maxWidth' | 'height' | 'minHeight' | 'maxHeight'
+>;
+
+/** Duration (and any Area with a numeric width / flex 0) must not sit inside a flex:1 wrapper. */
+const areaWrapperProps = (
+  { flex, width, minWidth, maxWidth, height, minHeight, maxHeight }: AreaDims,
+  inTableCell: boolean,
+) => {
+  const hugWidth = flex === 0 || isNumber(width);
+  return {
+    flex: hugWidth ? 0 : 1,
+    ...(hugWidth && isNumber(width)
+      ? {
+          width,
+          minWidth: minWidth ?? width,
+          maxWidth: maxWidth ?? width,
+        }
+      : undefined),
+    ...(height == null ? undefined : { height, minHeight: minHeight ?? 0, maxHeight }),
+    ...(inTableCell ? { minWidth: 0 } : undefined),
+  };
+};
+
+const areaDimensionProps = ({ flex, width, minWidth, maxWidth, height, minHeight, maxHeight }: AreaDims) => ({
+  ...(flex == null ? undefined : { flex }),
+  ...(width == null ? undefined : { width, minWidth, maxWidth }),
+  ...(height == null ? undefined : { height, minHeight, maxHeight }),
+});
+
+/** Beat the UA / `$true` 44px min on <input> when a recipe height is set (Duration size:$3 is 36; a 44 input overflows the box). */
+const areaHeightStyle = ({ height, minHeight, maxHeight }: AreaDims) =>
+  isWeb && isNumber(height)
+    ? {
+        style: {
+          height,
+          minHeight: isNumber(minHeight) ? minHeight : 0,
+          maxHeight: isNumber(maxHeight) ? maxHeight : height,
+        },
+      }
+    : undefined;
 
 const InputAreaImpl = InputFrame.styleable<{
   secureTextEntry?: boolean;
@@ -825,25 +988,17 @@ const InputAreaImpl = InputFrame.styleable<{
     minHeight: minHeightProp,
     maxHeight: maxHeightProp,
     ...props
-  } = areaProps as typeof areaProps & {
-    focusStyle?: Record<string, unknown>;
-    focusVisibleStyle?: Record<string, unknown>;
-    className?: string;
-    inputMode?: InputModeValue;
-    type?: string;
-    flex?: number | string;
-    width?: number | string;
-    minWidth?: number | string;
-    maxWidth?: number | string;
-    height?: number | string;
-    minHeight?: number | string;
-    maxHeight?: number | string;
-  };
+  } = areaProps;
   const { knobProps } = useResolvedKnobs();
   const theme = useTheme();
   const fieldDescribedBy = useFieldDescribedBy();
   const nativeA11yProps = useNativeFieldA11yProps();
   const inTableCell = useIsInTableCell();
+  // SAFETY: theme values are resolved color strings; the prop type lists only color tokens but RN/RN-web accept any color string
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+  const placeholderTextColor = (
+    isString(theme.placeholderColor?.val) ? theme.placeholderColor.val : '$placeholderColor'
+  ) as ColorTokens;
   if (isWeb) {
     ensureInputPartsFocusRing();
   }
@@ -851,11 +1006,19 @@ const InputAreaImpl = InputFrame.styleable<{
   // number-pad↔numeric, decimal-pad↔decimal, email-address↔email.
   const resolvedInputMode = inputModeProp ?? mapKeyboardTypeToInputMode(keyboardType);
   const resolvedKeyboardType = keyboardType ?? mapInputModeToKeyboardType(resolvedInputMode);
-  // Duration (and any Area with a numeric width / flex 0) must not sit inside
-  // a flex:1 wrapper — that wrapper grows with the Box, then Section's
-  // justifyContent:center floats the cluster in the leftover space. OTP still
-  // pins width on Box, not Area, so it keeps the grow wrapper.
-  const hugWidth = flexProp === 0 || typeof widthProp === 'number';
+  // A hugging Area (numeric width / flex 0) skips the flex:1 wrapper — that
+  // wrapper grows with the Box, then Section's justifyContent:center floats
+  // the cluster in the leftover space. OTP still pins width on Box, not Area,
+  // so it keeps the grow wrapper.
+  const dims: AreaDims = {
+    flex: flexProp,
+    width: widthProp,
+    minWidth: minWidthProp,
+    maxWidth: maxWidthProp,
+    height: heightProp,
+    minHeight: minHeightProp,
+    maxHeight: maxHeightProp,
+  };
 
   return (
     // In a table cell the flex wrapper and the raw
@@ -863,19 +1026,7 @@ const InputAreaImpl = InputFrame.styleable<{
     // (min-width:auto floors flex items at it); width 100% makes the input
     // adopt the flexed width instead of its size-attribute default. Explicit
     // consumer widths (OTP digit boxes) still win via the later spread.
-    <View
-      flex={hugWidth ? 0 : 1}
-      {...(hugWidth && typeof widthProp === 'number'
-        ? {
-            width: widthProp,
-            minWidth: minWidthProp ?? widthProp,
-            maxWidth: maxWidthProp ?? widthProp,
-          }
-        : undefined)}
-      {...(heightProp != null
-        ? { height: heightProp, minHeight: minHeightProp ?? 0, maxHeight: maxHeightProp }
-        : undefined)}
-      {...(inTableCell ? { minWidth: 0 } : undefined)}>
+    <View {...areaWrapperProps(dims, inTableCell)}>
       <InputFrame
         touch={hydrationTouch}
         aria-describedby={fieldDescribedBy}
@@ -884,7 +1035,7 @@ const InputAreaImpl = InputFrame.styleable<{
         size={size}
         {...knobProps.controlType}
         color={knobProps.textAccentColor}
-        placeholderTextColor={theme.placeholderColor?.val ?? '$placeholderColor'}
+        placeholderTextColor={placeholderTextColor}
         {...(inTableCell ? { width: '100%' as const, minWidth: 0 } : undefined)}
         {...knobProps.body}
         type={secureTextEntry ? 'password' : props.type}
@@ -895,51 +1046,26 @@ const InputAreaImpl = InputFrame.styleable<{
         keyboardType={resolvedKeyboardType}
         textContentType={textContentType}
         inputMode={resolvedInputMode}
-        autoComplete={
-          textContentType === 'emailAddress'
-            ? 'email'
-            : textContentType === 'password'
-              ? 'current-password'
-              : textContentType === 'telephoneNumber'
-                ? 'tel'
-                : textContentType === 'oneTimeCode'
-                  ? 'one-time-code'
-                  : undefined
-        }
+        autoComplete={autoCompleteFor(textContentType)}
         {...props}
-        {...(flexProp != null ? { flex: flexProp } : undefined)}
-        {...(widthProp != null ? { width: widthProp, minWidth: minWidthProp, maxWidth: maxWidthProp } : undefined)}
-        {...(heightProp != null
-          ? { height: heightProp, minHeight: minHeightProp, maxHeight: maxHeightProp }
-          : undefined)}
+        {...areaDimensionProps(dims)}
         {...webAreaAttrs(classNameProp)}
-        {...(isWeb && typeof heightProp === 'number'
-          ? {
-              // Beat the UA / `$true` 44px min on <input> when a recipe height is set
-              // (Duration size:$3 is 36; a 44 input overflows the box).
-              style: {
-                height: heightProp,
-                minHeight: typeof minHeightProp === 'number' ? minHeightProp : 0,
-                maxHeight: typeof maxHeightProp === 'number' ? maxHeightProp : heightProp,
-              },
-            }
-          : undefined)}
+        {...areaHeightStyle(dims)}
         {...AREA_NO_OUTLINE}
         focusStyle={{ ...focusStyleProp, ...AREA_NO_OUTLINE }}
         focusVisibleStyle={{ ...focusVisibleStyleProp, ...AREA_NO_OUTLINE }}
-        onFocus={(e: any) => {
+        onFocus={(e: FocusEvent<HTMLDivElement>) => {
           setFocused(true);
-          (onFocusProp as any)?.(e);
+          onFocusProp?.(e);
         }}
-        onBlur={(e: any) => {
+        onBlur={(e: FocusEvent<HTMLDivElement>) => {
           setFocused(false);
-          (onBlurProp as any)?.(e);
+          onBlurProp?.(e);
         }}
         onChange={
           onChangeText || onChangeProp
-            ? (e: any) => {
-                const text = e.target?.value ?? e.nativeEvent?.text ?? '';
-                onChangeText?.(text);
+            ? (e: ChangeEvent<HTMLDivElement>) => {
+                onChangeText?.(readChangeText(e));
                 onChangeProp?.(e);
               }
             : undefined
@@ -960,7 +1086,7 @@ const InputSection = styled(XGroup.Item, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
   } as const,
 });
@@ -987,7 +1113,7 @@ const InputButton = styled(TButton, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       ...sizeRecipeEndCapVariants,
@@ -1032,7 +1158,7 @@ const InputGlyphButton = styled(View, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       ...sizeRecipeEndCapVariants,
@@ -1043,6 +1169,7 @@ const InputGlyphButton = styled(View, {
 
 const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonProps, ref) => {
   const {
+    // oxlint-disable-next-line typescript/no-unsafe-assignment -- tamagui types styled-component `children` as any
     children,
     color: colorProp,
     glyphRing,
@@ -1050,34 +1177,28 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
     tabIndex: tabIndexProp,
     className,
     ...props
-  } = buttonProps as typeof buttonProps & {
-    color?: string;
-    glyphRing?: boolean;
-    size?: FontSizeTokens;
-    tabIndex?: number;
-    className?: string;
-  };
+  } = buttonProps;
   const { size: contextSize, color: contextColor } = InputContext.useStyledContext();
   const hydrationTouch = useTouchSurface();
   const { knobProps } = useResolvedKnobs();
   const theme = useTheme();
-  const size = (sizeProp ?? contextSize) as FontSizeTokens;
-  const paint = resolveGlyphPaint(theme as never, colorProp ?? contextColor);
+  const size = sizeProp ?? contextSize;
+  const paint = resolveGlyphPaint(theme, isString(colorProp) ? colorProp : contextColor);
   const getThemedIcon = useGetThemedIcon({
     size: knobProps.controlIcon.width,
-    color: paint as never,
+    color: paint,
   });
   // A string/number child is a LABEL, not an icon. `getThemedIcon` treats an
   // un-elemented child as a component TYPE and `createElement`s it, so "Scan"
   // becomes an invented `<scan>` element that paints nothing; a bare
   // string under the glyphRing View is the same category error on native.
   const textChild =
-    typeof children === 'string' || typeof children === 'number' ? (
+    isString(children) || isNumber(children) ? (
       <Text
         {...knobProps.controlType}
         fontFamily={knobProps.body.fontFamily}
         fontWeight={knobProps.body.fontWeight}
-        color={paint as never}
+        color={paint}
         numberOfLines={1}
         userSelect="none">
         {children}
@@ -1088,12 +1209,14 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
       // Tamagui 2.7.6 Button stamps tabIndex=0 after consumer props.
       // Correct the host at hydration; decorative caps share the field stop.
       if (isWeb && node && 'tabIndex' in node) {
-        node.tabIndex = tabIndexProp ?? -1;
+        node.tabIndex = Number(tabIndexProp ?? -1);
       }
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref) {
-        ref.current = node;
+      if (ref != null) {
+        if ('current' in ref) {
+          ref.current = node;
+        } else {
+          ref(node);
+        }
       }
     },
     [ref, tabIndexProp],
@@ -1104,27 +1227,32 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
     // knob's: a $2 field inside a $4 knob would otherwise ship a 44px stop
     // on a 32px frame. The picker trigger contract keeps the sub-floor case pressable via the
     // caller's hitSlop, never by inflating the cap.
-    const square = sizeRecipeForToken(String(size ?? '$true'), { touch: hydrationTouch }).height;
-    const disabled = (props as { disabled?: boolean }).disabled === true;
+    const square = sizeRecipeForToken(String(size), { touch: hydrationTouch }).height;
+    const disabled = props.disabled === true;
     if (isWeb) {
       ensureCompositeFocusRing();
     }
     return (
       <InputGlyphButton
         touch={hydrationTouch}
-        ref={ref as never}
+        ref={ref}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View, not a DOM element: `role` maps to the native accessibilityRole too
         role="button"
         size={size}
         height={square}
         width={square}
-        paddingHorizontal={0} // size-recipe-escape: square end-cap; pad lives on Input.Box
+        // size-recipe-escape: square end-cap; pad lives on Input.Box
+        paddingHorizontal={0}
         opacity={disabled ? 0.5 : 1}
         {...props}
         aria-disabled={disabled || undefined}
-        tabIndex={tabIndexProp ?? (disabled ? -1 : 0)}
+        tabIndex={Number(tabIndexProp ?? (disabled ? -1 : 0))}
         className={isWeb ? ['mp-chip-dismiss', className].filter(Boolean).join(' ') : (className ?? undefined)}
         data-end-cap={square}>
-        <View className={isWeb ? 'mp-chip-dismiss-ring' : undefined} alignItems="center" justifyContent="center">
+        <View
+          className={isWeb ? 'mp-chip-dismiss-ring' : undefined}
+          alignItems="center"
+          justifyContent="center">
           {textChild ?? children}
         </View>
       </InputGlyphButton>
@@ -1139,7 +1267,8 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
       size={size}
       height={square}
       width={square}
-      paddingHorizontal={0} // size-recipe-escape: square end-cap; pad lives on Input.Box
+      // size-recipe-escape: square end-cap; pad lives on Input.Box
+      paddingHorizontal={0}
       color={paint}
       // The decorative cap is not a tab stop. tabIndex alone is not
       // enough — TButton re-derives focusability and stamps tabindex="0".
@@ -1157,6 +1286,7 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
 // Input.Icon
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputIconFrame = styled(View, {
   name: 'InputIconFrame',
   justifyContent: 'center',
@@ -1166,7 +1296,7 @@ export const InputIconFrame = styled(View, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       ...(recipeFamilies.control.iconVariants ?? sizeRecipeIconVariants),
@@ -1181,12 +1311,13 @@ export const InputIconFrame = styled(View, {
 
 const InputIcon = InputIconFrame.styleable<{
   scaleIcon?: number;
-  color?: ColorTokens | string;
+  color?: string;
   adornment?: 'leading' | 'trailing';
 }>((iconProps, ref) => {
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- tamagui types styled-component `children` as any
   const { children, color: colorProp, scaleIcon: scaleIconProp, ...props } = iconProps;
   const hydrationTouch = useTouchSurface();
-  const { size = '$true', color: contextColor, scaleIcon = 1 } = InputContext.useStyledContext();
+  const { size, color: contextColor, scaleIcon } = InputContext.useStyledContext();
   const { knobProps } = useResolvedKnobs();
   const resolvedScaleIcon = scaleIconProp ?? scaleIcon;
 
@@ -1194,10 +1325,12 @@ const InputIcon = InputIconFrame.styleable<{
   const rawColor = colorProp ?? contextColor;
   // .val, not .get("web") — the web getter is undefined on native and
   // leaves Phosphor black in dark mode.
-  const color = getVariable(resolveGlyphPaint(theme as never, rawColor ? String(rawColor) : 'borderColor'));
+  const color = String(
+    getVariable(resolveGlyphPaint(theme, rawColor === undefined || rawColor === '' ? 'borderColor' : rawColor)),
+  );
   const iconSize = knobProps.controlIcon.width * resolvedScaleIcon;
 
-  const getThemedIcon = useGetThemedIcon({ size: iconSize, color: color });
+  const getThemedIcon = useGetThemedIcon({ size: iconSize, color });
   return (
     <InputIconFrame
       touch={hydrationTouch}
@@ -1216,6 +1349,7 @@ const InputIcon = InputIconFrame.styleable<{
 // Input (root container — provides context, manages theme on error)
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputContainerFrame = styled(View, {
   name: 'InputContainerFrame',
   context: InputContext,
@@ -1231,10 +1365,10 @@ export const InputContainerFrame = styled(View, {
       '...color': () => ({}),
     },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     gapScale: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
   } as const,
 
@@ -1273,22 +1407,34 @@ const InputLabelFrame = styled(Label, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
-      '...fontSize': getFontSized as any,
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: getFontSized is typed against TextProps' final props; Label's resolve to the same font-size spread at runtime
+      '...fontSize': getFontSized as never,
     },
   } as const,
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputLabel = InputLabelFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <InputLabelFrame ref={ref} {...knobProps.body} color={knobProps.textAccentColor} {...props} />;
+  return (
+    <InputLabelFrame
+      ref={ref}
+      {...knobProps.body}
+      color={knobProps.textAccentColor}
+      {...props}
+    />
+  );
 });
 
 // ---------------------------------------------------------------------------
 // Input.Info  (helper / error text)
 // ---------------------------------------------------------------------------
+
+/** Helper text runs at 80% of the font ramp entry (a Variable). */
+const scaledFontValue = (entry: { val: number } | undefined): number => Number(entry?.val) * 0.8;
 
 const InputInfoFrame = styled(Text, {
   context: InputContext,
@@ -1297,35 +1443,38 @@ const InputInfoFrame = styled(Text, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       '...fontSize': (val, { font }) => {
         if (!font) {
-          return;
+          return {};
         }
-        const fontSize = (font.size[val] as any)?.val * 0.8;
-        const lineHeight = (font.lineHeight?.[val] as any)?.val * 0.8;
-        const fontWeight = (font.weight as any)?.$2;
-        const letterSpacing = font.letterSpacing?.[val];
-        const textTransform = font.transform?.[val];
-        const fontStyle = font.style?.[val];
+        // SAFETY: GenericFont.weight is a `$n` -> weight table at runtime; the app's font config types it as never
+        const weightTable = font.weight as { $2?: ComponentProps<typeof Text>['fontWeight'] } | undefined;
         return {
-          fontSize,
-          lineHeight,
-          fontWeight,
-          letterSpacing,
-          textTransform,
-          fontStyle,
+          fontSize: scaledFontValue(font.size[val]),
+          lineHeight: scaledFontValue(font.lineHeight?.[val]),
+          fontWeight: weightTable?.$2,
+          letterSpacing: font.letterSpacing?.[val],
+          textTransform: font.transform?.[val],
+          fontStyle: font.style?.[val],
         };
       },
     },
   } as const,
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputInfo = InputInfoFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <InputInfoFrame ref={ref} {...knobProps.body} {...props} />;
+  return (
+    <InputInfoFrame
+      ref={ref}
+      {...knobProps.body}
+      {...props}
+    />
+  );
 });
 
 /**
@@ -1333,21 +1482,29 @@ export const InputInfo = InputInfoFrame.styleable((props, ref) => {
  * The validation error replaces the helper in place — never a
  * second line — so surfacing an error shifts no layout. Matches FieldLayout.
  */
-export function InputFieldMeta({ helperText, displayError }: { helperText?: string; displayError?: string | boolean }) {
-  const errorMessage =
-    displayError && typeof displayError === 'string' && displayError.length > 0 ? displayError : undefined;
-  if (errorMessage) {
+export const InputFieldMeta = ({
+  helperText,
+  displayError,
+}: {
+  helperText?: string;
+  displayError?: string | boolean;
+}) => {
+  const errorMessage = isString(displayError) && displayError.length > 0 ? displayError : undefined;
+  if (errorMessage !== undefined) {
     return (
-      <InputInfo color={formCommonColors.error} role="alert" aria-live="polite">
+      <InputInfo
+        color={formCommonColors.error}
+        role="alert"
+        aria-live="polite">
         {errorMessage}
       </InputInfo>
     );
   }
-  if (!helperText) {
+  if (helperText === undefined || helperText === '') {
     return null;
   }
   return <InputInfo>{helperText}</InputInfo>;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Input.XGroup
@@ -1359,7 +1516,7 @@ const InputXGroup = styled(XGroup, {
   variants: {
     touch: { true: {}, false: {} },
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
       '...size': () => ({}),
@@ -1371,11 +1528,9 @@ const InputXGroup = styled(XGroup, {
 // FocusWiredTextArea – reusable ThemedTextArea that syncs focus to FocusContext
 // ---------------------------------------------------------------------------
 
-import { ThemedTextArea } from '../themedPrimitives';
-
 type TamaguiTextAreaProps = ComponentProps<typeof ThemedTextArea>;
 
-export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Ref<any> }) {
+export const FocusWiredTextArea = (props: TamaguiTextAreaProps & { innerRef?: TamaguiTextAreaProps['ref'] }) => {
   const { setFocused } = FocusContext.useStyledContext();
   const {
     innerRef,
@@ -1386,16 +1541,10 @@ export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Re
     focusVisibleStyle,
     'aria-describedby': describedByProp,
     ...rest
-  } = props as TamaguiTextAreaProps & {
-    innerRef?: Ref<any>;
-    className?: string;
-    focusStyle?: Record<string, unknown>;
-    focusVisibleStyle?: Record<string, unknown>;
-    'aria-describedby'?: string;
-  };
+  } = props;
   const fieldDescribedBy = useFieldDescribedBy();
   const nativeA11yProps = useNativeFieldA11yProps();
-  const describedBy = [fieldDescribedBy, describedByProp].filter(Boolean).join(' ') || undefined;
+  const describedBy = [fieldDescribedBy, describedByProp].filter(Boolean).join(' ');
   if (isWeb) {
     ensureInputPartsFocusRing();
   }
@@ -1409,27 +1558,29 @@ export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Re
     focusVisibleStyle: { ...focusVisibleStyle, ...AREA_NO_OUTLINE },
   };
   return (
-    <View flex={1} minWidth={0}>
+    <View
+      flex={1}
+      minWidth={0}>
       <ThemedTextArea
-        aria-describedby={describedBy}
+        aria-describedby={describedBy === '' ? undefined : describedBy}
         aria-multiline="true"
         {...nativeA11yProps}
         ref={innerRef}
         width="100%"
         {...rest}
         {...killInnerRing}
-        onFocus={(e: any) => {
+        onFocus={(e: FocusEvent<HTMLDivElement>) => {
           setFocused(true);
-          (onFocus as any)?.(e);
+          onFocus?.(e);
         }}
-        onBlur={(e: any) => {
+        onBlur={(e: FocusEvent<HTMLDivElement>) => {
           setFocused(false);
-          (onBlur as any)?.(e);
+          onBlur?.(e);
         }}
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Compound component
@@ -1448,4 +1599,5 @@ const InputCompound = Object.assign(InputContainerImpl, {
   XGroup: Object.assign(InputXGroup, { Item: XGroup.Item }),
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const Input = InputCompound;

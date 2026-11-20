@@ -3,21 +3,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getToasts, resetToasts, TOAST_ACTION_MIN_MS } from '../Toast/store';
 
 import { notify } from './notify';
-import { routeNotify, type NotifyEvent } from './route';
+import { routeNotify } from './route';
+import type { NotifyEvent } from './route';
 import { dismissFeedbackByRegion, getFeedback, resetFeedback } from './store';
 
-afterEach(() => {
+const resetDelivery = () => {
   resetToasts();
   resetFeedback();
+};
+
+const action = { label: 'Retry', onPress: vi.fn<() => void>() };
+
+const event = (partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 'scope'>): NotifyEvent => ({
+  body: 'Something happened.',
+  ...partial,
 });
 
-const action = { label: 'Retry', onPress: vi.fn() };
-
-function event(partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 'scope'>): NotifyEvent {
-  return { body: 'Something happened.', ...partial };
-}
-
 describe('routeNotify (routing table)', () => {
+  afterEach(resetDelivery);
+
   it('success → toast (any scope)', () => {
     expect(routeNotify(event({ severity: 'success', scope: 'page' })).surface).toBe('toast');
     expect(routeNotify(event({ severity: 'success', scope: 'field' })).surface).toBe('toast');
@@ -91,6 +95,8 @@ describe('routeNotify (routing table)', () => {
 });
 
 describe('notify() delivery', () => {
+  afterEach(resetDelivery);
+
   it('targets and clears one inline region without disturbing another', () => {
     const route = notify({
       severity: 'error',
@@ -100,9 +106,9 @@ describe('notify() delivery', () => {
     });
     notify({ severity: 'error', scope: 'field', region: 'second', body: 'Second failed' });
     expect(route.region).toBe('first');
-    expect(getFeedback().map((entry) => entry.region)).toEqual(['first', 'second']);
+    expect(getFeedback().map((entry) => entry.region)).toStrictEqual(['first', 'second']);
     dismissFeedbackByRegion('first');
-    expect(getFeedback().map((entry) => entry.region)).toEqual(['second']);
+    expect(getFeedback().map((entry) => entry.region)).toStrictEqual(['second']);
   });
 
   it('success path shows a one-liner toast', () => {

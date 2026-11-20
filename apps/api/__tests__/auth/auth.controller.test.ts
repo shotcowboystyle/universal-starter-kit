@@ -1,73 +1,69 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import type { Response } from 'express';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AuthController } from "../../src/modules/auth/auth.controller";
+import { AuthController } from '../../src/modules/auth/auth.controller';
+import type { AuthService } from '../../src/modules/auth/auth.service';
 
-describe("AuthController", () => {
+const createAuthService = () => ({
+  login: vi.fn<AuthService['login']>(),
+});
+
+describe(AuthController, () => {
   let controller: AuthController;
-  let authService: { login: Mock };
+  let authService: ReturnType<typeof createAuthService>;
 
   beforeEach(() => {
-    authService = {
-      login: vi.fn()
-    };
+    authService = createAuthService();
 
     const configService = {
-      get: vi.fn((key: string) => {
-        if (key === "NODE_ENV") {
-          return "test";
-        }
-        if (key === "VERCEL") {
-          return undefined;
-        }
-        return undefined;
-      })
+      get: vi.fn<(key: string) => string | undefined>((key) => (key === 'NODE_ENV' ? 'test' : undefined)),
     };
 
     controller = new AuthController(authService as any, configService as any);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe("login", () => {
-    it("should return user and access_token", async () => {
+  describe('login', () => {
+    it('should return user and access_token', () => {
       const user = {
-        _id: "1",
-        email: "test@test.com",
-        name: "Test User",
+        _id: '1',
+        email: 'test@test.com',
+        name: 'Test User',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
-      const result = { user, access_token: "token" };
+      const result = { user, access_token: 'token' };
       const res = {
-        cookie: vi.fn(),
-        clearCookie: vi.fn(),
-        getHeaders: vi.fn().mockReturnValue({})
+        cookie: vi.fn<Response['cookie']>(),
+        clearCookie: vi.fn<Response['clearCookie']>(),
+        getHeaders: vi.fn<Response['getHeaders']>().mockReturnValue({}),
       };
 
-      authService.login.mockResolvedValue(result as any);
+      authService.login.mockReturnValue(result as any);
 
-      expect(await controller.login(user as any, res as any)).toEqual(result);
+      expect(controller.login(user as any, res as any)).toStrictEqual(result);
       expect(res.cookie).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe("getProfile", () => {
-    it("should return user from request", () => {
-      const user = { _id: "1", email: "test@test.com", name: "Test User" };
+  describe('getProfile', () => {
+    it('should return user from request', () => {
+      const user = { _id: '1', email: 'test@test.com', name: 'Test User' };
 
-      expect(controller.getProfile(user as any)).toEqual(user);
+      expect(controller.getProfile(user as any)).toStrictEqual(user);
     });
   });
 
-  describe("logout", () => {
-    it("should clear cookies and return a message", async () => {
+  describe('logout', () => {
+    it('should clear cookies and return a message', () => {
       const res = {
-        clearCookie: vi.fn()
+        clearCookie: vi.fn<Response['clearCookie']>(),
       };
 
-      expect(await controller.logout(res as any)).toEqual({ message: "Successfully logged out" });
+      expect(controller.logout(res as any)).toStrictEqual({ message: 'Successfully logged out' });
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
     });
   });

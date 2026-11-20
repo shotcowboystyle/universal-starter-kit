@@ -2,16 +2,18 @@ import { Button } from '@repo/forms';
 import { action } from '@repo/storybook';
 import { useResolvedKnobs } from '@repo/theme';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Paragraph, SizableText, XStack, YStack } from 'tamagui';
 
 import { resetToasts } from '../Toast/store';
 
-import { notify, NotifyHost, NotifyRegion, resetFeedback, type NotifyEvent } from './index';
+import { notify, NotifyHost, NotifyRegion, resetFeedback } from './index';
+import type { NotifyEvent } from './index';
 
 /** Demo region frame rides the knobs (story honesty): a pinned $3
  * radius held a 7px arc at borderRadius:none. */
-function DemoRegion({ children }: { children: ReactNode }) {
+const DemoRegion = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -23,9 +25,9 @@ function DemoRegion({ children }: { children: ReactNode }) {
       {children}
     </YStack>
   );
-}
+};
 
-function StoryReset() {
+const StoryReset = () => {
   useEffect(() => {
     resetToasts();
     resetFeedback();
@@ -35,7 +37,7 @@ function StoryReset() {
     };
   }, []);
   return null;
-}
+};
 
 const meta: Meta = {
   title: 'Components/Notify',
@@ -53,7 +55,7 @@ export default meta;
 
 type Story = StoryObj;
 
-const cases: Array<{ label: string; event: NotifyEvent }> = [
+const cases: { label: string; event: NotifyEvent }[] = [
   {
     label: 'success → toast',
     event: { severity: 'success', scope: 'page', body: 'Customer record updated.' },
@@ -134,16 +136,25 @@ export const RoutingTable: Story = {
   render: () => (
     <NotifyHost>
       <StoryReset />
-      <YStack gap="$4" padding="$4" maxWidth={720}>
-        <SizableText fontWeight="700" fontSize="$5">
+      <YStack
+        gap="$4"
+        padding="$4"
+        maxWidth={720}>
+        <SizableText
+          fontWeight="700"
+          fontSize="$5">
           notify() routing
         </SizableText>
-        <Paragraph size="$3" color="$color11">
+        <Paragraph
+          size="$3"
+          color="$color11">
           Success and page info go to toast. Page errors/warnings become sticky banners. Field and section scopes render
           inline alerts in the regions below. Blocking error/warning opens a ConfirmDialog (alertdialog; Escape/Cancel
           dismisses; error confirm is destructive).
         </Paragraph>
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           {cases.map(({ label, event: ev }) => (
             <Button
               key={label}
@@ -158,14 +169,21 @@ export const RoutingTable: Story = {
         <DemoRegion>
           <SizableText fontWeight="600">Section region</SizableText>
           <NotifyRegion scope="section" />
-          <Paragraph size="$2" color="$color10">
+          <Paragraph
+            size="$2"
+            color="$color10">
             Section-scoped notify() alerts land here.
           </Paragraph>
         </DemoRegion>
         <DemoRegion>
           <SizableText fontWeight="600">Field region</SizableText>
-          <NotifyRegion scope="field" compact />
-          <Paragraph size="$2" color="$color10">
+          <NotifyRegion
+            scope="field"
+            compact
+          />
+          <Paragraph
+            size="$2"
+            color="$color10">
             Field-scoped notify() alerts land here.
           </Paragraph>
         </DemoRegion>

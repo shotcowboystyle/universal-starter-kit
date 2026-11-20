@@ -1,13 +1,15 @@
 import { createI18nConfig, defaultLocale, locales, messages } from '@repo/i18n';
 import { createPreview } from '@repo/storybook';
-import { type ThemeConfig, ThemeProvider, createDefaultThemeConfig } from '@repo/theme';
+import { ThemeProvider, createDefaultThemeConfig } from '@repo/theme';
+import type { ThemeConfig } from '@repo/theme';
 import i18n from 'i18next';
 import type { ReactNode } from 'react';
 import { initReactI18next } from 'react-i18next';
 
 const themeConfig = createDefaultThemeConfig();
 
-i18n.use(initReactI18next).init({
+// oxlint-disable-next-line import/no-named-as-default-member -- i18next's named `use` trips rules-of-hooks, so the instance method is used
+void i18n.use(initReactI18next).init({
   ...createI18nConfig({
     languages: locales,
     namespaces: ['translation'],
@@ -18,7 +20,7 @@ i18n.use(initReactI18next).init({
   lng: defaultLocale,
 });
 
-function AppProvider({
+const AppProvider = ({
   themeConfig: activeThemeConfig = themeConfig,
   systemTheme,
   children,
@@ -26,13 +28,13 @@ function AppProvider({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) {
-  return (
-    <ThemeProvider config={{ tamagui: activeThemeConfig.tamagui }} systemTheme={systemTheme}>
-      {children}
-    </ThemeProvider>
-  );
-}
+}) => (
+  <ThemeProvider
+    config={{ tamagui: activeThemeConfig.tamagui }}
+    systemTheme={systemTheme}>
+    {children}
+  </ThemeProvider>
+);
 
 export default createPreview({
   themeConfig,

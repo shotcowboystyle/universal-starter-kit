@@ -13,12 +13,15 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView as RNScrollView } from 'react-native';
-import { Text, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import type { GestureResponderEvent, LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Text, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors, sectionHeading } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { ViewSwitcher } from '../layouts/ViewSwitcher';
 import { ScrollView } from '../ScrollView';
@@ -26,6 +29,7 @@ import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 import { Skeleton } from '../Skeleton';
 
+import { holdClickSuppressionUntilRelease, webOnlyProps } from './dom-interop';
 import {
   addDays,
   barGeometry,
@@ -50,17 +54,164 @@ import {
   spanInclusiveDays,
   startOfDay,
   todayLineX,
-  type GanttOpenSpan,
-  type GanttRange,
-  type GanttResizeEdge,
-  type GanttSpan,
-  type GanttZoom,
-} from './ganttMath';
+} from './gantt-math';
+import type { GanttOpenSpan, GanttRange, GanttResizeEdge, GanttSpan, GanttZoom } from './gantt-math';
+import { isNonEmpty } from './guards';
+
+const ACCENT_BACKGROUND = '$accentBackground';
+
+const SCROLLER_DIRECTION = { direction: 'ltr' } as const;
+
+const isGanttZoom = (value: string): value is GanttZoom => value === 'day' || value === 'week' || value === 'month';
+
+const SESSION_OPACITY = 0.85;
+
+/** Bar opacity: a live drag/resize wins, then the open-ended rail's value, then the resting value. */
+const barOpacity = (sessionLive: boolean, eternal: boolean, eternalOpacity: number, restOpacity: number): number => {
+  if (sessionLive) {
+    return SESSION_OPACITY;
+  }
+  return eternal ? eternalOpacity : restOpacity;
+};
+
+const barCursor = (draggable: boolean, pressable: boolean) => {
+  if (draggable) {
+    return 'grab';
+  }
+  return pressable ? 'pointer' : undefined;
+};
+
+const HANDLE_WIDE_PX = 8;
+const HANDLE_NARROW_PX = 4;
+
+/** Resize handle width by bar width: none when the bar is too narrow to grab an edge. */
+const resizeHandleWidth = (barWidth: number): number => {
+  if (barWidth >= 24) {
+    return HANDLE_WIDE_PX;
+  }
+  return barWidth >= 12 ? HANDLE_NARROW_PX : 0;
+};
+
+const openSide = (geom: { eternal: boolean; openStart: boolean }): 'both' | 'start' | 'end' => {
+  if (geom.eternal) {
+    return 'both';
+  }
+  return geom.openStart ? 'start' : 'end';
+};
+
+const labelRowBackground = (selected: boolean, hovered: boolean): string => {
+  if (selected) {
+    return ACCENT_BACKGROUND;
+  }
+  return hovered ? componentColors.interactive.background : 'transparent';
+};
+
+interface DragPreview {
+  key: string;
+  dx: number;
+  dayDelta: number;
+}
+
+interface ResizePreview {
+  key: string;
+  edge: GanttResizeEdge;
+  logicalDx: number;
+  dayDelta: number;
+}
+
+const previewSpanFor = (
+  bounded: GanttSpan | null,
+  activeDrag: DragPreview | null,
+  activeResize: ResizePreview | null,
+  dayDelta: number,
+): GanttSpan | null => {
+  if (bounded === null) {
+    return null;
+  }
+  if (activeDrag) {
+    return shiftSpanByDays(bounded, dayDelta);
+  }
+  return activeResize ? resizeSpanByDays(bounded, activeResize.edge, activeResize.dayDelta) : null;
+};
+
+const MIN_LIVE_WIDTH_PX = 6;
+
+const liveWidthFor = (width: number, activeResize: ResizePreview | null): number => {
+  if (!activeResize) {
+    return width;
+  }
+  const dragged = activeResize.edge === 'end' ? width + activeResize.logicalDx : width - activeResize.logicalDx;
+  return Math.max(MIN_LIVE_WIDTH_PX, dragged);
+};
+
+const liveTransformFor = (
+  activeDrag: DragPreview | null,
+  activeResize: ResizePreview | null,
+  dirSign: number,
+): number => {
+  if (activeDrag) {
+    return activeDrag.dx;
+  }
+  return activeResize && activeResize.edge === 'start' ? activeResize.logicalDx * dirSign : 0;
+};
+
+/** Pointer (web) or responder (native) handlers a bar or the marker handle spreads on. */
+interface BarDragProps {
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  onStartShouldSetResponder?: () => boolean;
+  onMoveShouldSetResponder?: () => boolean;
+  onResponderTerminationRequest?: () => boolean;
+  onResponderGrant?: (event: GestureResponderEvent) => void;
+  onResponderMove?: (event: GestureResponderEvent) => void;
+  onResponderRelease?: (event: GestureResponderEvent) => void;
+  onResponderTerminate?: () => void;
+}
+
+/** Pass drag handlers through a JSX spread: Tamagui's View prop type omits them, the host view accepts them. */
+const dragSpread = (props: BarDragProps): object => props;
+
+interface NativeBarSession {
+  task: GanttTask;
+  ref: GanttSpanRef;
+  span: GanttSpan;
+  startX: number;
+  dragging: boolean;
+  liftTimer: ReturnType<typeof setTimeout> | null;
+}
+
+/** Escape cancels an active session; the pointer is still down, so the trailing click stays suppressed. */
+const makeEscapeCancel =
+  (isActive: () => boolean, teardown: () => void, suppressRef: { current: boolean }) => (ke: KeyboardEvent) => {
+    if (ke.key !== 'Escape' || !isActive()) {
+      return;
+    }
+    ke.stopPropagation();
+    teardown();
+    holdClickSuppressionUntilRelease(suppressRef);
+  };
+
+/** Geometry per size-knob step: `$3` compact, `$5` roomy, anything else default. */
+const SIZE_STEPS = {
+  $3: { height: 400, rowHeight: 44, axisHeight: 40, pxPerDay: { day: 48, week: 18, month: 6 } },
+  $5: { height: 560, rowHeight: 56, axisHeight: 52, pxPerDay: { day: 80, week: 30, month: 10 } },
+  default: { height: 480, rowHeight: 48, axisHeight: 46, pxPerDay: { day: 64, week: 24, month: 8 } },
+} as const;
+
+const BAR_INSET_DEFAULT = 6;
+const barInsetFor = (space: string): number => {
+  if (space === 'small') {
+    return 4;
+  }
+  return space === 'large' ? 9 : BAR_INSET_DEFAULT;
+};
 
 // The chart canvas needs real scroll events to drive the pinned axis follower,
 // but Tamagui's styled ScrollView does not deliver onScroll on native — use the
 // raw RN ScrollView there (web keeps the Tamagui scroller unchanged).
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: RNScrollView accepts every prop CanvasScroller receives below (horizontal, onScroll, style)
 const CanvasScroller = (isWeb ? ScrollView : RNScrollView) as typeof ScrollView;
+
+export type GanttBarIntent = 'accent' | 'error' | 'warning' | 'success';
 
 /**
  * One drawn span on a Gantt row: a duration bar, or an open-ended one.
@@ -94,7 +245,7 @@ export interface GanttTaskSpan {
   id?: string;
   /** Span start date. Absent = open at the start. */
   start?: Date;
-  /** Span end date (midnight ends are inclusive whole days — Frappe date fields). Absent = open at the end. */
+  /** Span end date (midnight ends are inclusive whole days — date-only fields). Absent = open at the end. */
   end?: Date;
   /**
    * Explicit bar color (hex/rgb/token). Passes through untouched — the
@@ -102,10 +253,10 @@ export interface GanttTaskSpan {
    */
   color?: string;
   /** Semantic bar intent rendered via the theme ramps. */
-  intent?: 'accent' | 'error' | 'warning' | 'success';
+  intent?: GanttBarIntent;
   /**
-   * Optional completion 0–100. Paints a darker overlay on the bar (Frappe
-   * Gantt / MS Project progress). Omitted or 0 shows an empty bar. Ignored
+   * Optional completion 0–100. Paints a darker overlay on the bar (MS
+   * Project-style progress). Omitted or 0 shows an empty bar. Ignored
    * on an open-ended span.
    */
   progress?: number;
@@ -135,6 +286,7 @@ export interface GanttTask extends GanttTaskSpan {
    */
   spans?: GanttTaskSpan[];
   /** Any additional data */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported row shape: consumers attach their own fields, which only the consumer's renderers read
   [key: string]: unknown;
 }
 
@@ -200,7 +352,7 @@ export interface GanttViewProps extends Omit<YStackProps, 'children'> {
    * Failed load. Wins over the empty state — never shows
    * empty chrome.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Title for the default empty state */
@@ -256,18 +408,18 @@ export interface GanttViewProps extends Omit<YStackProps, 'children'> {
  * one-bar-per-row path is exactly what it was before `spans` existed.
  */
 /** The span as a closed duration, or null when either bound is open. */
-function boundedSpan(ref: GanttSpanRef): GanttSpan | null {
-  const span = ref.span;
+const boundedSpan = (ref: GanttSpanRef): GanttSpan | null => {
+  const { span } = ref;
   return isBoundedSpan(span) ? { start: span.start, end: span.end } : null;
-}
+};
 
-function resolveSpans(task: GanttTask): GanttSpanRef[] {
+const resolveSpans = (task: GanttTask): GanttSpanRef[] => {
   const list = task.spans;
   if (!list || list.length === 0) {
     return [{ span: task, index: 0, key: task.id }];
   }
   return list.map((span, index) => ({ span, index, key: span.id ?? `${task.id}#${index}` }));
-}
+};
 
 // ── Interaction constants (gesture recognition, not animation timing) ──
 
@@ -287,25 +439,28 @@ const TOUCH_SLOP_PX = 8;
 const hairlineEnd = isWeb
   ? {
       borderInlineEndWidth: hairlineWidth,
-      borderInlineEndStyle: 'solid' as any,
+      borderInlineEndStyle: 'solid' as const,
       className: 'mp-hairline-ie',
     }
   : { borderEndWidth: hairlineWidth };
 
-function isWeekend(date: Date): boolean {
+const isWeekend = (date: Date): boolean => {
   const day = date.getDay();
   return day === 0 || day === 6;
-}
+};
 
-function clampProgress(value: unknown): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
+const clampProgress = (value: number | undefined): number | null => {
+  if (value === undefined || !Number.isFinite(value)) {
     return null;
   }
   return Math.min(100, Math.max(0, value));
-}
+};
 
-/** Month bands for the dual-level axis (Frappe Gantt upper header). */
-function monthBands(range: GanttRange, pxPerDay: number): { x: number; width: number; label: string; key: string }[] {
+/** Month bands for the dual-level axis (upper header). */
+const monthBands = (
+  range: GanttRange,
+  pxPerDay: number,
+): { x: number; width: number; label: string; key: string }[] => {
   const total = rangeDays(range);
   const bands: { x: number; width: number; label: string; key: string }[] = [];
   let i = 0;
@@ -322,12 +477,12 @@ function monthBands(range: GanttRange, pxPerDay: number): { x: number; width: nu
     i = endIdx;
   }
   return bands;
-}
+};
 
-function weekendColumns(range: GanttRange, pxPerDay: number): { x: number; width: number; key: string }[] {
+const weekendColumns = (range: GanttRange, pxPerDay: number): { x: number; width: number; key: string }[] => {
   const total = rangeDays(range);
   const cols: { x: number; width: number; key: string }[] = [];
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < total; i += 1) {
     const date = addDays(startOfDay(range.start), i);
     if (!isWeekend(date)) {
       continue;
@@ -339,7 +494,7 @@ function weekendColumns(range: GanttRange, pxPerDay: number): { x: number; width
     });
   }
   return cols;
-}
+};
 
 // ── Loading skeleton (mirrors the real anatomy) ────────
 
@@ -352,36 +507,61 @@ const SKELETON_BARS = [
   { x: 240, width: 110 },
 ] as const;
 
-function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeight: number }) {
+const GanttSkeleton = ({ labelWidth, rowHeight }: { labelWidth: number; rowHeight: number }) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const edgePad = knobProps.panelPadding.padding;
   return (
-    <YStack width="100%" aria-busy aria-label={t('Loading')} {...{ 'data-gantt-skeleton': 'true' }}>
-      <XStack height={rowHeight} alignItems="center" {...hairline.bottom} borderColor="$borderColor">
-        <XStack width={labelWidth} paddingHorizontal={edgePad}>
-          <Skeleton width={64} height={12} />
+    <YStack
+      width="100%"
+      aria-busy
+      aria-label={t('Loading')}
+      {...{ 'data-gantt-skeleton': 'true' }}>
+      <XStack
+        height={rowHeight}
+        alignItems="center"
+        {...hairline.bottom}
+        borderColor="$borderColor">
+        <XStack
+          width={labelWidth}
+          paddingHorizontal={edgePad}>
+          <Skeleton
+            width={64}
+            height={12}
+          />
         </XStack>
-        <Skeleton width={220} height={12} />
+        <Skeleton
+          width={220}
+          height={12}
+        />
       </XStack>
       {SKELETON_BARS.map((bar, i) => (
         <XStack
-          key={i}
+          key={`${bar.x}-${bar.width}`}
           height={rowHeight}
           alignItems="center"
           {...(i < SKELETON_BARS.length - 1 ? hairline.bottom : null)}
           borderColor={componentColors.divider}>
-          <XStack width={labelWidth} paddingHorizontal={edgePad}>
-            <Skeleton width={i % 2 === 0 ? 96 : 72} height={12} />
+          <XStack
+            width={labelWidth}
+            paddingHorizontal={edgePad}>
+            <Skeleton
+              width={i % 2 === 0 ? 96 : 72}
+              height={12}
+            />
           </XStack>
           <YStack paddingLeft={bar.x}>
-            <Skeleton variant="rounded" width={bar.width} height={Math.max(10, rowHeight - 20)} />
+            <Skeleton
+              variant="rounded"
+              width={bar.width}
+              height={Math.max(10, rowHeight - 20)}
+            />
           </YStack>
         </XStack>
       ))}
     </YStack>
   );
-}
+};
 
 // ── Bar fill resolution ───────────────────────────────────────
 
@@ -391,15 +571,15 @@ function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeigh
  * theme's `$accentBackground`. Explicit `color` values pass through
  * untouched — they are values, not chrome (Axiom 11).
  */
-function BarIntentWrap({ intent, children }: { intent?: GanttTask['intent']; children: ReactNode }) {
+const BarIntentWrap = ({ intent, children }: { intent?: GanttTask['intent']; children: ReactNode }): ReactNode => {
   if (!intent || intent === 'accent') {
-    return <>{children}</>;
+    return children;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
 /** Title ink on a filled bar — paper or ink, whichever clears AA on the fill. */
-function GanttBarLabel({ title, fill }: { title: string; fill: string }) {
+const GanttBarLabel = ({ title, fill }: { title: string; fill: string }) => {
   const { knobProps } = useResolvedKnobs();
   const ink = useReadableTextOn(fill);
   return (
@@ -411,13 +591,13 @@ function GanttBarLabel({ title, fill }: { title: string; fill: string }) {
       pointerEvents="none"
       zIndex={1}
       aria-hidden>
-      {`${title}\u200b`}
+      {`${title}\u200B`}
     </Text>
   );
-}
+};
 
 /** Open-end mark: the bar label's ink, so it reads on every fill. */
-function GanttOpenEdgeMark({
+const GanttOpenEdgeMark = ({
   fill,
   glyph,
   side,
@@ -427,7 +607,7 @@ function GanttOpenEdgeMark({
   glyph: string;
   side: { left: number } | { right: number };
   edge: 'start' | 'end';
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   const ink = useReadableTextOn(fill);
   return (
@@ -443,17 +623,20 @@ function GanttOpenEdgeMark({
       {glyph}
     </Text>
   );
-}
+};
 
 /** Row-identity label: selected fill gets readable on-accent ink. */
-function GanttTaskName({ title, selected, body }: { title: string; selected: boolean; body: object }) {
-  const ink = useReadableTextOn(selected ? '$accentBackground' : undefined);
+const GanttTaskName = ({ title, selected, body }: { title: string; selected: boolean; body: object }) => {
+  const ink = useReadableTextOn(selected ? ACCENT_BACKGROUND : undefined);
   return (
-    <Text {...body} numberOfLines={1} color={selected && ink ? ink : '$color'}>
+    <Text
+      {...body}
+      numberOfLines={1}
+      color={selected && isNonEmpty(ink) ? ink : '$color'}>
       {title}
     </Text>
   );
-}
+};
 
 // ── GanttView ─────────────────────────────────────────────────
 
@@ -516,7 +699,8 @@ function GanttTaskName({ title, selected, body }: { title: string; selected: boo
  * />
  * ```
  */
-export function GanttView({
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one view: axis, rows, bar drag/resize sessions and the marker share the geometry and scroll bridge computed here
+export const GanttView = ({
   tasks,
   zoom: initialZoom = 'week',
   onZoomChange,
@@ -540,7 +724,8 @@ export function GanttView({
   enableMarkerDrag,
   markerLabel,
   ...stackProps
-}: GanttViewProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the complexity note above the component
+}: GanttViewProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const [zoom, setZoom] = useState<GanttZoom>(initialZoom);
@@ -553,6 +738,7 @@ export function GanttView({
   // Physical→logical sign: +1 physical-right is "later" in LTR, "earlier" in RTL.
   const dirSign = rtl ? -1 : 1;
   const dirSignRef = useRef(dirSign);
+  // oxlint-disable-next-line react/refs -- latest-value ref: pointer handlers must see the committed direction in the same render pass
   dirSignRef.current = dirSign;
   /** Mirror an LTR canvas offset: same value anchored from the other edge. */
   const canvasPos = useCallback((x: number) => (rtl ? { right: x } : { left: x }), [rtl]);
@@ -565,37 +751,21 @@ export function GanttView({
 
   // ── Knob-derived geometry (size/space step the density) ──────────
   const sz = knobProps.sizeToken;
-  const height = heightProp ?? (sz === '$3' ? 400 : sz === '$5' ? 560 : 480);
+  const steps = SIZE_STEPS[sz === '$3' || sz === '$5' ? sz : 'default'];
+  const height = heightProp ?? steps.height;
   // Row paint is the press target: never below 44px, even at compact.
-  const rowHeight = Math.max(MIN_PRESS_TARGET, sz === '$3' ? 44 : sz === '$5' ? 56 : 48);
-  // Dual-level axis (month band + day numbers) — Frappe Gantt upper/lower header.
-  const axisHeight = sz === '$3' ? 40 : sz === '$5' ? 52 : 46;
-  const pxPerDay =
-    zoom === 'day'
-      ? sz === '$3'
-        ? 48
-        : sz === '$5'
-          ? 80
-          : 64
-      : zoom === 'week'
-        ? sz === '$3'
-          ? 18
-          : sz === '$5'
-            ? 30
-            : 24
-        : sz === '$3'
-          ? 6
-          : sz === '$5'
-            ? 10
-            : 8;
-  const space = knobProps.space;
-  const barInset = space === 'small' ? 4 : space === 'large' ? 9 : 6;
+  const rowHeight = Math.max(MIN_PRESS_TARGET, steps.rowHeight);
+  // Dual-level axis (month band + day numbers) — upper/lower header.
+  const { axisHeight } = steps;
+  const pxPerDay = steps.pxPerDay[zoom];
+  const { space } = knobProps;
+  const barInset = barInsetFor(space);
   const barHeight = Math.max(10, rowHeight - barInset * 2);
   // An eternal span is a RAIL, not a bar: half the height, no caps. The
   // shape is the message — a full-width capped bar would put two chosen-
   // looking edges on the chart's own padding.
   const railHeight = Math.max(4, Math.round(barHeight / 2));
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   // Layout props (left) only tween on web — the RN driver cannot animate
   // layout, so native keeps committed jumps instant (Axiom 4 note).
   const webLayoutTransition = isWeb ? transition : undefined;
@@ -618,6 +788,7 @@ export function GanttView({
     return openSpanExtents(flat);
   }, [tasks, markerDate]);
   const range = useMemo(
+    // oxlint-disable-next-line react/purity -- the chart's default window is anchored on the current date by design
     () => computeGanttRange(spans, zoom, new Date(), firstDayOfWeek),
     [spans, zoom, firstDayOfWeek],
   );
@@ -630,6 +801,7 @@ export function GanttView({
   const rangeLabel = useMemo(() => formatRangeLabel(range), [range]);
   const months = useMemo(() => monthBands(range, pxPerDay), [range, pxPerDay]);
   const weekends = useMemo(() => weekendColumns(range, pxPerDay), [range, pxPerDay]);
+  // oxlint-disable-next-line react/purity -- the today column is the current date by design
   const todayColX = showToday ? dateToX(startOfDay(new Date()), range.start, pxPerDay) : null;
 
   const changeZoom = useCallback(
@@ -641,8 +813,8 @@ export function GanttView({
   );
 
   // ── Scroll-to-date (mount + Today button) + pinned-axis sync ─────────────
-  const hScrollRef = useRef<any>(null);
-  const axisScrollRef = useRef<any>(null);
+  const hScrollRef = useRef<RNScrollView>(null);
+  const axisScrollRef = useRef<RNScrollView>(null);
   const canvasViewportRef = useRef<number | null>(null);
   // Re-anchor in either direction once the canvas viewport has been measured.
   const pendingAnchorRef = useRef<Date | null>(null);
@@ -667,6 +839,7 @@ export function GanttView({
     [range.start, pxPerDay, labelWidth, rtl, chartWidth],
   );
   const scrollToDateRef = useRef(scrollToDate);
+  // oxlint-disable-next-line react/refs -- latest-value ref: the mount effect must call the newest scroll anchor without re-running on its identity
   scrollToDateRef.current = scrollToDate;
 
   useEffect(() => {
@@ -674,17 +847,18 @@ export function GanttView({
     scrollToDateRef.current(initialDate ?? new Date(), false);
     // Re-anchor when the scale changes (zoom flip re-lays the whole canvas)
     // or the direction flips (the whole canvas mirrors).
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the effect reads the newest anchor through a ref; zoom/initialDate/rtl are the re-anchor triggers
   }, [zoom, initialDate, rtl]);
 
   /** Canvas scroll drives the pinned axis strip (follower is not scrollable). */
-  const handleCanvasScroll = useCallback((event: any) => {
-    const x = event?.nativeEvent?.contentOffset?.x ?? 0;
+  const handleCanvasScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = event.nativeEvent.contentOffset?.x ?? 0;
     axisScrollRef.current?.scrollTo?.({ x, animated: false });
   }, []);
 
-  const handleCanvasLayout = useCallback((event: any) => {
-    const width = event?.nativeEvent?.layout?.width;
-    if (typeof width !== 'number' || !Number.isFinite(width) || width <= 0) {
+  const handleCanvasLayout = useCallback((event: LayoutChangeEvent) => {
+    const { width } = event.nativeEvent.layout;
+    if (!Number.isFinite(width) || width <= 0) {
       return;
     }
     canvasViewportRef.current = width;
@@ -716,14 +890,7 @@ export function GanttView({
   // Set after a drag ends so the trailing click doesn't fire onItemPress.
   const suppressClickRef = useRef(false);
   const dragCleanupRef = useRef<(() => void) | null>(null);
-  const nativeSessionRef = useRef<{
-    task: GanttTask;
-    ref: GanttSpanRef;
-    span: GanttSpan;
-    startX: number;
-    dragging: boolean;
-    liftTimer: ReturnType<typeof setTimeout> | null;
-  } | null>(null);
+  const nativeSessionRef = useRef<NativeBarSession | null>(null);
 
   useEffect(() => () => dragCleanupRef.current?.(), []);
 
@@ -793,12 +960,13 @@ export function GanttView({
         setDrag({ key: ref.key, dx, dayDelta: toDayDelta(dx) });
       };
 
+      // oxlint-disable eslint/no-use-before-define -- the session handlers reference one another (teardown detaches what onMove/onUp/onKey call); none runs before all are defined
       const teardown = () => {
         if (ended) {
           return;
         }
         ended = true;
-        if (longPressTimer) {
+        if (longPressTimer !== null) {
           clearTimeout(longPressTimer);
         }
         window.removeEventListener('pointermove', onMove);
@@ -842,23 +1010,7 @@ export function GanttView({
         commitDrag(task, ref, span, dayDelta);
       };
 
-      const onKey = (ke: KeyboardEvent) => {
-        if (ke.key !== 'Escape' || !active) {
-          return;
-        }
-        ke.stopPropagation();
-        teardown();
-        // Escape cancel: pointer is still down — keep suppressing until release.
-        suppressClickRef.current = true;
-        window.addEventListener(
-          'pointerup',
-          () =>
-            setTimeout(() => {
-              suppressClickRef.current = false;
-            }, 0),
-          { once: true },
-        );
-      };
+      const onKey = makeEscapeCancel(() => active, teardown, suppressClickRef);
 
       if (isTouch) {
         longPressTimer = setTimeout(() => {
@@ -867,6 +1019,7 @@ export function GanttView({
         }, TOUCH_LONG_PRESS_MS);
       }
 
+      // oxlint-enable eslint/no-use-before-define
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('keydown', onKey, true);
@@ -891,13 +1044,13 @@ export function GanttView({
       // drag and locks scroll BEFORE any movement, because on iOS the
       // ScrollView's pan gesture is recognized natively and would win any
       // move-threshold race against the JS responder system.
-      const session = {
+      const session: NativeBarSession = {
         task,
         ref,
         span,
         startX: e.nativeEvent?.pageX ?? 0,
         dragging: false,
-        liftTimer: null as ReturnType<typeof setTimeout> | null,
+        liftTimer: null,
       };
       session.liftTimer = setTimeout(() => {
         session.liftTimer = null;
@@ -923,7 +1076,7 @@ export function GanttView({
         // Pre-lift movement = scroll intent: cancel the pending lift and yield
         // (the termination request then returns true, freeing the ScrollView).
         if (Math.abs(dx) >= TOUCH_SLOP_PX) {
-          if (session.liftTimer) {
+          if (session.liftTimer !== null) {
             clearTimeout(session.liftTimer);
           }
           nativeSessionRef.current = null;
@@ -946,7 +1099,7 @@ export function GanttView({
       if (!session) {
         return;
       }
-      if (session.liftTimer) {
+      if (session.liftTimer !== null) {
         clearTimeout(session.liftTimer);
       }
       if (!session.dragging) {
@@ -963,7 +1116,7 @@ export function GanttView({
 
   const handleNativeTerminate = useCallback(() => {
     const session = nativeSessionRef.current;
-    if (session?.liftTimer) {
+    if (session?.liftTimer != null) {
       clearTimeout(session.liftTimer);
     }
     nativeSessionRef.current = null;
@@ -1014,6 +1167,7 @@ export function GanttView({
 
       const toDayDelta = (dx: number) => clampResizeDayDelta(span, edge, dxToDayDelta(clampLogicalDx(dx), pxPerDay));
 
+      // oxlint-disable eslint/no-use-before-define -- the session handlers reference one another (teardown detaches what onMove/onUp/onKey call); none runs before all are defined
       const teardown = () => {
         if (ended) {
           return;
@@ -1055,24 +1209,9 @@ export function GanttView({
         }
       };
 
-      const onKey = (ke: KeyboardEvent) => {
-        if (ke.key !== 'Escape' || !active) {
-          return;
-        }
-        ke.stopPropagation();
-        teardown();
-        // Escape cancel: pointer is still down — keep suppressing until release.
-        suppressClickRef.current = true;
-        window.addEventListener(
-          'pointerup',
-          () =>
-            setTimeout(() => {
-              suppressClickRef.current = false;
-            }, 0),
-          { once: true },
-        );
-      };
+      const onKey = makeEscapeCancel(() => active, teardown, suppressClickRef);
 
+      // oxlint-enable eslint/no-use-before-define
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('keydown', onKey, true);
@@ -1082,7 +1221,7 @@ export function GanttView({
   );
 
   const getBarDragProps = useCallback(
-    (task: GanttTask, ref: GanttSpanRef): Record<string, unknown> => {
+    (task: GanttTask, ref: GanttSpanRef): BarDragProps => {
       // An open-ended span has no second edge to hold a duration against, so
       // it gets no session at all rather than a drag that invents one.
       if (!boundedSpan(ref)) {
@@ -1090,7 +1229,7 @@ export function GanttView({
       }
       if (webDragEnabled) {
         return {
-          onPointerDown: (e: any) => {
+          onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
             handleBarPointerDown(task, ref, e);
           },
         };
@@ -1101,7 +1240,7 @@ export function GanttView({
           onStartShouldSetResponder: () => true,
           onMoveShouldSetResponder: () => true,
           onResponderTerminationRequest: () => !nativeSessionRef.current?.dragging,
-          onResponderGrant: (e: any) => {
+          onResponderGrant: (e: GestureResponderEvent) => {
             handleNativeGrant(task, ref, e);
           },
           onResponderMove: handleNativeMove,
@@ -1203,6 +1342,7 @@ export function GanttView({
       let prevUserSelect = '';
       const toDayDelta = (dx: number) => dirSignRef.current * dxToDayDelta(dx, pxPerDay);
 
+      // oxlint-disable eslint/no-use-before-define -- the session handlers reference one another (teardown detaches what onMove/onUp/onKey call); none runs before all are defined
       const teardown = () => {
         if (ended) {
           return;
@@ -1246,6 +1386,7 @@ export function GanttView({
         teardown();
       };
 
+      // oxlint-enable eslint/no-use-before-define
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('keydown', onKey, true);
@@ -1256,7 +1397,7 @@ export function GanttView({
 
   // Native: the axis strip does not scroll, so the handle can claim the touch
   // immediately — no long-press lift to arbitrate against a scroller.
-  const markerNativeProps = useMemo<Record<string, unknown>>(() => {
+  const markerNativeProps = useMemo<BarDragProps>(() => {
     if (!markerDragEnabled || isWeb) {
       return {};
     }
@@ -1264,19 +1405,19 @@ export function GanttView({
       onStartShouldSetResponder: () => true,
       onMoveShouldSetResponder: () => true,
       onResponderTerminationRequest: () => false,
-      onResponderGrant: (e: any) => {
+      onResponderGrant: (e: GestureResponderEvent) => {
         if (!openMarkerSession()) {
           return;
         }
-        markerSessionRef.current = { startX: e?.nativeEvent?.pageX ?? 0 };
+        markerSessionRef.current = { startX: e.nativeEvent.pageX };
         setMarkerDragging(true);
       },
-      onResponderMove: (e: any) => {
+      onResponderMove: (e: GestureResponderEvent) => {
         const session = markerSessionRef.current;
         if (!session) {
           return;
         }
-        const dx = (e?.nativeEvent?.pageX ?? 0) - session.startX;
+        const dx = e.nativeEvent.pageX - session.startX;
         emitMarker(dirSignRef.current * dxToDayDelta(dx, pxPerDay));
       },
       onResponderRelease: () => {
@@ -1331,8 +1472,9 @@ export function GanttView({
     return withInterp(t('{{title}}, always, no dates'), { title });
   };
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one bar: live drag/resize geometry, open-end marks, handles and a11y derive from the same per-span values
   const renderBar = (task: GanttTask, ref: GanttSpanRef) => {
-    const span = ref.span;
+    const { span } = ref;
     const barKey = ref.key;
     const bounded = boundedSpan(ref);
     const geom = openBarGeometry(span, range, pxPerDay);
@@ -1342,26 +1484,12 @@ export function GanttView({
     const resizing = activeResize !== null;
     const sessionLive = dragging || resizing;
     const dayDelta = activeDrag?.dayDelta ?? activeResize?.dayDelta ?? 0;
-    const previewSpan =
-      bounded && activeDrag
-        ? shiftSpanByDays(bounded, dayDelta)
-        : bounded && activeResize
-          ? resizeSpanByDays(bounded, activeResize.edge, activeResize.dayDelta)
-          : null;
+    const previewSpan = previewSpanFor(bounded, activeDrag, activeResize, dayDelta);
     const previewGeom = previewSpan ? barGeometry(previewSpan, range.start, pxPerDay) : null;
     // Live geometry: a move rides a pure transform; a resize tracks the
     // dragged edge 1:1 (the opposite edge stays put in both directions).
-    const liveWidth = activeResize
-      ? Math.max(
-          6,
-          activeResize.edge === 'end' ? geom.width + activeResize.logicalDx : geom.width - activeResize.logicalDx,
-        )
-      : geom.width;
-    const liveTransformX = activeDrag
-      ? activeDrag.dx
-      : activeResize && activeResize.edge === 'start'
-        ? activeResize.logicalDx * dirSign
-        : 0;
+    const liveWidth = liveWidthFor(geom.width, activeResize);
+    const liveTransformX = liveTransformFor(activeDrag, activeResize, dirSign);
     const barColor = span.color ?? task.color;
     const barIntent = span.intent ?? task.intent;
     const barTitle = span.title ?? task.title;
@@ -1373,7 +1501,7 @@ export function GanttView({
     const isBarFocused = focusedBarId === barKey;
     const showHandles = hoveredId === task.id || sessionLive;
     // Edge handles map physical sides to logical edges (mirrored under RTL).
-    const handleWidth = bounded ? (geom.width >= 24 ? 8 : geom.width >= 12 ? 4 : 0) : 0;
+    const handleWidth = bounded ? resizeHandleWidth(geom.width) : 0;
     const physicalLeftEdge: GanttResizeEdge = rtl ? 'end' : 'start';
     const physicalRightEdge: GanttResizeEdge = rtl ? 'start' : 'end';
     // An open END is physically on the right in LTR and on the left in RTL —
@@ -1386,10 +1514,12 @@ export function GanttView({
     const squareEnd = rtl
       ? { borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }
       : { borderTopRightRadius: 0, borderBottomRightRadius: 0 };
-    const height = geom.eternal ? railHeight : barHeight;
+    const boxHeight = geom.eternal ? railHeight : barHeight;
 
     return (
-      <BarIntentWrap key={barKey} intent={barColor ? undefined : barIntent}>
+      <BarIntentWrap
+        key={barKey}
+        intent={isNonEmpty(barColor) ? undefined : barIntent}>
         {/* Snapped drop preview (the raw bar tracks the pointer 1:1). */}
         {sessionLive && dayDelta !== 0 && previewGeom && (
           <YStack
@@ -1411,24 +1541,25 @@ export function GanttView({
           position="absolute"
           {...canvasPos(geom.x)}
           width={liveWidth}
-          top={barInset + (barHeight - height) / 2}
-          height={height}
+          top={barInset + (barHeight - boxHeight) / 2}
+          height={boxHeight}
           x={liveTransformX}
           zIndex={sessionLive ? 3 : 1}
           {...knobProps.borderRadius}
           {...(geom.openStart ? squareStart : null)}
           {...(geom.openEnd ? squareEnd : null)}
-          backgroundColor={fill as any}
+          backgroundColor={fill}
           // A rail reads as chrome, not as a duration somebody set.
-          opacity={sessionLive ? 0.85 : geom.eternal ? 0.55 : 1}
-          hoverStyle={{ opacity: sessionLive ? 0.85 : geom.eternal ? 0.7 : 0.9 }}
+          opacity={barOpacity(sessionLive, geom.eternal, 0.55, 1)}
+          hoverStyle={{ opacity: barOpacity(sessionLive, geom.eternal, 0.7, 0.9) }}
           pressStyle={{ opacity: 0.8 }}
-          cursor={bounded && webDragEnabled ? 'grab' : onItemPress ? 'pointer' : undefined}
+          cursor={barCursor(bounded !== null && webDragEnabled, onItemPress !== undefined)}
           justifyContent="center"
           // Committed/reverted geometry jumps tween on web; the live
           // drag/resize tracking stays 1:1 (no transition while the session
           // is live).
-          transition={(sessionLive ? undefined : webLayoutTransition) as any}
+          transition={sessionLive ? undefined : webLayoutTransition}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui YStack is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
           role="button"
           tabIndex={0}
           aria-label={spanAccessibleName(barTitle, span)}
@@ -1443,44 +1574,38 @@ export function GanttView({
             setBarKeyboardRing(false);
           }}
           // Tamagui forwards onHoverIn/onHoverOut at runtime; the RN-flavored
-          // View prop type omits them (house Record cast).
-          {...({
+          // View prop type omits them .
+          {...webOnlyProps({
             onHoverIn: () => {
               setHoveredId(task.id);
             },
             onHoverOut: () => {
               setHoveredId((id) => (id === task.id ? null : id));
             },
-          } as Record<string, unknown>)}
-          onKeyDown={
-            ((ke: any) => {
-              if (ke.key === 'Enter' || ke.key === ' ') {
-                ke.preventDefault?.();
-                ke.stopPropagation?.();
-                onItemPress?.(task);
-                return;
-              }
-              if ((ke.key === 'ArrowLeft' || ke.key === 'ArrowRight') && dragEnabled && bounded) {
-                ke.preventDefault?.();
-                ke.stopPropagation?.();
-                handleBarKeyboardMove(task, ref, ke.key, ke.shiftKey === true);
-              }
-            }) as any
-          }
+          })}
+          onKeyDown={(ke: React.KeyboardEvent) => {
+            if (ke.key === 'Enter' || ke.key === ' ') {
+              ke.preventDefault?.();
+              ke.stopPropagation?.();
+              onItemPress?.(task);
+              return;
+            }
+            if ((ke.key === 'ArrowLeft' || ke.key === 'ArrowRight') && dragEnabled && bounded) {
+              ke.preventDefault?.();
+              ke.stopPropagation?.();
+              handleBarKeyboardMove(task, ref, ke.key, ke.shiftKey);
+            }
+          }}
           {...{ 'data-gantt-bar': barKey }}
           {...(geom.eternal ? { 'data-gantt-rail': 'true' } : null)}
-          {...(geom.openStart || geom.openEnd
-            ? {
-                'data-gantt-span-open': geom.eternal ? 'both' : geom.openStart ? 'start' : 'end',
-              }
-            : null)}
-          {...(nativeDragEnabled ? null : getBarDragProps(task, ref))}
+          {...(geom.openStart || geom.openEnd ? { 'data-gantt-span-open': openSide(geom) } : null)}
+          {...(nativeDragEnabled ? null : dragSpread(getBarDragProps(task, ref)))}
           // Native drag responders own the tap → press is handled on release.
           onPress={
             nativeDragEnabled && bounded
               ? undefined
               : (e) => {
-                  (e as any)?.stopPropagation?.();
+                  e?.stopPropagation?.();
                   if (suppressClickRef.current) {
                     return;
                   }
@@ -1500,13 +1625,30 @@ export function GanttView({
               {...{ 'data-gantt-progress': String(progress) }}
             />
           )}
-          {showLabel && <GanttBarLabel title={barTitle} fill={fill} />}
+          {showLabel && (
+            <GanttBarLabel
+              title={barTitle}
+              fill={fill}
+            />
+          )}
 
           {/* "This end is not an end" — a mark, never a cap. */}
           {geom.openStart && (
-            <GanttOpenEdgeMark fill={fill} glyph={rtl ? '»' : '«'} side={openStartSide} edge="start" />
+            <GanttOpenEdgeMark
+              fill={fill}
+              glyph={rtl ? '»' : '«'}
+              side={openStartSide}
+              edge="start"
+            />
           )}
-          {geom.openEnd && <GanttOpenEdgeMark fill={fill} glyph={rtl ? '«' : '»'} side={openEndSide} edge="end" />}
+          {geom.openEnd && (
+            <GanttOpenEdgeMark
+              fill={fill}
+              glyph={rtl ? '«' : '»'}
+              side={openEndSide}
+              edge="end"
+            />
+          )}
 
           {/* Live date label while dragging (honest preview of the commit). */}
           {previewSpan && (
@@ -1522,7 +1664,10 @@ export function GanttView({
               pointerEvents="none"
               zIndex={4}
               {...{ 'data-gantt-drag-label': 'true' }}>
-              <Text {...knobProps.label} color="$color" numberOfLines={1}>
+              <Text
+                {...knobProps.label}
+                color="$color"
+                numberOfLines={1}>
                 {formatSpanLabel(previewSpan)}
               </Text>
             </XStack>
@@ -1540,9 +1685,11 @@ export function GanttView({
                 cursor="ew-resize"
                 backgroundColor={showHandles ? '$color12' : 'transparent'}
                 opacity={showHandles ? 0.28 : 0}
-                onPointerDown={(e: any) => {
-                  handleResizePointerDown(task, ref, physicalLeftEdge, e);
-                }}
+                {...webOnlyProps({
+                  onPointerDown: (e) => {
+                    handleResizePointerDown(task, ref, physicalLeftEdge, e);
+                  },
+                })}
                 {...{ 'data-gantt-resize-handle': physicalLeftEdge }}
               />
               <YStack
@@ -1554,9 +1701,11 @@ export function GanttView({
                 cursor="ew-resize"
                 backgroundColor={showHandles ? '$color12' : 'transparent'}
                 opacity={showHandles ? 0.28 : 0}
-                onPointerDown={(e: any) => {
-                  handleResizePointerDown(task, ref, physicalRightEdge, e);
-                }}
+                {...webOnlyProps({
+                  onPointerDown: (e) => {
+                    handleResizePointerDown(task, ref, physicalRightEdge, e);
+                  },
+                })}
                 {...{ 'data-gantt-resize-handle': physicalRightEdge }}
               />
             </>
@@ -1573,7 +1722,7 @@ export function GanttView({
               right={0}
               bottom={0}
               zIndex={5}
-              {...getBarDragProps(task, ref)}
+              {...dragSpread(getBarDragProps(task, ref))}
             />
           )}
         </YStack>
@@ -1587,14 +1736,23 @@ export function GanttView({
   const minorGridColor = componentColors.divider;
   // Manual mirroring owns RTL inside the horizontal scrollers: force their
   // scroll math to LTR so contentOffset.x stays 0-at-content-start on web.
-  const scrollerDirection = { direction: 'ltr' as const };
 
-  const showSkeleton = !error && isLoading && tasks.length === 0;
+  const hasError = Boolean(error);
+  const showSkeleton = !hasError && isLoading && tasks.length === 0;
 
   return (
     <AsyncBoundary
-      loading={showSkeleton ? <GanttSkeleton labelWidth={labelWidth} rowHeight={rowHeight} /> : false}
-      empty={!error && !isLoading && tasks.length === 0}
+      loading={
+        showSkeleton ? (
+          <GanttSkeleton
+            labelWidth={labelWidth}
+            rowHeight={rowHeight}
+          />
+        ) : (
+          false
+        )
+      }
+      empty={!hasError && !isLoading && tasks.length === 0}
       error={error}
       onRetry={onRetry}
       emptyTitle={emptyTitle ?? t('No tasks')}
@@ -1634,7 +1792,10 @@ export function GanttView({
             )}
 
             {/* Range title is the panel's section heading — shared scale. */}
-            <Text {...knobProps.heading} {...sectionHeading} numberOfLines={1}>
+            <Text
+              {...knobProps.heading}
+              {...sectionHeading}
+              numberOfLines={1}>
               {rangeLabel}
             </Text>
 
@@ -1648,7 +1809,9 @@ export function GanttView({
                 ]}
                 currentView={zoom}
                 onViewChange={(val) => {
-                  changeZoom(val as GanttZoom);
+                  if (isGanttZoom(val)) {
+                    changeZoom(val);
+                  }
                 }}
               />
             )}
@@ -1659,7 +1822,10 @@ export function GanttView({
             put while rows scroll vertically. The strip is a scroll-follower
             of the canvas scroller (works web + native), so the tick grid and
             bars can never drift apart horizontally. */}
-        <XStack {...hairline.bottom} borderColor="$borderColor" {...{ 'data-gantt-axis-row': 'true' }}>
+        <XStack
+          {...hairline.bottom}
+          borderColor="$borderColor"
+          {...{ 'data-gantt-axis-row': 'true' }}>
           <XStack
             width={labelWidth}
             flexShrink={0}
@@ -1669,7 +1835,10 @@ export function GanttView({
             {...hairlineEnd}
             borderColor="$borderColor"
             {...{ backgroundColor: componentColors.surface.background }}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}
+              numberOfLines={1}>
               {t('Task')}
             </Text>
           </XStack>
@@ -1679,7 +1848,7 @@ export function GanttView({
             flex={1}
             scrollEnabled={false}
             showsHorizontalScrollIndicator={false}
-            style={scrollerDirection as any}>
+            style={SCROLLER_DIRECTION}>
             <XStack
               width={chartWidth}
               height={axisHeight}
@@ -1718,7 +1887,7 @@ export function GanttView({
                   <Text
                     key={band.key}
                     position="absolute"
-                    {...(rtl ? { right: band.x + 4 } : { left: band.x + 4 })}
+                    {...canvasPos(band.x + 4)}
                     top={2}
                     width={Math.max(0, band.width - 8)}
                     {...knobProps.label}
@@ -1732,7 +1901,7 @@ export function GanttView({
                 <Text
                   key={tick.date.toISOString()}
                   position="absolute"
-                  {...(rtl ? { right: tick.x + 4 } : { left: tick.x + 4 })}
+                  {...canvasPos(tick.x + 4)}
                   top={axisHeight / 2}
                   {...knobProps.label}
                   color={knobProps.textAccentColor}
@@ -1774,28 +1943,29 @@ export function GanttView({
                     paddingBottom={2}
                     zIndex={4}
                     cursor={markerDragEnabled ? 'ew-resize' : undefined}
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/role-has-required-aria-props -- Tamagui YStack is the cross-platform primitive; the slider's value is a date, so aria-valuetext carries it instead of a numeric aria-valuenow
                     role="slider"
                     tabIndex={markerDragEnabled ? 0 : -1}
                     aria-label={markerName}
                     aria-valuetext={markerDate ? formatAbsoluteDate(markerDate) : undefined}
                     {...(markerDragEnabled && hasDom
-                      ? {
-                          onPointerDown: (e: any) => {
+                      ? // oxlint-disable-next-line react/refs -- the handler only touches the session refs when invoked, never while rendering
+                        webOnlyProps({
+                          onPointerDown: (e) => {
                             handleMarkerPointerDown(e);
                           },
-                        }
+                        })
                       : null)}
-                    {...markerNativeProps}
-                    onKeyDown={
-                      ((ke: any) => {
-                        if (ke.key !== 'ArrowLeft' && ke.key !== 'ArrowRight') {
-                          return;
-                        }
-                        ke.preventDefault?.();
-                        ke.stopPropagation?.();
-                        handleMarkerKeyboardMove(ke.key, ke.shiftKey === true);
-                      }) as any
-                    }
+                    // oxlint-disable-next-line react/refs -- the responder handlers only touch the session refs when invoked, never while rendering
+                    {...dragSpread(markerNativeProps)}
+                    onKeyDown={(ke: React.KeyboardEvent) => {
+                      if (ke.key !== 'ArrowLeft' && ke.key !== 'ArrowRight') {
+                        return;
+                      }
+                      ke.preventDefault?.();
+                      ke.stopPropagation?.();
+                      handleMarkerKeyboardMove(ke.key, ke.shiftKey);
+                    }}
                     {...{ 'data-gantt-marker-handle': 'true' }}>
                     <YStack
                       width={11}
@@ -1815,10 +1985,16 @@ export function GanttView({
         {/* Body: labels + chart share one vertical scroller so rows stay
             aligned; the chart owns its horizontal scroller so bars never
             paint past the frame. */}
-        <ScrollView flex={1} scrollEnabled={!scrollLocked}>
+        <ScrollView
+          flex={1}
+          scrollEnabled={!scrollLocked}>
           <XStack {...{ 'data-gantt-scroll-body': 'true' }}>
             {/* Task label column */}
-            <YStack width={labelWidth} flexShrink={0} {...hairlineEnd} borderColor="$borderColor">
+            <YStack
+              width={labelWidth}
+              flexShrink={0}
+              {...hairlineEnd}
+              borderColor="$borderColor">
               {tasks.map((task, index) => {
                 const refs = resolveSpans(task);
                 // A row is "selected" when any of ITS spans holds focus — for
@@ -1835,20 +2011,18 @@ export function GanttView({
                     paddingHorizontal={knobProps.panelPadding.padding}
                     {...(last ? null : hairline.bottom)}
                     borderColor={minorGridColor}
-                    backgroundColor={
-                      selected ? '$accentBackground' : hovered ? componentColors.interactive.background : 'transparent'
-                    }
+                    backgroundColor={labelRowBackground(selected, hovered)}
                     cursor={onItemPress ? 'pointer' : undefined}
                     // Tamagui forwards onHoverIn/onHoverOut at runtime; the
-                    // RN-flavored View prop type omits them (house Record cast).
-                    {...({
+                    // RN-flavored View prop type omits them .
+                    {...webOnlyProps({
                       onHoverIn: () => {
                         setHoveredId(task.id);
                       },
                       onHoverOut: () => {
                         setHoveredId((id) => (id === task.id ? null : id));
                       },
-                    } as Record<string, unknown>)}
+                    })}
                     onPress={
                       onItemPress
                         ? () => {
@@ -1865,7 +2039,11 @@ export function GanttView({
                           }
                     }
                     {...{ 'data-gantt-row-label': task.id }}>
-                    <GanttTaskName title={task.title} selected={selected} body={knobProps.body} />
+                    <GanttTaskName
+                      title={task.title}
+                      selected={selected}
+                      body={knobProps.body}
+                    />
                   </XStack>
                 );
               })}
@@ -1884,10 +2062,15 @@ export function GanttView({
               onScroll={handleCanvasScroll}
               scrollEventThrottle={16}
               onLayout={handleCanvasLayout}
-              style={(isWeb ? scrollerDirection : [{ flex: 1 }, scrollerDirection]) as any}>
-              <YStack width={chartWidth} position="relative" {...{ 'data-gantt-chart': 'true' }}>
+              style={isWeb ? SCROLLER_DIRECTION : [{ flex: 1 }, SCROLLER_DIRECTION]}>
+              <YStack
+                width={chartWidth}
+                position="relative"
+                {...{ 'data-gantt-chart': 'true' }}>
                 {/* Rows + grid + today line */}
-                <YStack position="relative" {...{ 'data-gantt-body': 'true' }}>
+                <YStack
+                  position="relative"
+                  {...{ 'data-gantt-body': 'true' }}>
                   {weekends.map((col) => (
                     <YStack
                       key={`body-we-${col.key}`}
@@ -1930,6 +2113,7 @@ export function GanttView({
                   ))}
 
                   {/* Task rows */}
+                  {/* oxlint-disable-next-line react/refs -- bars read the session refs only inside event handlers, never while rendering */}
                   {tasks.map((task, index) => {
                     const refs = resolveSpans(task);
                     const selected = refs.some((ref) => ref.key === focusedBarId);
@@ -1944,15 +2128,15 @@ export function GanttView({
                         borderColor={minorGridColor}
                         backgroundColor={selected || hovered ? componentColors.interactive.background : 'transparent'}
                         // Tamagui forwards onHoverIn/onHoverOut at runtime; the
-                        // RN-flavored View prop type omits them (house Record cast).
-                        {...({
+                        // RN-flavored View prop type omits them .
+                        {...webOnlyProps({
                           onHoverIn: () => {
                             setHoveredId(task.id);
                           },
                           onHoverOut: () => {
                             setHoveredId((id) => (id === task.id ? null : id));
                           },
-                        } as Record<string, unknown>)}
+                        })}
                         {...{ 'data-gantt-row': task.id }}>
                         {refs.map((ref) => renderBar(task, ref))}
                       </XStack>
@@ -2013,4 +2197,4 @@ export function GanttView({
       </YStack>
     </AsyncBoundary>
   );
-}
+};

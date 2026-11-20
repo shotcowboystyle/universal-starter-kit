@@ -1,22 +1,20 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnModuleInit
-} from "@nestjs/common";
-import { EventEmitter2 } from "eventemitter2";
-import { Types } from "mongoose";
+import type { OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from 'eventemitter2';
+import { Types } from 'mongoose';
 
-import { ProjectDeletedEvent } from "../../common/events";
-import { ProjectsService } from "../projects/projects.service";
+import type { ProjectDeletedEvent } from '../../common/events/project-deleted.event';
+import type { ProjectsService } from '../projects/projects.service';
 
-import { CreateTaskDto } from "./dto/create-task.dto";
-import { TaskResponseDto } from "./dto/task-response.dto";
-import { UpdateTaskDto } from "./dto/update-task.dto";
-import { TaskRepository } from "./repositories/tasks.repository";
-import { TaskDocument, TaskStatus } from "./schemas/tasks.schema";
+import type { CreateTaskDto } from './dto/create-task.dto';
+import type { TaskResponseDto } from './dto/task-response.dto';
+import type { UpdateTaskDto } from './dto/update-task.dto';
+import type { UserResponseDto } from './dto/user-response.dto';
+import type { TaskQuery, TaskRepository, TaskUpdate } from './repositories/tasks.repository';
+import type { Task, TaskDocument } from './schemas/tasks.schema';
+import { TaskStatus } from './schemas/tasks.schema';
+
+const USER_FIELDS = 'name email';
 
 interface PopulatedUserRef {
   _id: Types.ObjectId | string;
@@ -31,13 +29,13 @@ export class TasksService implements OnModuleInit {
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly projectsService: ProjectsService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   onModuleInit(): void {
-    this.eventEmitter.on("project.deleted", async (event: ProjectDeletedEvent) =>
-      this.handleProjectDeleted(event)
-    );
+    this.eventEmitter.on('project.deleted', (event: ProjectDeletedEvent) => {
+      void this.handleProjectDeleted(event);
+    });
   }
 
   async handleProjectDeleted(event: ProjectDeletedEvent): Promise<void> {
@@ -46,7 +44,7 @@ export class TasksService implements OnModuleInit {
 
   async create(createTaskDto: CreateTaskDto, userId: string): Promise<TaskResponseDto> {
     if (!userId) {
-      throw new BadRequestException("User ID is required to create a task");
+      throw new BadRequestException('User ID is required to create a task');
     }
 
     const creatorId = new Types.ObjectId(userId);
@@ -57,41 +55,45 @@ export class TasksService implements OnModuleInit {
       try {
         await this.projectsService.addMemberIfNotExists(createTaskDto.project, userId);
       } catch (error) {
-        this.logger.error("Error adding creator to project members:", error);
+        this.logger.error('Error adding creator to project members:', error);
       }
     }
 
     const orderInProject = createTaskDto.orderInProject ?? 0;
 
-    const taskData = {
-      ...createTaskDto,
+    const { title, description, dueDate, assignee } = createTaskDto;
+    const taskData: Partial<Task> = {
+      title,
+      description,
+      dueDate,
       project: projectId,
       board: new Types.ObjectId(createTaskDto.board),
       creator: creatorId,
       lastModifier: creatorId,
-      status: createTaskDto.status || TaskStatus.TODO,
+      status: createTaskDto.status ?? TaskStatus.TODO,
       orderInProject,
-      ...(createTaskDto.assignee && {
-        assignee: new Types.ObjectId(createTaskDto.assignee)
-      })
+      ...(assignee !== undefined &&
+        assignee !== '' && {
+          assignee: new Types.ObjectId(assignee),
+        }),
     };
 
     const savedTask = await this.taskRepository.create(taskData);
-    return this.toTaskResponse(savedTask);
+    return await this.toTaskResponse(savedTask);
   }
 
   async findAll(projectId?: string, assigneeId?: string): Promise<TaskResponseDto[]> {
-    const query: Record<string, unknown> = {};
+    const query: TaskQuery = {};
 
-    if (projectId) {
+    if (projectId !== undefined && projectId !== '') {
       query.project = new Types.ObjectId(projectId);
     }
-    if (assigneeId) {
+    if (assigneeId !== undefined && assigneeId !== '') {
       query.assignee = new Types.ObjectId(assigneeId);
     }
 
     const tasks = await this.taskRepository.findByQuery(query);
-    return Promise.all(tasks.map(async (task) => this.toTaskResponse(task)));
+    return await Promise.all(tasks.map(async (task) => await this.toTaskResponse(task)));
   }
 
   async findOne(id: string): Promise<TaskResponseDto> {
@@ -99,31 +101,38 @@ export class TasksService implements OnModuleInit {
     if (!task) {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
-    return this.toTaskResponse(task);
+    return await this.toTaskResponse(task);
   }
 
   async update(id: string, updateTaskDto: UpdateTaskDto, userId: string): Promise<TaskResponseDto> {
     await this.checkTaskPermission(id, userId);
 
-    const updateData: Record<string, unknown> = {
-      ...updateTaskDto,
+    const { title, description, status, dueDate, orderInProject, assigneeId } = updateTaskDto;
+    const updateData: TaskUpdate = {
       lastModifier: new Types.ObjectId(userId),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
-    // Remove undefined values
-    for (const key of Object.keys(updateData)) {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
+    // Only defined values are written
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+    if (dueDate !== undefined) {
+      updateData.dueDate = dueDate;
+    }
+    if (orderInProject !== undefined) {
+      updateData.orderInProject = orderInProject;
     }
 
     // Handle assigneeId → assignee conversion
-    if ("assigneeId" in updateData) {
-      updateData.assignee = updateData.assigneeId
-        ? new Types.ObjectId(updateData.assigneeId as string)
-        : null;
-      delete updateData.assigneeId;
+    if (assigneeId !== undefined) {
+      updateData.assignee = assigneeId !== null && assigneeId !== '' ? new Types.ObjectId(assigneeId) : null;
     }
 
     const updatedTask = await this.taskRepository.updateById(id, updateData);
@@ -132,7 +141,7 @@ export class TasksService implements OnModuleInit {
       throw new NotFoundException(`Task with ID ${id} not found`);
     }
 
-    return this.toTaskResponse(updatedTask);
+    return await this.toTaskResponse(updatedTask);
   }
 
   async remove(id: string, userId: string): Promise<void> {
@@ -152,18 +161,18 @@ export class TasksService implements OnModuleInit {
     taskId: string,
     newProjectId: string,
     newOrderInProject: number,
-    userId: string
+    userId: string,
   ): Promise<TaskResponseDto> {
     await this.checkTaskPermission(taskId, userId);
 
     if (!Types.ObjectId.isValid(taskId)) {
-      throw new BadRequestException("Invalid task ID");
+      throw new BadRequestException('Invalid task ID');
     }
     if (!Types.ObjectId.isValid(newProjectId)) {
-      throw new BadRequestException("Invalid project ID");
+      throw new BadRequestException('Invalid project ID');
     }
     if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException("Invalid user ID");
+      throw new BadRequestException('Invalid user ID');
     }
 
     const task = await this.taskRepository.findById(taskId);
@@ -188,82 +197,72 @@ export class TasksService implements OnModuleInit {
           new Types.ObjectId(newProjectId),
           taskId,
           oldOrderInProject,
-          newOrderInProject
+          newOrderInProject,
         );
       }
     } else {
       // Different project: adjust both
-      await this.taskRepository.decrementOrderAfter(
-        new Types.ObjectId(oldProjectId),
-        oldOrderInProject
-      );
-      await this.taskRepository.incrementOrderFrom(
-        new Types.ObjectId(newProjectId),
-        newOrderInProject,
-        taskId
-      );
+      await this.taskRepository.decrementOrderAfter(new Types.ObjectId(oldProjectId), oldOrderInProject);
+      await this.taskRepository.incrementOrderFrom(new Types.ObjectId(newProjectId), newOrderInProject, taskId);
     }
 
     const updatedTask = await this.taskRepository.findByIdPopulated(taskId);
     if (!updatedTask) {
-      throw new NotFoundException("Task not found after update");
+      throw new NotFoundException('Task not found after update');
     }
 
-    return this.toTaskResponse(updatedTask);
+    return await this.toTaskResponse(updatedTask);
   }
 
   // --- Private helpers ---
 
-  private async checkTaskPermission(
-    taskId: string,
-    userId: string,
-    requireCreator = false
-  ): Promise<TaskDocument> {
+  private async checkTaskPermission(taskId: string, userId: string, requireCreator = false): Promise<TaskDocument> {
     const task = await this.taskRepository.findById(taskId);
     if (!task) {
       throw new NotFoundException(`Task with ID ${taskId} not found`);
     }
 
-    const userIdString = userId?.toString();
     const creatorIdString = task.creator?.toString();
     const assigneeIdString = task.assignee?.toString();
 
-    const isCreator = creatorIdString === userIdString;
-    const isAssignee = assigneeIdString === userIdString;
+    const isCreator = creatorIdString === userId;
+    const isAssignee = assigneeIdString === userId;
 
     if (requireCreator && !isCreator) {
-      throw new ForbiddenException("Only the task creator can perform this action");
+      throw new ForbiddenException('Only the task creator can perform this action');
     }
 
     if (!isCreator && !isAssignee) {
-      throw new ForbiddenException("You do not have permission to modify this task");
+      throw new ForbiddenException('You do not have permission to modify this task');
     }
 
     return task;
   }
 
-  private toUserResponse(user: PopulatedUserRef | null | undefined) {
-    if (!user) {
+  private toUserResponse(user?: PopulatedUserRef | null): UserResponseDto | null {
+    if (user == null) {
       return null;
     }
     return {
-      _id: user._id?.toString() || "",
+      _id: user._id?.toString() || '',
       name: user.name ?? null,
-      email: user.email ?? undefined
+      email: user.email ?? undefined,
     };
   }
 
   private async toTaskResponse(task: TaskDocument): Promise<TaskResponseDto> {
     let populatedTask = task;
-    if (typeof task.populate === "function") {
+    if ('populate' in task) {
       populatedTask = await task.populate([
-        { path: "creator", select: "name email" },
-        { path: "assignee", select: "name email" },
-        { path: "lastModifier", select: "name email" }
+        { path: 'creator', select: USER_FIELDS },
+        { path: 'assignee', select: USER_FIELDS },
+        { path: 'lastModifier', select: USER_FIELDS },
       ]);
     }
 
-    const response: Partial<TaskResponseDto> & Pick<TaskResponseDto, "_id" | "title" | "status"> = {
+    const { description, dueDate } = populatedTask;
+
+    return {
       _id: populatedTask._id.toString(),
       title: populatedTask.title,
       status: populatedTask.status,
@@ -272,20 +271,11 @@ export class TasksService implements OnModuleInit {
       createdAt: populatedTask.createdAt,
       updatedAt: populatedTask.updatedAt,
       orderInProject: populatedTask.orderInProject ?? 0,
-      creator: this.toUserResponse(populatedTask.creator as PopulatedUserRef | null),
-      assignee: this.toUserResponse(populatedTask.assignee as PopulatedUserRef | null),
-      lastModifier: populatedTask.lastModifier
-        ? this.toUserResponse(populatedTask.lastModifier as PopulatedUserRef | null)
-        : this.toUserResponse(populatedTask.creator as PopulatedUserRef | null)
+      creator: this.toUserResponse(populatedTask.creator),
+      assignee: this.toUserResponse(populatedTask.assignee),
+      lastModifier: this.toUserResponse(populatedTask.lastModifier ?? populatedTask.creator),
+      ...(description != null && description !== '' && { description }),
+      ...(dueDate != null && { dueDate }),
     };
-
-    if (populatedTask.description) {
-      response.description = populatedTask.description;
-    }
-    if (populatedTask.dueDate) {
-      response.dueDate = populatedTask.dueDate;
-    }
-
-    return response as TaskResponseDto;
   }
 }

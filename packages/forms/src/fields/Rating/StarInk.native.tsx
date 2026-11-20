@@ -16,13 +16,17 @@ import type { StarInkProps } from './types';
  * resolves to `{}` and falls back to a DEFAULT SPRING, which is
  * motion wearing the name of silence.
  */
-export function inkMotionProps(transition: TransitionProp | undefined) {
-  // `TransitionProp` is the whole union (token, per-property map, tuple), but
-  // the per-property SLOT only accepts the token form. The knob always
-  // resolves to a token name — `resolveKnobs` sets `transition` straight from
-  // the `animation` knob — so this narrows rather than widens.
-  return transition ? { transition: { opacity: transition as TransitionKeys } } : {};
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- native-only file where Fast Refresh does not apply; exported so the motion-prop contract is unit-testable
+export const inkMotionProps = (transition?: TransitionProp) =>
+  transition == null
+    ? {}
+    : {
+        // `TransitionProp` is the whole union (token, per-property map, tuple), but
+        // the per-property SLOT only accepts the token form.
+        // SAFETY: the knob always resolves to a token name — `resolveKnobs` sets `transition` straight from the `animation` knob — so this narrows rather than widens.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TransitionProp's object and tuple forms are never produced by the animation knob
+        transition: { opacity: transition as TransitionKeys },
+      };
 
 /**
  * Native ink layer (star fill).
@@ -32,7 +36,7 @@ export function inkMotionProps(transition: TransitionProp | undefined) {
  * property that actually changes is not reachable any other way either: the
  * star's ink is the `fill`/`stroke` PROP of a `react-native-svg` shape, while
  * the RN driver only interpolates the style keys in its own table
- * (`animatedStyleKey` = `transform`, `opacity`, plus a fixed colour set in
+ * (`animatedStyleKey` = `transform`, `opacity`, plus a fixed color set in
  * `colorStyleKey`). An SVG paint prop is in neither, so NO `transition` on any
  * wrapper — however it is spelled — can ever reach it. That is why the native
  * star jumped while the web star tweened.
@@ -49,16 +53,35 @@ export function inkMotionProps(transition: TransitionProp | undefined) {
  * the usual cross-fade dip, and the price of not being able to interpolate
  * the paint itself.
  */
-export function StarInk({ StarIcon, size, filled, filledColor, emptyColor, transition }: StarInkProps) {
+export const StarInk = ({ StarIcon, size, filled, filledColor, emptyColor, transition }: StarInkProps) => {
   const motion = inkMotionProps(transition);
   return (
-    <View width={size} height={size}>
-      <View data-rating-ink="empty" opacity={filled ? 0 : 1} {...motion}>
-        <StarIcon size={size} weight="regular" color={emptyColor} />
+    <View
+      width={size}
+      height={size}>
+      <View
+        data-rating-ink="empty"
+        opacity={filled ? 0 : 1}
+        {...motion}>
+        <StarIcon
+          size={size}
+          weight="regular"
+          color={emptyColor}
+        />
       </View>
-      <View data-rating-ink="filled" position="absolute" top={0} left={0} opacity={filled ? 1 : 0} {...motion}>
-        <StarIcon size={size} weight="fill" color={filledColor} />
+      <View
+        data-rating-ink="filled"
+        position="absolute"
+        top={0}
+        left={0}
+        opacity={filled ? 1 : 0}
+        {...motion}>
+        <StarIcon
+          size={size}
+          weight="fill"
+          color={filledColor}
+        />
       </View>
     </View>
   );
-}
+};

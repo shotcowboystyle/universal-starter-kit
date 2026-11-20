@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,13 +7,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Spinner } from './index';
 
-afterEach(cleanup);
+const status = (container: HTMLElement): HTMLElement => container.querySelector("[role='status']")!;
 
-function status(container: HTMLElement): HTMLElement {
-  return container.querySelector("[role='status']") as HTMLElement;
-}
+describe(Spinner, () => {
+  afterEach(cleanup);
 
-describe('Spinner', () => {
   it('announces as a polite status region and is not a progressbar', () => {
     const { container } = renderWithProviders(<Spinner />);
     const node = status(container);
@@ -43,10 +39,10 @@ describe('Spinner', () => {
 
   it('maps explicit small/large onto the shared size-token scale', () => {
     const small = renderWithProviders(<Spinner size="small" />);
-    expect(status(small.container).getAttribute('data-size')).toBe('$1');
+    expect(status(small.container).dataset.size).toBe('$1');
     cleanup();
     const large = renderWithProviders(<Spinner size="large" />);
-    expect(status(large.container).getAttribute('data-size')).toBe('$3');
+    expect(status(large.container).dataset.size).toBe('$3');
   });
 
   it('publishes data-animation=none when the animation knob is none', () => {
@@ -55,12 +51,12 @@ describe('Spinner', () => {
         <Spinner />
       </Preset>,
     );
-    expect(status(container).getAttribute('data-animation')).toBe('none');
+    expect(status(container).dataset.animation).toBe('none');
   });
 
   it('publishes data-animation=spin with motion on', () => {
     const { container } = renderWithProviders(<Spinner />);
-    expect(status(container).getAttribute('data-animation')).toBe('spin');
+    expect(status(container).dataset.animation).toBe('spin');
   });
 
   it('follows the size knob when size is omitted', () => {
@@ -69,13 +65,13 @@ describe('Spinner', () => {
         <Spinner />
       </Preset>,
     );
-    expect(status(small.container).getAttribute('data-size')).toBe('$3');
+    expect(status(small.container).dataset.size).toBe('$3');
     cleanup();
     const large = renderWithProviders(
       <Preset overrides={{ size: 'large' }}>
         <Spinner />
       </Preset>,
     );
-    expect(status(large.container).getAttribute('data-size')).toBe('$5');
+    expect(status(large.container).dataset.size).toBe('$5');
   });
 });

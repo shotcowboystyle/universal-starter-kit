@@ -36,10 +36,10 @@ import {
   H5 as RawH5,
   H6 as RawH6,
   Heading as RawHeading,
-  type HeadingProps,
 } from 'tamagui';
+import type { HeadingProps } from 'tamagui';
 
-export type { HeadingProps };
+export type { HeadingProps } from 'tamagui';
 
 /** Subordinate heading voice: mono, weight 400. Consumer props still eject. */
 const SUBORDINATE_FAMILY = '$mono';
@@ -54,43 +54,79 @@ type Weight = HeadingProps['fontWeight'];
  * That ramp is why a sized heading swapped to `headingFont: serif` fell from
  * Inter's 600 to the category font's 400.
  */
-function useHeadingVoice(fontWeight: Weight) {
+const useHeadingVoice = (fontWeight: Weight) => {
   const { knobProps } = useResolvedKnobs();
   const { fontWeight: knobWeight, ...heading } = knobProps.heading;
   return {
     heading,
     pageTitle: knobProps.pageTitle,
+    // SAFETY: knob heading weights are Tamagui font-weight tokens, the Weight domain.
     weight: fontWeight ?? (knobWeight as Weight),
   };
-}
+};
 
-export function Heading({ fontWeight, ...props }: HeadingProps) {
+export const Heading = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, weight } = useHeadingVoice(fontWeight);
-  return <RawHeading {...heading} {...props} fontWeight={weight} />;
-}
+  return (
+    <RawHeading
+      {...heading}
+      {...props}
+      fontWeight={weight}
+    />
+  );
+};
 
-export function H1({ fontWeight, ...props }: HeadingProps) {
+export const H1 = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, pageTitle, weight } = useHeadingVoice(fontWeight);
-  return <RawH1 {...pageTitle} {...heading} {...props} fontWeight={weight} />;
-}
+  return (
+    <RawH1
+      {...pageTitle}
+      {...heading}
+      {...props}
+      fontWeight={weight}
+    />
+  );
+};
 
-export function H2({ fontWeight, ...props }: HeadingProps) {
+export const H2 = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, weight } = useHeadingVoice(fontWeight);
-  return <RawH2 {...heading} {...props} fontWeight={weight} />;
-}
+  return (
+    <RawH2
+      {...heading}
+      {...props}
+      fontWeight={weight}
+    />
+  );
+};
 
-export function H3({ fontWeight, ...props }: HeadingProps) {
-  return <RawH3 fontFamily={SUBORDINATE_FAMILY} {...props} fontWeight={fontWeight ?? SUBORDINATE_WEIGHT} />;
-}
+export const H3 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH3
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export function H4({ fontWeight, ...props }: HeadingProps) {
-  return <RawH4 fontFamily={SUBORDINATE_FAMILY} {...props} fontWeight={fontWeight ?? SUBORDINATE_WEIGHT} />;
-}
+export const H4 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH4
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export function H5({ fontWeight, ...props }: HeadingProps) {
-  return <RawH5 fontFamily={SUBORDINATE_FAMILY} {...props} fontWeight={fontWeight ?? SUBORDINATE_WEIGHT} />;
-}
+export const H5 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH5
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export function H6({ fontWeight, ...props }: HeadingProps) {
-  return <RawH6 fontFamily={SUBORDINATE_FAMILY} {...props} fontWeight={fontWeight ?? SUBORDINATE_WEIGHT} />;
-}
+export const H6 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH6
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);

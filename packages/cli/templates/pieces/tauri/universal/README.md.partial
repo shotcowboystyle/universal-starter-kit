@@ -1,0 +1,20 @@
+## Desktop app (`mpo init --tauri`)
+
+`apps/__NAME__/src-tauri/` is a minimal [Tauri v2](https://tauri.app) shell
+around the web app. It needs the platform prerequisites (Rust toolchain +
+system webview libraries): https://tauri.app/start/prerequisites/
+
+```bash
+pnpm tauri:dev     # dev window against the vite dev server (:3456)
+pnpm tauri:build   # bundle installers (runs pnpm build first)
+```
+
+`tauri:dev` starts `pnpm dev` for you (beforeDevCommand); the window holds
+on a waiting page until the app's client modules answer, then loads the
+app (Cmd/Ctrl+R reloads it, Cmd/Ctrl+Alt+I toggles devtools). Note the web
+build is an SSR One app: `tauri:build` embeds `apps/__NAME__/dist` as-is,
+which suits a static/SPA export — point `frontendDist`
+(src-tauri/tauri.conf.json) at your static output, or keep the desktop
+shell against a served URL.
+Regenerate icons from your own artwork with
+`pnpm --filter @app/__NAME__ tauri icon <path/to/icon.png>`.

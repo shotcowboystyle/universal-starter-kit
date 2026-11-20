@@ -34,21 +34,21 @@ export default meta;
 
 type Story = StoryObj<typeof SortableList>;
 
-function Demo(props: {
+const Demo = (props: {
   readOnly?: boolean;
   locked?: string;
   disabled?: boolean;
   compact?: boolean;
   empty?: boolean;
   disabledStyle?: 'keepLabel' | 'dimWhole';
-}) {
+}) => {
   const [items, setItems] = useState(props.empty ? [] : SEED);
   return (
     <SortableList
       items={items}
       getId={(item) => item.id}
       getLabel={(item) => item.label}
-      canReorder={props.locked ? (item) => item.id !== props.locked : undefined}
+      canReorder={props.locked !== undefined && props.locked !== '' ? (item) => item.id !== props.locked : undefined}
       readOnly={props.readOnly}
       disabled={props.disabled}
       compact={props.compact}
@@ -58,7 +58,7 @@ function Demo(props: {
       aria-label="Sprint rituals"
     />
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',

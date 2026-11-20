@@ -1,61 +1,63 @@
-const noop = () => {};
+const noop = (): void => {
+  // intentionally empty
+};
 const hasWindow = typeof window !== 'undefined';
 const hasDocument = typeof document !== 'undefined';
 
 /** Returns a cleanup function */
-export function onAppFocus(callback: () => void): () => void {
+export const onAppFocus = (listener: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
-  window.addEventListener('focus', callback);
+  window.addEventListener('focus', listener);
   return () => {
-    window.removeEventListener('focus', callback);
+    window.removeEventListener('focus', listener);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onAppBlur(callback: () => void): () => void {
+export const onAppBlur = (listener: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
-  window.addEventListener('blur', callback);
+  window.addEventListener('blur', listener);
   return () => {
-    window.removeEventListener('blur', callback);
+    window.removeEventListener('blur', listener);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onOnline(callback: () => void): () => void {
+export const onOnline = (listener: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
-  window.addEventListener('online', callback);
+  window.addEventListener('online', listener);
   return () => {
-    window.removeEventListener('online', callback);
+    window.removeEventListener('online', listener);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onOffline(callback: () => void): () => void {
+export const onOffline = (listener: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
-  window.addEventListener('offline', callback);
+  window.addEventListener('offline', listener);
   return () => {
-    window.removeEventListener('offline', callback);
+    window.removeEventListener('offline', listener);
   };
-}
+};
 
 /** Returns a cleanup function. Calls back with true when visible, false when hidden. */
-export function onVisibilityChange(callback: (visible: boolean) => void): () => void {
+export const onVisibilityChange = (listener: (visible: boolean) => void): (() => void) => {
   if (!hasDocument) {
     return noop;
   }
   const handler = () => {
-    callback(document.visibilityState === 'visible');
+    listener(document.visibilityState === 'visible');
   };
   document.addEventListener('visibilitychange', handler);
   return () => {
     document.removeEventListener('visibilitychange', handler);
   };
-}
+};

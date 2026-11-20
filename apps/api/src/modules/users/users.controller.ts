@@ -1,23 +1,24 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-import { UserService } from "./users.service";
+import type { UserService } from './users.service';
 
-@Controller("users")
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard) // <-- This protects the route
+  // This protects the route
+  @UseGuards(JwtAuthGuard)
   async findAll() {
     const users = await this.userService.findAll();
     return { users };
   }
 
-  @Get("search")
+  @Get('search')
   @UseGuards(JwtAuthGuard)
-  async search(@Query("username") username: string) {
+  async search(@Query('username') username: string) {
     const users = await this.userService.searchByName(username);
     return { users };
   }

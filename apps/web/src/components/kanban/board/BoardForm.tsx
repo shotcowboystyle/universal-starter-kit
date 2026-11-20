@@ -2,9 +2,9 @@
 
 import { Form, Input, TextArea } from '@repo/forms';
 import { useTranslations } from 'next-intl';
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { boardSchema } from '@/types/boardForm';
+import { boardSchema } from '@/types/board-form';
 
 type BoardFormValues = z.infer<typeof boardSchema>;
 
@@ -17,7 +17,7 @@ interface BoardFormProps {
 const validateTitle = ({ value }: { value: string }) =>
   boardSchema.shape.title.safeParse(value).error?.issues[0]?.message;
 
-export function BoardForm({ defaultValues, onSubmit, children }: BoardFormProps) {
+export const BoardForm = ({ defaultValues, onSubmit, children }: BoardFormProps) => {
   const t = useTranslations('kanban.actions');
 
   return (
@@ -42,4 +42,4 @@ export function BoardForm({ defaultValues, onSubmit, children }: BoardFormProps)
       {children}
     </Form>
   );
-}
+};

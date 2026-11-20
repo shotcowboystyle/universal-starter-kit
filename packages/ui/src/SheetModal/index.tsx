@@ -11,8 +11,10 @@
 
 import { zIndex } from '@repo/forms';
 import { useResolvedKnobs, wasKeyboardFocus } from '@repo/theme';
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { isWeb, Sheet, View } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 import { DialogRegionContext, SheetFrame } from '../surfaces';
 
@@ -38,6 +40,8 @@ export interface SheetModalProps {
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const noCleanup = (): void => undefined;
+
 const IN_DIALOG_REGION = { inDialogRegion: true } as const;
 
 /*
@@ -56,55 +60,61 @@ const frameRingReset = {
   focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
 };
 
-function useSheetFrameFocus(open: boolean, frameRef: RefObject<HTMLElement | null>) {
-  const prevRef = useRef<HTMLElement | null>(null);
-  const wasOpenRef = useRef(false);
-  if (isWeb && typeof document !== 'undefined') {
-    if (open && !wasOpenRef.current) {
-      prevRef.current = document.activeElement as HTMLElement | null;
+/** `focusVisible` is not yet in lib.dom's FocusOptions. */
+const focusOptions = (focusVisible: boolean): FocusOptions & { focusVisible: boolean } => ({
+  preventScroll: true,
+  focusVisible,
+});
+
+const restoreAfterClose = (restore: () => void) => {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(restore);
+  });
+  setTimeout(restore, 320);
+};
+
+const useSheetFrameFocus = (open: boolean, frameRef: RefObject<TamaguiElement | null>) => {
+  // Captured during render (not in an effect): by the time effects run, the
+  // sheet's own focus handling may already have moved focus off the opener.
+  const [wasOpen, setWasOpen] = useState(false);
+  const [prevFocus, setPrevFocus] = useState<HTMLElement | null>(null);
+  if (isWeb && 'document' in globalThis && open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      const active = document.activeElement;
+      setPrevFocus(active instanceof HTMLElement ? active : null);
     }
-    wasOpenRef.current = open;
   }
 
   useEffect(() => {
-    if (!isWeb || typeof document === 'undefined' || !open) {
-      return;
+    if (!isWeb || !open) {
+      return noCleanup;
     }
     const frame = frameRef.current;
     const restore = () => {
-      if (typeof document === 'undefined') {
-        return;
-      }
-      const target = prevRef.current;
-      if (!target || !target.isConnected) {
+      if (!prevFocus?.isConnected) {
         return;
       }
       const ae = document.activeElement;
-      const dropped =
-        !ae || ae === document.body || ae === document.documentElement || !!frameRef.current?.contains(ae);
+      const { current } = frameRef;
+      const focusLost = !ae || ae === document.body || ae === document.documentElement;
+      const dropped = focusLost || (current instanceof HTMLElement && current.contains(ae));
       if (dropped) {
-        target.focus({
-          preventScroll: true,
-          focusVisible: wasKeyboardFocus(),
-        } as FocusOptions);
+        prevFocus.focus(focusOptions(wasKeyboardFocus()));
       }
     };
-    if (!frame || typeof frame.addEventListener !== 'function') {
+    if (!(frame instanceof HTMLElement)) {
       return () => {
-        requestAnimationFrame(() => requestAnimationFrame(restore));
-        setTimeout(restore, 320);
+        restoreAfterClose(restore);
       };
     }
 
     const focusIn = () => {
-      if (typeof document === 'undefined') {
-        return;
-      }
       if (frame.contains(document.activeElement)) {
         return;
       }
       const first = frame.querySelector<HTMLElement>(FOCUSABLE);
-      (first ?? frame).focus({ preventScroll: true, focusVisible: false } as FocusOptions);
+      (first ?? frame).focus(focusOptions(false));
     };
     let innerRaf = 0;
     const raf = requestAnimationFrame(() => {
@@ -115,15 +125,15 @@ function useSheetFrameFocus(open: boolean, frameRef: RefObject<HTMLElement | nul
       if (e.key !== 'Tab') {
         return;
       }
-      const focusables = Array.from(frame.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+      const focusables = [...frame.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
         (el) => el.offsetWidth > 0 || el.offsetHeight > 0,
       );
       if (!focusables.length) {
         e.preventDefault();
         return;
       }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
+      const [first, ...rest] = focusables;
+      const last = rest.at(-1) ?? first;
       const current = document.activeElement;
       if (e.shiftKey && (current === first || current === frame)) {
         e.preventDefault();
@@ -138,18 +148,19 @@ function useSheetFrameFocus(open: boolean, frameRef: RefObject<HTMLElement | nul
       cancelAnimationFrame(raf);
       cancelAnimationFrame(innerRaf);
       frame.removeEventListener('keydown', onKeyDown);
-      requestAnimationFrame(() => requestAnimationFrame(restore));
-      setTimeout(restore, 320);
+      restoreAfterClose(restore);
     };
-  }, [open, frameRef]);
-}
+  }, [open, frameRef, prevFocus]);
+};
 
-function useSheetEscapeDismiss(open: boolean, onDismiss: () => void) {
+const useSheetEscapeDismiss = (open: boolean, onDismiss: () => void) => {
   const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
+  useLayoutEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
   useEffect(() => {
     if (!isWeb || !open) {
-      return;
+      return noCleanup;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) {
@@ -162,9 +173,9 @@ function useSheetEscapeDismiss(open: boolean, onDismiss: () => void) {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
-}
+};
 
-export function SheetModal({
+export const SheetModal = ({
   open,
   onOpenChange,
   children,
@@ -172,16 +183,36 @@ export function SheetModal({
   snapPoint = 60,
   scrollable,
   fill = false,
-}: SheetModalProps) {
+}: SheetModalProps) => {
   const { knobProps } = useResolvedKnobs();
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   const titleId = useId();
-  const frameRef = useRef<HTMLElement | null>(null);
+  const frameRef = useRef<TamaguiElement | null>(null);
+  const hasHeader = Boolean(header);
+  const fillOnly = fill ? nonShrinking : null;
 
   useSheetFrameFocus(open, frameRef);
   useSheetEscapeDismiss(open, () => {
     onOpenChange(false);
   });
+
+  const scrollBody = (
+    <Sheet.ScrollView
+      testID="sheet-modal-scroll"
+      {...(fill ? fillSlot : null)}>
+      {children}
+    </Sheet.ScrollView>
+  );
+  const plainBody = scrollable ? scrollBody : children;
+  const body = fill ? (
+    <View
+      testID="sheet-modal-body"
+      {...fillSlot}>
+      {plainBody}
+    </View>
+  ) : (
+    plainBody
+  );
 
   return (
     <Sheet
@@ -209,42 +240,32 @@ export function SheetModal({
         aria-label="Resize"
       />
       <SheetFrame
-        ref={frameRef as never}
-        {...({
-          tabIndex: -1,
-          role: 'dialog',
-          'aria-modal': true,
-          'aria-labelledby': header ? titleId : undefined,
-        } as Record<string, unknown>)}
+        ref={frameRef}
+        tabIndex={-1}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SheetFrame is a Tamagui styled view, not a DOM tag; the dialog role has to ride its props
+        role="dialog"
+        aria-modal
+        aria-labelledby={hasHeader ? titleId : undefined}
         {...knobProps.gap}
         borderBottomLeftRadius={0}
         borderBottomRightRadius={0}
         overflow="hidden"
         {...frameRingReset}>
         <DialogRegionContext.Provider value={IN_DIALOG_REGION}>
-          {header ? (
-            <View id={titleId} {...(fill ? nonShrinking : null)}>
+          {hasHeader ? (
+            <View
+              id={titleId}
+              {...fillOnly}>
               {header}
             </View>
           ) : null}
-          {fill ? (
-            <View testID="sheet-modal-body" {...fillSlot}>
-              {scrollable ? (
-                <Sheet.ScrollView testID="sheet-modal-scroll" {...fillSlot}>
-                  {children}
-                </Sheet.ScrollView>
-              ) : (
-                children
-              )}
-            </View>
-          ) : scrollable ? (
-            <Sheet.ScrollView testID="sheet-modal-scroll">{children}</Sheet.ScrollView>
-          ) : (
-            children
-          )}
-          <View style={{ height: 'env(safe-area-inset-bottom)' }} {...(fill ? nonShrinking : null)} />
+          {body}
+          <View
+            style={{ height: 'env(safe-area-inset-bottom)' }}
+            {...fillOnly}
+          />
         </DialogRegionContext.Provider>
       </SheetFrame>
     </Sheet>
   );
-}
+};

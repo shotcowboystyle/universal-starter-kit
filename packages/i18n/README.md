@@ -1,8 +1,7 @@
 # @repo/i18n
 
 Internationalization for this monorepo: [i18next](https://www.i18next.com)
-config factory, language detection/persistence, an optional Frappe translation
-backend, and locale-aware formatters.
+config factory, language detection/persistence, and locale-aware formatters.
 
 ## Usage in this monorepo
 
@@ -14,9 +13,8 @@ Peers: `i18next`, `react` (pair with `react-i18next` in the app).
 ## What it owns
 
 - **`createI18nConfig(options)`** — builds the i18next config from
-  `languages`, `namespaces`, `defaultLanguage`, `defaultNamespace`, bundled
-  `resources`, and an optional Frappe backend
-- **`createFrappeBackend(options)`** — loads translations from a Frappe server
+  `languages`, `namespaces`, `defaultLanguage`, `defaultNamespace` and
+  bundled `resources`
 - **Language handling** — `useLanguage()`, `detectLanguage()`,
   `persistLanguage()` / `getPersistedLanguage()` (cookie-based, SSR-safe)
 - **Formatters** — `useFormatDate`, `useFormatNumber`, `useFormatCurrency`
@@ -52,5 +50,3 @@ const formatCurrency = useFormatCurrency();
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

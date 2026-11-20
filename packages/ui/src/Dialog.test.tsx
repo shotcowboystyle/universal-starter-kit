@@ -9,46 +9,43 @@ import { AlertDialog, Button, Dialog } from './index';
 
 const catalog = vi.hoisted(() => ({ current: {} as Record<string, string> }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the mock supplies only `t`; the real useTranslation returns the full i18next response, so a typed factory cannot compile
 vi.mock('./shared/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => catalog.current[key] ?? key }),
 }));
 
-afterEach(() => {
-  cleanup();
-  catalog.current = {};
-});
+const OpenDialog = ({ children }: { children: ReactNode }) => (
+  <Dialog open>
+    <Dialog.Portal>
+      <Dialog.Content>
+        <Dialog.Title>Edit profile</Dialog.Title>
+        {children}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog>
+);
 
-function OpenDialog({ children }: { children: ReactNode }) {
-  return (
-    <Dialog open>
-      <Dialog.Portal>
-        <Dialog.Content>
-          <Dialog.Title>Edit profile</Dialog.Title>
-          {children}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog>
-  );
-}
-
-function OpenAlertDialog({ children }: { children: ReactNode }) {
-  return (
-    <AlertDialog open>
-      <AlertDialog.Portal>
-        <AlertDialog.Content>
-          <AlertDialog.Title>Delete account?</AlertDialog.Title>
-          {children}
-        </AlertDialog.Content>
-      </AlertDialog.Portal>
-    </AlertDialog>
-  );
-}
+const OpenAlertDialog = ({ children }: { children: ReactNode }) => (
+  <AlertDialog open>
+    <AlertDialog.Portal>
+      <AlertDialog.Content>
+        <AlertDialog.Title>Delete account?</AlertDialog.Title>
+        {children}
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog>
+);
 
 const noDialogClose = () => {
   expect(screen.queryAllByRole('button', { name: 'Dialog Close' })).toHaveLength(0);
 };
 
 describe('house Dialog.Close is named by what it shows', () => {
+  afterEach(() => {
+    cleanup();
+    catalog.current = {};
+  });
+
   it("keeps each asChild button's visible label as its accessible name", () => {
     renderWithProviders(
       <OpenDialog>
@@ -80,7 +77,10 @@ describe('house Dialog.Close is named by what it shows', () => {
     renderWithProviders(
       <OpenDialog>
         <Dialog.Close asChild>
-          <Button circular icon={X} />
+          <Button
+            circular
+            icon={X}
+          />
         </Dialog.Close>
         <Dialog.Close>
           <X />
@@ -95,7 +95,11 @@ describe('house Dialog.Close is named by what it shows', () => {
     renderWithProviders(
       <OpenDialog>
         <Dialog.Close asChild>
-          <Button circular icon={X} aria-label="Close dialog" />
+          <Button
+            circular
+            icon={X}
+            aria-label="Close dialog"
+          />
         </Dialog.Close>
         <Dialog.Close aria-label="Dismiss">
           <X />
@@ -134,6 +138,11 @@ describe('house Dialog.Close is named by what it shows', () => {
 });
 
 describe('house AlertDialog Cancel and Action are named by what they show', () => {
+  afterEach(() => {
+    cleanup();
+    catalog.current = {};
+  });
+
   it("keeps each asChild button's visible label as its accessible name", () => {
     renderWithProviders(
       <OpenAlertDialog>

@@ -1,0 +1,3 @@
+# tauri piece (mpo init --tauri): rust build output + generated schemas
+apps/__NAME__/src-tauri/target
+apps/__NAME__/src-tauri/gen/schemas

@@ -1,18 +1,22 @@
 /**
  * The `tamaguiConfig` toolbar global renders a story under the full
  * house config or its default subset. A subset fails quietly (a dropped theme
- * renders in its parent's colours), so the switch is only worth having if the
+ * renders in its parent's colors), so the switch is only worth having if the
  * dropped theme really falls back under it and comes back under full.
  */
 
-import { createDefaultThemeConfig, type ThemeConfig, useResolvedKnobs } from '@repo/theme';
+import { createDefaultThemeConfig, useResolvedKnobs } from '@repo/theme';
+import type { ThemeConfig } from '@repo/theme';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { setUserScheme, useUserScheme } from '@vxrn/color-scheme';
 import type { ReactNode } from 'react';
-import { TamaguiProvider, Theme, type ThemeName, getConfig, useThemeName } from 'tamagui';
-import { afterEach, describe, expect, it } from 'vitest';
+import type { Globals } from 'storybook/internal/csf';
+import { TamaguiProvider, Theme, getConfig, useThemeName } from 'tamagui';
+import type { ThemeName } from 'tamagui';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { type Preview, createPreview } from './CreatePreview';
+import { createPreview } from './CreatePreview';
+import type { Preview } from './CreatePreview';
 
 const full = createDefaultThemeConfig({});
 const subset = createDefaultThemeConfig({
@@ -23,12 +27,12 @@ const subset = createDefaultThemeConfig({
 });
 
 const i18n = {
-  instance: { changeLanguage: async () => undefined },
+  instance: { changeLanguage: vi.fn<(lang: string) => Promise<null>>().mockResolvedValue(null) },
   languages: ['en'],
   defaultLanguage: 'en',
 };
 
-function AppProvider({
+const AppProvider = ({
   themeConfig,
   systemTheme,
   children,
@@ -36,49 +40,61 @@ function AppProvider({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) {
-  return (
-    <TamaguiProvider config={themeConfig?.tamagui} defaultTheme={systemTheme} disableInjectCSS>
-      {children}
-    </TamaguiProvider>
-  );
-}
+}) => (
+  <TamaguiProvider
+    config={themeConfig?.tamagui}
+    defaultTheme={systemTheme}
+    disableInjectCSS>
+    {children}
+  </TamaguiProvider>
+);
 
-function ResolvedName({ theme }: { theme: string }) {
-  return <span data-testid={theme}>{useThemeName()}</span>;
-}
+const ResolvedName = ({ theme }: { theme: string }) => <span data-testid={theme}>{useThemeName()}</span>;
 
-function Story() {
-  return (
-    <>
-      {(['red', 'error'] as const).map((theme) => (
-        <Theme key={theme} name={theme as ThemeName}>
-          <ResolvedName theme={theme} />
-        </Theme>
-      ))}
-    </>
-  );
-}
+const Story = () => (
+  <>
+    {(['red', 'error'] as const).map((theme) => (
+      <Theme
+        key={theme}
+        name={theme as ThemeName}>
+        <ResolvedName theme={theme} />
+      </Theme>
+    ))}
+  </>
+);
 
-function renderStory(preview: Preview, globals: Record<string, unknown>) {
+const renderStory = (preview: Preview, globals: Globals) => {
   const [frameworkDecorator] = preview.decorators ?? [];
-  const context = (next: Record<string, unknown>) => ({
+  const context = (next: Globals) => ({
     globals: { ...preview.initialGlobals, scheme: 'light', ...next },
     parameters: {},
   });
   const view = render(frameworkDecorator(Story, context(globals)));
   return {
-    rerender: (next: Record<string, unknown>) => {
-      act(() => view.rerender(frameworkDecorator(Story, context(next))));
+    rerender: (next: Globals) => {
+      act(() => {
+        view.rerender(frameworkDecorator(Story, context(next)));
+      });
     },
   };
-}
+};
+
+const Zebra = () => <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
+
+const UserScheme = () => <span data-testid="user-scheme">{useUserScheme().value}</span>;
+
+const prefersDark = (dark: boolean) => {
+  const { happyDOM } = window as unknown as {
+    happyDOM: { settings: { device: { prefersColorScheme: string } } };
+  };
+  happyDOM.settings.device.prefersColorScheme = dark ? 'dark' : 'light';
+};
 
 const resolved = (theme: string) => screen.getByTestId(theme).textContent;
 
-afterEach(cleanup);
-
 describe('createPreview tamaguiConfig global', () => {
+  afterEach(cleanup);
+
   const preview = createPreview({ themeConfig: full, themeConfigs: { subset }, i18n, AppProvider });
 
   it('boots on the full config although the subset was created last', () => {
@@ -87,7 +103,7 @@ describe('createPreview tamaguiConfig global', () => {
 
   it('offers full and subset in the toolbar and defaults to full', () => {
     const toolbar = preview.globalTypes?.tamaguiConfig?.toolbar as { items: { value: string }[] };
-    expect(toolbar.items.map((item) => item.value)).toEqual(['full', 'subset']);
+    expect(toolbar.items.map((item) => item.value)).toStrictEqual(['full', 'subset']);
     expect(preview.initialGlobals?.tamaguiConfig).toBe('full');
   });
 
@@ -140,13 +156,11 @@ describe('createPreview with one config', () => {
 });
 
 describe('createPreview tableZebra global', () => {
+  afterEach(cleanup);
+
   const preview = createPreview({ themeConfig: full, i18n, AppProvider });
 
-  function Zebra() {
-    return <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
-  }
-
-  function renderZebra(globals: Record<string, unknown>) {
+  const renderZebra = (globals: Globals) => {
     const [frameworkDecorator] = preview.decorators ?? [];
     render(
       frameworkDecorator(Zebra, {
@@ -155,10 +169,10 @@ describe('createPreview tableZebra global', () => {
       }),
     );
     return screen.getByTestId('zebra').textContent;
-  }
+  };
 
   it('registers tableZebra so a URL global or the toolbar can set it', () => {
-    expect(preview.globalTypes?.tableZebra?.options).toEqual(['on', 'off']);
+    expect(preview.globalTypes?.tableZebra?.options).toStrictEqual(['on', 'off']);
     expect(preview.initialGlobals?.tableZebra).toBe('');
   });
 
@@ -172,34 +186,26 @@ describe('createPreview tableZebra global', () => {
 describe('createPreview scheme global reaches useUserScheme', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider, setUserScheme });
 
-  function UserScheme() {
-    return <span data-testid="user-scheme">{useUserScheme().value}</span>;
-  }
-
-  function renderUserScheme(globals: Record<string, unknown>) {
+  const renderUserScheme = (globals: Globals) => {
     const [frameworkDecorator] = preview.decorators ?? [];
-    const context = (next: Record<string, unknown>) => ({
+    const context = (next: Globals) => ({
       globals: { ...preview.initialGlobals, ...next },
       parameters: {},
     });
     const view = render(frameworkDecorator(UserScheme, context(globals)));
     return {
       value: () => screen.getByTestId('user-scheme').textContent,
-      rerender: (next: Record<string, unknown>) => {
-        act(() => view.rerender(frameworkDecorator(UserScheme, context(next))));
+      rerender: (next: Globals) => {
+        act(() => {
+          view.rerender(frameworkDecorator(UserScheme, context(next)));
+        });
       },
     };
-  }
-
-  const prefersDark = (dark: boolean) => {
-    const { happyDOM } = window as unknown as {
-      happyDOM: { settings: { device: { prefersColorScheme: string } } };
-    };
-    happyDOM.settings.device.prefersColorScheme = dark ? 'dark' : 'light';
   };
 
   afterEach(() => {
     prefersDark(false);
+    cleanup();
   });
 
   it('reads dark under scheme:dark and light under scheme:light', () => {

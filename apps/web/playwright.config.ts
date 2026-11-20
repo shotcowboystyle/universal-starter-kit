@@ -1,79 +1,86 @@
-import path from "path";
+import path from 'node:path';
 
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices } from '@playwright/test';
 // Add this line to import dotenv
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
+
+// oxlint-disable-next-line unicorn/prefer-module -- Playwright loads this config as CJS (no "type": "module"), where import.meta is unavailable
+const dirname = __dirname;
 
 // Load environment variables from .env file first (as fallback)
 // dotenv will not override existing environment variables (e.g., from CI)
-dotenv.config({ path: path.resolve(__dirname, ".env") });
+dotenv.config({ path: path.resolve(dirname, '.env') });
 
 // Load environment variables from .env.test file (as fallback only)
 // This will NOT override existing environment variables (e.g., from CI)
 // Priority: 1. CI env vars, 2. .env.test, 3. .env
-dotenv.config({ path: path.resolve(__dirname, ".env.test") });
+dotenv.config({ path: path.resolve(dirname, '.env.test') });
 
 // Ensure environment variables are set or use default values
 // process.env will now contain variables loaded according to the priority:
 // 1. System Env (CI)
 // 2. .env.test
 // 3. .env
-const baseURL = process.env.NEXT_PUBLIC_WEB_URL || "http://localhost:3000/";
-const apiURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const envOr = (value: string | undefined, fallback: string): string =>
+  value === undefined || value === '' ? fallback : value;
+const isCI = envOr(process.env.CI, '') !== '';
+const baseURL = envOr(process.env.NEXT_PUBLIC_WEB_URL, 'http://localhost:3000/');
+const apiURL = envOr(process.env.NEXT_PUBLIC_API_URL, 'http://localhost:3001');
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  testDir: "./__tests__/e2e/",
+  testDir: './e2e/',
+  testMatch: '**/*.e2e.ts',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
+  forbidOnly: isCI,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  retries: isCI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: "html",
+  reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: baseURL,
+    baseURL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    trace: 'on-first-retry',
 
     // headless mode - use true for CI, false for local debugging
-    headless: true
+    headless: true,
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
     },
     {
-      name: "Microsoft Edge",
+      name: 'Microsoft Edge',
       use: {
-        ...devices["Desktop Edge"],
-        channel: "msedge"
-      }
+        ...devices['Desktop Edge'],
+        channel: 'msedge',
+      },
     },
     {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] }
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
     },
     /* Test against mobile viewports. */
     {
-      name: "Mobile Chrome",
-      use: { ...devices["Pixel 7"] }
+      name: 'Mobile Chrome',
+      use: { ...devices['Pixel 7'] },
     },
     {
-      name: "Mobile Safari",
-      use: { ...devices["iPhone 14"] }
-    }
+      name: 'Mobile Safari',
+      use: { ...devices['iPhone 14'] },
+    },
 
     /* Test against branded browsers. */
     // {
@@ -93,17 +100,17 @@ export default defineConfig({
   // - Locally: docker compose up -d (in apps/api/database/)
   // - Or use a cloud MongoDB instance (set DATABASE_URL in .env.test)
   webServer: {
-    command: "pnpm dev",
+    command: 'pnpm dev',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !isCI,
     timeout: 120 * 1000,
     env: {
       ...process.env,
-      NODE_ENV: process.env.NODE_ENV || "test",
+      NODE_ENV: envOr(process.env.NODE_ENV, 'test'),
       NEXT_PUBLIC_API_URL: apiURL,
-      NEXT_PUBLIC_WEB_URL: baseURL
+      NEXT_PUBLIC_WEB_URL: baseURL,
     },
-    stdout: "pipe",
-    stderr: "pipe"
-  }
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
 });

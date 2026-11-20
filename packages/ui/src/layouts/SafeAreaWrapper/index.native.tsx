@@ -1,8 +1,10 @@
 import type { PropsWithChildren } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { applySafeAreaInsets, type SafeAreaEdge, type SafeAreaMode } from './insets';
+import { applySafeAreaInsets } from './insets';
+import type { SafeAreaEdge, SafeAreaMode } from './insets';
 
 export type { SafeAreaEdge, SafeAreaMode } from './insets';
 
@@ -20,24 +22,31 @@ export interface SafeAreaWrapperProps extends YStackProps {
   mode?: SafeAreaMode;
 }
 
+const DEFAULT_EDGES: SafeAreaEdge[] = ['top', 'bottom', 'left', 'right'];
+
 /**
  * SafeAreaWrapper — native insets.
  *
  * Wraps content with device safe-area insets (notch, home indicator).
  * No owned surface — only platform spacing. Consumer `{...stackProps}` last.
  */
-export function SafeAreaWrapper({
+export const SafeAreaWrapper = ({
   children,
-  edges = ['top', 'bottom', 'left', 'right'],
+  edges = DEFAULT_EDGES,
   mode = 'padding',
   ...stackProps
-}: PropsWithChildren<SafeAreaWrapperProps>) {
+}: PropsWithChildren<SafeAreaWrapperProps>) => {
   const insets = useSafeAreaInsets();
   const insetStyles = applySafeAreaInsets(insets, edges, mode);
 
   return (
-    <YStack data-testid="safe-area-wrapper" data-safe-area="native" flex={1} style={insetStyles} {...stackProps}>
+    <YStack
+      data-testid="safe-area-wrapper"
+      data-safe-area="native"
+      flex={1}
+      style={insetStyles}
+      {...stackProps}>
       {children}
     </YStack>
   );
-}
+};

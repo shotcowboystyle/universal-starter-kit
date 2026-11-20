@@ -37,9 +37,16 @@ function MyForm() {
         }}
       />
 
-      <Input name="password" label="Password" type="password" />
+      <Input
+        name="password"
+        label="Password"
+        type="password"
+      />
 
-      <Checkbox name="remember" label="Remember me" />
+      <Checkbox
+        name="remember"
+        label="Remember me"
+      />
 
       <Button type="submit">Sign In</Button>
     </Form>
@@ -93,7 +100,9 @@ function AdvancedForm() {
   });
 
   return (
-    <Form form={form} syncWithUrl={true}>
+    <Form
+      form={form}
+      syncWithUrl={true}>
       <Input
         name="name"
         label="Name"
@@ -102,7 +111,11 @@ function AdvancedForm() {
         }}
       />
 
-      <Input name="age" label="Age" type="number" />
+      <Input
+        name="age"
+        label="Age"
+        type="number"
+      />
 
       <Button type="submit" />
     </Form>
@@ -149,8 +162,6 @@ Optional link rendering when displaying values:
 - **Field-level:** `linkResolver?: (value) => Href | null` on Input (and similar)
 
 When `linkResolver` returns a non-null href, the value renders as `<Link href={...}>`. In edit mode, normal input is shown. Link behavior applies in readOnly/display mode.
-
-**Frappe:** Schema mapping (doctype → linkResolver) belongs in an optional integration layer. Core forms stay doctype-agnostic.
 
 ## Package Structure
 
@@ -224,5 +235,3 @@ its validator timing (see `docs/standards/frontend/field-architecture.md`).
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

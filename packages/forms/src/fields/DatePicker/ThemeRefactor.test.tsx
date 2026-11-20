@@ -5,12 +5,15 @@
  * 1. DatePicker uses premium patterns (Popover, theme tokens)
  */
 
+import { renderWithProviders } from '@repo/test-utils';
 import { describe, it, expect, vi } from 'vitest';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('@repo/router', () => ({
   useUrlState: () => [null, () => {}],
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('@tamagui/lucide-icons-2', () => ({
   Calendar: () => null,
   ChevronLeft: () => null,
@@ -18,6 +21,7 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
   X: () => null,
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('react-native-reanimated', () => ({
   default: {
     useSharedValue: (init: any) => ({ value: init }),
@@ -53,17 +57,21 @@ vi.mock('react-native-reanimated', () => ({
   Layout: { duration: () => ({}) },
 }));
 
-import { renderWithProviders } from '@repo/test-utils';
-
-async function loadDatePicker() {
-  return (await import('.')).DatePicker;
-}
+const loadDatePicker = async () => {
+  const { DatePicker } = await import('.');
+  return DatePicker;
+};
 
 describe('DatePicker uses premium patterns', () => {
   it('renders with label and input trigger', async () => {
     const DatePicker = await loadDatePicker();
 
-    const result = renderWithProviders(<DatePicker label="Due Date" placeholder="Select date" />);
+    const result = renderWithProviders(
+      <DatePicker
+        label="Due Date"
+        placeholder="Select date"
+      />,
+    );
 
     const labelEl = result.findTextElement('Due Date');
     expect(labelEl).toBeTruthy();

@@ -19,7 +19,7 @@ export interface DestructiveSeverityHints {
  * `DestructiveAction` defaults to **medium** (confirm) when nothing is specified —
  * opting into the primitive means the action is risky.
  */
-export function resolveDestructiveSeverity(hints: DestructiveSeverityHints = {}): DestructiveSeverity {
+export const resolveDestructiveSeverity = (hints: DestructiveSeverityHints = {}): DestructiveSeverity => {
   if (hints.severity) {
     return hints.severity;
   }
@@ -33,14 +33,12 @@ export function resolveDestructiveSeverity(hints: DestructiveSeverityHints = {})
     return 'medium';
   }
   return 'medium';
-}
+};
 
 /** Medium/high tiers require a confirm gate. */
-export function severityRequiresConfirm(severity: DestructiveSeverity): boolean {
-  return severity === 'medium' || severity === 'high';
-}
+export const severityRequiresConfirm = (severity: DestructiveSeverity): boolean =>
+  severity === 'medium' || severity === 'high';
 
 /** Danger / error tone is reserved for medium+ (Pajamas / DG-DX). */
-export function severityUsesDangerTone(severity: DestructiveSeverity): boolean {
-  return severity === 'medium' || severity === 'high';
-}
+export const severityUsesDangerTone = (severity: DestructiveSeverity): boolean =>
+  severity === 'medium' || severity === 'high';

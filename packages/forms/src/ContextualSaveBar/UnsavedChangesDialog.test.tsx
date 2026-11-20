@@ -14,126 +14,241 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 
-afterEach(cleanup);
+const dialog = (): HTMLElement | null => document.body.querySelector('[role="alertdialog"]');
 
-function dialog(): HTMLElement | null {
-  return document.body.querySelector('[role="alertdialog"]');
-}
-
-function button(marker: string): HTMLElement {
+const button = (marker: string): HTMLElement => {
   const node = document.body.querySelector(`[${marker}]`);
   if (!node) {
     throw new Error(`No button carrying ${marker}`);
   }
   return node as HTMLElement;
-}
+};
 
-function noop() {}
+const noop = () => {};
 
 /** Tamagui paints through atomic classes; read the inline channel first. */
-function cssOf(node: HTMLElement, prop: string): string {
+const cssOf = (node: HTMLElement, prop: string): string => {
   const inline = node.style.getPropertyValue(prop);
   if (inline) {
     return inline;
   }
   return getComputedStyle(node).getPropertyValue(prop) || '';
-}
+};
 
-describe('UnsavedChangesDialog', () => {
+describe(UnsavedChangesDialog, () => {
+  afterEach(cleanup);
+
   it('renders nothing while closed', () => {
-    renderWithProviders(<UnsavedChangesDialog open={false} fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open={false}
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()).toBeNull();
   });
 
   it('announces as an alertdialog, not a plain dialog, because the choice is destructive', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()).toBeTruthy();
     expect(document.body.querySelector('[role="dialog"][data-mp-savebar-guard]')).toBeNull();
   });
 
   it('leads with the question, so the title carries the decision', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.textContent).toContain('Discard unsaved changes?');
   });
 
   it('uses the singular sentence for exactly one edited field', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={1} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={1}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     const text = dialog()?.textContent ?? '';
     expect(text).toContain('1 field on this page has edits');
     expect(text).not.toContain('fields on this page have');
   });
 
   it('uses the plural sentence, with the count interpolated, for more than one', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={4} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={4}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     const text = dialog()?.textContent ?? '';
     expect(text).toContain('4 fields on this page have edits');
     expect(text).not.toContain('1 field on this page has');
   });
 
   it('says plainly that leaving discards the edits', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.textContent).toContain('Leaving discards them');
   });
 
   it('offers both a way back and a way out', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(button('data-mp-savebar-keep').textContent).toContain('Keep editing');
     expect(button('data-mp-savebar-discard-confirm').textContent).toContain('Discard changes');
   });
 
   it('calls onKeepEditing, and only that, when the safe button is pressed', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
     fireEvent.click(button('data-mp-savebar-keep'));
-    expect(onKeepEditing).toHaveBeenCalledTimes(1);
+    expect(onKeepEditing).toHaveBeenCalledOnce();
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
   it('calls onDiscard, and only that, when the destructive button is pressed', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
     fireEvent.click(button('data-mp-savebar-discard-confirm'));
-    expect(onDiscard).toHaveBeenCalledTimes(1);
+    expect(onDiscard).toHaveBeenCalledOnce();
     expect(onKeepEditing).not.toHaveBeenCalled();
   });
 
   it('treats any dismissal as keep-editing, never as a silent discard', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
-    fireEvent.keyDown(dialog() as HTMLElement, { key: 'Escape', code: 'Escape' });
+    fireEvent.keyDown(dialog()!, { key: 'Escape', code: 'Escape' });
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
   it("marks the content so the save bar's outside-click guard can find it", () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
-    expect(dialog()?.hasAttribute('data-mp-savebar-guard')).toBe(true);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
+    expect(dialog()?.dataset.mpSavebarGuard).toBeDefined();
   });
 
   it('takes focus itself rather than leaving it behind the overlay', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('paints no focus outline on the sheet itself, so the ring stays on the buttons', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
-    const outline = cssOf(dialog() as HTMLElement, 'outline-width');
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
+    const outline = cssOf(dialog()!, 'outline-width');
     expect(outline === '' || outline === '0px').toBe(true);
   });
 
   it('caps its width so the sentence never runs the width of a desk monitor', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
-    expect(cssOf(dialog() as HTMLElement, 'max-width')).toBe('440px');
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
+    expect(cssOf(dialog()!, 'max-width')).toBe('440px');
   });
 });
+
+const LeavePage = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}>
+        Leave the page
+      </button>
+      <UnsavedChangesDialog
+        open={open}
+        fieldCount={2}
+        onKeepEditing={() => {
+          setOpen(false);
+        }}
+        onDiscard={() => {
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+};
 
 // Chromium and WebKit's <dialog>.show() focuses the first focusable
 // descendant, and the panel is tabindex=-1, so those two opened on the panel
@@ -141,30 +256,7 @@ describe('UnsavedChangesDialog', () => {
 // Keep editing is the alertdialog's least destructive action, the one tamagui's
 // AlertDialog.Cancel takes on open, so every browser opens there.
 describe('UnsavedChangesDialog open focus', () => {
-  function LeavePage() {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-          }}>
-          Leave the page
-        </button>
-        <UnsavedChangesDialog
-          open={open}
-          fieldCount={2}
-          onKeepEditing={() => {
-            setOpen(false);
-          }}
-          onDiscard={() => {
-            setOpen(false);
-          }}
-        />
-      </>
-    );
-  }
+  afterEach(cleanup);
 
   it('opens on Keep editing', async () => {
     renderWithProviders(<LeavePage />);
@@ -178,7 +270,7 @@ describe('UnsavedChangesDialog open focus', () => {
   });
 
   describe('behind <dialog>.show()', () => {
-    let restoreShow = () => {};
+    let restoreShow: () => void = noop;
     beforeEach(() => {
       restoreShow = modelFirstFocusableShow();
     });

@@ -1,41 +1,42 @@
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
+import type { AppStateStatus } from 'react-native';
 
-export function onAppFocus(callback: () => void): () => void {
+export const onAppFocus = (listener: () => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
     if (state === 'active') {
-      callback();
+      listener();
     }
   });
   return () => {
     sub.remove();
   };
-}
+};
 
-export function onAppBlur(callback: () => void): () => void {
+export const onAppBlur = (listener: () => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
     if (state === 'background' || state === 'inactive') {
-      callback();
+      listener();
     }
   });
   return () => {
     sub.remove();
   };
-}
+};
 
-export function onOnline(callback: () => void): () => void {
-  // NetInfo not available without expo-network — no-op for now
-  return () => {};
-}
+const noop = (): void => {
+  // intentionally empty
+};
 
-export function onOffline(callback: () => void): () => void {
-  return () => {};
-}
+// NetInfo not available without expo-network — no-op for now
+export const onOnline = (_listener: () => void): (() => void) => noop;
 
-export function onVisibilityChange(callback: (visible: boolean) => void): () => void {
+export const onOffline = (_listener: () => void): (() => void) => noop;
+
+export const onVisibilityChange = (listener: (visible: boolean) => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-    callback(state === 'active');
+    listener(state === 'active');
   });
   return () => {
     sub.remove();
   };
-}
+};

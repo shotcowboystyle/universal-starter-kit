@@ -22,7 +22,7 @@
  */
 
 /** Divider line width: half a CSS pixel = one device pixel on 2x displays. */
-export const hairlineWidth: number = 0.5;
+export const hairlineWidth = 0.5;
 
 /**
  * Spreadable divider treatments. Each entry pairs the 0.5px style with the
@@ -87,18 +87,18 @@ export const hairlineFallbackCss = `@media (max-resolution: 1.49dppx), (-webkit-
 }`;
 
 /** Idempotently mount the low-DPI fallback stylesheet (no-op off-DOM). */
-export function ensureHairlineFallback(): void {
+export const ensureHairlineFallback = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(STYLE_TAG_ID)) {
+  if (document.querySelector(`#${STYLE_TAG_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
   tag.id = STYLE_TAG_ID;
   tag.textContent = hairlineFallbackCss;
-  document.head.appendChild(tag);
-}
+  document.head.append(tag);
+};
 
 // The fallback is static CSS (no knob/theme dependency), so mount it as soon
 // as the module loads in a DOM environment.

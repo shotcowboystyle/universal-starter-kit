@@ -10,7 +10,7 @@
   "exports": {
     "./package.json": "./package.json",
     "./rnw-overrides": {
-      "types": "./src/rnw_overrides.d.ts"
+      "types": "./src/rnw-overrides.d.ts"
     },
     "./file": {
       "types": "./src/file/index.ts",
@@ -23,8 +23,6 @@
   },
   "scripts": {
     "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/platform",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run"
   },
   "dependencies": {

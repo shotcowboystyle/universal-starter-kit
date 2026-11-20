@@ -7,9 +7,9 @@ import { Text, YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
 
-import { loadExpoMaps } from './expoMapsLoader';
-import { zoomFromDelta } from './mapMath';
-import type { GeolocationMapSurfaceProps } from './mapTypes';
+import { loadExpoMaps } from './expo-maps-loader';
+import { zoomFromDelta } from './map-math';
+import type { GeolocationMapSurfaceProps } from './map-types';
 
 interface MapClickEvent {
   coordinates?: { latitude?: number; longitude?: number };
@@ -19,7 +19,7 @@ interface MapClickEvent {
  * Placeholder when no native map can render (module absent — e.g. Expo Go or
  * a consumer that skipped the optional peer — or an unsupported platform).
  */
-function MapFallback({
+const MapFallback = ({
   lat,
   lng,
   minHeight,
@@ -29,25 +29,27 @@ function MapFallback({
   lng: number;
   minHeight?: number;
   hasValue?: boolean;
-}) {
-  return (
-    <YStack
-      testID="geolocation-map-fallback"
-      flex={1}
-      minHeight={minHeight}
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor="$backgroundHover"
-      gap="$1">
-      <Text color="$color11" fontSize="$2">
-        {t('Map preview unavailable — requires expo-maps')}
-      </Text>
-      <Text color="$color11" fontSize="$1">
-        {hasValue === false ? t('No location set') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
-      </Text>
-    </YStack>
-  );
-}
+}) => (
+  <YStack
+    testID="geolocation-map-fallback"
+    flex={1}
+    minHeight={minHeight}
+    alignItems="center"
+    justifyContent="center"
+    backgroundColor="$backgroundHover"
+    gap="$1">
+    <Text
+      color="$color11"
+      fontSize="$2">
+      {t('Map preview unavailable — requires expo-maps')}
+    </Text>
+    <Text
+      color="$color11"
+      fontSize="$1">
+      {hasValue === false ? t('No location set') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+    </Text>
+  </YStack>
+);
 
 /**
  * Native map surface — a real map through the optional `expo-maps` peer
@@ -61,7 +63,7 @@ function MapFallback({
  * Output surface of the search-first field. Search and the
  * coordinate disclosure live in the parent.
  */
-export function GeolocationMap({
+export const GeolocationMap = ({
   lat,
   lng,
   delta = 0.02,
@@ -70,7 +72,7 @@ export function GeolocationMap({
   disabled,
   readOnly,
   hasValue = true,
-}: GeolocationMapSurfaceProps) {
+}: GeolocationMapSurfaceProps) => {
   const maps = loadExpoMaps();
   const appleRef = useRef<AppleMapsNS.MapView | null>(null);
   const googleRef = useRef<GoogleMapsNS.MapView | null>(null);
@@ -89,14 +91,21 @@ export function GeolocationMap({
   }, [lat, lng, zoom]);
 
   if (!maps || (Platform.OS !== 'ios' && Platform.OS !== 'android')) {
-    return <MapFallback lat={lat} lng={lng} minHeight={minHeight} hasValue={hasValue} />;
+    return (
+      <MapFallback
+        lat={lat}
+        lng={lng}
+        minHeight={minHeight}
+        hasValue={hasValue}
+      />
+    );
   }
 
-  const interactive = !disabled && !readOnly && typeof onChange === 'function';
+  const interactive = !disabled && !readOnly && onChange !== undefined;
   const handlePick = interactive
     ? (event: MapClickEvent) => {
         const { latitude, longitude } = event?.coordinates ?? {};
-        if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        if (latitude == null || longitude == null) {
           return;
         }
         onChange?.(latitude, longitude);
@@ -117,7 +126,10 @@ export function GeolocationMap({
   if (Platform.OS === 'ios') {
     const AppleMapsView = maps.AppleMaps.View;
     return (
-      <YStack testID="geolocation-native-map" flex={1} minHeight={minHeight}>
+      <YStack
+        testID="geolocation-native-map"
+        flex={1}
+        minHeight={minHeight}>
         <AppleMapsView
           ref={appleRef}
           style={{ flex: 1 }}
@@ -131,7 +143,10 @@ export function GeolocationMap({
 
   const GoogleMapsView = maps.GoogleMaps.View;
   return (
-    <YStack testID="geolocation-native-map" flex={1} minHeight={minHeight}>
+    <YStack
+      testID="geolocation-native-map"
+      flex={1}
+      minHeight={minHeight}>
       <GoogleMapsView
         ref={googleRef}
         style={{ flex: 1 }}
@@ -142,4 +157,4 @@ export function GeolocationMap({
       />
     </YStack>
   );
-}
+};

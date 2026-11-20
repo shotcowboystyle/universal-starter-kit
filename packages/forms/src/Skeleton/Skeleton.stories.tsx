@@ -41,14 +41,24 @@ export const Variants: Story = {
   render: () => (
     <YStack gap="$4">
       {(['text', 'rounded', 'rectangular'] as const).map((variant) => (
-        <YStack key={variant} gap="$2">
+        <YStack
+          key={variant}
+          gap="$2">
           <Paragraph size="$2">{variant}</Paragraph>
-          <Skeleton variant={variant} width={240} height={variant === 'text' ? undefined : 48} />
+          <Skeleton
+            variant={variant}
+            width={240}
+            height={variant === 'text' ? undefined : 48}
+          />
         </YStack>
       ))}
       <YStack gap="$2">
         <Paragraph size="$2">circular</Paragraph>
-        <Skeleton variant="circular" width={48} height={48} />
+        <Skeleton
+          variant="circular"
+          width={48}
+          height={48}
+        />
       </YStack>
     </YStack>
   ),
@@ -60,7 +70,9 @@ export const Variants: Story = {
  */
 export const TextLines: Story = {
   render: () => (
-    <YStack gap="$6" width={320}>
+    <YStack
+      gap="$6"
+      width={320}>
       <YStack gap="$2">
         <Paragraph size="$2">one line</Paragraph>
         <SkeletonText />
@@ -71,7 +83,10 @@ export const TextLines: Story = {
       </YStack>
       <YStack gap="$2">
         <Paragraph size="$2">five lines, last at 40%</Paragraph>
-        <SkeletonText lines={5} lastLineWidth="40%" />
+        <SkeletonText
+          lines={5}
+          lastLineWidth="40%"
+        />
       </YStack>
     </YStack>
   ),
@@ -80,7 +95,9 @@ export const TextLines: Story = {
 /** `SkeletonCircle` sizes itself one height step above the control ramp. */
 export const Circles: Story = {
   render: () => (
-    <XStack gap="$4" alignItems="center">
+    <XStack
+      gap="$4"
+      alignItems="center">
       <SkeletonCircle />
       <SkeletonCircle size={32} />
       <SkeletonCircle size={64} />
@@ -91,10 +108,18 @@ export const Circles: Story = {
 /** What a loading row actually looks like: avatar, name, two lines of body. */
 export const LoadingRow: Story = {
   render: () => (
-    <XStack gap="$3" width={360} alignItems="flex-start">
+    <XStack
+      gap="$3"
+      width={360}
+      alignItems="flex-start">
       <SkeletonCircle size={40} />
-      <YStack flex={1} gap="$2">
-        <Skeleton variant="text" width="45%" />
+      <YStack
+        flex={1}
+        gap="$2">
+        <Skeleton
+          variant="text"
+          width="45%"
+        />
         <SkeletonText lines={2} />
       </YStack>
     </XStack>
@@ -108,17 +133,28 @@ export const LoadingRow: Story = {
  */
 export const MotionOff: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
-      <YStack gap="$2" width={180}>
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
+      <YStack
+        gap="$2"
+        width={180}>
         <Paragraph size="$2">animation knob on</Paragraph>
         <SkeletonText lines={3} />
       </YStack>
-      <YStack gap="$2" width={180}>
+      <YStack
+        gap="$2"
+        width={180}>
         <Paragraph size="$2">animate={'{false}'}</Paragraph>
-        <SkeletonText lines={3} animate={false} />
+        <SkeletonText
+          lines={3}
+          animate={false}
+        />
       </YStack>
       <Preset overrides={{ animation: 'none' }}>
-        <YStack gap="$2" width={180}>
+        <YStack
+          gap="$2"
+          width={180}>
           <Paragraph size="$2">animation: none</Paragraph>
           <SkeletonText lines={3} />
         </YStack>
@@ -133,13 +169,26 @@ export const MotionOff: Story = {
  */
 export const RadiusKnob: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
       {(['none', 'medium', 'large'] as const).map((borderRadius) => (
-        <Preset key={borderRadius} overrides={{ borderRadius }}>
-          <YStack gap="$2" width={160}>
+        <Preset
+          key={borderRadius}
+          overrides={{ borderRadius }}>
+          <YStack
+            gap="$2"
+            width={160}>
             <Paragraph size="$2">borderRadius: {borderRadius}</Paragraph>
-            <Skeleton variant="text" width={140} />
-            <Skeleton variant="rounded" width={140} height={40} />
+            <Skeleton
+              variant="text"
+              width={140}
+            />
+            <Skeleton
+              variant="rounded"
+              width={140}
+              height={40}
+            />
             <SkeletonCircle size={40} />
           </YStack>
         </Preset>

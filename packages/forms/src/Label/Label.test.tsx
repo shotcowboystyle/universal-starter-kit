@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Label } from './index';
 
-describe('Label', () => {
+describe(Label, () => {
   it('associates with a control via htmlFor', () => {
     const { container } = renderWithProviders(
       <>
@@ -20,7 +20,9 @@ describe('Label', () => {
 
   it('appends the required asterisk from house marking', () => {
     const { container } = renderWithProviders(
-      <Label htmlFor="req" required>
+      <Label
+        htmlFor="req"
+        required>
         Email address
       </Label>,
     );
@@ -29,7 +31,10 @@ describe('Label', () => {
 
   it('appends (optional) when marking optional fields', () => {
     const { container } = renderWithProviders(
-      <Label htmlFor="opt" required={false} requiredMarking="optional">
+      <Label
+        htmlFor="opt"
+        required={false}
+        requiredMarking="optional">
         Nickname
       </Label>,
     );
@@ -39,7 +44,9 @@ describe('Label', () => {
   it('keeps a hidden label in the tree and associated', () => {
     const { container } = renderWithProviders(
       <>
-        <Label htmlFor="search-field" hidden>
+        <Label
+          htmlFor="search-field"
+          hidden>
           Search
         </Label>
         <TamaguiInput id="search-field" />
@@ -54,7 +61,9 @@ describe('Label', () => {
 
   it('wraps a page-heading label in h1', () => {
     const { container } = renderWithProviders(
-      <Label htmlFor="event" asPageHeading>
+      <Label
+        htmlFor="event"
+        asPageHeading>
         Event name
       </Label>,
     );
@@ -69,6 +78,6 @@ describe('Label', () => {
     const label = container.querySelector('label') as HTMLElement;
     expect(label).toBeTruthy();
     const weight = label.style.fontWeight || getComputedStyle(label).fontWeight;
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(weight);
   });
 });

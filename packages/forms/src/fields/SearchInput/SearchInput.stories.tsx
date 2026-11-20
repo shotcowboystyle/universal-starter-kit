@@ -42,42 +42,58 @@ export const Main: Story = {
   ),
 };
 
+const DebouncedExample = () => {
+  const [live, setLive] = useState('');
+  const [searched, setSearched] = useState('');
+  return (
+    <YStack
+      gap="$3"
+      maxWidth={400}>
+      <SearchInput
+        debounceMs={500}
+        onChange={setLive}
+        onSearch={setSearched}
+      />
+      <Paragraph
+        size="$2"
+        color="$color10">
+        typing: {live || '(empty)'}
+      </Paragraph>
+      <Paragraph
+        size="$2"
+        color="$color10">
+        searched (500ms debounce): {searched || '(empty)'}
+      </Paragraph>
+    </YStack>
+  );
+};
+
 export const Debounced: Story = {
-  render: () => {
-    const Example = () => {
-      const [live, setLive] = useState('');
-      const [searched, setSearched] = useState('');
-      return (
-        <YStack gap="$3" maxWidth={400}>
-          <SearchInput debounceMs={500} onChange={setLive} onSearch={setSearched} />
-          <Paragraph size="$2" color="$color10">
-            typing: {live || '(empty)'}
-          </Paragraph>
-          <Paragraph size="$2" color="$color10">
-            searched (500ms debounce): {searched || '(empty)'}
-          </Paragraph>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <DebouncedExample />,
+};
+
+const ControlledExample = () => {
+  const [value, setValue] = useState('preset query');
+  return (
+    <YStack
+      gap="$3"
+      maxWidth={400}>
+      <SearchInput
+        value={value}
+        onChange={setValue}
+        onSearch={(text) => action('onSearch')(text)}
+      />
+      <Paragraph
+        size="$2"
+        color="$color10">
+        value: {value || '(empty)'}
+      </Paragraph>
+    </YStack>
+  );
 };
 
 export const Controlled: Story = {
-  render: () => {
-    const Example = () => {
-      const [value, setValue] = useState('preset query');
-      return (
-        <YStack gap="$3" maxWidth={400}>
-          <SearchInput value={value} onChange={setValue} onSearch={(text) => action('onSearch')(text)} />
-          <Paragraph size="$2" color="$color10">
-            value: {value || '(empty)'}
-          </Paragraph>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <ControlledExample />,
 };
 
 export const Filled: Story = {
@@ -91,10 +107,22 @@ export const Filled: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <SearchInput size="$2" placeholder="Small" />
-      <SearchInput size="$3" placeholder="Medium (default)" defaultValue="bulbasaur" />
-      <SearchInput size="$4" placeholder="Large" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <SearchInput
+        size="$2"
+        placeholder="Small"
+      />
+      <SearchInput
+        size="$3"
+        placeholder="Medium (default)"
+        defaultValue="bulbasaur"
+      />
+      <SearchInput
+        size="$4"
+        placeholder="Large"
+      />
     </YStack>
   ),
 };
@@ -102,8 +130,18 @@ export const Sizes: Story = {
 export const ToolbarCompact: Story = {
   name: 'Toolbar (compact + chromeless)',
   render: () => (
-    <YStack maxWidth={400} backgroundColor="$color3" borderWidth={1} borderColor="$borderColor" padding="$2">
-      <SearchInput compact chromeless size="$3" onSearch={(text) => action('onSearch')(text)} />
+    <YStack
+      maxWidth={400}
+      backgroundColor="$color3"
+      borderWidth={1}
+      borderColor="$borderColor"
+      padding="$2">
+      <SearchInput
+        compact
+        chromeless
+        size="$3"
+        onSearch={(text) => action('onSearch')(text)}
+      />
     </YStack>
   ),
 };

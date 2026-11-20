@@ -16,9 +16,15 @@ import { TamaguiProvider, createTamagui } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
-import { __resetDevWarnSeen } from '../../shared/devWarn';
+import { __resetDevWarnSeen } from '../../shared/dev-warn';
 
 import { ToggleGroup } from './index';
+
+const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
+  const wrapper = segment.parentElement!;
+  expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/u);
+  return wrapper;
+};
 
 // The stock test themes carry no accent ramp, so token resolution for the
 // selected mark is invisible under renderWithProviders. Mount the house
@@ -32,21 +38,21 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-function renderWithHouseThemes(ui: ReactElement) {
-  return render(
-    <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
+const renderWithHouseThemes = (ui: ReactElement) =>
+  render(
+    <TamaguiProvider
+      config={houseConfig}
+      defaultTheme="light"
+      disableInjectCSS>
       {ui}
     </TamaguiProvider>,
   );
-}
 
 /**
  * First three numeric groups (h, s, l) of an hsla() string — the digit prefix
  * Tamagui embeds in the atomic class it generates for a concrete color value.
  */
-function hslDigits(hsla: string): string {
-  return (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
-}
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
 const options = [
   { label: 'Left', value: 'left' },
@@ -54,47 +60,80 @@ const options = [
   { label: 'Right', value: 'right' },
 ];
 
-describe('ToggleGroup', () => {
+describe(ToggleGroup, () => {
   describe('without form context', () => {
     it('renders all options', () => {
-      const result = renderWithProviders(<ToggleGroup label="Alignment" name="align" options={options} />);
+      const result = renderWithProviders(
+        <ToggleGroup
+          label="Alignment"
+          name="align"
+          options={options}
+        />,
+      );
       expect(result.findTextElement('Left')).toBeDefined();
       expect(result.findTextElement('Center')).toBeDefined();
       expect(result.findTextElement('Right')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<ToggleGroup label="Required" name="req" options={options} required />);
+      const result = renderWithProviders(
+        <ToggleGroup
+          label="Required"
+          name="req"
+          options={options}
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
       const result = renderWithProviders(
-        <ToggleGroup label="Align" name="a" options={options} helperText="Choose alignment" />,
+        <ToggleGroup
+          label="Align"
+          name="a"
+          options={options}
+          helperText="Choose alignment"
+        />,
       );
       expect(result.findTextElement('Choose alignment')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<ToggleGroup label="Loading" name="l" options={options} skeleton />);
+      const result = renderWithProviders(
+        <ToggleGroup
+          label="Loading"
+          name="l"
+          options={options}
+          skeleton
+        />,
+      );
       expect(result.findTextElement('Left')).toBeUndefined();
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<ToggleGroup label="Disabled" name="d" options={options} disabled />);
+      const result = renderWithProviders(
+        <ToggleGroup
+          label="Disabled"
+          name="d"
+          options={options}
+          disabled
+        />,
+      );
       expect(result.findTextElement('Left')).toBeDefined();
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once each', () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
+      const onValueChange = vi.fn<(value: string | string[]) => void>();
       const result = renderWithProviders(
         <ToggleGroup
           label="Alignment"
           name="align"
           options={options}
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- this test pins the deprecated alias
           onValueChange={onValueChange}
         />,
       );
@@ -103,18 +142,22 @@ describe('ToggleGroup', () => {
       if (center) {
         fireEvent.click(center);
       }
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChange).toHaveBeenCalledWith('center');
-      expect(onValueChange).toHaveBeenCalledTimes(1);
-      expect(onValueChange).toHaveBeenCalledWith('center');
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('center');
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith('center');
     });
   });
 
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { align: 'left' } }} submitText="Submit">
-          <ToggleGroup name="align" label="Alignment" options={options} />
+        <Form
+          formOptions={{ defaultValues: { align: 'left' } }}
+          submitText="Submit">
+          <ToggleGroup
+            name="align"
+            label="Alignment"
+            options={options}
+          />
         </Form>,
       );
       expect(result.findTextElement('Left')).toBeDefined();
@@ -148,12 +191,18 @@ describe('ToggleGroup', () => {
     });
 
     it('DEV-warns bare-disabled for a group disabled without a reason', () => {
-      renderWithProviders(<ToggleGroup label="Alignment" options={options} disabled />);
+      renderWithProviders(
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          disabled
+        />,
+      );
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('bare-disabled'));
     });
 
     it('explained disabled item renders its reason line, is described by it, and blocks change', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
       renderWithProviders(
         <ToggleGroup
           label="Alignment"
@@ -203,15 +252,19 @@ describe('ToggleGroup', () => {
   describe('selected mark (one emphasis)', () => {
     it('fills the selected segment with the accent-tinted surface, never the neutral tier', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
       // Segmented-control selection strength is pinned at TINTED: the
       // accent ramp's surface tier in a light scheme
       // is its palest step (accent11) — the same channel ViewSwitcher takes.
       const tint = houseThemes.light.accent11;
       expect(tint).toBeTruthy();
-      const selected = container.querySelector('[data-state="on"]') as HTMLElement;
-      const idle = container.querySelector('[data-state="off"]') as HTMLElement;
+      const selected = container.querySelector('[data-state="on"]')!;
+      const idle = container.querySelector('[data-state="off"]')!;
       expect(selected).toBeTruthy();
       expect(idle).toBeTruthy();
       expect(selected.className).toContain(`_bg-hsla${hslDigits(tint)}`);
@@ -224,43 +277,59 @@ describe('ToggleGroup', () => {
   describe('segmented anatomy', () => {
     it('does not paint a border on every segment — selected is fill, idle is chromeless', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments).toHaveLength(3);
       for (const segment of segments) {
-        expect(segment.className).toMatch(/_bw-0\b|_borderw-0\b|bw-0/);
-        expect(segment.className).not.toMatch(/_bw-1\b/);
+        expect(segment.className).toMatch(/_bw-0\b|_borderw-0\b|bw-0/u);
+        expect(segment.className).not.toMatch(/_bw-1\b/u);
       }
     });
 
     it('squares interior corners and rounds only the outer edges', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="center" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="center"
+        />,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments).toHaveLength(3);
       const [first, middle, last] = segments;
       // Tamagui emits per-corner radius classes from stackRadiusProps.
-      expect(middle.className).toMatch(/bssr-0|bstr-0|borderStartStartRadius-0/i);
-      expect(first.className).not.toEqual(middle.className);
-      expect(last.className).not.toEqual(middle.className);
+      expect(middle.className).toMatch(/bssr-0|bstr-0|borderStartStartRadius-0/iu);
+      expect(first.className).not.toStrictEqual(middle.className);
+      expect(last.className).not.toStrictEqual(middle.className);
     });
 
     it('rings the focused segment, never the group frame', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
-      const group = container.querySelector('[role="group"]') as HTMLElement;
+      const group = container.querySelector('[role="group"]')!;
       expect(group).toBeTruthy();
       // Ring on the container is the known-bad segmented pattern: square
       // outline over a rounded frame, and it paints on mouse via :focus-within.
-      expect(group.className).not.toMatch(/outlineWidth-2px|outlinew-2px|_ow-2px/);
+      expect(group.className).not.toMatch(/outlineWidth-2px|outlinew-2px|_ow-2px/u);
     });
 
     it('paints segment height from the size recipe; press floor is hitSlop not minHeight', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments.length).toBeGreaterThan(0);
@@ -268,38 +337,40 @@ describe('ToggleGroup', () => {
       for (const segment of segments) {
         expect(segment.className).toContain(`_h-${recipe.height}px`);
         // The 44px floor is hitSlop, never a painted minHeight.
-        expect(segment.className).not.toMatch(/_mih-44px|_minh-44px|minHeight-44px/);
+        expect(segment.className).not.toMatch(/_mih-44px|_minh-44px|minHeight-44px/u);
         expect(MIN_PRESS_TARGET).toBe(44);
       }
     });
 
     it('applies the animation knob as transition on each segment (SB-M-221)', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments.length).toBeGreaterThan(0);
       for (const segment of segments) {
-        expect(segment.className).toMatch(/transition|tns-|trs-/i);
-        expect(segment.style.transitionDuration).toMatch(/\d+ms/);
-        expect(segment.style.transitionDuration).not.toMatch(/^0m?s$/);
+        expect(segment.className).toMatch(/transition|tns-|trs-/iu);
+        expect(segment.style.transitionDuration).toMatch(/\dms/u);
+        expect(segment.style.transitionDuration).not.toMatch(/^0m?s$/u);
       }
     });
   });
 
   describe('per-segment elevation wrapper', () => {
-    function elevationWrapperFor(segment: HTMLElement): HTMLElement {
-      const wrapper = segment.parentElement as HTMLElement;
-      expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/);
-      return wrapper;
-    }
-
     // The wrapper only exists to carry a shadow, and the default stop paints
     // none on a control, so these render at elevation medium.
     it("lays the wrapper out as a row so the segment's zero flex-basis sizes width, not height", () => {
       const { container } = renderWithHouseThemes(
         <Preset overrides={{ elevation: 'medium' }}>
-          <ToggleGroup label="Alignment" options={options} defaultValue="left" />
+          <ToggleGroup
+            label="Alignment"
+            options={options}
+            defaultValue="left"
+          />
         </Preset>,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
@@ -315,7 +386,12 @@ describe('ToggleGroup', () => {
     it('keeps the row wrapper in the vertical orientation', () => {
       const { container } = renderWithHouseThemes(
         <Preset overrides={{ elevation: 'medium' }}>
-          <ToggleGroup label="Alignment" options={options} defaultValue="left" orientation="vertical" />
+          <ToggleGroup
+            label="Alignment"
+            options={options}
+            defaultValue="left"
+            orientation="vertical"
+          />
         </Preset>,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
@@ -329,24 +405,32 @@ describe('ToggleGroup', () => {
     it('leaves the group frame flat while the segments carry the shadow (E-FLAT)', () => {
       const { container } = renderWithHouseThemes(
         <Preset overrides={{ elevation: 'medium' }}>
-          <ToggleGroup label="Alignment" options={options} defaultValue="left" />
+          <ToggleGroup
+            label="Alignment"
+            options={options}
+            defaultValue="left"
+          />
         </Preset>,
       );
-      const group = container.querySelector('[role="group"]') as HTMLElement;
+      const group = container.querySelector('[role="group"]')!;
       expect(group).toBeTruthy();
-      expect(group.className).not.toMatch(/_bxsh-/);
-      expect(group.getAttribute('style') ?? '').not.toMatch(/box-shadow/);
+      expect(group.className).not.toMatch(/_bxsh-/u);
+      expect(group.getAttribute('style') ?? '').not.toMatch(/box-shadow/u);
     });
   });
 
   describe('one tab stop', () => {
     it('exposes exactly one tab stop among the segments', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="center" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="center"
+        />,
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments).toHaveLength(3);
-      expect(segments.map((el) => el.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+      expect(segments.map((el) => el.getAttribute('tabindex'))).toStrictEqual(['-1', '0', '-1']);
     });
   });
 
@@ -369,20 +453,30 @@ describe('ToggleGroup', () => {
 
     it('places interior seams on logical inline edges so RTL does not invert rounding', () => {
       const { container } = renderWithHouseThemes(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+        />,
       );
       const seams = [...container.querySelectorAll('[data-mp-toggle-seam]')] as HTMLElement[];
       expect(seams.length).toBeGreaterThan(0);
       for (const seam of seams) {
-        expect(seam.className + JSON.stringify(seam.style.cssText)).toMatch(/insetInlineEnd|inset-inline-end/i);
-        expect(seam.getAttribute('style') ?? '').not.toMatch(/(?:^|;)\s*right\s*:/);
+        expect(seam.className + JSON.stringify(seam.style.cssText)).toMatch(/insetInlineEnd|inset-inline-end/iu);
+        expect(seam.style.right).toBe('');
       }
     });
 
     it('blocks change when readOnly (SB-M-218)', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
       const result = renderWithProviders(
-        <ToggleGroup label="Alignment" options={options} defaultValue="left" readOnly onChange={onChange} />,
+        <ToggleGroup
+          label="Alignment"
+          options={options}
+          defaultValue="left"
+          readOnly
+          onChange={onChange}
+        />,
       );
       const center = result.findTextElement('Center');
       expect(center).toBeDefined();
@@ -394,7 +488,13 @@ describe('ToggleGroup', () => {
 
     it('sizes skeleton segments from the control recipe, never a 60px literal', () => {
       const recipe = sizeRecipeForToken('$4');
-      const { container } = renderWithHouseThemes(<ToggleGroup label="Loading" options={options} skeleton />);
+      const { container } = renderWithHouseThemes(
+        <ToggleGroup
+          label="Loading"
+          options={options}
+          skeleton
+        />,
+      );
       const skels = [...container.querySelectorAll('[data-mp-toggle-skeleton]')] as HTMLElement[];
       expect(skels).toHaveLength(options.length);
       const expectedWidth = recipe.paddingHorizontal * 2 + 40;

@@ -52,14 +52,20 @@ export const DisabledAndLoading: Story = {
       leading={
         // A disabled control explains itself; inline placement keeps
         // the toolbar row's shared control height.
-        <Button compact disabled disabledReason="No screen to go back to" disabledReasonPlacement="inline">
+        <Button
+          compact
+          disabled
+          disabledReason="No screen to go back to"
+          disabledReasonPlacement="inline">
           Back
         </Button>
       }
       trailing={
         // The house loading state: `loading` renders the spinner and is a
         // derived (never bare) disable.
-        <Button compact loading>
+        <Button
+          compact
+          loading>
           Saving
         </Button>
       }
@@ -69,7 +75,11 @@ export const DisabledAndLoading: Story = {
 
 export const ManyActionsNarrow: Story = {
   render: () => (
-    <YStack maxWidth={320} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      maxWidth={320}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <ScreenToolbar
         leading={<Button compact>Back to the previous screen</Button>}
         trailing={

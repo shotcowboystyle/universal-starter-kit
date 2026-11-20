@@ -5,18 +5,19 @@ import {
   SheetModal as PublicSheetModal,
   XStack,
   YStack as FixtureStack,
-  type TamaguiElement,
 } from '@repo/ui';
+import type { TamaguiElement } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useRef, useState } from 'react';
-import { Platform, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { Paragraph, SizableText, YStack } from 'tamagui';
 
 import { ActionBar } from '../actions/ActionBar';
 
 import { SheetModal } from './index';
 
-function Harness({
+const Harness = ({
   scrollable = false,
   snapPoint,
   startOpen = false,
@@ -24,10 +25,12 @@ function Harness({
   scrollable?: boolean;
   snapPoint?: number;
   startOpen?: boolean;
-}) {
+}) => {
   const [open, setOpen] = useState(startOpen);
   return (
-    <YStack minHeight={480} gap="$3">
+    <YStack
+      minHeight={480}
+      gap="$3">
       <Button
         onPress={() => {
           setOpen(true);
@@ -75,7 +78,7 @@ function Harness({
       </SheetModal>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof SheetModal> = {
   title: 'Components/SheetModal',
@@ -135,6 +138,9 @@ interface Bounds {
 }
 type Reading<T> = T | 'unmeasured' | 'unavailable' | 'invalid';
 type FixtureMode = 'subject' | 'control-240';
+const isMeasured = <T extends object>(reading: Reading<T>): reading is T =>
+  reading !== 'unmeasured' && reading !== 'unavailable' && reading !== 'invalid';
+const readingHeight = (value: Reading<Bounds>) => (isMeasured(value) ? value.height : value);
 interface FixtureReadings {
   frameLayout: Reading<Bounds>;
   toolbarLayout: Reading<Bounds>;
@@ -151,31 +157,28 @@ interface FixtureReadings {
   tailPresses: number;
 }
 
-function emptyReadings(): FixtureReadings {
-  return {
-    frameLayout: 'unmeasured',
-    toolbarLayout: 'unmeasured',
-    viewportLayout: 'unmeasured',
-    scrollLayout: 'unmeasured',
-    frameWindow: 'unmeasured',
-    viewportWindow: 'unmeasured',
-    scrollWindow: 'unmeasured',
-    tailWindow: 'unmeasured',
-    content: 'unmeasured',
-    offset: 'unmeasured',
-    sampleWindow: 'unmeasured',
-    sample: 0,
-    tailPresses: 0,
-  };
-}
+type LayoutKey = Extract<keyof FixtureReadings, `${string}Layout`>;
 
-function bounds(x: number, y: number, width: number, height: number): Reading<Bounds> {
-  return [x, y, width, height].every(Number.isFinite) && width >= 0 && height >= 0
-    ? { x, y, width, height }
-    : 'invalid';
-}
+const emptyReadings = (): FixtureReadings => ({
+  frameLayout: 'unmeasured',
+  toolbarLayout: 'unmeasured',
+  viewportLayout: 'unmeasured',
+  scrollLayout: 'unmeasured',
+  frameWindow: 'unmeasured',
+  viewportWindow: 'unmeasured',
+  scrollWindow: 'unmeasured',
+  tailWindow: 'unmeasured',
+  content: 'unmeasured',
+  offset: 'unmeasured',
+  sampleWindow: 'unmeasured',
+  sample: 0,
+  tailPresses: 0,
+});
 
-function OwnedBodyFixture({ measured }: { measured: boolean }) {
+const bounds = (x: number, y: number, width: number, height: number): Reading<Bounds> =>
+  [x, y, width, height].every(Number.isFinite) && width >= 0 && height >= 0 ? { x, y, width, height } : 'invalid';
+
+const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   const window = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<FixtureMode>('subject');
@@ -183,30 +186,31 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
   const [readings, setReadings] = useState(emptyReadings);
   const active = useRef(false);
   const generation = useRef(0);
+  const [presentation, setPresentation] = useState(0);
   const sample = useRef(0);
   const frameRef = useRef<TamaguiElement>(null);
   const viewportRef = useRef<TamaguiElement>(null);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const tailRef = useRef<TamaguiElement>(null);
-  const presentation = generation.current;
   const kind = measured ? 'measured' : 'scroll';
 
-  function present(nextMode: FixtureMode, nextFill = false) {
+  const present = (nextMode: FixtureMode, nextFill = false) => {
     generation.current += 1;
+    setPresentation(generation.current);
     sample.current = 0;
     active.current = true;
     setMode(nextMode);
     setFill(nextFill);
     setReadings(emptyReadings());
     setOpen(true);
-  }
+  };
 
-  function close() {
+  const close = () => {
     active.current = false;
     setOpen(false);
-  }
+  };
 
-  function record(patch: Partial<FixtureReadings>) {
+  const record = (patch: Partial<FixtureReadings>) => {
     if (!active.current || generation.current !== presentation) {
       return;
     }
@@ -214,16 +218,17 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
       const next = { ...previous, ...patch };
       return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
     });
-  }
+  };
 
-  function onLayout(key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') {
-    return ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
+  const onLayout =
+    (key: LayoutKey) =>
+    ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
       record({ [key]: bounds(layout.x, layout.y, layout.width, layout.height) });
     };
-  }
 
-  function measureBounds() {
-    const currentSample = ++sample.current;
+  const measureBounds = () => {
+    sample.current += 1;
+    const currentSample = sample.current;
     record({
       sample: currentSample,
       frameWindow: 'unmeasured',
@@ -238,7 +243,7 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
       ['scrollWindow', scrollRef.current?.getNativeScrollRef?.()],
       ['tailWindow', tailRef.current],
     ] as const) {
-      if (!node || typeof node.measureInWindow !== 'function') {
+      if (!node || !('measureInWindow' in node)) {
         record({ [key]: 'unavailable' });
         continue;
       }
@@ -248,11 +253,10 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         }
       });
     }
-  }
+  };
 
   const viewport = readings.viewportLayout;
-  const showRows = !measured || (typeof viewport === 'object' && viewport.height > 0);
-  const height = (value: Reading<Bounds>) => (typeof value === 'object' ? value.height : value);
+  const showRows = !measured || (isMeasured(viewport) && viewport.height > 0);
   const diagnostics = {
     kind,
     mode,
@@ -266,7 +270,9 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
   };
 
   return (
-    <FixtureStack gap="$3" padding="$3">
+    <FixtureStack
+      gap="$3"
+      padding="$3">
       <FixtureText>{measured ? 'Owned measured viewport' : 'Owned ScrollView'}</FixtureText>
       <Button
         onPress={() => {
@@ -290,7 +296,9 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         Measure after the sheet settles. Close it to read the captured bounds below. Repeat after dragging, scrolling,
         rotating or using the keyboard. A declared size is not a measurement.
       </FixtureText>
-      <FixtureText testID="owned-sheet-readings" selectable>
+      <FixtureText
+        testID="owned-sheet-readings"
+        selectable>
         {JSON.stringify(diagnostics, null, 2)}
       </FixtureText>
       <PublicSheetModal
@@ -304,23 +312,29 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         scrollable={false}
         fill={fill}
         header={
-          <FixtureStack gap="$1" flexShrink={0}>
+          <FixtureStack
+            gap="$1"
+            flexShrink={0}>
             <FixtureText numberOfLines={1}>
               {kind} / {mode} / fill {fill ? 'on' : 'off'}
             </FixtureText>
             <FixtureText numberOfLines={1}>
-              Body {height(readings.frameLayout)} / toolbar {height(readings.toolbarLayout)} / viewport{' '}
-              {height(viewport)}
+              Body {readingHeight(readings.frameLayout)} / toolbar {readingHeight(readings.toolbarLayout)} / viewport{' '}
+              {readingHeight(viewport)}
             </FixtureText>
             <FixtureText numberOfLines={1}>
-              Offset {typeof readings.offset === 'object' ? readings.offset.y : readings.offset} / tail presses{' '}
+              Offset {isMeasured(readings.offset) ? readings.offset.y : readings.offset} / tail presses{' '}
               {readings.tailPresses}
             </FixtureText>
             <XStack gap="$2">
-              <Button flex={1} onPress={measureBounds}>
+              <Button
+                flex={1}
+                onPress={measureBounds}>
                 Measure bounds
               </Button>
-              <Button flex={1} onPress={close}>
+              <Button
+                flex={1}
+                onPress={close}>
                 Close fixture
               </Button>
             </XStack>
@@ -375,16 +389,25 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
                   });
                 }}>
                 <FixtureStack gap="$2">
-                  <Input label="Keyboard probe" placeholder="Generic text only" />
+                  <Input
+                    label="Keyboard probe"
+                    placeholder="Generic text only"
+                  />
                   {Array.from({ length: 60 }, (_, index) => (
-                    <FixtureStack key={index} gap="$1" paddingVertical="$2">
+                    <FixtureStack
+                      key={index}
+                      gap="$1"
+                      paddingVertical="$2">
                       <FixtureText>Record {index + 1}</FixtureText>
-                      {Array.from({ length: 1 + (index % 4) }, (_, line) => (
+                      {Array.from({ length: 1 + (index % 4) }, (_item, line) => (
                         <FixtureText key={line}>Generic detail {line + 1} for this record.</FixtureText>
                       ))}
                     </FixtureStack>
                   ))}
-                  <FixtureStack ref={tailRef} testID="owned-sheet-tail" collapsable={false}>
+                  <FixtureStack
+                    ref={tailRef}
+                    testID="owned-sheet-tail"
+                    collapsable={false}>
                     <Button
                       onPress={() => {
                         record({ tailPresses: readings.tailPresses + 1 });
@@ -400,7 +423,7 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
       </PublicSheetModal>
     </FixtureStack>
   );
-}
+};
 
 export const OwnedMeasuredViewport: Story = {
   name: 'Owned measured viewport',

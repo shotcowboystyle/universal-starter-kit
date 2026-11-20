@@ -1,16 +1,19 @@
 import type { GroupOrientation, GroupPosition } from '@repo/theme';
 import type { ReactNode } from 'react';
-import type { ImageErrorEventData, ImageLoadEventData, NativeSyntheticEvent } from 'react-native';
+import type { ImageErrorEvent, ImageLoadEvent } from 'react-native';
 import type { ImageProps as TamaguiImageProps } from 'tamagui';
+
+export type ImageStatus = 'loading' | 'loaded' | 'error';
 
 /** Polaris Thumbnail sizes. `extraSmall` is the nested control box. */
 export type ImageThumbnailSize = 'extraSmall' | 'small' | 'medium' | 'large';
 
-export type ImagePlaceholder = 'empty' | 'blur' | 'skeleton' | ReactNode;
+/** The strings `'empty'`, `'blur'` and `'skeleton'` select built-in placeholders; any other node renders as-is. */
+export type ImagePlaceholder = ReactNode;
 
 export type ImageProps = Omit<TamaguiImageProps, 'resizeMode' | 'onLoad' | 'onError' | 'size' | 'fill'> & {
-  onLoad?: (event?: NativeSyntheticEvent<ImageLoadEventData>) => void;
-  onError?: (error: NativeSyntheticEvent<ImageErrorEventData> | Error) => void;
+  onLoad?: (event?: ImageLoadEvent) => void;
+  onError?: (error: ImageErrorEvent | Error) => void;
   svg?: boolean;
   /** Next.js `fill` — paint the positioned parent (absolute inset 0). */
   fill?: boolean;

@@ -9,6 +9,7 @@
  * keeps its chrome and composes this rail.
  */
 import { defaultKnobs, usePresetContext, useResolvedKnobs } from '@repo/theme';
+import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { Text, View, XStack, YStack, isWeb, styled } from 'tamagui';
 
@@ -25,9 +26,8 @@ import {
   meterTrackHeightPx,
   resolveMeterRailRadius,
   resolveMeterZone,
-  type MeterFormat,
-  type MeterLayout,
 } from './meter';
+import type { MeterFormat, MeterLayout, MeterZone } from './meter';
 
 export {
   METER_RADIUS_CLASS,
@@ -104,7 +104,7 @@ export interface MeterProps extends Omit<GetProps<typeof MeterRoot>, 'children'>
   disabled?: boolean;
 }
 
-function tickLeftPercent(cut: number, min: number, max: number): number | null {
+const tickLeftPercent = (cut: number, min: number, max: number): number | null => {
   if (max === min) {
     return null;
   }
@@ -112,31 +112,237 @@ function tickLeftPercent(cut: number, min: number, max: number): number | null {
     return null;
   }
   return ((cut - min) / (max - min)) * 100;
-}
+};
 
-function defaultValueText(opts: {
+const defaultValueText = (opts: {
   value?: number | null;
   visible: string;
   unit?: string;
   format?: MeterFormat;
-}): string {
+}): string => {
   if (opts.value == null || !Number.isFinite(opts.value)) {
     return UNKNOWN_VALUE;
   }
   if (opts.format === 'percent') {
     return opts.visible;
   }
-  if (opts.unit) {
+  if (opts.unit !== undefined && opts.unit !== '') {
     return `${opts.visible} used`;
   }
   return opts.visible;
+};
+
+type MeterKnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
+
+interface MeterState {
+  known: boolean;
+  zone: MeterZone;
+  ratio: number | null;
+  discrete: number;
+  filledCount: number;
+  valueNow: number | undefined;
 }
+
+const resolveMeterState = (
+  opts: Pick<MeterProps, 'value' | 'min' | 'max' | 'low' | 'high' | 'optimum' | 'segments'>,
+): MeterState => {
+  const { value, min, max, low, high, optimum, segments } = opts;
+  const known = value != null && Number.isFinite(value);
+  const zone = known ? resolveMeterZone({ value, min, max, low, high, optimum }) : 'ok';
+  const discrete = segments != null && Number.isFinite(segments) && segments > 0 ? Math.round(segments) : 0;
+  const span = max - min;
+  const filledCount =
+    known && discrete > 0 && span !== 0
+      ? Math.max(0, Math.min(discrete, Math.round((value - min) / (span / discrete))))
+      : 0;
+  return {
+    known,
+    zone,
+    ratio: meterFillRatio(value, min, max),
+    discrete,
+    filledCount,
+    valueNow: known ? value : undefined,
+  };
+};
+
+const useMeterSizing = () => {
+  const preset = usePresetContext();
+  const stop = preset?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
+  // SAFETY: the preset size knob is one of the three size stops; meterTrackHeightPx maps exactly those.
+  const size = (preset?.preset.knobs.size ?? defaultKnobs.size) as 'small' | 'medium' | 'large';
+  return { trackH: meterTrackHeightPx(size), railRadius: resolveMeterRailRadius(stop) };
+};
+
+const trackColor = (outlined: boolean) => (outlined ? 'transparent' : METER_TRACK);
+
+interface MeterTicksProps {
+  low?: number;
+  high?: number;
+  min: number;
+  max: number;
+}
+
+const MeterTicks = ({ low, high, min, max }: MeterTicksProps) => (
+  <>
+    {(
+      [
+        ['low', low],
+        ['high', high],
+      ] as const
+    ).map(([name, cut]) => {
+      if (cut === undefined) {
+        return null;
+      }
+      const left = tickLeftPercent(cut, min, max);
+      if (left == null) {
+        return null;
+      }
+      return (
+        <Tick
+          key={name}
+          left={`${left}%`}
+          backgroundColor={METER_TICK}
+          data-meter-tick=""
+        />
+      );
+    })}
+  </>
+);
+
+interface MeterRailProps extends MeterTicksProps {
+  state: MeterState;
+  label?: string;
+  valuetext: string;
+  trackH: number;
+  railRadius: number;
+  outlined: boolean;
+  paintedBorder: MeterKnobProps['inputSurface']['borderWidth'];
+  outlineChrome: object;
+  transition: MeterKnobProps['transition'];
+  disabled: boolean;
+  loading: boolean;
+}
+
+const meterSemantics = (p: MeterRailProps) => ({
+  'aria-label': p.label,
+  'aria-valuemin': p.min,
+  'aria-valuemax': p.max,
+  'aria-valuetext': p.valuetext,
+  'data-meter-radius-class': METER_RADIUS_CLASS,
+  'data-meter-rail-radius': p.railRadius,
+  'data-meter-border-width': p.paintedBorder,
+  'data-meter-zone': p.state.zone,
+  'data-meter-track-height': p.trackH,
+});
+
+const MeterSegments = (p: MeterRailProps) => {
+  const paint = METER_ZONE_PAINT[p.state.zone];
+  return (
+    <XStack
+      gap={3}
+      data-meter-segments={p.state.discrete}
+      opacity={p.disabled ? 0.5 : 1}>
+      {Array.from({ length: p.state.discrete }, (_, i) => (
+        <Segment
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- fixed-length positional slots; the list never reorders or filters
+          key={i}
+          width={19}
+          height={p.trackH}
+          borderRadius={p.railRadius}
+          {...p.outlineChrome}
+          backgroundColor={i < p.state.filledCount ? paint.fill : trackColor(p.outlined)}
+        />
+      ))}
+    </XStack>
+  );
+};
+
+const MeterContinuousRail = (p: MeterRailProps) => {
+  const paint = METER_ZONE_PAINT[p.state.zone];
+  const { known, ratio } = p.state;
+  const transition = p.transition ?? 'none';
+  return (
+    <Rail
+      height={p.trackH}
+      minHeight={p.trackH}
+      borderRadius={p.railRadius}
+      {...p.outlineChrome}
+      backgroundColor={trackColor(p.outlined)}
+      opacity={p.disabled ? 0.5 : 1}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui views cannot render a native <meter>
+      role="meter"
+      aria-valuenow={p.state.valueNow}
+      {...meterSemantics(p)}
+      data-meter-fill={known && ratio != null ? paint.fill : undefined}>
+      {known && ratio != null ? (
+        <Fill
+          width={`${ratio * 100}%`}
+          backgroundColor={paint.fill}
+          transition={transition}
+        />
+      ) : null}
+      <MeterTicks
+        low={p.low}
+        high={p.high}
+        min={p.min}
+        max={p.max}
+      />
+    </Rail>
+  );
+};
+
+const MeterRail = (p: MeterRailProps): ReactNode => {
+  if (p.loading) {
+    return (
+      <Skeleton
+        variant="rounded"
+        height={p.trackH}
+        width="100%"
+      />
+    );
+  }
+  if (p.state.discrete === 0) {
+    return <MeterContinuousRail {...p} />;
+  }
+  // Segmented rails still owe role=meter — park it on the segment row host.
+  return (
+    <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui views cannot render a native <meter>
+      role="meter"
+      aria-valuenow={p.state.valueNow}
+      {...meterSemantics(p)}
+      data-meter-fill={p.state.known ? METER_ZONE_PAINT[p.state.zone].fill : undefined}>
+      <MeterSegments {...p} />
+    </View>
+  );
+};
+
+interface MeterReadoutProps {
+  visible: string;
+  valueInk: MeterKnobProps['textAccentColor'];
+  labelProps: MeterKnobProps['label'];
+}
+
+const MeterReadout = ({ visible, valueInk, labelProps }: MeterReadoutProps) => (
+  <Text
+    {...labelProps}
+    fontFamily="$mono"
+    color={valueInk}
+    whiteSpace="nowrap"
+    data-meter-value=""
+    data-meter-value-color={valueInk}
+    {...(isWeb ? { style: { fontVariantNumeric: 'tabular-nums' } } : null)}>
+    {visible}
+  </Text>
+);
+
+const hasText = (text: string | undefined): text is string => text !== undefined && text !== '';
 
 /**
  * Bounded-quantity display. Inert — no tab stop, no focus ring. The input
  * twin is Slider.
  */
-export function Meter({
+export const Meter = ({
   value,
   min,
   max,
@@ -153,130 +359,53 @@ export function Meter({
   loading = false,
   disabled = false,
   ...props
-}: MeterProps) {
+}: MeterProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Meter' });
-  const preset = usePresetContext();
-  const stop = preset?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
-  const size = (preset?.preset.knobs.size ?? defaultKnobs.size) as 'small' | 'medium' | 'large';
-  const outlined = knobProps.outlined;
-  const trackH = meterTrackHeightPx(size);
-  const railRadius = resolveMeterRailRadius(stop);
+  const { trackH, railRadius } = useMeterSizing();
+  const { outlined } = knobProps;
   // Spread the fragment (AGENTS.md). Hardcoded 1px ignored the borderWidth knob.
   const outlineChrome = outlined ? { ...knobProps.inputSurface, borderColor: '$color6' as const } : { borderWidth: 0 };
   const paintedBorder = outlined ? knobProps.inputSurface.borderWidth : 0;
-  const known = value != null && Number.isFinite(value);
-  const zone = known ? resolveMeterZone({ value: value, min, max, low, high, optimum }) : 'ok';
-  const paint = METER_ZONE_PAINT[zone];
+  const state = resolveMeterState({ value, min, max, low, high, optimum, segments });
+  const paint = METER_ZONE_PAINT[state.zone];
   const valueInk = 'value' in paint ? paint.value : knobProps.textAccentColor;
-  const ratio = meterFillRatio(value, min, max);
   const visible = formatMeterValue({ value, min, max, unit, format, valueLabel });
   const valuetext = valueText ?? defaultValueText({ value, visible, unit, format });
-  const discrete = typeof segments === 'number' && Number.isFinite(segments) && segments > 0 ? Math.round(segments) : 0;
-  const span = max - min;
-  const filledCount =
-    known && discrete > 0 && span !== 0
-      ? Math.max(0, Math.min(discrete, Math.round((value - min) / (span / discrete))))
-      : 0;
 
   const valueNode =
     layout === 'bare' ? null : (
-      <Text
-        {...knobProps.label}
-        fontFamily="$mono"
-        color={valueInk}
-        whiteSpace="nowrap"
-        data-meter-value=""
-        data-meter-value-color={valueInk}
-        {...(isWeb ? { style: { fontVariantNumeric: 'tabular-nums' } } : null)}>
-        {visible}
-      </Text>
+      <MeterReadout
+        visible={visible}
+        valueInk={valueInk}
+        labelProps={knobProps.label}
+      />
     );
 
-  const ticks =
-    discrete > 0
-      ? null
-      : [low, high].map((cut, i) => {
-          if (cut === undefined) {
-            return null;
-          }
-          const left = tickLeftPercent(cut, min, max);
-          if (left == null) {
-            return null;
-          }
-          return <Tick key={`${cut}-${i}`} left={`${left}%`} backgroundColor={METER_TICK} data-meter-tick="" />;
-        });
-
-  const railEl = loading ? (
-    <Skeleton variant="rounded" height={trackH} width="100%" />
-  ) : discrete > 0 ? (
-    <XStack gap={3} data-meter-segments={discrete} opacity={disabled ? 0.5 : 1}>
-      {Array.from({ length: discrete }, (_, i) => (
-        <Segment
-          key={i}
-          width={19}
-          height={trackH}
-          borderRadius={railRadius}
-          {...outlineChrome}
-          backgroundColor={i < filledCount ? paint.fill : outlined ? 'transparent' : METER_TRACK}
-        />
-      ))}
-    </XStack>
-  ) : (
-    <Rail
-      height={trackH}
-      minHeight={trackH}
-      borderRadius={railRadius}
-      {...outlineChrome}
-      backgroundColor={outlined ? 'transparent' : METER_TRACK}
-      opacity={disabled ? 0.5 : 1}
-      role="meter"
-      aria-label={label}
-      aria-valuemin={min}
-      aria-valuemax={max}
-      aria-valuenow={known ? value : undefined}
-      aria-valuetext={valuetext}
-      data-meter-radius-class={METER_RADIUS_CLASS}
-      data-meter-rail-radius={railRadius}
-      data-meter-border-width={paintedBorder}
-      data-meter-zone={zone}
-      data-meter-fill={known && ratio != null ? paint.fill : undefined}
-      data-meter-track-height={trackH}>
-      {known && ratio != null ? (
-        <Fill
-          width={`${ratio * 100}%`}
-          backgroundColor={paint.fill}
-          {...(knobProps.transition ? { transition: knobProps.transition } : { transition: 'none' })}
-        />
-      ) : null}
-      {ticks}
-    </Rail>
+  const segmentedMeter = (
+    <MeterRail
+      state={state}
+      label={label}
+      valuetext={valuetext}
+      trackH={trackH}
+      railRadius={railRadius}
+      outlined={outlined}
+      paintedBorder={paintedBorder}
+      outlineChrome={outlineChrome}
+      transition={knobProps.transition}
+      disabled={disabled}
+      loading={loading}
+      low={low}
+      high={high}
+      min={min}
+      max={max}
+    />
   );
-
-  // Segmented rails still owe role=meter — park it on the segment row host.
-  const segmentedMeter =
-    !loading && discrete > 0 ? (
-      <View
-        role="meter"
-        aria-label={label}
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={known ? value : undefined}
-        aria-valuetext={valuetext}
-        data-meter-radius-class={METER_RADIUS_CLASS}
-        data-meter-rail-radius={railRadius}
-        data-meter-border-width={paintedBorder}
-        data-meter-zone={zone}
-        data-meter-fill={known ? paint.fill : undefined}
-        data-meter-track-height={trackH}>
-        {railEl}
-      </View>
-    ) : (
-      railEl
-    );
 
   if (layout === 'bare') {
     return (
-      <MeterRoot width="100%" {...props}>
+      <MeterRoot
+        width="100%"
+        {...props}>
         {segmentedMeter}
       </MeterRoot>
     );
@@ -284,9 +413,15 @@ export function Meter({
 
   if (layout === 'inline') {
     return (
-      <MeterRoot width="100%" {...props}>
-        <XStack alignItems="center" {...knobProps.gap}>
-          <View flex={1} minWidth={0}>
+      <MeterRoot
+        width="100%"
+        {...props}>
+        <XStack
+          alignItems="center"
+          {...knobProps.gap}>
+          <View
+            flex={1}
+            minWidth={0}>
             {segmentedMeter}
           </View>
           {valueNode}
@@ -296,11 +431,20 @@ export function Meter({
   }
 
   return (
-    <MeterRoot width="100%" {...knobProps.gap} {...props}>
-      {label || valueNode ? (
-        <XStack justifyContent="space-between" alignItems="baseline" {...knobProps.gap}>
-          {label ? (
-            <Text {...knobProps.body} flex={1} numberOfLines={1}>
+    <MeterRoot
+      width="100%"
+      {...knobProps.gap}
+      {...props}>
+      {hasText(label) || valueNode ? (
+        <XStack
+          justifyContent="space-between"
+          alignItems="baseline"
+          {...knobProps.gap}>
+          {hasText(label) ? (
+            <Text
+              {...knobProps.body}
+              flex={1}
+              numberOfLines={1}>
               {label}
             </Text>
           ) : (
@@ -312,4 +456,4 @@ export function Meter({
       {segmentedMeter}
     </MeterRoot>
   );
-}
+};

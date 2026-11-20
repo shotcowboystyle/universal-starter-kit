@@ -1,6 +1,6 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
+
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
@@ -29,13 +29,13 @@ describe('Tooltip size vs space recipes', () => {
     expect(resolveTooltipSizeRecipe('small').maxWidth).toBe(tooltipSizeRecipes.small.maxWidth);
     expect(resolveTooltipSizeRecipe('large').maxWidth).toBe(tooltipSizeRecipes.large.maxWidth);
     expect(resolveTooltipSizeRecipe('small').maxWidth).not.toBe(resolveTooltipSizeRecipe('large').maxWidth);
-    expect(resolveTooltipPadRecipe('medium')).toEqual(tooltipPadRecipes.medium);
+    expect(resolveTooltipPadRecipe('medium')).toStrictEqual(tooltipPadRecipes.medium);
   });
 
   it('space steps pad and does not change max-width', () => {
-    expect(resolveTooltipPadRecipe('small')).toEqual(tooltipPadRecipes.small);
-    expect(resolveTooltipPadRecipe('large')).toEqual(tooltipPadRecipes.large);
-    expect(resolveTooltipPadRecipe('small')).not.toEqual(resolveTooltipPadRecipe('large'));
+    expect(resolveTooltipPadRecipe('small')).toStrictEqual(tooltipPadRecipes.small);
+    expect(resolveTooltipPadRecipe('large')).toStrictEqual(tooltipPadRecipes.large);
+    expect(resolveTooltipPadRecipe('small')).not.toStrictEqual(resolveTooltipPadRecipe('large'));
     expect(resolveTooltipSizeRecipe('medium').maxWidth).toBe(tooltipSizeRecipes.medium.maxWidth);
   });
 
@@ -53,13 +53,13 @@ describe('Tooltip skip delay (Radix / Spectrum cooldown)', () => {
   });
 
   it('uses the warmup delay until a tooltip has just closed', () => {
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000)).toBe(TOOLTIP_DEFAULT_DELAY_MS);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000)).toBe(TOOLTIP_DEFAULT_DELAY_MS);
   });
 
   it('skips the delay inside the cooldown window', () => {
-    noteTooltipClosed(1_000);
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000 + 10)).toBe(0);
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000 + TOOLTIP_SKIP_DELAY_MS + 1)).toBe(
+    noteTooltipClosed(1000);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000 + 10)).toBe(0);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000 + TOOLTIP_SKIP_DELAY_MS + 1)).toBe(
       TOOLTIP_DEFAULT_DELAY_MS,
     );
   });
@@ -78,7 +78,9 @@ describe('Tooltip interaction', () => {
 
   it('does not wrap the trigger when disabled', () => {
     const { container } = renderWithProviders(
-      <Tooltip content="Nope" disabled>
+      <Tooltip
+        content="Nope"
+        disabled>
         <Button>Idle</Button>
       </Tooltip>,
     );
@@ -87,9 +89,12 @@ describe('Tooltip interaction', () => {
   });
 
   it('Escape closes a controlled open tooltip without moving focus into it', () => {
-    const onOpenChange = vi.fn();
+    const onOpenChange = vi.fn<(open: boolean) => void>();
     renderWithProviders(
-      <Tooltip content="Hint" open onOpenChange={onOpenChange}>
+      <Tooltip
+        content="Hint"
+        open
+        onOpenChange={onOpenChange}>
         <Button>Edit</Button>
       </Tooltip>,
     );
@@ -105,39 +110,39 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     { borderWidth: 'large', elevation: 'large', animation: 'slow' },
   ] as const;
 
-  async function measure(stop: (typeof stops)[number]) {
+  const measure = async (stop: (typeof stops)[number]) => {
     const result = renderWithProviders(
       <Preset overrides={stop}>
-        <Tooltip content="Hint" open>
+        <Tooltip
+          content="Hint"
+          open>
           <Button>Edit</Button>
         </Tooltip>
       </Preset>,
     );
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
     });
     const content = document.querySelector<HTMLElement>("[data-tooltip='content']");
-    const classes = content?.className.split(/\s+/) ?? [];
+    const classes = content?.className.split(/\s+/u) ?? [];
     const measured = {
       mounted: content !== null,
       border: classes.find((c) => c.startsWith('_btw-')),
-      shadow: classes.find((c) => c.startsWith('_bxsh-'))?.match(/^_bxsh-\d+px\d+px\d+px/)?.[0],
-      transition: content?.style.transition.match(/^all \d+ms/)?.[0],
+      shadow: classes.find((c) => c.startsWith('_bxsh-'))?.match(/^_bxsh-\d+px\d+px\d+px/u)?.[0],
+      transition: content?.style.transition.match(/^all \d+ms/u)?.[0],
     };
     result.unmount();
     return measured;
-  }
+  };
 
   it('follows each stop on the mounted bubble, and none carries no border, shadow or motion', async () => {
     const none = await measure(stops[0]);
     const small = await measure(stops[1]);
     const large = await measure(stops[2]);
-    expect(none).toEqual({
-      mounted: true,
-      border: '_btw-0px',
-      shadow: undefined,
-      transition: undefined,
-    });
+    expect(none.mounted).toBe(true);
+    expect(none.border).toBe('_btw-0px');
+    expect(none.shadow).toBeUndefined();
+    expect(none.transition).toBeUndefined();
     expect(small).toMatchObject({
       mounted: true,
       border: '_btw-0--5px',
@@ -145,8 +150,8 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     });
     // Overlay large is the ladder's own $5 dialog stop, not the control $4.
     expect(large).toMatchObject({ mounted: true, border: '_btw-2px', shadow: '_bxsh-0px12px24px' });
-    expect(small.transition).toMatch(/^all \d+ms$/);
-    expect(large.transition).toMatch(/^all \d+ms$/);
+    expect(small.transition).toMatch(/^all \d+ms$/u);
+    expect(large.transition).toMatch(/^all \d+ms$/u);
     expect(large.transition).not.toBe(small.transition);
   });
 });
@@ -161,7 +166,7 @@ describe('Tooltip native long-press open path', () => {
   });
 
   it('opens after the ~500ms press-in delay and closes on press-out', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen, TOOLTIP_NATIVE_LONG_PRESS_MS);
     press.pressIn();
     vi.advanceTimersByTime(TOOLTIP_NATIVE_LONG_PRESS_MS - 1);
@@ -174,18 +179,17 @@ describe('Tooltip native long-press open path', () => {
   });
 
   it('cancels a pending press-in when the finger lifts early', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen);
     press.pressIn();
     press.pressOut();
     vi.advanceTimersByTime(TOOLTIP_NATIVE_LONG_PRESS_MS);
-    expect(setOpen).toHaveBeenCalledTimes(1);
-    expect(setOpen).toHaveBeenCalledWith(false);
+    expect(setOpen).toHaveBeenCalledExactlyOnceWith(false);
     press.dispose();
   });
 
   it('opens on long-press and closes on tap outside', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen);
     press.longPress();
     expect(setOpen).toHaveBeenCalledWith(true);

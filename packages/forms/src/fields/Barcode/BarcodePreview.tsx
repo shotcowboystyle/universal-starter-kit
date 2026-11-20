@@ -33,7 +33,7 @@ import { t } from '../../shared/t';
 
 import { encodeCode128B } from './code128';
 import { QR_QUIET_ZONE_MODULES, encodeQr, qrRowRuns } from './qr';
-import { resolveNativeBarcodeType } from './scannerTypes';
+import { resolveNativeBarcodeType } from './scanner-types';
 
 export type BarcodePreviewSymbology = 'qr' | 'code128';
 
@@ -43,9 +43,9 @@ export type BarcodePreviewSymbology = 'qr' | 'code128';
  * draws, the scanner resolves back to the same format id). Absent or unknown
  * tokens keep the historical Code 128 strip.
  */
-export function barcodePreviewSymbology(format?: string): BarcodePreviewSymbology {
-  return resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helper kept beside the component whose symbology it decides; shared by the field and tests
+export const barcodePreviewSymbology = (format?: string): BarcodePreviewSymbology =>
+  resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
 
 export interface BarcodePreviewProps {
   value?: string;
@@ -77,23 +77,105 @@ export interface BarcodePreviewProps {
 
 /** Mono value text — both the honest fallback for
  * unencodable values and the optional human-readable line under the symbol. */
-function MonoValue({ value }: { value: string }) {
-  return (
-    <Text fontFamily="$mono" fontSize="$2" numberOfLines={1} color="$color" flexShrink={1}>
-      {value}
-    </Text>
-  );
-}
+const MonoValue = ({ value }: { value: string }) => (
+  <Text
+    fontFamily="$mono"
+    fontSize="$2"
+    numberOfLines={1}
+    color="$color"
+    flexShrink={1}>
+    {value}
+  </Text>
+);
 
-export function BarcodePreview({
+const QrPreview = ({
+  value,
+  height,
+  moduleWidth,
+  showText,
+  textFallback,
+}: {
+  value: string;
+  height: number;
+  moduleWidth: number;
+  showText: boolean;
+  textFallback: boolean;
+}) => {
+  const matrix = encodeQr(value);
+  if (!matrix) {
+    return textFallback ? <MonoValue value={value} /> : null;
+  }
+  // A module must land on a WHOLE pixel. A fractional module width rounds to
+  // different widths across the grid, so a decoder cannot resample the symbol —
+  // measured on the media-11 board at DPR 2: the 33px square (1.000 px/module)
+  // decoded and the 44px one (1.333 px/module) did not, in either scheme. So
+  // the module is the largest whole pixel that fits, capped by `moduleWidth`
+  // and by the host's `height` bound (the square never exceeds its
+  // host, and the bound is a ceiling, never a target).
+  const totalModules = matrix.size + 2 * QR_QUIET_ZONE_MODULES;
+  const cell = Math.floor(Math.min(moduleWidth, height / totalModules));
+  // Under one whole pixel there is no readable symbol to draw at all. Fall
+  // back to the value as text, the same honest contract the over-capacity and
+  // non-ASCII cases have: a symbol no reader can resample is decoration, and
+  // decoration that looks like data is the one thing this component refuses to
+  // paint. This is what a `compact` bound (24) or a table-row bound does to
+  // anything past a short SKU.
+  if (cell < 1) {
+    return textFallback ? <MonoValue value={value} /> : null;
+  }
+  const edge = cell * totalModules;
+  const quietZone = cell * QR_QUIET_ZONE_MODULES;
+  const rows = qrRowRuns(matrix);
+  return (
+    <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a View-drawn symbol: the module Views cannot be children of an <img>
+      role="img"
+      aria-label={t('QR code: {{value}}', { value })}
+      testID="barcode-preview"
+      flexDirection="column"
+      alignItems="center"
+      maxWidth="100%"
+      minWidth={0}
+      flexShrink={1}
+      overflow="hidden">
+      <Theme name="light">
+        <YStack
+          testID="barcode-preview-qr"
+          width={edge}
+          height={edge}
+          padding={quietZone}
+          backgroundColor="$background"
+          aria-hidden>
+          {rows.map((runs, rowIndex) => (
+            <XStack
+              key={rowIndex}
+              height={cell}>
+              {runs.map((run, runIndex) => (
+                <View
+                  key={runIndex}
+                  width={run.modules * cell}
+                  height="100%"
+                  backgroundColor={run.dark ? '$color' : 'transparent'}
+                />
+              ))}
+            </XStack>
+          ))}
+        </YStack>
+      </Theme>
+      {showText && <MonoValue value={value} />}
+    </View>
+  );
+};
+
+export const BarcodePreview = ({
   value,
   height = 18,
   moduleWidth = 1,
   showText = false,
   format,
   textFallback = true,
-}: BarcodePreviewProps) {
-  if (!value) {
+}: BarcodePreviewProps) => {
+  if (value === undefined || value === '') {
     return null;
   }
   if (barcodePreviewSymbology(format) === 'qr') {
@@ -114,6 +196,7 @@ export function BarcodePreview({
   const quietZone = moduleWidth * 10;
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a View-drawn symbol: the run Views cannot be children of an <img>
       role="img"
       aria-label={t('Barcode: {{value}}', { value })}
       testID="barcode-preview"
@@ -145,80 +228,4 @@ export function BarcodePreview({
       {showText && <MonoValue value={value} />}
     </View>
   );
-}
-
-function QrPreview({
-  value,
-  height,
-  moduleWidth,
-  showText,
-  textFallback,
-}: {
-  value: string;
-  height: number;
-  moduleWidth: number;
-  showText: boolean;
-  textFallback: boolean;
-}) {
-  const matrix = encodeQr(value);
-  if (!matrix) {
-    return textFallback ? <MonoValue value={value} /> : null;
-  }
-  // A module must land on a WHOLE pixel. A fractional module width rounds to
-  // different widths across the grid, so a decoder cannot resample the symbol —
-  // measured on the media-11 board at DPR 2: the 33px square (1.000 px/module)
-  // decoded and the 44px one (1.333 px/module) did not, in either scheme. So
-  // the module is the largest whole pixel that fits, capped by `moduleWidth`
-  // and by the host's `height` bound (the square never exceeds its
-  // host, and the bound is a ceiling, never a target).
-  const totalModules = matrix.size + 2 * QR_QUIET_ZONE_MODULES;
-  const cell = Math.floor(Math.min(moduleWidth, height / totalModules));
-  // Under one whole pixel there is no readable symbol to draw at all. Fall
-  // back to the value as text, the same honest contract the over-capacity and
-  // non-ASCII cases have: a symbol no reader can resample is decoration, and
-  // decoration that looks like data is the one thing this component refuses to
-  // paint. This is what a `compact` bound (24) or a table-row bound does to
-  // anything past a short SKU.
-  if (cell < 1) {
-    return textFallback ? <MonoValue value={value} /> : null;
-  }
-  const edge = cell * totalModules;
-  const quietZone = cell * QR_QUIET_ZONE_MODULES;
-  const rows = qrRowRuns(matrix);
-  return (
-    <View
-      role="img"
-      aria-label={t('QR code: {{value}}', { value })}
-      testID="barcode-preview"
-      flexDirection="column"
-      alignItems="center"
-      maxWidth="100%"
-      minWidth={0}
-      flexShrink={1}
-      overflow="hidden">
-      <Theme name="light">
-        <YStack
-          testID="barcode-preview-qr"
-          width={edge}
-          height={edge}
-          padding={quietZone}
-          backgroundColor="$background"
-          aria-hidden>
-          {rows.map((runs, rowIndex) => (
-            <XStack key={rowIndex} height={cell}>
-              {runs.map((run, runIndex) => (
-                <View
-                  key={runIndex}
-                  width={run.modules * cell}
-                  height="100%"
-                  backgroundColor={run.dark ? '$color' : 'transparent'}
-                />
-              ))}
-            </XStack>
-          ))}
-        </YStack>
-      </Theme>
-      {showText && <MonoValue value={value} />}
-    </View>
-  );
-}
+};

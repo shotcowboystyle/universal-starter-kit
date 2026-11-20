@@ -10,10 +10,70 @@ import { Form } from '../../Form';
 
 import { Barcode } from './index';
 
+const PRODUCT_LABEL = 'Product Barcode';
+
 const iconProps = {
   barcodeIcon: <BarcodeIcon size={18} />,
   scanIcon: <CameraIcon size={18} />,
   stopIcon: <XIcon size={18} />,
+};
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      barcode: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Barcode
+          label="Item Barcode"
+          name="barcode"
+          helperText="Scan or type the barcode"
+          enableScan
+          {...iconProps}
+        />
+        <Button action="submit">Look Up</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Barcode
+        label="Scan Product"
+        helperText={value ? `Scanned: ${value}` : 'Enter a barcode'}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+        {...iconProps}
+      />
+      <Barcode
+        label="Without Camera"
+        enableScan={false}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+        {...iconProps}
+      />
+    </YStack>
+  );
 };
 
 const meta: Meta<typeof Barcode> = {
@@ -44,34 +104,7 @@ type Story = StoryObj<typeof Barcode>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          barcode: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form} maxWidth={400}>
-          <YStack gap="$4">
-            <Barcode
-              label="Item Barcode"
-              name="barcode"
-              helperText="Scan or type the barcode"
-              enableScan
-              {...iconProps}
-            />
-            <Button action="submit">Look Up</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -80,7 +113,12 @@ export const Standalone: Story = {
     helperText: 'Scan or enter barcode',
     enableScan: true,
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /**
@@ -98,96 +136,109 @@ export const Bare: Story = {
 
 export const Basic: Story = {
   args: {
-    label: 'Product Barcode',
+    label: PRODUCT_LABEL,
     helperText: 'Enter or scan a barcode',
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const Disabled: Story = {
   args: {
-    label: 'Product Barcode',
+    label: PRODUCT_LABEL,
     helperText: 'This field is disabled',
     disabled: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const WithError: Story = {
   args: {
-    label: 'Product Barcode',
+    label: PRODUCT_LABEL,
     helperText: 'Enter or scan a barcode',
     required: true,
     error: 'Barcode is required',
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <Text fontWeight="bold">Size $2</Text>
-      <Barcode label="Small" size="$2" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Small"
+        size="$2"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Barcode label="Medium" size="$3" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Medium"
+        size="$3"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Barcode label="Large" size="$4" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Large"
+        size="$4"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack gap="$4" maxWidth={400}>
-          <Barcode
-            label="Scan Product"
-            helperText={value ? `Scanned: ${value}` : 'Enter a barcode'}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-            {...iconProps}
-          />
-          <Barcode
-            label="Without Camera"
-            enableScan={false}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-            {...iconProps}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
 export const SkeletonState: Story = {
-  args: { label: 'Product Barcode', skeleton: true },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  args: { label: PRODUCT_LABEL, skeleton: true },
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /** Encoded value + trailing scan inside one composite (preview under the box). */
 export const Filled: Story = {
   args: {
-    label: 'Product Barcode',
+    label: PRODUCT_LABEL,
     helperText: 'Scan or enter barcode',
     value: 'SKU-001234',
     enableScan: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /**
@@ -200,10 +251,15 @@ export const FilledQr: Story = {
   args: {
     label: 'QR Code',
     helperText: 'Scan or enter a QR value',
-    value: 'https://multiplatform.one',
+    value: 'https://universal-starter-kit',
     enableScan: true,
     formats: ['qr'],
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };

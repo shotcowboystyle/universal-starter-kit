@@ -10,34 +10,75 @@ import { RadioGroup } from '../fields/RadioGroup';
 import { Switch } from '../fields/Switch';
 import { Form } from '../Form';
 
-import { clientKnownIdentity, ContextualSaveBar, type NavigationBlocker } from './index';
+import { clientKnownIdentity, ContextualSaveBar } from './index';
+import type { ContextualSaveBarProps, NavigationBlocker } from './index';
 
-function savebar(root: ParentNode = document.body): HTMLElement | null {
-  return root.querySelector('[data-mp-contextual-savebar]');
-}
+const savebar = (root: ParentNode = document.body): HTMLElement | null =>
+  root.querySelector('[data-mp-contextual-savebar]');
 
-function barButton(label: string, root: ParentNode = document.body): HTMLElement {
-  const buttons = Array.from(root.querySelectorAll('[role="button"], button'));
+const barButton = (label: string, root: ParentNode = document.body): HTMLElement => {
+  const buttons = [...root.querySelectorAll('[role="button"], button')];
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
-    throw new Error(`No button labelled "${label}"`);
+    throw new Error(`No button labeled "${label}"`);
   }
   return match as HTMLElement;
-}
+};
 
-function alertdialog(): HTMLElement | null {
-  return document.body.querySelector('[role="alertdialog"]');
-}
+const alertdialog = (): HTMLElement | null => document.body.querySelector('[role="alertdialog"]');
 
-function typeIn(input: Element, value: string) {
+const typeIn = (input: Element, value: string) => {
   fireEvent.change(input, { target: { value } });
-}
+};
 
-describe('ContextualSaveBar', () => {
+const RouteLeaveHarness = () => {
+  const [leaveArmed, setLeaveArmed] = useState(false);
+  const useBlocker = (shouldBlock: boolean): NavigationBlocker => {
+    if (leaveArmed && shouldBlock) {
+      return {
+        state: 'blocked',
+        proceed: () => {
+          setLeaveArmed(false);
+        },
+        reset: () => {
+          setLeaveArmed(false);
+        },
+      };
+    }
+    return { state: 'unblocked', proceed: () => {}, reset: () => {} };
+  };
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="leave"
+        onClick={() => {
+          setLeaveArmed(true);
+        }}>
+        Leave
+      </button>
+      <Form
+        saveBar={{ useBlocker }}
+        formOptions={{ defaultValues: { name: 'svc' } }}>
+        <Input
+          name="name"
+          label="Service name"
+        />
+      </Form>
+    </>
+  );
+};
+
+describe(ContextualSaveBar, () => {
   it('does not render when the form is clean', () => {
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { name: 'svc' } }}>
-        <Input name="name" label="Service name" />
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { name: 'svc' } }}>
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>,
     );
     expect(savebar(result.container)).toBeNull();
@@ -46,8 +87,13 @@ describe('ContextualSaveBar', () => {
 
   it('appears from TanStack dirty state when a text field is edited', async () => {
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { name: 'svc' } }}>
-        <Input name="name" label="Service name" />
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { name: 'svc' } }}>
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>,
     );
     const input = result.container.querySelector('input');
@@ -63,8 +109,13 @@ describe('ContextualSaveBar', () => {
 
   it('appears when a checkbox is edited (declarative)', async () => {
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { agree: false } }}>
-        <Checkbox name="agree" label="Notify on deploy" />
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { agree: false } }}>
+        <Checkbox
+          name="agree"
+          label="Notify on deploy"
+        />
       </Form>,
     );
     const box = result.getCheckbox();
@@ -79,7 +130,9 @@ describe('ContextualSaveBar', () => {
 
   it('appears when a radio is edited (declarative)', async () => {
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { env: 'prod' } }}>
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { env: 'prod' } }}>
         <RadioGroup
           name="env"
           options={[
@@ -102,11 +155,19 @@ describe('ContextualSaveBar', () => {
   });
 
   it('does not appear when a Switch auto-commits', async () => {
-    const onAutoCommit = vi.fn();
+    const onAutoCommit = vi.fn<NonNullable<ContextualSaveBarProps['onAutoCommit']>>();
     const result = renderWithProviders(
-      <Form saveBar={{ onAutoCommit }} formOptions={{ defaultValues: { live: false, name: 'svc' } }}>
-        <Switch name="live" label="Live" />
-        <Input name="name" label="Service name" />
+      <Form
+        saveBar={{ onAutoCommit }}
+        formOptions={{ defaultValues: { live: false, name: 'svc' } }}>
+        <Switch
+          name="live"
+          label="Live"
+        />
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>,
     );
     const sw = result.getSwitch();
@@ -130,7 +191,10 @@ describe('ContextualSaveBar', () => {
           onSubmit={async () => {
             throw new Error(refusal);
           }}>
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
         </Form>,
       );
       await act(async () => {
@@ -157,7 +221,10 @@ describe('ContextualSaveBar', () => {
             onSubmit={async () => {
               throw new Error(refusal);
             }}>
-            <Input name="name" label="Service name" />
+            <Input
+              name="name"
+              label="Service name"
+            />
           </Form>
         </div>,
       );
@@ -182,10 +249,16 @@ describe('ContextualSaveBar', () => {
   );
 
   it('clears after Save and after Discard confirm', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<() => void>();
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { name: 'svc' } }} onSubmit={onSubmit}>
-        <Input name="name" label="Service name" />
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { name: 'svc' } }}
+        onSubmit={onSubmit}>
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>,
     );
     const input = result.container.querySelector('input')!;
@@ -245,13 +318,18 @@ describe('ContextualSaveBar', () => {
   });
 
   it('never disables Discard while Save is in flight', async () => {
-    let finish!: () => void;
-    const hang = new Promise<void>((resolve) => {
-      finish = resolve;
-    });
+    const { promise: hang, resolve: finish } = Promise.withResolvers<null>();
     const result = renderWithProviders(
-      <Form saveBar formOptions={{ defaultValues: { name: 'svc' } }} onSubmit={() => hang}>
-        <Input name="name" label="Service name" />
+      <Form
+        saveBar
+        formOptions={{ defaultValues: { name: 'svc' } }}
+        onSubmit={async () => {
+          await hang;
+        }}>
+        <Input
+          name="name"
+          label="Service name"
+        />
       </Form>,
     );
     await act(async () => {
@@ -270,45 +348,12 @@ describe('ContextualSaveBar', () => {
     const discard = barButton('Discard');
     expect(discard.getAttribute('disabled')).toBeNull();
     expect(discard.getAttribute('aria-disabled')).toBeNull();
-    expect(discard.getAttribute('data-disabled')).toBeNull();
-    finish();
+    expect(discard.dataset.disabled).toBeUndefined();
+    finish(null);
   });
 
   it('fires the route-leave guard and Keep editing dismisses it', async () => {
-    function Harness() {
-      const [leaveArmed, setLeaveArmed] = useState(false);
-      const useBlocker = (shouldBlock: boolean): NavigationBlocker => {
-        if (leaveArmed && shouldBlock) {
-          return {
-            state: 'blocked',
-            proceed: () => {
-              setLeaveArmed(false);
-            },
-            reset: () => {
-              setLeaveArmed(false);
-            },
-          };
-        }
-        return { state: 'unblocked', proceed: () => {}, reset: () => {} };
-      };
-      return (
-        <>
-          <button
-            type="button"
-            data-testid="leave"
-            onClick={() => {
-              setLeaveArmed(true);
-            }}>
-            Leave
-          </button>
-          <Form saveBar={{ useBlocker }} formOptions={{ defaultValues: { name: 'svc' } }}>
-            <Input name="name" label="Service name" />
-          </Form>
-        </>
-      );
-    }
-
-    const result = renderWithProviders(<Harness />);
+    const result = renderWithProviders(<RouteLeaveHarness />);
     await act(async () => {
       typeIn(result.container.querySelector('input')!, 'svc-billing');
     });
@@ -335,33 +380,42 @@ describe('ContextualSaveBar', () => {
   it('Discard on the bar ignores a disabled request', () => {
     renderWithProviders(
       <Form formOptions={{ defaultValues: { name: 'x' } }}>
-        <Input name="name" label="Name" />
-        <ContextualSaveBar forceVisible discardDisabled />
+        <Input
+          name="name"
+          label="Name"
+        />
+        <ContextualSaveBar
+          forceVisible
+          discardDisabled
+        />
       </Form>,
     );
     const discard = barButton('Discard');
     expect(discard.getAttribute('disabled')).toBeNull();
     expect(discard.getAttribute('aria-disabled')).toBeNull();
-    expect(discard.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
+    expect(discard.dataset.mpCancelDisabledIgnored).toBe('true');
   });
 
   it('CONTAINER-CAP on the top pair only; bottom pair pinned 0 (bottom-docked sheet)', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full', space: 'medium' }}>
         <Form formOptions={{ defaultValues: { name: 'x' } }}>
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
           <ContextualSaveBar forceVisible />
         </Form>
       </Preset>,
     );
     const bar = savebar(result.container);
     expect(bar).toBeTruthy();
-    expect(bar?.getAttribute('data-mp-savebar-radius-class')).toBe('CONTAINER-CAP');
-    expect(bar?.getAttribute('data-mp-savebar-dock')).toBe('bottom');
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('18');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
-    const cls = String(bar?.className ?? '');
-    expect(cls).not.toMatch(/t-radius-12/);
+    expect(bar?.dataset.mpSavebarRadiusClass).toBe('CONTAINER-CAP');
+    expect(bar?.dataset.mpSavebarDock).toBe('bottom');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('18');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
+    const cls = bar?.className ?? '';
+    expect(cls).not.toMatch(/t-radius-12/u);
     const cs = bar ? getComputedStyle(bar) : null;
     expect(cs?.borderBottomLeftRadius === '0px' || cs?.borderBottomLeftRadius === '0').toBe(true);
     expect(cs?.borderBottomRightRadius === '0px' || cs?.borderBottomRightRadius === '0').toBe(true);
@@ -371,39 +425,45 @@ describe('ContextualSaveBar', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'large', space: 'small' }}>
         <Form formOptions={{ defaultValues: { name: 'x' } }}>
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
           <ContextualSaveBar forceVisible />
         </Form>
       </Preset>,
     );
     const bar = savebar(result.container);
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('13');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('13');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
   });
 
   it('none squares the top pair; bottoms stay 0', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
         <Form formOptions={{ defaultValues: { name: 'x' } }}>
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
           <ContextualSaveBar forceVisible />
         </Form>
       </Preset>,
     );
     const bar = savebar(result.container);
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('$0');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('$0');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
   });
 });
 
-describe('clientKnownIdentity', () => {
+describe(clientKnownIdentity, () => {
   it('returns the client-owned identifier', () => {
     expect(clientKnownIdentity('svc-billing-api')).toBe('svc-billing-api');
   });
 
   it('refuses a missing or envelope-dropped identity', () => {
-    expect(() => clientKnownIdentity(undefined)).toThrow(/client-known/i);
-    expect(() => clientKnownIdentity('')).toThrow(/client-known/i);
-    expect(() => clientKnownIdentity('undefined')).toThrow(/client-known/i);
+    expect(() => clientKnownIdentity()).toThrow(/client-known/iu);
+    expect(() => clientKnownIdentity('')).toThrow(/client-known/iu);
+    expect(() => clientKnownIdentity('undefined')).toThrow(/client-known/iu);
   });
 });

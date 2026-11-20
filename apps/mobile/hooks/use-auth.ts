@@ -1,33 +1,33 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 
-import { authService } from "@/lib/auth/auth-service";
-import { useAuthStore } from "@/stores/auth";
+import { authService } from '@/lib/auth/auth-service';
+import { useAuthStore } from '@/stores/auth';
 
 const AUTH_KEYS = {
-  session: ["auth", "session"] as const
+  session: ['auth', 'session'] as const,
 };
 
-export function useAuth() {
+export const useAuth = () => {
   const queryClient = useQueryClient();
   const { setSession, setUser, clear } = useAuthStore();
 
   const sessionQuery = useQuery({
     queryKey: AUTH_KEYS.session,
-    queryFn: async () => authService.getSession(),
+    queryFn: async () => await authService.getSession(),
     staleTime: 5 * 60 * 1000,
-    retry: false
+    retry: false,
   });
 
   const loginMutation = useMutation({
-    mutationFn: async (email: string) => authService.login(email),
+    mutationFn: async (email: string) => await authService.login(email),
     onSuccess: async (data) => {
       const user = data.user ?? (await authService.getProfile());
       setSession({ user, accessToken: data.access_token });
       setUser(user);
-      queryClient.invalidateQueries({ queryKey: AUTH_KEYS.session });
-      router.replace("/(tabs)");
-    }
+      void queryClient.invalidateQueries({ queryKey: AUTH_KEYS.session });
+      router.replace('/(tabs)');
+    },
   });
 
   const logout = async () => {
@@ -44,6 +44,6 @@ export function useAuth() {
     error: loginMutation.error?.message ?? sessionQuery.error?.message ?? null,
     login: loginMutation.mutate,
     loginMutation,
-    logout
+    logout,
   };
-}
+};

@@ -1,32 +1,28 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { screen } from '@testing-library/react';
 import React from 'react';
-import { expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import SignInView from '@/components/auth/SignInView';
 
 // Mock next-intl's useTranslations
-vi.mock('next-intl', () => ({
-  useTranslations: vi.fn(() => (key: string) => {
-    if (key === 'title') {
-      return 'Sign In';
-    }
-    if (key === 'description') {
-      return 'Welcome Back';
-    }
-    if (key === 'formHint') {
-      return 'Enter your email to sign in';
-    }
-    return key;
-  }),
-}));
+vi.mock(import('next-intl'), async () => {
+  const { createUseTranslations } = await import('../../../helpers/key-translator');
+  const signInLabels = new Map([
+    ['title', 'Sign In'],
+    ['description', 'Welcome Back'],
+    ['formHint', 'Enter your email to sign in'],
+  ]);
+  const labelFor = (key: string): string => signInLabels.get(key) ?? key;
+  return { useTranslations: createUseTranslations(labelFor) };
+});
 
 // Mock the UserAuthForm component
-vi.mock('@/components/auth/UserAuthForm', () => ({
-  default: vi.fn(() => <div data-testid="user-auth-form">Mock UserAuthForm</div>),
+vi.mock(import('@/components/auth/UserAuthForm'), () => ({
+  default: vi.fn<() => React.JSX.Element>(() => <div data-testid="user-auth-form">Mock UserAuthForm</div>),
 }));
 
-describe('SignInView', () => {
+describe(SignInView, () => {
   it('should render the sign-in view with title and form', () => {
     renderWithProviders(<SignInView />);
 

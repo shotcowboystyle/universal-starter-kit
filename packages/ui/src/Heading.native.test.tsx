@@ -34,37 +34,36 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { H1, H3, Heading } from './Heading';
 
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
   isNative: true,
 }));
 
-afterEach(cleanup);
-
 const TITLE = 'Workspace Settings';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
-function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] {
+const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
-  if (expectedTag) {
+  if (expectedTag !== undefined && expectedTag !== '') {
     // The text node IS the heading element — not a frame around it.
     expect(textNode.tagName).toBe(expectedTag);
   }
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Heading — NATIVE environment (isWeb false)', () => {
+  afterEach(cleanup);
+
   it('really is running with the native platform flags', async () => {
     const platform = await import('@repo/platform');
     expect(platform.isWeb).toBe(false);
@@ -87,9 +86,9 @@ describe('house Heading — NATIVE environment (isWeb false)', () => {
     const explicit400 = renderHeadingClasses(<Heading fontWeight="400">{TITLE}</Heading>, ['_fow-']);
     const explicit700 = renderHeadingClasses(<Heading fontWeight="700">{TITLE}</Heading>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('H1 changes size on a pageTitleScale flip, resolved through the page-title table', () => {
@@ -110,9 +109,9 @@ describe('house Heading — NATIVE environment (isWeb false)', () => {
     const explicit8 = renderHeadingClasses(<H1 size="$8">{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
     const explicit10 = renderHeadingClasses(<H1 size="$10">{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
     expect(moderate).not.toHaveLength(0);
-    expect(moderate).not.toEqual(display);
-    expect(moderate).toEqual(explicit8);
-    expect(display).toEqual(explicit10);
+    expect(moderate).not.toStrictEqual(display);
+    expect(moderate).toStrictEqual(explicit8);
+    expect(display).toStrictEqual(explicit10);
   });
 
   it('H1 carries the fontWeight flip too — pageTitle does not swallow it', () => {
@@ -131,7 +130,7 @@ describe('house Heading — NATIVE environment (isWeb false)', () => {
       'H1',
     );
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
+    expect(regular).not.toStrictEqual(bold);
   });
 
   it('H3 stays mono 400 — subordinate headings ignore the heading knobs', () => {
@@ -144,6 +143,6 @@ describe('house Heading — NATIVE environment (isWeb false)', () => {
       'H3',
     );
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(underBoldSans);
+    expect(byDefault).toStrictEqual(underBoldSans);
   });
 });

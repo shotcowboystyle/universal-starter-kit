@@ -3,21 +3,22 @@ import { View, isWeb } from 'tamagui';
 
 import { t } from '../shared/t';
 
+import { spinnerSizePx, spinnerSizeToken } from './spinner-size';
+import type { SpinnerProps } from './spinner-size';
 import { SpinnerGlyph, useSpinnerStroke } from './SpinnerGlyph';
-import { spinnerSizePx, spinnerSizeToken, type SpinnerProps } from './spinnerSize';
 
-export type { SpinnerProps, SpinnerSize } from './spinnerSize';
+export type { SpinnerProps, SpinnerSize } from './spinner-size';
 
 const MOTION_STYLE_ID = 'mp1-spinner-motion';
 // A-CONTINUOUS period. Gated on `knobProps.transition`; not sourced
 // from A-STATE durations (quick=100ms would strobe).
 const SPIN_PERIOD = '0.7s';
 
-function ensureMotionStyles() {
+const ensureMotionStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(MOTION_STYLE_ID)) {
+  if (document.querySelector(`#${MOTION_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -28,23 +29,25 @@ function ensureMotionStyles() {
     '.mp1-spinner-static, .mp1-spinner-static * { animation: none !important; }',
     '@media (prefers-reduced-motion: reduce) { .mp1-spinner, .mp1-spinner * { animation: none !important; } }',
   ].join('\n');
-  document.head.appendChild(style);
-}
+  document.head.append(style);
+};
 
 /** Form-styled Spinner. Size follows the shared size-token scale; spin gates on transition. */
-export function Spinner({ size, color, ...props }: SpinnerProps) {
+export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
   const { knobProps } = useResolvedKnobs();
   const token = spinnerSizeToken(size, knobProps.sizeToken);
   const px = spinnerSizePx(token);
   const stroke = useSpinnerStroke(color);
-  const animationsOff = !knobProps.transition;
+  const animationsOff = knobProps.transition == null;
   ensureMotionStyles();
+  // SAFETY: className is the only passthrough prop read here and callers only supply strings
   const { className: classNameProp, ...rest } = props as { className?: string };
   const className = ['mp1-spinner', animationsOff ? 'mp1-spinner-static' : '', classNameProp].filter(Boolean).join(' ');
   return (
     <View
       width={px}
       height={px}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View has no <output> mapping
       role="status"
       aria-label={t('Loading')}
       aria-live="polite"
@@ -54,7 +57,10 @@ export function Spinner({ size, color, ...props }: SpinnerProps) {
       data-animation={animationsOff ? 'none' : 'spin'}
       {...(isWeb ? { className } : undefined)}
       {...rest}>
-      <SpinnerGlyph color={stroke} size={px} />
+      <SpinnerGlyph
+        color={stroke}
+        size={px}
+      />
     </View>
   );
-}
+};

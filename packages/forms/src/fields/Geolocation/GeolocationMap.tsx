@@ -3,22 +3,29 @@ import { useCallback, useMemo, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { Text, View, YStack } from 'tamagui';
 
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import { OSM_TILE_SIZE, latLngFromMapClick, tilesForView, zoomFromDelta } from './mapMath';
-import type { GeolocationMapSurfaceProps } from './mapTypes';
+import { OSM_TILE_SIZE, latLngFromMapClick, tilesForView, zoomFromDelta } from './map-math';
+import type { GeolocationMapSurfaceProps } from './map-types';
 
-function tileSrc(zoom: number, x: number, y: number) {
-  if (typeof process !== 'undefined' && process.env.VITEST) {
+/** Tests must not hit the tile server; vitest sets `VITEST`. */
+const isVitestRun = (): boolean =>
+  typeof process !== 'undefined' && process.env.VITEST !== undefined && process.env.VITEST !== '';
+
+/** `color` tints the phosphor pin via currentColor; Tamagui applies it on web Views though the RN-flavored View type omits it. */
+const pinTint = { color: '$red10' } as const;
+
+const tileSrc = (zoom: number, x: number, y: number) => {
+  if (isVitestRun()) {
     return '';
   }
   return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
-}
+};
 
 /**
  * Web map surface — OSM tiles we own the projection of, so click-to-pick
- * (Frappe Desk / Leaflet, Google/Apple compact pickers) can commit through
+ * (like Leaflet or Google/Apple compact pickers) can commit through
  * the field's onChange path. The iframe embed could not report clicks.
  * Native interactive maps live in `GeolocationMap.native.tsx`.
  *
@@ -26,7 +33,7 @@ function tileSrc(zoom: number, x: number, y: number) {
  * geocoding, and the coordinate disclosure live in the parent — nothing
  * here is an input pasted over the tiles.
  */
-export function GeolocationMap({
+export const GeolocationMap = ({
   lat,
   lng,
   delta = 0.02,
@@ -36,10 +43,10 @@ export function GeolocationMap({
   disabled,
   readOnly,
   hasValue = true,
-}: GeolocationMapSurfaceProps) {
+}: GeolocationMapSurfaceProps) => {
   const zoom = zoomFromDelta(delta);
   const [box, setBox] = useState({ width: 0, height: 0 });
-  const interactive = !disabled && !readOnly && typeof onChange === 'function';
+  const interactive = !disabled && !readOnly && onChange !== undefined;
 
   const onLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -85,9 +92,10 @@ export function GeolocationMap({
       backgroundColor="$backgroundHover"
       onLayout={onLayout}
       aria-label={title}>
-      {typeof process !== 'undefined' && process.env.VITEST
+      {isVitestRun()
         ? null
         : tiles.map((tile) => (
+            // oxlint-disable-next-line next/no-img-element, react-doctor/nextjs-no-img-element -- OSM tiles are absolutely positioned by this map surface's own projection; next/image cannot lay them out
             <img
               key={`${zoom}-${tile.tx}-${tile.ty}-${Math.round(tile.left)}-${Math.round(tile.top)}`}
               alt=""
@@ -120,10 +128,11 @@ export function GeolocationMap({
           y={-28}
           pointerEvents="none"
           zIndex={1}
-          // `color` tints the phosphor pin via currentColor; Tamagui applies it
-          // on web Views though the RN-flavored View type omits it.
-          {...({ color: '$red10' } as Record<string, unknown>)}>
-          <MapPinIcon size={28} weight="fill" />
+          {...pinTint}>
+          <MapPinIcon
+            size={28}
+            weight="fill"
+          />
         </View>
       ) : null}
 
@@ -161,4 +170,4 @@ export function GeolocationMap({
       </Text>
     </YStack>
   );
-}
+};

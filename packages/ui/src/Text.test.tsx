@@ -27,37 +27,31 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Anchor, Text } from './Text';
 
-afterEach(cleanup);
-
 const LABEL = 'Measure the text node';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
-  return (
-    String((el as HTMLElement).className || '')
-      .split(' ')
-      .find((c) => c.startsWith('font_')) ?? ''
-  );
-}
+const fontScopeClass = (el: Element): string =>
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
-function renderTextClasses(node: React.ReactElement, prefixes: string[]): string[] {
+const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(LABEL);
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Text — textAccent reaches the text node', () => {
-  it('changes colour on a textAccent flip', () => {
+  afterEach(cleanup);
+
+  it('changes color on a textAccent flip', () => {
     const high = renderTextClasses(
       <Preset overrides={{ textAccent: 'high' }}>
         <Text>{LABEL}</Text>
@@ -72,7 +66,7 @@ describe('house Text — textAccent reaches the text node', () => {
     );
     expect(high).not.toHaveLength(0);
     expect(low).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 
   it('low and medium share the AA legibility floor ($color11)', () => {
@@ -88,7 +82,7 @@ describe('house Text — textAccent reaches the text node', () => {
       </Preset>,
       ['_col-'],
     );
-    expect(low).toEqual(medium);
+    expect(low).toStrictEqual(medium);
   });
 
   it('measures the TEXT NODE, never the frame', () => {
@@ -108,6 +102,8 @@ describe('house Text — textAccent reaches the text node', () => {
 });
 
 describe('house Text — fontWeight and bodyFont reach the text node', () => {
+  afterEach(cleanup);
+
   it('changes weight on a fontWeight flip, pinned to the 400/700 label law', () => {
     const regular = renderTextClasses(
       <Preset overrides={{ fontWeight: 'regular' }}>
@@ -127,9 +123,9 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
     const explicit700 = renderTextClasses(<Text fontWeight="700">{LABEL}</Text>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('changes family on a bodyFont flip (props, not the web-only CSS rescue)', () => {
@@ -161,13 +157,16 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
     // never leak into the assertion.
     const byDefault = renderTextClasses(<Text>{LABEL}</Text>, ['_fos-', '_lh-', '_fow-']);
     const explicit = renderTextClasses(
-      <Text fontSize={14} lineHeight={25} fontWeight="400">
+      <Text
+        fontSize={14}
+        lineHeight={25}
+        fontWeight="400">
         {LABEL}
       </Text>,
       ['_fos-', '_lh-', '_fow-'],
     );
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(explicit);
+    expect(byDefault).toStrictEqual(explicit);
   });
 
   it('explicit consumer props still eject (STD-EJECT-LAST)', () => {
@@ -178,17 +177,19 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
       ['_fow-'],
     );
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
-    expect(ejected).toEqual(explicit400);
+    expect(ejected).toStrictEqual(explicit400);
   });
 });
 
-describe("house Anchor — link chrome is house Text's, in the accent", () => {
-  function AccentProbe({ onInk }: { onInk: (ink: string) => void }) {
-    onInk(useAccentOnSurface());
-    return null;
-  }
+const AccentProbe = ({ onInk }: { onInk: (ink: string) => void }) => {
+  onInk(useAccentOnSurface());
+  return null;
+};
 
-  it("paints the AA-safe accent ink, not tamagui's link colour", () => {
+describe("house Anchor — link chrome is house Text's, in the accent", () => {
+  afterEach(cleanup);
+
+  it("paints the AA-safe accent ink, not tamagui's link color", () => {
     let ink = '';
     const anchor = renderTextClasses(
       <>
@@ -201,14 +202,14 @@ describe("house Anchor — link chrome is house Text's, in the accent", () => {
     const accented = renderTextClasses(<Anchor color={ink as never}>{LABEL}</Anchor>, ['_col-']);
     const body = renderTextClasses(<Text>{LABEL}</Text>, ['_col-']);
     expect(anchor).not.toHaveLength(0);
-    expect(anchor).toEqual(accented);
-    expect(anchor).not.toEqual(body);
+    expect(anchor).toStrictEqual(accented);
+    expect(anchor).not.toStrictEqual(body);
   });
 
-  it('a consumer colour still ejects (STD-EJECT-LAST)', () => {
+  it('a consumer color still ejects (STD-EJECT-LAST)', () => {
     const ejected = renderTextClasses(<Anchor color="$color9">{LABEL}</Anchor>, ['_col-']);
     const explicit = renderTextClasses(<Text color="$color9">{LABEL}</Text>, ['_col-']);
-    expect(ejected).toEqual(explicit);
+    expect(ejected).toStrictEqual(explicit);
   });
 });
 

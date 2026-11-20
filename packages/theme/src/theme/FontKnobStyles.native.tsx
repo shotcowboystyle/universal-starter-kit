@@ -7,18 +7,14 @@
  */
 import type { FontCategory } from './knobs';
 
-export function getConfiguredFontFamily(_category: FontCategory): string | undefined {
-  return undefined;
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- native twin of FontKnobStyles.tsx: it must export the same non-component helpers
+export const getConfiguredFontFamily = (_category: FontCategory): string | undefined => undefined;
 
-export function buildFontKnobCss(
+// oxlint-disable-next-line react-doctor/only-export-components -- native twin of FontKnobStyles.tsx: it must export the same non-component helpers
+export const buildFontKnobCss = (
   _headingFont: FontCategory,
   _bodyFont: FontCategory,
   _resolveFamily?: (category: FontCategory) => string | undefined,
-): string {
-  return '';
-}
+): string => '';
 
-export function FontKnobStyles() {
-  return null;
-}
+export const FontKnobStyles = () => null;

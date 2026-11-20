@@ -1,6 +1,5 @@
+// @vitest-environment jsdom
 /**
- * @vitest-environment jsdom
- *
  * Five primitives the house barrel could not express.
  *
  * Collapsible / LinearGradient / VisuallyHidden / Unspaced are
@@ -11,17 +10,17 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
 import { AlertDialog } from 'tamagui';
-import * as tamagui from 'tamagui';
-import * as tamaguiLinearGradient from 'tamagui/linear-gradient';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { AlertDialogContent, AlertDialogOverlay } from './surfaces';
 
-import * as pkg from './index';
-
-afterEach(cleanup);
+const tamagui = await import('tamagui');
+const tamaguiLinearGradient = await import('tamagui/linear-gradient');
+const pkg = await import('./index');
 
 describe('knob-immune primitives on the house barrel', () => {
+  afterEach(cleanup);
+
   it('isolates the safe Collapsible adapter and preserves other primitives', () => {
     expect(pkg.Collapsible).not.toBe(tamagui.Collapsible);
     expect(pkg.Unspaced).toBe(tamagui.Unspaced);
@@ -31,7 +30,7 @@ describe('knob-immune primitives on the house barrel', () => {
   });
 
   it('exports LinearGradient from the tamagui/linear-gradient subpath (not the main barrel)', () => {
-    expect((tamagui as Record<string, unknown>).LinearGradient).toBeUndefined();
+    expect(new Map<string, unknown>(Object.entries(tamagui)).get('LinearGradient')).toBeUndefined();
     expect(pkg.LinearGradient).toBe(tamaguiLinearGradient.LinearGradient);
   });
 
@@ -67,7 +66,7 @@ describe('knob-immune primitives on the house barrel', () => {
     );
     const node = getByText('Hidden label for assistive technology');
     expect(node).toBeTruthy();
-    expect(node.className).toMatch(/_o-/);
+    expect(node.className).toMatch(/_o-/u);
   });
 
   it('renders Unspaced as a transparent spacing marker', () => {
@@ -81,13 +80,19 @@ describe('knob-immune primitives on the house barrel', () => {
 
   it('renders LinearGradient with theme-token stops', () => {
     const { container } = renderWithProviders(
-      <pkg.LinearGradient width={80} height={40} colors={['$color4', '$background']} />,
+      <pkg.LinearGradient
+        width={80}
+        height={40}
+        colors={['$color4', '$background']}
+      />,
     );
     expect(container.firstChild).toBeTruthy();
   });
 });
 
 describe('house AlertDialog surface', () => {
+  afterEach(cleanup);
+
   it('is not the raw AlertDialog.Content (baked elevate chrome)', () => {
     expect(pkg.AlertDialogContent).toBe(AlertDialogContent);
     expect(pkg.AlertDialogContent).not.toBe(AlertDialog.Content);
@@ -100,7 +105,9 @@ describe('house AlertDialog surface', () => {
       <AlertDialog defaultOpen>
         <AlertDialog.Portal>
           <AlertDialogOverlay />
-          <AlertDialogContent role="alertdialog" data-testid="house-alertdialog">
+          <AlertDialogContent
+            role="alertdialog"
+            data-testid="house-alertdialog">
             <AlertDialog.Title>Delete customer?</AlertDialog.Title>
             <AlertDialog.Description>This cannot be undone.</AlertDialog.Description>
           </AlertDialogContent>

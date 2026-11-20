@@ -9,14 +9,13 @@
     "sourceMap": true,
     "outDir": "./dist",
     "incremental": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
+    // Nest DTOs/schemas are populated by decorators, not constructors.
+    "strictPropertyInitialization": false,
     "noFallthroughCasesInSwitch": false,
     "types": ["vitest/globals"],
     "paths": {
-      "@/*": ["./src/*"],
-    },
+      "@/*": ["./src/*"]
+    }
   },
-  "exclude": ["dist", "**/*spec.ts", "database/mongodb/**/*", "__tests__"],
+  "exclude": ["dist", "**/*spec.ts", "database/mongodb/**/*", "__tests__"]
 }

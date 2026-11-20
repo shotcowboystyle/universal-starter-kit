@@ -1,17 +1,18 @@
 import { ClockIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { sizeRecipeForToken, type KnobProps } from '@repo/theme';
-import type { ReactNode } from 'react';
+import { useTouchSurface, sizeRecipeForToken } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
+import type { ComponentProps, ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Text, XStack, YStack, isWeb } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
+import type { FieldValidators } from '../../shared/utils';
 import {
   getFieldError,
   getFieldHeight,
@@ -28,11 +29,35 @@ import {
   parseDurationText,
   partsToSeconds,
   secondsToParts,
-  type DurationParts,
-} from './durationMath';
+} from './duration-math';
+import type { DurationParts } from './duration-math';
 
-export type { DurationParts };
-export { durationSegmentWidth, normalizeSeconds, parseDurationText, partsToSeconds, secondsToParts };
+export type { DurationParts } from './duration-math';
+export {
+  durationSegmentWidth,
+  normalizeSeconds,
+  parseDurationText,
+  partsToSeconds,
+  secondsToParts,
+} from './duration-math';
+
+type BlurHandler = NonNullable<ComponentProps<typeof FieldLayout>['onBlur']>;
+
+/** Structural subset of the web key event this field reads (RN-web may omit parts). */
+interface KeyEventLike {
+  key?: string;
+  nativeEvent?: { key?: string };
+  preventDefault?: () => void;
+}
+
+/** Structural subset of the web paste event this field reads. */
+interface PasteEventLike {
+  clipboardData?: { getData?: (type: string) => string } | null;
+  preventDefault?: () => void;
+}
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
 
 export interface DurationPreset {
   label: string;
@@ -44,14 +69,14 @@ const defaultPresets: DurationPreset[] = [
   { label: '30m', seconds: 1800 },
   { label: '1h', seconds: 3600 },
   { label: '2h', seconds: 7200 },
-  { label: '4h', seconds: 14400 },
-  { label: '8h', seconds: 28800 },
+  { label: '4h', seconds: 14_400 },
+  { label: '8h', seconds: 28_800 },
 ];
 
 /** Preset chips stay on the $2 row (28px). The field size knob does not reach them. */
 export const DURATION_PRESET_SIZE = '$2' as const;
 
-function DurationSegment({
+const DurationSegment = ({
   id,
   unit,
   ariaLabel,
@@ -81,10 +106,10 @@ function DurationSegment({
   required?: boolean;
   hasError?: boolean;
   sizeToken: string;
-}) {
+}) => {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (wide ? String(value) : String(value).padStart(2, '0'));
-  const locked = !!(disabled || readOnly);
+  const locked = disabled === true || readOnly === true;
   const recipe = sizeRecipeForToken(sizeToken);
   const segmentWidth = durationSegmentWidth(sizeToken, wide ? 3 : 2);
 
@@ -113,10 +138,10 @@ function DurationSegment({
         disabled={disabled}
         readOnly={readOnly}
         aria-label={ariaLabel}
-        aria-disabled={disabled || undefined}
-        aria-readonly={readOnly || undefined}
-        aria-required={required || undefined}
-        aria-invalid={hasError || undefined}
+        aria-disabled={disabled === true ? true : undefined}
+        aria-readonly={readOnly === true ? true : undefined}
+        aria-required={required === true ? true : undefined}
+        aria-invalid={hasError === true ? true : undefined}
         color={formCommonColors.text}
         textAlign="right"
         {...knobProps.controlType}
@@ -127,6 +152,7 @@ function DurationSegment({
         height={recipe.height}
         minHeight={0}
         maxHeight={recipe.height}
+        // SAFETY: sizeToken is always a tamagui size token string (from the size prop or knobProps.sizeToken).
         size={sizeToken as SizeTokens}
         data-duration-input-height={recipe.height}
         paddingHorizontal={0}
@@ -136,7 +162,7 @@ function DurationSegment({
           if (locked) {
             return;
           }
-          if (text !== '' && !/^\d+$/.test(text)) {
+          if (text !== '' && !/^\d+$/u.test(text)) {
             return;
           }
           setDraft(text);
@@ -150,11 +176,11 @@ function DurationSegment({
               }
         }
         {...(isWeb
-          ? ({
+          ? {
               fontVariantNumeric: 'tabular-nums',
               onKeyDown: locked
                 ? undefined
-                : (e: any) => {
+                : (e: KeyEventLike) => {
                     const key = e?.nativeEvent?.key ?? e?.key;
                     if (key === 'ArrowUp') {
                       e?.preventDefault?.();
@@ -171,8 +197,8 @@ function DurationSegment({
                   },
               onPaste: locked
                 ? undefined
-                : (e: any) => {
-                    const text = String(e?.clipboardData?.getData?.('text') ?? '');
+                : (e: PasteEventLike) => {
+                    const text = e?.clipboardData?.getData?.('text') ?? '';
                     const parsed = parseDurationText(text);
                     if (parsed == null) {
                       return;
@@ -181,17 +207,21 @@ function DurationSegment({
                     setDraft(null);
                     onPasteDuration(parsed);
                   },
-            } as Record<string, unknown>)
+            }
           : {})}
       />
-      <Text {...knobProps.body} {...knobProps.controlType} color={formCommonColors.muted} textTransform="lowercase">
+      <Text
+        {...knobProps.body}
+        {...knobProps.controlType}
+        color={formCommonColors.muted}
+        textTransform="lowercase">
         {unit}
       </Text>
     </XStack>
   );
-}
+};
 
-function DurationControl({
+const DurationControl = ({
   seconds,
   onChange,
   disabled,
@@ -221,9 +251,10 @@ function DurationControl({
   required?: boolean;
   size?: SizeTokens;
   knobProps: KnobProps;
-}) {
+}) => {
   const parts = secondsToParts(seconds, hideDays);
-  const sizeToken = String(size || knobProps.sizeToken);
+  const effectiveSize = size === undefined || size === '' || size === 0 ? knobProps.sizeToken : size;
+  const sizeToken = String(effectiveSize);
   const recipe = sizeRecipeForToken(sizeToken);
   const resolvedClock = clockIcon === undefined ? <ClockIcon size={recipe.iconSize} /> : clockIcon;
 
@@ -235,17 +266,19 @@ function DurationControl({
   );
 
   return (
-    <InputParts size={size || knobProps.sizeToken}>
+    <InputParts size={effectiveSize}>
       <InputParts.Box
         theme={hasError ? 'error' : undefined}
         elevation={undefined}
         disabled={disabled}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Box is a styled stack; swapping in a native fieldset would change its layout and default styling
         role="group"
         aria-label={hasLabel ? undefined : t('Duration')}
         data-ring-target="box"
         data-duration-box=""
         justifyContent="flex-start"
         alignItems="stretch"
+        // SAFETY: sizeToken is always a tamagui size token string (from the size prop or knobProps.sizeToken).
         size={sizeToken as SizeTokens}
         height={recipe.height}
         sizeRecipeEscape="duration-box">
@@ -265,8 +298,8 @@ function DurationControl({
             flexShrink={1}
             gap={recipe.gap}
             data-duration-row="">
-            {resolvedClock != null ? <InputParts.Icon adornment="leading">{resolvedClock}</InputParts.Icon> : null}
-            {!hideDays ? (
+            {resolvedClock == null ? null : <InputParts.Icon adornment="leading">{resolvedClock}</InputParts.Icon>}
+            {hideDays ? null : (
               <DurationSegment
                 id={id}
                 unit={t('d')}
@@ -284,7 +317,7 @@ function DurationControl({
                 hasError={hasError}
                 sizeToken={sizeToken}
               />
-            ) : null}
+            )}
             <DurationSegment
               id={hideDays ? id : `${id}-hours`}
               unit={t('h')}
@@ -342,9 +375,9 @@ function DurationControl({
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
-function DurationPresets({
+const DurationPresets = ({
   seconds,
   presets,
   onChange,
@@ -354,12 +387,15 @@ function DurationPresets({
   presets: DurationPreset[];
   onChange: (seconds: number) => void;
   knobProps: KnobProps;
-}) {
+}) => {
   if (presets.length === 0) {
     return null;
   }
   return (
-    <XStack {...knobProps.gap} flexWrap="wrap" data-duration-presets="">
+    <XStack
+      {...knobProps.gap}
+      flexWrap="wrap"
+      data-duration-presets="">
       {presets.map((preset) => {
         const selected = seconds === preset.seconds;
         return (
@@ -379,12 +415,12 @@ function DurationPresets({
       })}
     </XStack>
   );
-}
+};
 
 export interface DurationProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -396,14 +432,14 @@ export interface DurationProps {
   value?: number;
   defaultValue?: number;
   onChange?: (value: number) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: BlurHandler;
   disabled?: boolean;
   readOnly?: boolean;
   /** Show seconds segment (default false) */
   showSeconds?: boolean;
   /**
    * Hide the days segment and fold days into hours (default true).
-   * Pass `false` for Frappe-parity day + hour + minute entry.
+   * Pass `false` for day + hour + minute entry.
    */
   hideDays?: boolean;
   /** Quick-select presets. Pass [] to hide. */
@@ -420,7 +456,7 @@ export interface DurationProps {
   compact?: boolean;
 }
 
-export function Duration({
+export const Duration = ({
   name,
   form: formProp,
   validators,
@@ -444,7 +480,7 @@ export function Duration({
   clockIcon,
   skeleton,
   compact,
-}: DurationProps) {
+}: DurationProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
@@ -456,11 +492,12 @@ export function Duration({
   const [internal, setInternal] = useState(() => normalizeSeconds(defaultValue ?? 0));
   const seconds = normalizeSeconds(isControlled ? value : internal);
   const inTableCell = useIsInTableCell();
+  // SAFETY: the size prop and knobProps.sizeToken are both tamagui size tokens.
   const resolvedSize = (size ?? knobProps.sizeToken) as SizeTokens;
   const visualHeight = getFieldHeight(resolvedSize, 1, hydrationTouch);
 
   const handleChange = useCallback(
-    (next: number, fieldChange?: (v: any) => void) => {
+    (next: number, fieldChange?: (v: number) => void) => {
       const n = normalizeSeconds(next);
       if (!isControlled) {
         setInternal(n);
@@ -473,15 +510,24 @@ export function Duration({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} data-duration-skeleton="" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+            data-duration-skeleton=""
+          />
         </InputParts>
       </FieldLayout>
     );
   }
 
-  const fieldBody = (current: number, onValueChange: (s: number) => void, hasError?: boolean) => (
+  const fieldBody = (current: number, onValueChange: (s: number) => void, hasError = false) => (
     <YStack {...knobProps.gap}>
       <DurationControl
         seconds={current}
@@ -499,13 +545,18 @@ export function Duration({
         size={size}
         knobProps={knobProps}
       />
-      {readOnly || disabled || inTableCell ? null : (
-        <DurationPresets seconds={current} presets={presets} onChange={onValueChange} knobProps={knobProps} />
+      {readOnly === true || disabled === true || inTableCell ? null : (
+        <DurationPresets
+          seconds={current}
+          presets={presets}
+          onChange={onValueChange}
+          knobProps={knobProps}
+        />
       )}
     </YStack>
   );
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -523,14 +574,18 @@ export function Duration({
           (s) => {
             handleChange(s);
           },
-          !!error,
+          hasErrorValue(error),
         )}
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = normalizeSeconds(field.state.value ?? 0);
@@ -549,13 +604,15 @@ export function Duration({
             {fieldBody(
               fieldValue,
               (s) => {
-                handleChange(s, (v) => field.handleChange(v));
+                handleChange(s, (v) => {
+                  field.handleChange(v);
+                });
               },
-              !!resolvedError,
+              hasErrorValue(resolvedError),
             )}
           </FieldLayout>
         );
       }}
     </Field>
   );
-}
+};

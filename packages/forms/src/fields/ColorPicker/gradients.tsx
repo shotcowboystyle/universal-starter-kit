@@ -18,32 +18,32 @@ const fill = {
   bottom: 0,
 };
 
-export function SaturationBackground({ hueColor }: { hueColor: string; width?: number; height?: number }) {
-  return (
-    <View {...fill} overflow="hidden">
-      <View
-        {...fill}
-        style={{
-          background: `linear-gradient(to right, #fff, ${hueColor})`,
-        }}
-      />
-      <View
-        {...fill}
-        style={{
-          background: 'linear-gradient(to top, #000, transparent)',
-        }}
-      />
-    </View>
-  );
-}
+export const SaturationBackground = ({ hueColor }: { hueColor: string; width?: number; height?: number }) => (
+  <View
+    {...fill}
+    overflow="hidden">
+    <View
+      {...fill}
+      style={{
+        background: `linear-gradient(to right, #fff, ${hueColor})`,
+      }}
+    />
+    <View
+      {...fill}
+      style={{
+        background: 'linear-gradient(to top, #000, transparent)',
+      }}
+    />
+  </View>
+);
 
-export function HueBackground({
+export const HueBackground = ({
   orientation = 'horizontal',
 }: {
   width?: number;
   height?: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const dir = orientation === 'vertical' ? 'to bottom' : 'to right';
   return (
     <View
@@ -53,9 +53,9 @@ export function HueBackground({
       }}
     />
   );
-}
+};
 
-export function AlphaBackground({
+export const AlphaBackground = ({
   hex,
   orientation = 'horizontal',
 }: {
@@ -63,7 +63,7 @@ export function AlphaBackground({
   width?: number;
   height?: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const dir = orientation === 'vertical' ? 'to bottom' : 'to right';
   return (
     <>
@@ -84,4 +84,4 @@ export function AlphaBackground({
       />
     </>
   );
-}
+};

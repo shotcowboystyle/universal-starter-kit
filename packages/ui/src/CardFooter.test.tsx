@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,23 +9,20 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CardFooter } from './CardFooter';
 import { Card } from './surfaces';
 
-function readSibling(name: string) {
-  return readFileSync(join(import.meta.dirname, name), 'utf8');
-}
+const readSibling = (name: string) => readFileSync(path.join(import.meta.dirname, name), 'utf-8');
 
-function atoms(el: Element | null, prefixes: string[]): string[] {
+const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
-  return String((el as HTMLElement).className || '')
+  return (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
+};
 
-function captionText(container: HTMLElement, label: string): HTMLElement {
-  return container.querySelector('[data-body-font]') ?? screen.getByText(label);
-}
+const captionText = (container: HTMLElement, label: string): HTMLElement =>
+  container.querySelector('[data-body-font]') ?? screen.getByText(label);
 
 describe('CardFooter named exports', () => {
   it('is the Card.Footer static and has no default export', async () => {
@@ -39,10 +36,10 @@ describe('CardFooter named exports', () => {
 describe('CardFooter — no Tint wrap', () => {
   it('source does not wrap Tint; NestedScale stays on Card', () => {
     const src = readSibling('CardFooter.tsx');
-    expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
-    expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).not.toMatch(/function NestedScale/);
-    expect(src).toMatch(/padding=\{0\}/);
+    expect(src).not.toMatch(/from ["'][^"']*Tint["']/u);
+    expect(src).not.toMatch(/<[Tt]int[\s/>]/u);
+    expect(src).not.toMatch(/const NestedScale = /u);
+    expect(src).toMatch(/padding=\{0\}/u);
   });
 });
 
@@ -57,7 +54,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
     );
     const caption = screen.getByText('Ready to submit');
     expect(caption.tagName).not.toBe('DIV');
-    expect(caption.getAttribute('data-body-font')).toBeTruthy();
+    expect(caption.dataset.bodyFont).toBeTruthy();
   });
 
   it('coalesces array-of-strings children into one wrapped label', () => {
@@ -81,7 +78,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
     );
     const weight = atoms(captionText(container, 'Ready to submit'), ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('lets the fontWeight knob restyle the caption text node', () => {
@@ -103,10 +100,10 @@ describe('CardFooter design-law — T-BODY text node', () => {
       </Preset>,
     );
     const boldWeight = atoms(captionText(bold.container, 'Ready to submit'), ['_fow-']).join(' ');
-    expect(regularWeight).not.toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).not.toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).not.toEqual(regularWeight);
-    expect(boldWeight).toMatch(/700|weight-7|fow-7/);
+    expect(regularWeight).not.toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).not.toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).not.toStrictEqual(regularWeight);
+    expect(boldWeight).toMatch(/700|weight-7|fow-7/u);
   });
 
   it('lets the bodyFont knob restyle the caption text node', () => {
@@ -117,7 +114,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
         </Card>
       </Preset>,
     );
-    const sansFamily = captionText(sans.container, 'Ready to submit').getAttribute('data-body-font');
+    const sansFamily = captionText(sans.container, 'Ready to submit').dataset.bodyFont;
     cleanup();
 
     const mono = renderWithProviders(
@@ -128,13 +125,13 @@ describe('CardFooter design-law — T-BODY text node', () => {
       </Preset>,
     );
     expect(sansFamily).toBeTruthy();
-    expect(captionText(mono.container, 'Ready to submit').getAttribute('data-body-font')).toBe('$mono');
-    expect(captionText(mono.container, 'Ready to submit').getAttribute('data-body-font')).not.toBe(sansFamily);
+    expect(captionText(mono.container, 'Ready to submit').dataset.bodyFont).toBe('$mono');
+    expect(captionText(mono.container, 'Ready to submit').dataset.bodyFont).not.toBe(sansFamily);
   });
 
   it('stamps data-slot=footer and stays a zero-padding slot', () => {
     const src = readSibling('CardFooter.tsx');
-    expect(src).toMatch(/padding=\{0\}/);
+    expect(src).toMatch(/padding=\{0\}/u);
     const { container } = renderWithProviders(
       <Card>
         <Card.Footer>Actions</Card.Footer>

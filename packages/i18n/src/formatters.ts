@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 
-import { useLanguage } from './useLanguage';
+import { useLanguage } from './use-language';
 
 type DateInput = Date | number | string;
 
-function getRelativeTime(language: string, date: DateInput): string {
+const getRelativeTime = (language: string, date: DateInput): string => {
   const diffMs = new Date(date).getTime() - Date.now();
   const abs = Math.abs(diffMs) / 1000;
   const rtf = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
@@ -12,53 +12,49 @@ function getRelativeTime(language: string, date: DateInput): string {
     return rtf.format(Math.round(diffMs / 1000), 'second');
   }
   if (abs < 3600) {
-    return rtf.format(Math.round(diffMs / 60000), 'minute');
+    return rtf.format(Math.round(diffMs / 60_000), 'minute');
   }
-  if (abs < 86400) {
-    return rtf.format(Math.round(diffMs / 3600000), 'hour');
+  if (abs < 86_400) {
+    return rtf.format(Math.round(diffMs / 3_600_000), 'hour');
   }
-  if (abs < 2592000) {
-    return rtf.format(Math.round(diffMs / 86400000), 'day');
+  if (abs < 2_592_000) {
+    return rtf.format(Math.round(diffMs / 86_400_000), 'day');
   }
-  if (abs < 31536000) {
-    return rtf.format(Math.round(diffMs / 2592000000), 'month');
+  if (abs < 31_536_000) {
+    return rtf.format(Math.round(diffMs / 2_592_000_000), 'month');
   }
-  return rtf.format(Math.round(diffMs / 31536000000), 'year');
-}
+  return rtf.format(Math.round(diffMs / 31_536_000_000), 'year');
+};
 
-export function createDateFormatter(language: string) {
-  return {
-    format: (date: DateInput, options?: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat(language, options).format(new Date(date)),
-    relative: (date: DateInput) => getRelativeTime(language, date),
-  };
-}
+export const createDateFormatter = (language: string) => ({
+  format: (date: DateInput, options?: Intl.DateTimeFormatOptions) =>
+    // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
+    new Intl.DateTimeFormat(language, options).format(new Date(date)),
+  relative: (date: DateInput) => getRelativeTime(language, date),
+});
 
-export function createNumberFormatter(language: string) {
-  return {
-    format: (value: number, options?: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat(language, options).format(value),
-  };
-}
+export const createNumberFormatter = (language: string) => ({
+  // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
+  format: (value: number, options?: Intl.NumberFormatOptions) => new Intl.NumberFormat(language, options).format(value),
+});
 
-export function createCurrencyFormatter(language: string) {
-  return {
-    format: (value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>) =>
-      new Intl.NumberFormat(language, { ...options, style: 'currency', currency }).format(value),
-  };
-}
+export const createCurrencyFormatter = (language: string) => ({
+  format: (value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>) =>
+    // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
+    new Intl.NumberFormat(language, { ...options, style: 'currency', currency }).format(value),
+});
 
-export function useFormatDate() {
+export const useFormatDate = () => {
   const [language] = useLanguage();
   return useMemo(() => createDateFormatter(language), [language]);
-}
+};
 
-export function useFormatNumber() {
+export const useFormatNumber = () => {
   const [language] = useLanguage();
   return useMemo(() => createNumberFormatter(language), [language]);
-}
+};
 
-export function useFormatCurrency() {
+export const useFormatCurrency = () => {
   const [language] = useLanguage();
   return useMemo(() => createCurrencyFormatter(language), [language]);
-}
+};

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Quote } from './index';
 
-describe('Quote', () => {
+describe(Quote, () => {
   it('renders as a blockquote with body text', () => {
     const { container } = renderWithProviders(<Quote>Invent the future.</Quote>);
     expect(container.querySelector('blockquote')).toBeTruthy();
@@ -12,10 +12,10 @@ describe('Quote', () => {
 
   it('does not pin compact, so the density knob restyles the frame', () => {
     const { container } = renderWithProviders(<Quote>Invent the future.</Quote>);
-    const figure = container.querySelector('figure') as HTMLElement;
+    const figure = container.querySelector<HTMLElement>('figure')!;
     expect(figure).toBeTruthy();
-    expect(figure.getAttribute('data-density')).toBeTruthy();
-    expect(figure.getAttribute('data-density')).not.toBe('');
+    expect(figure.dataset.density).toBeTruthy();
+    expect(figure.dataset.density).not.toBe('');
   });
 
   it('renders cite attribution outside the quotation', () => {

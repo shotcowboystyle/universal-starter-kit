@@ -1,26 +1,22 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen } from '@testing-library/react';
 import { H1 } from 'tamagui';
-import { expect, vitest } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from './index';
-import * as ErrorBoundaryModule from './index';
 
 const ChildThatThrows = () => {
   throw new Error('Test Error');
 };
-const ChildThatRenders = () => {
-  return <H1>Hello from child!</H1>;
-};
+const ChildThatRenders = () => <H1>Hello from child!</H1>;
 
-function weightClasses(el: Element): string[] {
-  return String((el as HTMLElement).className || '')
+const weightClasses = (el: Element): string[] =>
+  el.className
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
-    .sort();
-}
+    .toSorted();
 
-describe('ErrorBoundary', () => {
+describe(ErrorBoundary, () => {
   it('should render children when no error occurs', () => {
     renderWithProviders(
       <ErrorBoundary>
@@ -50,9 +46,9 @@ describe('ErrorBoundary', () => {
     );
     const node = screen.getByText('Try again?');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
     expect(weightClasses(node).some((c) => c.includes('400'))).toBe(true);
   });
 
@@ -68,7 +64,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('should log errors when componentDidCatch is triggered', () => {
-    const spy = vitest.spyOn(console, 'info');
+    const spy = vi.spyOn(console, 'info');
     renderWithProviders(
       <ErrorBoundary>
         <ChildThatThrows />
@@ -83,7 +79,8 @@ describe('ErrorBoundary', () => {
     spy.mockRestore();
   });
 
-  it('exposes named ErrorBoundary export and no default', () => {
+  it('exposes named ErrorBoundary export and no default', async () => {
+    const ErrorBoundaryModule = await import('./index');
     expect(ErrorBoundaryModule.ErrorBoundary).toBe(ErrorBoundary);
     expect('default' in ErrorBoundaryModule).toBe(false);
   });

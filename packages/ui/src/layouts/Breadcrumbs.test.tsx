@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent } from '@testing-library/react';
@@ -9,23 +9,23 @@ import { Breadcrumbs } from './Breadcrumbs';
 
 const items = [{ label: 'Home', href: '/' }, { label: 'Projects', href: '/projects' }, { label: 'Settings' }];
 
-describe('Breadcrumbs', () => {
+describe(Breadcrumbs, () => {
   it('publishes density and paints crumb labels at weight 400 (§6.1)', () => {
     const { container } = renderWithProviders(<Breadcrumbs items={items} />);
-    const nav = container.querySelector('[data-testid="breadcrumbs"]') as HTMLElement;
+    const nav = container.querySelector<HTMLElement>('[data-testid="breadcrumbs"]')!;
     expect(nav).toBeTruthy();
-    expect(nav.getAttribute('data-density')).toBeTruthy();
-    expect(nav.getAttribute('data-density')).not.toBe('');
+    expect(nav.dataset.density).toBeTruthy();
+    expect(nav.dataset.density).not.toBe('');
 
-    const current = container.querySelector('[aria-current="page"]') as HTMLElement;
+    const current = container.querySelector<HTMLElement>('[aria-current="page"]')!;
     expect(current).toBeTruthy();
     const currentWeight = current.style.fontWeight || getComputedStyle(current).fontWeight;
-    expect(['400', 'normal']).toContain(String(currentWeight));
+    expect(['400', 'normal']).toContain(currentWeight);
 
     const home = [...container.querySelectorAll('a')].find((el) => el.textContent === 'Home');
     expect(home).toBeTruthy();
     const linkWeight = home!.style.fontWeight || getComputedStyle(home!).fontWeight;
-    expect(['400', 'normal']).toContain(String(linkWeight));
+    expect(['400', 'normal']).toContain(linkWeight);
   });
 
   it('hides the slash separators from AT and paints them as T-HELPER ink', () => {
@@ -38,14 +38,19 @@ describe('Breadcrumbs', () => {
     }
     // Distinct token from the warning-surface fix: separators ride textAccentColor (AA floor
     // at $color11), not componentColors.text.subtle ($color8).
-    const source = readFileSync(join(import.meta.dirname, 'breadcrumbs.tsx'), 'utf8');
-    expect(source).toMatch(/color=\{knobProps\.textAccentColor\}/);
-    expect(source).not.toMatch(/color=\{componentColors\.text\.subtle\}/);
+    const source = readFileSync(path.join(import.meta.dirname, 'breadcrumbs.tsx'), 'utf-8');
+    expect(source).toMatch(/color=\{knobProps\.textAccentColor\}/u);
+    expect(source).not.toMatch(/color=\{componentColors\.text\.subtle\}/u);
   });
 
   it('calls onNavigate from a path crumb and keeps the current page inert', () => {
-    const onNavigate = vi.fn();
-    const { container } = renderWithProviders(<Breadcrumbs items={items} onNavigate={onNavigate} />);
+    const onNavigate = vi.fn<(href: string) => void>();
+    const { container } = renderWithProviders(
+      <Breadcrumbs
+        items={items}
+        onNavigate={onNavigate}
+      />,
+    );
     fireEvent.click([...container.querySelectorAll('a')].find((el) => el.textContent === 'Home')!);
     expect(onNavigate).toHaveBeenCalledWith('/');
     expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('Settings');

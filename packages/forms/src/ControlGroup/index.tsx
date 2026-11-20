@@ -6,14 +6,15 @@ import {
   hairline,
   useResolvedKnobs,
 } from '@repo/theme';
-import { Children, isValidElement, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, useMemo, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { SizableText, View, isWeb, styled } from 'tamagui';
-import type { GetProps } from 'tamagui';
+import type { GetProps, SizeTokens } from 'tamagui';
 
 import { FocusContext, getInputFrameTransitionProps, InputContext } from '../InputParts';
-import { formCommonColors, formControlColors, formInputColors } from '../shared/colorRamps';
-import { ControlGroupCtx } from '../shared/groupContext';
-import { useIsInTableCell } from '../shared/tableCellContext';
+import { formCommonColors, formControlColors, formInputColors } from '../shared/color-ramps';
+import { ControlGroupCtx } from '../shared/group-context';
+import { useIsInTableCell } from '../shared/table-cell-context';
 import { getElevationWrapperProps } from '../shared/utils';
 
 // ---------------------------------------------------------------------------
@@ -34,10 +35,10 @@ const ControlGroupFrame = styled(View, {
 
   variants: {
     scaleIcon: {
-      ':number': {} as any,
+      ':number': () => ({}),
     },
     size: {
-      '...size': (val: any) => ({
+      '...size': (val: SizeTokens) => ({
         height: val,
       }),
     },
@@ -52,51 +53,46 @@ const controlGroupRingCss = `/* LC-71: ring lives on the outer ControlGroup; des
   box-shadow: none !important;
 }`;
 
-function ensureControlGroupRing() {
+const ensureControlGroupRing = () => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(CONTROL_GROUP_RING_ID)) {
+  if (document.querySelector(`#${CONTROL_GROUP_RING_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
   tag.id = CONTROL_GROUP_RING_ID;
   tag.textContent = controlGroupRingCss;
-  document.head.appendChild(tag);
-}
+  document.head.append(tag);
+};
 
-function isControlGroupAddon(child: ReactElement): boolean {
-  const type = child.type as { isControlGroupAddon?: boolean };
-  return type === ControlGroupAddon || type.isControlGroupAddon === true;
-}
-
-function groupItems(children: ReactNode): ReactElement[] {
-  return Children.toArray(children).filter(isValidElement);
-}
+// oxlint-disable-next-line react/no-react-children -- toArray flattens fragments/arrays, drops nullish children and assigns the stable keys the group relies on
+const groupItems = (children: ReactNode): ReactElement[] => Children.toArray(children).filter(isValidElement);
 
 // ---------------------------------------------------------------------------
 // ControlGroup.Addon — Bootstrap input-group-text / Polaris connected slot
 // ---------------------------------------------------------------------------
 
-export type ControlGroupAddonProps = GetProps<typeof View> & {
+export type ControlGroupAddonProps = Omit<GetProps<typeof View>, 'children'> & {
   children?: ReactNode;
 };
 
-function ControlGroupAddonImpl({ children, ...props }: ControlGroupAddonProps) {
+const ControlGroupAddonImpl = ({ children, ...props }: ControlGroupAddonProps) => {
   const { knobProps } = useResolvedKnobs();
-  const text =
-    typeof children === 'string' || typeof children === 'number' ? (
-      <SizableText
-        {...knobProps.label}
-        fontWeight="400"
-        color={formCommonColors.muted}
-        userSelect="none"
-        numberOfLines={1}>
-        {children}
-      </SizableText>
-    ) : (
-      children
-    );
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode children; only plain text/number needs the label wrapper
+  const isPlainText = typeof children === 'string' || typeof children === 'number';
+  const text = isPlainText ? (
+    <SizableText
+      {...knobProps.label}
+      fontWeight="400"
+      color={formCommonColors.muted}
+      userSelect="none"
+      numberOfLines={1}>
+      {children}
+    </SizableText>
+  ) : (
+    children
+  );
   return (
     <View
       data-mp-control-group-addon="true"
@@ -112,11 +108,19 @@ function ControlGroupAddonImpl({ children, ...props }: ControlGroupAddonProps) {
       {text}
     </View>
   );
-}
+};
 
 export const ControlGroupAddon = Object.assign(ControlGroupAddonImpl, {
   isControlGroupAddon: true as const,
 });
+
+const isControlGroupAddon = (child: ReactElement): boolean => {
+  const { type } = child;
+  if (type === ControlGroupAddon) {
+    return true;
+  }
+  return type instanceof Object && 'isControlGroupAddon' in type && type.isControlGroupAddon === true;
+};
 
 // ---------------------------------------------------------------------------
 // ControlGroup
@@ -126,9 +130,11 @@ export interface ControlGroupProps extends GetProps<typeof ControlGroupFrame> {
   children: ReactNode;
   /** Layout direction. Default "horizontal". */
   orientation?: 'horizontal' | 'vertical';
+  /** Web only: merged after the composite-ring classes. */
+  className?: string;
 }
 
-function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: ControlGroupProps) {
+const ControlGroupImpl = ({ children, orientation = 'horizontal', ...props }: ControlGroupProps) => {
   const [focused, setFocused] = useState(false);
   const { knobProps, control, elevation } = useResolvedKnobs();
   const inTableCell = useIsInTableCell();
@@ -138,12 +144,14 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
   }
   const elevationWrapperProps = useMemo(() => getElevationWrapperProps(knobProps, elevation), [knobProps, elevation]);
   const isVertical = orientation === 'vertical';
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- transition is a name or a config object at runtime; only names feed the frame
+  const transitionName = typeof knobProps.transition === 'string' ? knobProps.transition : undefined;
   const items = groupItems(children);
 
   const renderItems = (seams: boolean) => {
     const count = items.length;
     const nodes: ReactNode[] = [];
-    for (let index = 0; index < count; index++) {
+    for (let index = 0; index < count; index += 1) {
       const child = items[index];
       const position = getGroupPosition(index, count);
       const isMiddle = position === 'middle';
@@ -153,12 +161,15 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
       // culls the zero-rect subtree from the a11y tree. Web keeps the
       // content-sized wrapper (CSS inputs have intrinsic width).
       // Polaris Connected: the primary field flexes; addons stay content-sized.
-      const needsFlex = !isControlGroupAddon(child) && (isMiddle || count === 2 || (!isWeb && count === 1));
+      const isLoneNativeChild = !isWeb && count === 1;
+      const needsFlex = !isControlGroupAddon(child) && (isMiddle || count === 2 || isLoneNativeChild);
       const flexProps = needsFlex
         ? { flex: 1, ...(isVertical ? { minHeight: 0 } : { minWidth: 0 }) }
         : { flexGrow: 0, flexShrink: 0 };
       nodes.push(
-        <GroupPositionContext.Provider key={child.key ?? index} value={position}>
+        <GroupPositionContext.Provider
+          key={child.key ?? index}
+          value={position}>
           <View
             {...flexProps}
             borderRadius={0}
@@ -190,7 +201,9 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
   if (inTableCell) {
     return (
       <ControlGroupCtx.Provider value={true}>
-        <FocusContext.Provider focused={focused} setFocused={setFocused}>
+        <FocusContext.Provider
+          focused={focused}
+          setFocused={setFocused}>
           <ControlGroupFrame
             {...knobProps.body}
             flexDirection={isVertical ? 'column' : 'row'}
@@ -200,8 +213,12 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
             data-mp-control-group=""
             data-orientation={orientation}
             {...props}>
-            {Children.map(items, (child) => (
-              <View flex={1} minWidth={0} borderRadius={0}>
+            {items.map((child) => (
+              <View
+                key={child.key}
+                flex={1}
+                minWidth={0}
+                borderRadius={0}>
                 {child}
               </View>
             ))}
@@ -213,16 +230,18 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
 
   return (
     <ControlGroupCtx.Provider value={true}>
-      <FocusContext.Provider focused={focused} setFocused={setFocused}>
+      <FocusContext.Provider
+        focused={focused}
+        setFocused={setFocused}>
         <ControlGroupFrame
           {...knobProps.body}
-          {...(!isVertical ? { size: knobProps.sizeToken } : undefined)}
+          {...(isVertical ? undefined : { size: knobProps.sizeToken })}
           flexDirection={isVertical ? 'column' : 'row'}
           backgroundColor={knobProps.outlined ? 'transparent' : formInputColors.background.base}
           {...knobProps.inputSurface}
           {...knobProps.borderRadius}
           {...elevationWrapperProps}
-          {...getInputFrameTransitionProps(typeof knobProps.transition === 'string' ? knobProps.transition : undefined)}
+          {...getInputFrameTransitionProps(transitionName)}
           {...(control.focusKnobProps
             ? {
                 focusStyle: {
@@ -252,12 +271,7 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
           {...props}
           {...(isWeb
             ? {
-                className: [
-                  'mp-control-group',
-                  'mp-composite-ring',
-                  'mp-composite-ring-deep',
-                  (props as { className?: string }).className,
-                ]
+                className: ['mp-control-group', 'mp-composite-ring', 'mp-composite-ring-deep', props.className]
                   .filter(Boolean)
                   .join(' '),
               }
@@ -278,7 +292,7 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
       </FocusContext.Provider>
     </ControlGroupCtx.Provider>
   );
-}
+};
 
 export const ControlGroup = Object.assign(ControlGroupImpl, {
   Addon: ControlGroupAddon,

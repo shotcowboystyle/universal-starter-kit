@@ -36,6 +36,18 @@ export interface ViewSwitcherProps {
   testID?: string;
 }
 
+// Tamagui Toggle paints a 1px border + −1px margin on every item (the
+// overlapping-border button-group trick). That IS "border on every
+// segment". Kill both; selection is fill, grouping is the frame.
+const restSegment = {
+  borderWidth: 0,
+  borderColor: 'transparent',
+  margin: 0,
+  backgroundColor: 'transparent',
+} as const;
+const hoverWash = { backgroundColor: '$backgroundHover' as const };
+const pressWash = { backgroundColor: '$backgroundPress' as const };
+
 /**
  * Fused segmented control for switching view modes.
  *
@@ -43,7 +55,7 @@ export interface ViewSwitcherProps {
  * one R-OUTER frame, selected = fill (never a border on every segment),
  * keyboard ring on the focused item only. Activation stays MANUAL.
  */
-export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-switcher' }: ViewSwitcherProps) {
+export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-switcher' }: ViewSwitcherProps) => {
   const { knobProps } = useResolvedKnobs();
   // Chromium drops keyboard modality on tamagui's group focus redirect, so
   // :focus-visible can miss the first item — paint the ring manually on
@@ -57,7 +69,7 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
     ensureKeyboardModalityTracking();
   }
   // The selected segment carried a neutral `$color3`
-  // -tier fill, so a segmented control marked its choice in the same grey it
+  // -tier fill, so a segmented control marked its choice in the same gray it
   // marks hover with. Selection is the accent language; segmented-control
   // STRENGTH is pinned at tinted (not the solid an accent CTA takes), so the
   // chip resolves the accent-ramp analogue of that neutral surface tier and
@@ -72,7 +84,8 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
   // that did not exist in the previous frame, so the fill tween is unreachable until
   // the segment keeps its identity. The on-tint anchor the label and icon need
   // is applied on the row below, which is not a context host.
-  const selectedChip = selectedTint ? { backgroundColor: selectedTint } : undefined;
+  const selectedChip =
+    selectedTint !== undefined && selectedTint !== '' ? { backgroundColor: selectedTint } : undefined;
   // Size recipe owns chrome (height/pad/font/icon/gap). Press floor is
   // hitSlop, never painted minHeight. Radius stays on the radius knob.
   // SP-PAD exemption (Chip precedent): this is a control-tier segmented
@@ -86,17 +99,20 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
   const groupRing = ensureFocusVisibleRing();
   const radius = knobProps.borderRadius.borderRadius;
   const count = views.length;
-  // Tamagui Toggle paints a 1px border + −1px margin on every item (the
-  // overlapping-border button-group trick). That IS "border on every
-  // segment". Kill both; selection is fill, grouping is the frame.
-  const restSegment = {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    margin: 0,
-    backgroundColor: 'transparent',
-  } as const;
-  const hoverWash = { backgroundColor: '$backgroundHover' as const };
-  const pressWash = { backgroundColor: '$backgroundPress' as const };
+  // Roving tabindex (single tab stop): tamagui's vendored
+  // roving-focus item hardcodes tabIndex=0 on every segment, turning a
+  // 3-view switcher into 3 tab stops. Exactly one segment stays in the
+  // page tab order — the focused one while focus is inside the group,
+  // else the active one (or the first when nothing matches); arrows
+  // move within the group.
+  const anchorIndex = (() => {
+    const focusIdx = focusValue !== null && focusValue !== '' ? views.findIndex((v) => v.type === focusValue) : -1;
+    if (focusIdx >= 0) {
+      return focusIdx;
+    }
+    const activeIdx = views.findIndex((v) => v.type === currentView);
+    return activeIdx === -1 ? 0 : activeIdx;
+  })();
 
   return (
     <ToggleGroup
@@ -115,14 +131,12 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
       {...knobProps.borderRadius}
       {...knobProps.inputSurface}
       testID={testID}
-      {...({
-        'data-testid': testID,
-        'data-size': knobProps.size,
-        'data-density': knobProps.density,
-      } as Record<string, string>)}
+      data-testid={testID}
+      data-size={knobProps.size}
+      data-density={knobProps.density}
       // Recessed track (Apple) so unselected segments still read as inside
       // the control once per-item borders are gone. `$color2` is the surface
-      // tier — a step off the page, not the hover grey that used to fake
+      // tier — a step off the page, not the hover gray that used to fake
       // selection.
       backgroundColor="$color2"
       // R-OUTER (container clip): the outer frame owns the
@@ -146,24 +160,14 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
         : undefined)}>
       {views.map((view, viewIndex) => {
         const Icon = view.icon;
-        // Roving tabindex (single tab stop): tamagui's vendored
-        // roving-focus item hardcodes tabIndex=0 on every segment, turning a
-        // 3-view switcher into 3 tab stops. Exactly one segment stays in the
-        // page tab order — the focused one while focus is inside the group,
-        // else the active one (or the first when nothing matches); arrows
-        // move within the group.
-        const anchorIndex = (() => {
-          const focusIdx = focusValue ? views.findIndex((v) => v.type === focusValue) : -1;
-          if (focusIdx >= 0) {
-            return focusIdx;
-          }
-          const activeIdx = views.findIndex((v) => v.type === currentView);
-          return activeIdx >= 0 ? activeIdx : 0;
-        })();
         const isTabStop = viewIndex === anchorIndex;
         const isSelected = view.type === currentView;
         const groupedRadius = stackRadiusProps(getGroupPosition(viewIndex, count), radius, 'horizontal');
-        const fill = isSelected && selectedChip ? selectedChip : restSegment;
+        const chosenChip = isSelected ? selectedChip : undefined;
+        const kbFocused = kbFocusValue === view.type;
+        const kbRing = kbFocused ? keyboardFocusRingProps : { outlineWidth: 0 };
+        const onTintInk =
+          isSelected && onSelectedTint !== undefined && onSelectedTint !== '' ? { color: onSelectedTint } : undefined;
         return (
           // no size prop: ToggleGroup.Item's size makes square icon-buttons
           // (fixed width) that clip text labels -- let content + pad size the item.
@@ -187,23 +191,23 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
             transition={knobProps.transition}
             {...restSegment}
             {...groupedRadius}
-            {...fill}
+            {...(chosenChip ?? restSegment)}
             // The selected fill is re-applied through hover/press/focus so the
             // neutral state layer never paints over the accent chip (the
             // rule the checked Switch track already follows). `focus` is
             // not optional: selecting a segment focuses it, and ToggleFrame's
             // own active recipe carries a neutral `$backgroundActive` focus
-            // fill that would otherwise grey out the chip the moment it is
+            // fill that would otherwise gray out the chip the moment it is
             // chosen.
             hoverStyle={{
               ...restSegment,
               ...groupedRadius,
-              ...(isSelected && selectedChip ? selectedChip : hoverWash),
+              ...(chosenChip ?? hoverWash),
             }}
             pressStyle={{
               ...restSegment,
               ...groupedRadius,
-              ...(isSelected && selectedChip ? selectedChip : pressWash),
+              ...(chosenChip ?? pressWash),
             }}
             // Rest outline is off; the keyboard ring is merged into the
             // focused state so ToggleFrame's focusStyle cannot zero it.
@@ -211,10 +215,10 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
             focusStyle={{
               ...restSegment,
               ...groupedRadius,
-              ...(isSelected && selectedChip ? selectedChip : {}),
-              ...(kbFocusValue === view.type ? keyboardFocusRingProps : { outlineWidth: 0 }),
+              ...chosenChip,
+              ...kbRing,
             }}
-            focusVisibleStyle={kbFocusValue === view.type ? keyboardFocusRingProps : { outlineWidth: 0 }}
+            focusVisibleStyle={kbRing}
             {...(isWeb
               ? {
                   onFocus: () => {
@@ -229,7 +233,7 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
                   },
                 }
               : undefined)}
-            {...(kbFocusValue === view.type ? keyboardFocusRingProps : undefined)}>
+            {...(kbFocused ? keyboardFocusRingProps : undefined)}>
             <XStack
               alignItems="center"
               gap={knobProps.control.gap}
@@ -238,14 +242,14 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
               // on-tint anchor for the glyph and the label takes it explicitly
               // (tamagui Text resolves `$color` from the theme, not by CSS
               // inheritance).
-              {...(isSelected && onSelectedTint ? { color: onSelectedTint } : undefined)}>
+              {...onTintInk}>
               {Icon && <Icon size={knobProps.controlIcon.width} />}
               {!view.iconOnly && view.label ? (
                 <Text
                   {...knobProps.controlType}
                   numberOfLines={1}
                   {...knobProps.body}
-                  {...(isSelected && onSelectedTint ? { color: onSelectedTint } : undefined)}>
+                  {...onTintInk}>
                   {view.label}
                 </Text>
               ) : null}
@@ -255,4 +259,4 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
       })}
     </ToggleGroup>
   );
-}
+};

@@ -1,8 +1,23 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import type { Model } from 'mongoose';
+import { Types } from 'mongoose';
 
-import { Task, TaskDocument } from "../schemas/tasks.schema";
+import type { TaskDocument } from '../schemas/tasks.schema';
+import { Task } from '../schemas/tasks.schema';
+
+const USER_FIELDS = 'name email';
+
+export interface TaskQuery {
+  project?: Types.ObjectId;
+  assignee?: Types.ObjectId;
+}
+
+export interface TaskUpdate extends Partial<Omit<Task, 'assignee'>> {
+  assignee?: Types.ObjectId | null;
+}
+
+const DEFAULT_TASK_SORT = { orderInProject: 1 } satisfies Record<string, 1 | -1>;
 
 @Injectable()
 export class TaskRepository {
@@ -10,33 +25,31 @@ export class TaskRepository {
 
   async create(data: Partial<Task>): Promise<TaskDocument> {
     const task = new this.taskModel(data);
-    return task.save();
+    return await task.save();
   }
 
-  async findByQuery(
-    query: Record<string, unknown>,
-    sort: Record<string, 1 | -1> = { orderInProject: 1 }
-  ): Promise<TaskDocument[]> {
-    return this.taskModel.find(query).sort(sort).populate("lastModifier", "name email").exec();
+  async findByQuery(query: TaskQuery, sort: Record<string, 1 | -1> = DEFAULT_TASK_SORT): Promise<TaskDocument[]> {
+    // oxlint-disable-next-line unicorn/no-array-sort -- Mongoose Query#sort, not Array#sort
+    return await this.taskModel.find(query).sort(sort).populate('lastModifier', USER_FIELDS).exec();
   }
 
   async findById(id: string): Promise<TaskDocument | null> {
-    return this.taskModel.findById(id);
+    return await this.taskModel.findById(id);
   }
 
   async findByIdPopulated(id: string): Promise<TaskDocument | null> {
-    return this.taskModel
+    return await this.taskModel
       .findById(id)
-      .populate("creator", "name email")
-      .populate("assignee", "name email")
-      .populate("lastModifier", "name email")
+      .populate('creator', USER_FIELDS)
+      .populate('assignee', USER_FIELDS)
+      .populate('lastModifier', USER_FIELDS)
       .exec();
   }
 
-  async updateById(id: string, updateData: Record<string, unknown>): Promise<TaskDocument | null> {
-    return this.taskModel
+  async updateById(id: string, updateData: TaskUpdate): Promise<TaskDocument | null> {
+    return await this.taskModel
       .findByIdAndUpdate(id, { $set: updateData }, { new: true })
-      .populate("lastModifier", "name email")
+      .populate('lastModifier', USER_FIELDS)
       .exec();
   }
 
@@ -46,18 +59,13 @@ export class TaskRepository {
   }
 
   async deleteByProjectId(projectId: string): Promise<{ deletedCount: number }> {
-    const result = await this.taskModel
-      .deleteMany({ project: new Types.ObjectId(projectId) })
-      .exec();
+    const result = await this.taskModel.deleteMany({ project: new Types.ObjectId(projectId) }).exec();
     return { deletedCount: result.deletedCount || 0 };
   }
 
   async decrementOrderAfter(projectId: Types.ObjectId, deletedOrder: number): Promise<void> {
     await this.taskModel
-      .updateMany(
-        { project: projectId, orderInProject: { $gt: deletedOrder } },
-        { $inc: { orderInProject: -1 } }
-      )
+      .updateMany({ project: projectId, orderInProject: { $gt: deletedOrder } }, { $inc: { orderInProject: -1 } })
       .exec();
   }
 
@@ -65,45 +73,31 @@ export class TaskRepository {
     projectId: Types.ObjectId,
     taskId: string,
     oldOrder: number,
-    newOrder: number
+    newOrder: number,
   ): Promise<void> {
-    if (newOrder > oldOrder) {
-      await this.taskModel.updateMany(
-        {
-          project: projectId,
-          orderInProject: { $gt: oldOrder, $lte: newOrder },
-          _id: { $ne: taskId }
-        },
-        { $inc: { orderInProject: -1 } }
-      );
-    } else {
-      await this.taskModel.updateMany(
-        {
-          project: projectId,
-          orderInProject: { $gte: newOrder, $lt: oldOrder },
-          _id: { $ne: taskId }
-        },
-        { $inc: { orderInProject: 1 } }
-      );
-    }
+    const isMovingDown = newOrder > oldOrder;
+    await this.taskModel.updateMany(
+      {
+        project: projectId,
+        orderInProject: isMovingDown ? { $gt: oldOrder, $lte: newOrder } : { $gte: newOrder, $lt: oldOrder },
+        _id: { $ne: taskId },
+      },
+      { $inc: { orderInProject: isMovingDown ? -1 : 1 } },
+    );
   }
 
-  async incrementOrderFrom(
-    projectId: Types.ObjectId,
-    fromOrder: number,
-    excludeTaskId: string
-  ): Promise<void> {
+  async incrementOrderFrom(projectId: Types.ObjectId, fromOrder: number, excludeTaskId: string): Promise<void> {
     await this.taskModel.updateMany(
       {
         project: projectId,
         orderInProject: { $gte: fromOrder },
-        _id: { $ne: excludeTaskId }
+        _id: { $ne: excludeTaskId },
       },
-      { $inc: { orderInProject: 1 } }
+      { $inc: { orderInProject: 1 } },
     );
   }
 
   async save(task: TaskDocument): Promise<TaskDocument> {
-    return task.save();
+    return await task.save();
   }
 }

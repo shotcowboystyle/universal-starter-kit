@@ -1,27 +1,28 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { expect, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import UserAuthForm from '@/components/auth/UserAuthForm';
-import { defaultEmail } from '@/constants/demoData';
-import { useAuthForm } from '@/hooks/useAuth';
+import { defaultEmail } from '@/constants/demo-data';
+import { useAuthForm } from '@/hooks/use-auth';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the lookup translator stub does not match next-intl's typed translator signature
 vi.mock('next-intl', () => ({
-  useTranslations: vi.fn(() => (key: string) => {
-    const copy: Record<string, string> = {
-      emailLabel: 'Email',
-      emailPlaceholder: 'm@example.com',
-      continueButton: 'Continue',
-      invalidEmail: 'Invalid email address',
-    };
-    return copy[key] ?? key;
+  useTranslations: vi.fn<() => (key: string) => string>(() => (key: string) => {
+    const copy = new Map([
+      ['emailLabel', 'Email'],
+      ['emailPlaceholder', 'm@example.com'],
+      ['continueButton', 'Continue'],
+      ['invalidEmail', 'Invalid email address'],
+    ]);
+    return copy.get(key) ?? key;
   }),
 }));
 
-const mockHandleSubmit = vi.fn();
-vi.mock('@/hooks/useAuth', () => ({
-  useAuthForm: vi.fn(() => ({
+const mockHandleSubmit = vi.fn<(email: string) => Promise<void>>();
+vi.mock(import('@/hooks/use-auth'), () => ({
+  useAuthForm: vi.fn<typeof useAuthForm>(() => ({
     handleSubmit: mockHandleSubmit,
     isLoading: false,
     error: null,
@@ -29,7 +30,7 @@ vi.mock('@/hooks/useAuth', () => ({
   })),
 }));
 
-describe('UserAuthForm', () => {
+describe(UserAuthForm, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

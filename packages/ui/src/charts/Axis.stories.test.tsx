@@ -7,48 +7,60 @@
  */
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { XAxis, YAxis } from './Axis';
 import meta, { AxisLineAndTicks, Default, LabelTruncation, WideValueRange } from './Axis.stories';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot } from './composeChart';
+import { computeCartesianPlot } from './compose-chart';
 import { createBandScale, createLinearScale } from './math';
-
-afterEach(cleanup);
 
 const categories = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-function Frame({ showGrid = true }: { showGrid?: boolean }) {
-  return (
-    <ChartSurface label="Axis frame" width={400} height={200}>
-      {(size) => {
-        const plot = computeCartesianPlot(size, {
-          showXAxis: true,
-          showYAxis: true,
-          yTickLabels: ['0', '25', '50', '75', '100'],
-          fontSize: 12,
-        });
-        const xScale = createBandScale({
-          domain: categories,
-          range: [plot.x, plot.x + plot.width],
-        });
-        const yScale = createLinearScale({
-          domain: [0, 100],
-          range: [plot.y + plot.height, plot.y],
-        });
-        return (
-          <>
-            <YAxis plot={plot} scale={yScale} ticks={4} showGrid={showGrid} />
-            <XAxis plot={plot} scale={xScale} />
-          </>
-        );
-      }}
-    </ChartSurface>
-  );
-}
+const Frame = ({ showGrid = true }: { showGrid?: boolean }) => (
+  <ChartSurface
+    label="Axis frame"
+    width={400}
+    height={200}>
+    {(size) => {
+      const plot = computeCartesianPlot(size, {
+        showXAxis: true,
+        showYAxis: true,
+        yTickLabels: ['0', '25', '50', '75', '100'],
+        fontSize: 12,
+      });
+      const xScale = createBandScale({
+        domain: categories,
+        range: [plot.x, plot.x + plot.width],
+      });
+      const yScale = createLinearScale({
+        domain: [0, 100],
+        range: [plot.y + plot.height, plot.y],
+      });
+      return (
+        <>
+          <YAxis
+            plot={plot}
+            scale={yScale}
+            ticks={4}
+            showGrid={showGrid}
+          />
+          <XAxis
+            plot={plot}
+            scale={xScale}
+          />
+        </>
+      );
+    }}
+  </ChartSurface>
+);
+
+const StoryNode = ({ node }: { node: ReactNode }) => <div>{node}</div>;
 
 describe('Axis stories', () => {
+  afterEach(cleanup);
+
   it('declares the Components/Axis title against the component', () => {
     expect(meta.title).toBe('Components/Axis');
     expect(meta.component).toBeDefined();
@@ -56,21 +68,21 @@ describe('Axis stories', () => {
 
   it('every exported story mounts', () => {
     for (const story of [Default, AxisLineAndTicks, LabelTruncation, WideValueRange]) {
-      renderWithProviders(<>{story.render?.({} as never, {} as never)}</>);
+      renderWithProviders(<StoryNode node={story.render?.({} as never, {} as never)} />);
+      expect(story.render).toBeDefined();
       cleanup();
     }
-    expect(true).toBe(true);
   });
 
   it('Long labels truncate renders both container widths', () => {
-    renderWithProviders(<>{LabelTruncation.render?.({} as never, {} as never)}</>);
+    renderWithProviders(<StoryNode node={LabelTruncation.render?.({} as never, {} as never)} />);
     expect(screen.getByText('520px container')).toBeTruthy();
     expect(screen.getByText('280px container')).toBeTruthy();
   });
 
   it('draws one x label per category and the y grid lines at a fixed size', () => {
     const { container } = renderWithProviders(<Frame />);
-    const labels = Array.from(container.querySelectorAll('text')).map((node) => node.textContent);
+    const labels = [...container.querySelectorAll('text')].map((node) => node.textContent);
     for (const category of categories) {
       expect(labels).toContain(category);
     }

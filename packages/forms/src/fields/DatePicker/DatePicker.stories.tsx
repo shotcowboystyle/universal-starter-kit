@@ -53,34 +53,47 @@ const meta: Meta<typeof DatePicker> = {
 export default meta;
 type Story = StoryObj<typeof DatePicker>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      birthDate: new Date('1990-01-01'),
+      startDate: null,
+      endDate: null,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={400}>
+        <DatePicker
+          label="Birth Date"
+          name="birthDate"
+          helperText="Select your date of birth"
+        />
+        <DatePicker
+          label="Start Date"
+          name={'startDate' as any}
+          helperText="Select project start date"
+        />
+        <DatePicker
+          label="End Date"
+          name={'endDate' as any}
+          helperText="Select project end date"
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          birthDate: new Date('1990-01-01'),
-          startDate: null,
-          endDate: null,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4" maxWidth={400}>
-            <DatePicker label="Birth Date" name="birthDate" helperText="Select your date of birth" />
-            <DatePicker label="Start Date" name={'startDate' as any} helperText="Select project start date" />
-            <DatePicker label="End Date" name={'endDate' as any} helperText="Select project end date" />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -92,32 +105,47 @@ export const Standalone: Story = {
   render: (args) => <DatePicker {...args} />,
 };
 
+const StateContractExample = () => {
+  const [value, setValue] = useState<string | null>(null);
+  const [edits, setEdits] = useState(0);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatePicker
+        label="Saved date"
+        defaultValue="1990-01-01"
+      />
+      <DatePicker
+        label="Programmatic date"
+        value={value}
+        onChange={() => {
+          setEdits((count) => count + 1);
+        }}
+      />
+      <Button
+        onPress={() => {
+          setValue('2026-03-05');
+        }}>
+        Load date
+      </Button>
+      <Text>{`User edits: ${edits}`}</Text>
+      <DatePicker
+        label="Read-only date"
+        value="1990-01-01"
+        readOnly
+      />
+      <DatePicker
+        label="Disabled date"
+        value="1990-01-01"
+        disabled
+      />
+    </YStack>
+  );
+};
+
 export const StateContract: Story = {
-  render: () => {
-    const [value, setValue] = useState<string | null>(null);
-    const [edits, setEdits] = useState(0);
-    return (
-      <YStack gap="$4" maxWidth={400}>
-        <DatePicker label="Saved date" defaultValue="1990-01-01" />
-        <DatePicker
-          label="Programmatic date"
-          value={value}
-          onChange={() => {
-            setEdits((count) => count + 1);
-          }}
-        />
-        <Button
-          onPress={() => {
-            setValue('2026-03-05');
-          }}>
-          Load date
-        </Button>
-        <Text>{`User edits: ${edits}`}</Text>
-        <DatePicker label="Read-only date" value="1990-01-01" readOnly />
-        <DatePicker label="Disabled date" value="1990-01-01" disabled />
-      </YStack>
-    );
-  },
+  render: () => <StateContractExample />,
 };
 
 export const Basic: Story = {
@@ -147,36 +175,51 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <DatePicker label="Small" size="$2" placeholder="Pick a date" />
-      <DatePicker label="Medium (default)" size="$3" placeholder="Pick a date" />
-      <DatePicker label="Large" size="$4" placeholder="Pick a date" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatePicker
+        label="Small"
+        size="$2"
+        placeholder="Pick a date"
+      />
+      <DatePicker
+        label="Medium (default)"
+        size="$3"
+        placeholder="Pick a date"
+      />
+      <DatePicker
+        label="Large"
+        size="$4"
+        placeholder="Pick a date"
+      />
     </YStack>
   ),
 };
 
+const InteractiveExample = () => {
+  const [date, setDate] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatePicker
+        label="Pick a Date"
+        value={date}
+        // @ts-expect-error controlled mode not supported
+        onChange={(val: string) => {
+          setDate(val);
+          action('onChange')(val);
+        }}
+        placeholder="Choose a date"
+        helperText={date ? `Selected: ${date}` : 'No date selected'}
+      />
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [date, setDate] = useState('');
-      return (
-        <YStack gap="$4" maxWidth={400}>
-          <DatePicker
-            label="Pick a Date"
-            value={date}
-            // @ts-expect-error controlled mode not supported
-            onChange={(val: string) => {
-              setDate(val);
-              action('onChange')(val);
-            }}
-            placeholder="Choose a date"
-            helperText={date ? `Selected: ${date}` : 'No date selected'}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 // --- Calendar variant ---
@@ -223,7 +266,9 @@ export const MonthPickerBasic = {
 
 export const MonthPickerWithYearRange = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <MonthPicker
         label="Fiscal Period"
         placeholder="Select fiscal period"
@@ -248,7 +293,9 @@ export const DatetimePickerBasic = {
 
 export const DatetimePicker24Hour = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <DatetimePicker
         label="Meeting Time"
         placeholder="Select meeting time"
@@ -261,8 +308,15 @@ export const DatetimePicker24Hour = {
 
 export const DatetimePickerWithSeconds = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <DatetimePicker label="Precise Timestamp" placeholder="Select exact time" helperText="With seconds" showSeconds />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatetimePicker
+        label="Precise Timestamp"
+        placeholder="Select exact time"
+        helperText="With seconds"
+        showSeconds
+      />
     </YStack>
   ),
 };

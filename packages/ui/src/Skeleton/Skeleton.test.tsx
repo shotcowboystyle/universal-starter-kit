@@ -9,19 +9,15 @@ import { Preset, sizeRecipeForToken } from '@repo/theme';
 import { cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as SkeletonExports from './index';
 import { Skeleton, SkeletonCircle, SkeletonGroup, SkeletonText } from './index';
 
-afterEach(cleanup);
-
-function radiusClasses(el: Element): string[] {
-  return String((el as HTMLElement).className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
-}
+const radiusClasses = (el: Element): string[] => el.className.split(' ').filter((c) => c.startsWith('_btlr-'));
 
 describe('Skeleton named exports', () => {
-  it('serves named exports only (no default) and keeps the namespace statics', () => {
+  afterEach(cleanup);
+
+  it('serves named exports only (no default) and keeps the namespace statics', async () => {
+    const SkeletonExports = await import('./index');
     expect('default' in SkeletonExports).toBe(false);
     expect(SkeletonExports.Skeleton).toBe(Skeleton);
     expect(SkeletonExports.SkeletonText).toBe(SkeletonText);
@@ -34,50 +30,65 @@ describe('Skeleton named exports', () => {
 });
 
 describe('Skeleton — announcer and motion', () => {
+  afterEach(cleanup);
+
   it('announces a root bone as a polite busy status', () => {
     const { container } = renderWithProviders(<Skeleton width={200} />);
-    const bone = container.querySelector('[data-skeleton]') as HTMLElement;
+    const bone = container.querySelector<HTMLElement>('[data-skeleton]')!;
     expect(bone.getAttribute('role')).toBe('status');
     expect(bone.getAttribute('aria-busy')).toBe('true');
     expect(bone.getAttribute('aria-live')).toBe('polite');
     expect(bone.getAttribute('aria-label')).toBe('Loading');
-    expect(bone.getAttribute('data-skeleton-variant')).toBe('text');
+    expect(bone.dataset.skeletonVariant).toBe('text');
     expect(bone.getAttribute('tabindex')).toBeNull();
   });
 
   it('pulses by default and goes static when animate=false', () => {
     const live = renderWithProviders(<Skeleton width={120} />);
-    const liveBone = live.container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(liveBone.getAttribute('data-animate')).toBe('true');
-    expect(liveBone.className).toMatch(/mp-skeleton-pulse/);
-    expect(liveBone.className).not.toMatch(/mp-skeleton-static/);
+    const liveBone = live.container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(liveBone.dataset.animate).toBe('true');
+    expect(liveBone.className).toMatch(/mp-skeleton-pulse/u);
+    expect(liveBone.className).not.toMatch(/mp-skeleton-static/u);
     cleanup();
 
-    const still = renderWithProviders(<Skeleton width={120} animate={false} />);
-    const stillBone = still.container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(stillBone.getAttribute('data-animate')).toBe('false');
-    expect(stillBone.className).toMatch(/mp-skeleton-static/);
-    expect(stillBone.className).not.toMatch(/mp-skeleton-pulse/);
+    const still = renderWithProviders(
+      <Skeleton
+        width={120}
+        animate={false}
+      />,
+    );
+    const stillBone = still.container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(stillBone.dataset.animate).toBe('false');
+    expect(stillBone.className).toMatch(/mp-skeleton-static/u);
+    expect(stillBone.className).not.toMatch(/mp-skeleton-pulse/u);
   });
 
   it('animation:none stops the pulse even when animate is true', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Skeleton width={120} animate />
+        <Skeleton
+          width={120}
+          animate
+        />
       </Preset>,
     );
-    const bone = container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(bone.getAttribute('data-animate')).toBe('false');
-    expect(bone.className).toMatch(/mp-skeleton-static/);
+    const bone = container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(bone.dataset.animate).toBe('false');
+    expect(bone.className).toMatch(/mp-skeleton-static/u);
   });
 
   it('never accepts pointer events', () => {
-    const { container } = renderWithProviders(<Skeleton width={80} height={16} />);
-    const bone = container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(bone.className).toMatch(/_pe-none/);
+    const { container } = renderWithProviders(
+      <Skeleton
+        width={80}
+        height={16}
+      />,
+    );
+    const bone = container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(bone.className).toMatch(/_pe-none/u);
   });
 
-  it('fillStyle does not recolour the bone (neutral chrome)', () => {
+  it('fillStyle does not recolor the bone (neutral chrome)', () => {
     const filled = renderWithProviders(
       <Preset overrides={{ fillStyle: 'filled' }}>
         <Skeleton width={80} />
@@ -88,15 +99,17 @@ describe('Skeleton — announcer and motion', () => {
         <Skeleton width={80} />
       </Preset>,
     );
-    const filledBg = String(filled.container.querySelector('[data-skeleton]')!.className)
-      .split(' ')
+    const filledBg = filled.container
+      .querySelector('[data-skeleton]')!
+      .className.split(' ')
       .filter((c) => c.startsWith('_bg-'))
-      .sort()
+      .toSorted()
       .join(' ');
-    const outlinedBg = String(outlined.container.querySelector('[data-skeleton]')!.className)
-      .split(' ')
+    const outlinedBg = outlined.container
+      .querySelector('[data-skeleton]')!
+      .className.split(' ')
       .filter((c) => c.startsWith('_bg-'))
-      .sort()
+      .toSorted()
       .join(' ');
     expect(filledBg).toBe(outlinedBg);
     expect(filledBg.length).toBeGreaterThan(0);
@@ -104,71 +117,97 @@ describe('Skeleton — announcer and motion', () => {
 });
 
 describe('Skeleton — radius classes', () => {
+  afterEach(cleanup);
+
   it('text bones ride DEFAULT: square at radius:none, the token at full', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="text" width={120} />
+        <Skeleton
+          variant="text"
+          width={120}
+        />
       </Preset>,
     );
-    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
+    expect(radiusClasses(none.container.querySelector('[data-skeleton]')!)).toStrictEqual(['_btlr-t-radius-0']);
     cleanup();
 
     const full = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="text" width={120} />
+        <Skeleton
+          variant="text"
+          width={120}
+        />
       </Preset>,
     );
-    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(full.container.querySelector('[data-skeleton]')!)).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('rounded bones track the radius knob (R-SCALE)', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="rounded" width={80} height={32} />
+        <Skeleton
+          variant="rounded"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
-    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
+    expect(radiusClasses(none.container.querySelector('[data-skeleton]')!)).toStrictEqual(['_btlr-t-radius-0']);
     cleanup();
 
     const full = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="rounded" width={80} height={32} />
+        <Skeleton
+          variant="rounded"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
-    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(full.container.querySelector('[data-skeleton]')!)).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('circular bones declare R-PILL and stay round at radius:none', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="circular" width={40} height={40} />
+        <Skeleton
+          variant="circular"
+          width={40}
+          height={40}
+        />
       </Preset>,
     );
-    const bone = container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(bone.getAttribute('data-radius-class')).toBe('R-PILL');
-    expect(bone.getAttribute('data-radius-part')).toBe('SkeletonCircle');
-    expect(bone.getAttribute('data-skeleton-variant')).toBe('circular');
+    const bone = container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(bone.dataset.radiusClass).toBe('R-PILL');
+    expect(bone.dataset.radiusPart).toBe('SkeletonCircle');
+    expect(bone.dataset.skeletonVariant).toBe('circular');
   });
 
   it('rectangular bones stay square (no radius class, no R-PILL)', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="rectangular" width={80} height={32} />
+        <Skeleton
+          variant="rectangular"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
-    const bone = container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(bone.getAttribute('data-radius-class')).toBeNull();
-    expect(radiusClasses(bone)).toEqual(['_btlr-0px']);
+    const bone = container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(bone.dataset.radiusClass).toBeUndefined();
+    expect(radiusClasses(bone)).toStrictEqual(['_btlr-0px']);
   });
 });
 
-describe('SkeletonText', () => {
+describe(SkeletonText, () => {
+  afterEach(cleanup);
+
   it('announces once; child bones are decorative', () => {
     const { container } = renderWithProviders(<SkeletonText lines={3} />);
-    const stack = container.querySelector('[data-skeleton-text]') as HTMLElement;
+    const stack = container.querySelector<HTMLElement>('[data-skeleton-text]')!;
     expect(stack.getAttribute('role')).toBe('status');
     expect(stack.getAttribute('aria-busy')).toBe('true');
-    expect(stack.getAttribute('data-lines')).toBe('3');
+    expect(stack.dataset.lines).toBe('3');
     const bones = container.querySelectorAll('[data-skeleton]');
     expect(bones).toHaveLength(3);
     for (const bone of bones) {
@@ -184,12 +223,17 @@ describe('SkeletonText', () => {
   });
 
   it('shortens only the last line when more than one line exists', () => {
-    const { container } = renderWithProviders(<SkeletonText lines={3} lastLineWidth="40%" />);
+    const { container } = renderWithProviders(
+      <SkeletonText
+        lines={3}
+        lastLineWidth="40%"
+      />,
+    );
     const bones = [...container.querySelectorAll('[data-skeleton]')] as HTMLElement[];
     expect(bones).toHaveLength(3);
-    expect(bones[0].getAttribute('data-width')).toBe('100%');
-    expect(bones[1].getAttribute('data-width')).toBe('100%');
-    expect(bones[2].getAttribute('data-width')).toBe('40%');
+    expect(bones[0].dataset.width).toBe('100%');
+    expect(bones[1].dataset.width).toBe('100%');
+    expect(bones[2].dataset.width).toBe('40%');
   });
 
   it('space knob drives the line gap (SP-GAP)', () => {
@@ -203,20 +247,22 @@ describe('SkeletonText', () => {
         <SkeletonText lines={2} />
       </Preset>,
     );
-    const smallGap = String(small.container.querySelector('[data-skeleton-text]')!.className);
-    const largeGap = String(large.container.querySelector('[data-skeleton-text]')!.className);
-    expect(smallGap).not.toEqual(largeGap);
+    const smallGap = small.container.querySelector('[data-skeleton-text]')!.className;
+    const largeGap = large.container.querySelector('[data-skeleton-text]')!.className;
+    expect(smallGap).not.toStrictEqual(largeGap);
   });
 });
 
-describe('SkeletonCircle', () => {
+describe(SkeletonCircle, () => {
+  afterEach(cleanup);
+
   it('stays 1:1 and scales with the size recipe when size is omitted', () => {
     const medium = renderWithProviders(<SkeletonCircle />);
-    const mediumBone = medium.container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(mediumBone.getAttribute('data-radius-class')).toBe('R-PILL');
-    expect(mediumBone.getAttribute('data-skeleton-variant')).toBe('circular');
+    const mediumBone = medium.container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(mediumBone.dataset.radiusClass).toBe('R-PILL');
+    expect(mediumBone.dataset.skeletonVariant).toBe('circular');
     const mediumMax = sizeRecipeForToken('$5').height;
-    expect(Number(mediumBone.getAttribute('data-diameter'))).toBe(mediumMax);
+    expect(Number(mediumBone.dataset.diameter)).toBe(mediumMax);
     cleanup();
 
     const small = renderWithProviders(
@@ -224,26 +270,28 @@ describe('SkeletonCircle', () => {
         <SkeletonCircle />
       </Preset>,
     );
-    const smallBone = small.container.querySelector('[data-skeleton]') as HTMLElement;
+    const smallBone = small.container.querySelector<HTMLElement>('[data-skeleton]')!;
     const smallMax = sizeRecipeForToken('$4').height;
-    const smallVal = Number(smallBone.getAttribute('data-diameter'));
+    const smallVal = Number(smallBone.dataset.diameter);
     expect(smallVal).toBe(smallMax);
     expect(smallVal).toBeLessThan(mediumMax);
   });
 
   it('honors an explicit size and a zero diameter', () => {
     const sized = renderWithProviders(<SkeletonCircle size={64} />);
-    const sizedBone = sized.container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(Number(sizedBone.getAttribute('data-diameter'))).toBe(64);
+    const sizedBone = sized.container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(Number(sizedBone.dataset.diameter)).toBe(64);
     cleanup();
 
     const zero = renderWithProviders(<SkeletonCircle size={0} />);
-    const zeroBone = zero.container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(Number(zeroBone.getAttribute('data-diameter'))).toBe(0);
+    const zeroBone = zero.container.querySelector<HTMLElement>('[data-skeleton]')!;
+    expect(Number(zeroBone.dataset.diameter)).toBe(0);
   });
 });
 
-describe('SkeletonGroup', () => {
+describe(SkeletonGroup, () => {
+  afterEach(cleanup);
+
   it('announces the group once so nested bones stay decorative', () => {
     const { container } = renderWithProviders(
       <SkeletonGroup>
@@ -251,7 +299,7 @@ describe('SkeletonGroup', () => {
         <SkeletonText lines={2} />
       </SkeletonGroup>,
     );
-    const group = container.querySelector('[data-skeleton-group]') as HTMLElement;
+    const group = container.querySelector<HTMLElement>('[data-skeleton-group]')!;
     expect(group.getAttribute('role')).toBe('status');
     expect(group.getAttribute('aria-busy')).toBe('true');
     expect(container.querySelectorAll('[role="status"]')).toHaveLength(1);

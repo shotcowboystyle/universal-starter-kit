@@ -1,6 +1,8 @@
 import { useResolvedKnobs } from '@repo/theme';
-import { Children, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { XStack, YStack, isWeb, useMedia } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 /** Container/media width below which multi-column form grids collapse to 1 col. */
 export const FORM_GRID_COLLAPSE_WIDTH = 480;
@@ -28,9 +30,181 @@ export interface FormGridProps {
   children: ReactNode;
 }
 
-function resolveWideColumns(columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns {
-  return Math.min(columns, maxColumns) as FormGridColumns;
-}
+const resolveWideColumns = (columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns =>
+  columns < maxColumns ? columns : maxColumns;
+
+const FormGridWeb = ({
+  columns,
+  maxColumns,
+  gap,
+  gapFragment,
+  density,
+  size,
+  children,
+}: {
+  columns: FormGridColumns;
+  maxColumns: FormGridColumns;
+  gap: number | string;
+  gapFragment: { gap: number | string };
+  density: string;
+  size: string;
+  children: ReactNode;
+}) => {
+  const ref = useRef<TamaguiElement>(null);
+  const [containerWide, setContainerWide] = useState(true);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!(el instanceof HTMLElement) || columns <= 1) {
+      setContainerWide(true);
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
+    }
+
+    const update = (width: number) => {
+      setContainerWide(width >= FORM_GRID_COLLAPSE_WIDTH);
+    };
+
+    update(el.getBoundingClientRect().width);
+
+    if (typeof ResizeObserver === 'undefined') {
+      const onResize = () => {
+        update(el.getBoundingClientRect().width);
+      };
+      // oxlint-disable-next-line github/prefer-observers -- fallback branch taken only when ResizeObserver is unavailable
+      window.addEventListener('resize', onResize);
+      return () => {
+        window.removeEventListener('resize', onResize);
+      };
+    }
+
+    const ro = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? el.getBoundingClientRect().width;
+      update(width);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, [columns]);
+
+  const effectiveColumns: FormGridColumns = columns <= 1 || !containerWide ? 1 : columns;
+
+  const style: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
+    // Enable container queries for consumers / CSS extensions.
+    containerType: columns > 1 ? 'inline-size' : undefined,
+  };
+
+  return (
+    <YStack
+      ref={ref}
+      data-mpo-form-grid=""
+      data-columns={effectiveColumns}
+      data-max-columns={maxColumns}
+      data-requested-columns={columns}
+      data-gap={String(gap)}
+      data-density={density}
+      data-size={size}
+      {...gapFragment}
+      width="100%"
+      minWidth={0}
+      style={style}>
+      {children}
+    </YStack>
+  );
+};
+
+const FormGridNative = ({
+  columns,
+  maxColumns,
+  gap,
+  gapFragment,
+  density,
+  size,
+  children,
+}: {
+  columns: FormGridColumns;
+  maxColumns: FormGridColumns;
+  gap: number | string;
+  gapFragment: { gap: number | string };
+  density: string;
+  size: string;
+  children: ReactNode;
+}) => {
+  const media = useMedia();
+  // React Native defines a `window` global without DOM event methods or
+  // innerWidth, so bare `typeof window` checks are not enough — the resize
+  // listener crashed on native ("window.addEventListener is not a function").
+  /* oxlint-disable anti-slop/no-runtime-typeof -- RN's `window` global lacks DOM members; only a runtime typeof probe distinguishes it */
+  const canUseDomResize =
+    typeof window !== 'undefined' &&
+    typeof window.addEventListener === 'function' &&
+    typeof window.innerWidth === 'number';
+  /* oxlint-enable anti-slop/no-runtime-typeof */
+  // Prefer live viewport width when available; fall back to Tamagui media
+  // (`xs` = v5 minWidth 460, nearest key to FORM_GRID_COLLAPSE_WIDTH 480 —
+  // the old `gtSm` key died with the v5 media map), which stays
+  // reactive on native.
+  const [domViewportWide, setDomViewportWide] = useState(() =>
+    canUseDomResize ? window.innerWidth >= FORM_GRID_COLLAPSE_WIDTH : true,
+  );
+
+  useEffect(() => {
+    if (!canUseDomResize) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
+    }
+    const handler = () => {
+      setDomViewportWide(window.innerWidth >= FORM_GRID_COLLAPSE_WIDTH);
+    };
+    handler();
+    // oxlint-disable-next-line github/prefer-observers -- RN/DOM viewport width has no observer API; ResizeObserver tracks elements, not the window
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('resize', handler);
+    };
+  }, [canUseDomResize]);
+
+  const viewportWide = canUseDomResize ? domViewportWide : media.xs;
+  const effectiveColumns: FormGridColumns = columns <= 1 || !viewportWide ? 1 : columns;
+
+  // oxlint-disable-next-line react/no-react-children -- children are chunked into rows; toArray drops null/boolean and assigns stable keys
+  const childArray = Children.toArray(children);
+  const rows: ReactNode[][] = [];
+  for (let i = 0; i < childArray.length; i += effectiveColumns) {
+    rows.push(childArray.slice(i, i + effectiveColumns));
+  }
+
+  return (
+    <YStack
+      {...gapFragment}
+      width="100%"
+      data-mpo-form-grid=""
+      data-columns={effectiveColumns}
+      data-max-columns={maxColumns}
+      data-requested-columns={columns}
+      data-gap={String(gap)}
+      data-density={density}
+      data-size={size}>
+      {rows.map((row, rowIndex) => (
+        <XStack
+          key={rowIndex}
+          {...gapFragment}>
+          {row.map((child, colIndex) => (
+            <YStack
+              key={colIndex}
+              flex={1}
+              minWidth={0}>
+              {child}
+            </YStack>
+          ))}
+        </XStack>
+      ))}
+    </YStack>
+  );
+};
 
 /**
  * Lays out form fields in a grid with correct tab order (left-to-right across rows).
@@ -41,7 +215,7 @@ function resolveWideColumns(columns: FormGridColumns, maxColumns: FormGridColumn
  * the container is at least {@link FORM_GRID_COLLAPSE_WIDTH} wide (container measure
  * on web; viewport media on native).
  */
-export function FormGrid({ columns = 1, maxColumns = 2, gap, compact, children }: FormGridProps) {
+export const FormGrid = ({ columns = 1, maxColumns = 2, gap, compact, children }: FormGridProps) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const gapFragment = gap === undefined ? knobProps.gap : { gap };
   const resolvedGap = gapFragment.gap;
@@ -72,165 +246,4 @@ export function FormGrid({ columns = 1, maxColumns = 2, gap, compact, children }
       {children}
     </FormGridNative>
   );
-}
-
-function FormGridWeb({
-  columns,
-  maxColumns,
-  gap,
-  gapFragment,
-  density,
-  size,
-  children,
-}: {
-  columns: FormGridColumns;
-  maxColumns: FormGridColumns;
-  gap: number | string;
-  gapFragment: { gap: number | string };
-  density: string;
-  size: string;
-  children: ReactNode;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [containerWide, setContainerWide] = useState(true);
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || columns <= 1) {
-      setContainerWide(true);
-      return;
-    }
-
-    const update = (width: number) => {
-      setContainerWide(width >= FORM_GRID_COLLAPSE_WIDTH);
-    };
-
-    update(el.getBoundingClientRect().width);
-
-    if (typeof ResizeObserver === 'undefined') {
-      const onResize = () => {
-        update(el.getBoundingClientRect().width);
-      };
-      window.addEventListener('resize', onResize);
-      return () => {
-        window.removeEventListener('resize', onResize);
-      };
-    }
-
-    const ro = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? el.getBoundingClientRect().width;
-      update(width);
-    });
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-    };
-  }, [columns]);
-
-  const effectiveColumns: FormGridColumns = columns <= 1 || !containerWide ? 1 : columns;
-
-  const style: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
-    // Enable container queries for consumers / CSS extensions.
-    containerType: columns > 1 ? 'inline-size' : undefined,
-  };
-
-  return (
-    <YStack
-      ref={ref as never}
-      data-mpo-form-grid=""
-      data-columns={effectiveColumns}
-      data-max-columns={maxColumns}
-      data-requested-columns={columns}
-      data-gap={String(gap)}
-      data-density={density}
-      data-size={size}
-      {...gapFragment}
-      width="100%"
-      minWidth={0}
-      style={style}>
-      {children}
-    </YStack>
-  );
-}
-
-function FormGridNative({
-  columns,
-  maxColumns,
-  gap,
-  gapFragment,
-  density,
-  size,
-  children,
-}: {
-  columns: FormGridColumns;
-  maxColumns: FormGridColumns;
-  gap: number | string;
-  gapFragment: { gap: number | string };
-  density: string;
-  size: string;
-  children: ReactNode;
-}) {
-  const media = useMedia();
-  // React Native defines a `window` global without DOM event methods or
-  // innerWidth, so bare `typeof window` checks are not enough — the resize
-  // listener crashed on native ("window.addEventListener is not a function").
-  const canUseDomResize =
-    typeof window !== 'undefined' &&
-    typeof window.addEventListener === 'function' &&
-    typeof window.innerWidth === 'number';
-  // Prefer live viewport width when available; fall back to Tamagui media
-  // (`xs` = v5 minWidth 460, nearest key to FORM_GRID_COLLAPSE_WIDTH 480 —
-  // the old `gtSm` key died with the v5 media map), which stays
-  // reactive on native.
-  const [domViewportWide, setDomViewportWide] = useState(() =>
-    canUseDomResize ? window.innerWidth >= FORM_GRID_COLLAPSE_WIDTH : true,
-  );
-
-  useEffect(() => {
-    if (!canUseDomResize) {
-      return;
-    }
-    const handler = () => {
-      setDomViewportWide(window.innerWidth >= FORM_GRID_COLLAPSE_WIDTH);
-    };
-    handler();
-    window.addEventListener('resize', handler);
-    return () => {
-      window.removeEventListener('resize', handler);
-    };
-  }, [canUseDomResize]);
-
-  const viewportWide = canUseDomResize ? domViewportWide : media.xs;
-  const effectiveColumns: FormGridColumns = columns <= 1 || !viewportWide ? 1 : columns;
-
-  const childArray = Children.toArray(children);
-  const rows: ReactNode[][] = [];
-  for (let i = 0; i < childArray.length; i += effectiveColumns) {
-    rows.push(childArray.slice(i, i + effectiveColumns));
-  }
-
-  return (
-    <YStack
-      {...gapFragment}
-      width="100%"
-      data-mpo-form-grid=""
-      data-columns={effectiveColumns}
-      data-max-columns={maxColumns}
-      data-requested-columns={columns}
-      data-gap={String(gap)}
-      data-density={density}
-      data-size={size}>
-      {rows.map((row, rowIndex) => (
-        <XStack key={rowIndex} {...gapFragment}>
-          {row.map((child, colIndex) => (
-            <YStack key={colIndex} flex={1} minWidth={0}>
-              {child}
-            </YStack>
-          ))}
-        </XStack>
-      ))}
-    </YStack>
-  );
-}
+};

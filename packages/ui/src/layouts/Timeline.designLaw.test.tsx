@@ -18,6 +18,6 @@ describe('Timeline design law', () => {
         ]}
       />,
     );
-    expect(container.textContent).toMatch(/Ada|Hello/);
+    expect(container.textContent).toMatch(/Ada|Hello/u);
   });
 });

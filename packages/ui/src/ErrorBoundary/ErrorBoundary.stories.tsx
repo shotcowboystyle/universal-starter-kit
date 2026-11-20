@@ -1,6 +1,7 @@
 import { Button } from '@repo/forms';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Text, YStack } from 'tamagui';
 
 import { ErrorBoundary } from './index';
@@ -22,11 +23,11 @@ const meta: Meta<typeof ErrorBoundary> = {
 export default meta;
 type Story = StoryObj<typeof ErrorBoundary>;
 
-function ThrowError(): ReactNode {
+const ThrowError = (): ReactNode => {
   throw new Error('This is a test error!');
-}
+};
 
-function BuggyCounter() {
+const BuggyCounter = () => {
   const [count, setCount] = useState(0);
 
   if (count === 5) {
@@ -42,12 +43,14 @@ function BuggyCounter() {
         }}>
         Increment
       </Button>
-      <Text fontSize="$2" color="$color10">
+      <Text
+        fontSize="$2"
+        color="$color10">
         Click 5 times to trigger error
       </Text>
     </YStack>
   );
-}
+};
 
 export const Basic: Story = {
   name: 'Main',
@@ -79,7 +82,9 @@ export const WithError = () => {
 
 export const CounterExample = () => (
   <YStack gap="$4">
-    <Text fontSize="$6" fontWeight="bold">
+    <Text
+      fontSize="$6"
+      fontWeight="bold">
       Counter with Error Boundary
     </Text>
     <ErrorBoundary>
@@ -90,7 +95,9 @@ export const CounterExample = () => (
 
 export const MultipleChildren = () => (
   <YStack gap="$4">
-    <Text fontSize="$6" fontWeight="bold">
+    <Text
+      fontSize="$6"
+      fontWeight="bold">
       Error Boundary with Multiple Children
     </Text>
     <ErrorBoundary>
@@ -107,12 +114,18 @@ export const NestedBoundaries = () => {
 
   return (
     <YStack gap="$4">
-      <Text fontSize="$6" fontWeight="bold">
+      <Text
+        fontSize="$6"
+        fontWeight="bold">
         Nested Error Boundaries
       </Text>
 
       <ErrorBoundary>
-        <YStack gap="$2" padding="$4" backgroundColor="$blue2" borderRadius="$4">
+        <YStack
+          gap="$2"
+          padding="$4"
+          backgroundColor="$blue2"
+          borderRadius="$4">
           <Text fontWeight="bold">Outer Boundary</Text>
           <Button
             size="$3"
@@ -124,7 +137,11 @@ export const NestedBoundaries = () => {
           {trigger1 && <ThrowError />}
 
           <ErrorBoundary>
-            <YStack gap="$2" padding="$4" backgroundColor="$green2" borderRadius="$4">
+            <YStack
+              gap="$2"
+              padding="$4"
+              backgroundColor="$green2"
+              borderRadius="$4">
               <Text fontWeight="bold">Inner Boundary</Text>
               <Button
                 size="$3"

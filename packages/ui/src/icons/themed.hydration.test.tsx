@@ -9,8 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { themed } from './themed';
 
 const host = vi.hoisted(() => ({ touch: false }));
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: true,
   isTouchable: false,
   get isWebTouchable() {
@@ -18,20 +18,24 @@ vi.mock('@repo/platform', async (importOriginal) => ({
   },
 }));
 
-const Icon = themed(({ size }: { size?: string | number }) => <svg width={size} height={size} />);
-function Fixture() {
-  return (
-    <TestProviders>
-      <Icon size="$4" />
-    </TestProviders>
-  );
-}
+const Icon = themed(({ size }: { size?: string | number }) => (
+  <svg
+    aria-hidden="true"
+    width={size}
+    height={size}
+  />
+));
+const Fixture = () => (
+  <TestProviders>
+    <Icon size="$4" />
+  </TestProviders>
+);
 
 describe('token icon hydration', () => {
   it('preserves the server SVG before adopting touch sizing', async () => {
     host.touch = false;
     const container = document.createElement('div');
-    container.innerHTML = renderToString(<Fixture />);
+    container.insertAdjacentHTML('beforeend', renderToString(<Fixture />));
     document.body.append(container);
     const icon = container.querySelector('svg');
     const errors: unknown[] = [];
@@ -46,7 +50,7 @@ describe('token icon hydration', () => {
       });
       expect(container.querySelector('svg')).toBe(icon);
       expect(icon?.getAttribute('width')).toBe(String(sizeRecipeForToken('$4', { touch: true }).iconSize));
-      expect(errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)))).toEqual([]);
+      expect(errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)))).toStrictEqual([]);
     } finally {
       await act(async () => root?.unmount());
       spy.mockRestore();

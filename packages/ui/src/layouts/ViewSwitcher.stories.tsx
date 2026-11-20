@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { YStack, Text } from 'tamagui';
 
-import { ViewSwitcher, type ViewOption } from './ViewSwitcher';
+import { ViewSwitcher } from './ViewSwitcher';
+import type { ViewOption } from './ViewSwitcher';
 
 const views: ViewOption[] = [
   { type: 'list', label: 'List' },
@@ -10,29 +11,32 @@ const views: ViewOption[] = [
   { type: 'kanban', label: 'Kanban' },
 ];
 
-function ListIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Text fontSize={size} lineHeight={size} aria-hidden>
-      ≡
-    </Text>
-  );
-}
+const ListIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ≡
+  </Text>
+);
 
-function GridIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Text fontSize={size} lineHeight={size} aria-hidden>
-      ▦
-    </Text>
-  );
-}
+const GridIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ▦
+  </Text>
+);
 
-function KanbanIcon({ size = 16 }: { size?: number }) {
-  return (
-    <Text fontSize={size} lineHeight={size} aria-hidden>
-      ▯
-    </Text>
-  );
-}
+const KanbanIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ▯
+  </Text>
+);
 
 const viewsWithIcons: ViewOption[] = [
   { type: 'list', label: 'List', icon: ListIcon },
@@ -46,15 +50,22 @@ const viewsIconsOnly: ViewOption[] = [
   { type: 'kanban', label: 'Kanban', icon: KanbanIcon, iconOnly: true },
 ];
 
-function ViewSwitcherExample({ options = views }: { options?: ViewOption[] }) {
+const ViewSwitcherExample = ({ options = views }: { options?: ViewOption[] }) => {
   const [current, setCurrent] = useState(options[0]?.type ?? 'list');
   return (
-    <YStack gap="$4" padding="$4" alignItems="flex-start">
-      <ViewSwitcher views={options} currentView={current} onViewChange={setCurrent} />
+    <YStack
+      gap="$4"
+      padding="$4"
+      alignItems="flex-start">
+      <ViewSwitcher
+        views={options}
+        currentView={current}
+        onViewChange={setCurrent}
+      />
       <Text>Current view: {current}</Text>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof ViewSwitcher> = {
   title: 'Components/ViewSwitcher',

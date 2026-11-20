@@ -1,5 +1,5 @@
 /**
- * ListCard — Frappe link card / Polaris resource list / Grafana table-lite.
+ * ListCard — link card / Polaris resource list / Grafana table-lite.
  */
 
 import { action } from '@repo/storybook';
@@ -38,7 +38,9 @@ export const Main: Story = {
     },
   },
   render: (args) => (
-    <YStack width={320} padding="$4">
+    <YStack
+      width={320}
+      padding="$4">
       <ListCard {...args} />
     </YStack>
   ),

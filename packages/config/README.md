@@ -14,9 +14,7 @@ consuming package's `devDependencies`.
 ```ts
 import { createViteConfig } from '@repo/config/vite';
 
-export default createViteConfig({
-  /* options */
-});
+export default createViteConfig({/* options */});
 ```
 
 ### Vitest
@@ -24,9 +22,7 @@ export default createViteConfig({
 ```ts
 import { createVitestConfig } from '@repo/config/vitest';
 
-export default createVitestConfig({
-  /* options */
-});
+export default createVitestConfig({/* options */});
 ```
 
 ### Storybook
@@ -34,9 +30,7 @@ export default createVitestConfig({
 ```ts
 import { createStorybookViteConfig } from '@repo/config/storybook';
 
-export default createStorybookViteConfig({
-  /* options */
-});
+export default createStorybookViteConfig({/* options */});
 ```
 
 ### Playwright
@@ -44,9 +38,7 @@ export default createStorybookViteConfig({
 ```ts
 import { createPlaywrightConfig } from '@repo/config/playwright';
 
-export default createPlaywrightConfig({
-  /* options */
-});
+export default createPlaywrightConfig({/* options */});
 ```
 
 ### TypeScript
@@ -77,7 +69,7 @@ oxlint resolves `extends` as a file path, not a package name, hence the
 `no-hex-literals`, `no-raw-typography` and `no-parameter-properties` on as
 errors, turns `no-chrome-props`, `no-raw-geometry` and `no-child-margin` on
 as warnings while their burndowns run, and exempts specs and `tests/` trees,
-which assert computed colours, from all but `no-raw-typography` and
+which assert computed colors, from all but `no-raw-typography` and
 `no-parameter-properties`. A project that wants its
 own levels keeps the older one-line form,
 `{ "jsPlugins": ["@repo/config/oxlint"] }`, and writes its own
@@ -123,5 +115,3 @@ runConventionChecks({
   roots: { root: process.cwd() },
 });
 ```
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

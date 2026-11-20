@@ -1,15 +1,16 @@
 import { FileIcon, UploadIcon, XIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus } from '@repo/theme';
+import { useTouchSurface, ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type DragEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { useProps, type SizeTokens } from 'tamagui';
-import { Image, isWeb, Text, XStack, YStack, styled } from 'tamagui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DragEvent, ReactNode } from 'react';
+import type { ViewStyle } from 'react-native';
+import { useProps, Image, isWeb, Text, XStack, YStack, styled } from 'tamagui';
+import type { SizeTokens, TamaguiElement } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
-import { formCommonColors, formDropzoneColors, formInputColors } from '../../shared/colorRamps';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
+import { formCommonColors, formDropzoneColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   clampRadiusForLargeComponent,
@@ -22,10 +23,10 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import type { NativePickedFile, NativePickerMode } from './filePickerTypes';
+import type { NativePickedFile, NativePickerMode } from './file-picker-types';
 // Platform-split: the web twin is inert, the `.native` twin opens
 // expo-document-picker / expo-image-picker (Geolocation map-surface pattern).
-import { pickFilesNatively } from './nativeFilePicker';
+import { pickFilesNatively } from './native-file-picker';
 
 /** Structured per-file transport error. */
 export interface FileTransferError {
@@ -46,13 +47,13 @@ interface TransferItem {
   file: File;
   status: TransferStatus;
   progress: number;
-  error?: FileTransferError;
+  error?: FileTransferError | null;
   controller: AbortController;
 }
 
 export type FileUploadProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
+  TParentData = unknown,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
@@ -60,7 +61,8 @@ export type FileUploadProps<
   Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
     readOnly?: boolean;
     accept?: string;
-    maxSize?: number; // in bytes
+    /** In bytes. */
+    maxSize?: number;
     multiple?: boolean;
     dragDrop?: boolean;
     showPreview?: boolean;
@@ -101,6 +103,9 @@ export type FileUploadProps<
     actions?: ReactNode;
   };
 
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: web-only CSS value; RN's style type omits 'none' but react-native-web forwards it to the DOM.
+const noOutlineStyle = 'none' as ViewStyle['outlineStyle'];
+
 const UploadAreaFrame = styled(YStack, {
   width: '100%',
   position: 'relative',
@@ -119,9 +124,9 @@ const UploadAreaFrame = styled(YStack, {
   // only on keyboard-origin focus via wasKeyboardFocus() below — never the
   // 1px browser outline (forms-fileupload--standalone audit Cluster C).
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
-  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
-  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
+  outlineStyle: noOutlineStyle,
+  focusStyle: { outlineWidth: 0, outlineStyle: noOutlineStyle },
+  focusVisibleStyle: { outlineWidth: 0, outlineStyle: noOutlineStyle },
 });
 
 /**
@@ -135,10 +140,12 @@ const UploadAreaFrame = styled(YStack, {
  * the state that should carry a ring, and leaves pointer focus alone (the
  * caller only spreads this while `kbZoneFocus` is true).
  */
-function withZoneFocusRing() {
+const withZoneFocusRing = () => {
   const ring = ensureFocusVisibleRing({ outlineOffset: 0 });
   return { ...ring, focusStyle: ring, focusVisibleStyle: ring };
-}
+};
+
+const overlayGlyphColor = { color: formCommonColors.text };
 
 const DropOverlayFrame = styled(YStack, {
   position: 'absolute',
@@ -179,13 +186,49 @@ const UploadTileGridFrame = styled(XStack, {
   flexWrap: 'wrap',
 });
 
-export function FileUpload<
+// Native owns no listeners or object URLs, so its effect cleanup has nothing to release.
+const noopCleanup = () => {
+  // intentionally empty
+};
+
+/** Holds `flag` true for the duration of `task`, releasing it even when `task` throws. */
+const holdFlag = async (flag: { current: boolean }, task: () => Promise<void>): Promise<void> => {
+  flag.current = true;
+  try {
+    await task();
+  } finally {
+    flag.current = false;
+  }
+};
+
+// `errorProp` is a message or a bare flag; '' / false / undefined mean no error.
+const isErrorShown = (errorProp?: string | boolean): boolean =>
+  errorProp !== undefined && errorProp !== false && errorProp !== '';
+
+const getErrorBorder = (hasError: boolean) => (hasError ? { borderColor: formCommonColors.error } : undefined);
+
+const getHoverStyle = (canInteract: boolean, hasError: boolean) =>
+  canInteract
+    ? {
+        borderColor: hasError ? formCommonColors.error : formInputColors.border.hover,
+        // Held exception: the measured mpo $color4 hover flood stays
+        // (Bento's hover/drag states were not measurable headlessly).
+        backgroundColor: formInputColors.background.focus,
+      }
+    : undefined;
+
+const removeLabel = (fileName: string): string => t('Remove {{name}}', { name: fileName });
+
+// oxlint-disable-next-line react-doctor/no-giant-component -- one field owns the upload queue, drop-zone listeners and preview refs; splitting would thread them all through props
+export const FileUpload = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: FileUploadProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: FileUploadProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -202,6 +245,7 @@ export function FileUpload<
     onFileRemove,
     onUpload,
     onChange: onChangeProp,
+    // oxlint-disable-next-line typescript/no-deprecated -- `onValueChange` is a supported alias that must keep firing alongside `onChange`
     onValueChange: onValueChangeProp,
     pickerMode = 'auto',
     mode,
@@ -252,7 +296,9 @@ export function FileUpload<
   // frame move together per size. The corner remove disc hangs a quarter of
   // its own nestedControl step (8 at medium) outside the tile's top-right,
   // which is the Bento Image Picker overlap read under the house tokens.
-  const tilePx = getFieldHeight(knobProps.sizeToken as SizeTokens, 2, hydrationTouch);
+  // SAFETY: knobProps.sizeToken is always one of the size tokens the field-height ladder is keyed by.
+  const knobSizeToken = knobProps.sizeToken as SizeTokens;
+  const tilePx = getFieldHeight(knobSizeToken, 2, hydrationTouch);
   const tileRemoveInset = -Math.round(knobProps.nestedControl.px / 4);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -266,10 +312,12 @@ export function FileUpload<
   const transferSeqRef = useRef(0);
   const transfersRef = useRef<TransferItem[]>([]);
   const onUploadRef = useRef(onUpload);
-  onUploadRef.current = onUpload;
-  const emitFieldRef = useRef<((nextValue: TData) => void) | undefined>(undefined);
+  const emitFieldRef = useRef<((nextValue: TData) => void) | null>(null);
   const multipleRef = useRef(multiple);
-  multipleRef.current = multiple;
+  useEffect(() => {
+    onUploadRef.current = onUpload;
+    multipleRef.current = multiple;
+  }, [onUpload, multiple]);
 
   const setTransfersAndRef = useCallback((updater: (prev: TransferItem[]) => TransferItem[]) => {
     setTransfers((prev) => {
@@ -279,9 +327,27 @@ export function FileUpload<
     });
   }, []);
 
+  const releasePreviewUrls = useCallback(() => {
+    for (const url of previewUrlsRef.current.values()) {
+      URL.revokeObjectURL(url);
+    }
+    previewUrlsRef.current.clear();
+  }, []);
+
+  const abortAllTransfers = useCallback(() => {
+    for (const item of transfersRef.current) {
+      item.controller.abort();
+    }
+  }, []);
+
+  const releaseZoneListeners = useCallback(() => {
+    zoneCleanupRef.current?.();
+    zoneCleanupRef.current = null;
+  }, []);
+
   useEffect(() => {
     if (!isWeb) {
-      return;
+      return noopCleanup;
     }
     ensureKeyboardModalityTracking();
     const onKey = () => {
@@ -295,17 +361,11 @@ export function FileUpload<
     return () => {
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onPointer, true);
-      previewUrlsRef.current.forEach((url) => {
-        URL.revokeObjectURL(url);
-      });
-      previewUrlsRef.current.clear();
-      transfersRef.current.forEach((item) => {
-        item.controller.abort();
-      });
-      zoneCleanupRef.current?.();
-      zoneCleanupRef.current = null;
+      releasePreviewUrls();
+      abortAllTransfers();
+      releaseZoneListeners();
     };
-  }, []);
+  }, [releasePreviewUrls, abortAllTransfers, releaseZoneListeners]);
 
   const formatFileSize = useCallback((bytes: number): string => {
     if (bytes === 0) {
@@ -314,21 +374,21 @@ export function FileUpload<
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${t(sizes[i])}`;
+    return `${Number((bytes / k ** i).toFixed(2))} ${t(sizes[i])}`;
   }, []);
 
   const validateFile = useCallback(
     (file: File): string | null => {
-      if (maxSize && file.size > maxSize) {
+      if (maxSize !== undefined && maxSize !== 0 && file.size > maxSize) {
         return t('File size must be less than {{size}}', { size: formatFileSize(maxSize) });
       }
-      if (accept) {
+      if (accept !== undefined && accept !== '') {
         const acceptedTypes = accept.split(',').map((type) => type.trim());
         const isAccepted = acceptedTypes.some((type) => {
           if (type.startsWith('.')) {
             return file.name.toLowerCase().endsWith(type.toLowerCase());
           }
-          return file.type.match(type.replace('*', '.*'));
+          return new RegExp(type.replace('*', '.*'), 'u').test(file.type);
         });
         if (!isAccepted) {
           return t('File type not accepted. Accepted types: {{types}}', { types: accept });
@@ -340,21 +400,33 @@ export function FileUpload<
   );
 
   const syncFieldValue = useCallback(
-    (nextFiles: File[], onValueChange?: (nextValue: TData) => void) => {
-      if (!onValueChange) {
+    (nextFiles: File[], onValueChange?: ((nextValue: TData) => void) | null) => {
+      if (onValueChange == null) {
         return;
       }
-      if (multiple) {
-        onValueChange(nextFiles as TData);
-        return;
-      }
-      onValueChange((nextFiles[0] ?? null) as TData);
+      // SAFETY: the bound field value is File[] in multiple mode and File | null otherwise.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TData is the caller's field value type; File shapes cannot be expressed against a generic DeepValue
+      onValueChange((multiple ? nextFiles : (nextFiles[0] ?? null)) as TData);
     },
     [multiple],
   );
 
+  const removeTransferRow = useCallback(
+    (transferId: string) => {
+      setTransfersAndRef((prev) => prev.filter((item) => item.id !== transferId));
+    },
+    [setTransfersAndRef],
+  );
+
+  const patchTransferRow = useCallback(
+    (transferId: string, patch: Partial<TransferItem>) => {
+      setTransfersAndRef((prev) => prev.map((item) => (item.id === transferId ? { ...item, ...patch } : item)));
+    },
+    [setTransfersAndRef],
+  );
+
   const runTransfer = useCallback(
-    async (id: string, file: File, controller: AbortController) => {
+    async (transferId: string, file: File, controller: AbortController) => {
       const upload = onUploadRef.current;
       if (!upload) {
         return;
@@ -362,110 +434,101 @@ export function FileUpload<
       try {
         await upload(file, {
           onProgress: (percent) => {
-            const n = Math.min(100, Math.max(0, Math.round(Number(percent) || 0)));
-            setTransfersAndRef((prev) => prev.map((item) => (item.id === id ? { ...item, progress: n } : item)));
+            patchTransferRow(transferId, { progress: Math.min(100, Math.max(0, Math.round(percent || 0))) });
           },
           signal: controller.signal,
         });
         if (controller.signal.aborted) {
           return;
         }
-        setTransfersAndRef((prev) => prev.filter((item) => item.id !== id));
+        removeTransferRow(transferId);
         setSelectedFiles((prev) => {
           const nextFiles = multipleRef.current ? [...prev, file] : [file];
           syncFieldValue(nextFiles, emitFieldRef.current);
           return nextFiles;
         });
-      } catch (err) {
-        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
-          setTransfersAndRef((prev) => prev.filter((item) => item.id !== id));
+      } catch (error) {
+        if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+          removeTransferRow(transferId);
           return;
         }
-        const problem = err instanceof Error && err.message ? err.message : t('Upload failed');
-        setTransfersAndRef((prev) =>
-          prev.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  status: 'failed' as const,
-                  error: {
-                    problem,
-                    action: t('Try again or remove the file'),
-                    cta: t('Retry'),
-                  },
-                }
-              : item,
-          ),
-        );
+        const problem = error instanceof Error && error.message !== '' ? error.message : t('Upload failed');
+        patchTransferRow(transferId, {
+          status: 'failed',
+          error: {
+            problem,
+            action: t('Try again or remove the file'),
+            cta: t('Retry'),
+          },
+        });
       }
     },
-    [setTransfersAndRef, syncFieldValue],
+    [patchTransferRow, removeTransferRow, syncFieldValue],
   );
 
   const startTransfer = useCallback(
     (file: File) => {
       if (!multipleRef.current) {
-        transfersRef.current.forEach((item) => {
-          item.controller.abort();
-        });
+        abortAllTransfers();
         setTransfersAndRef(() => []);
       }
-      const id = `xfer-${++transferSeqRef.current}`;
+      transferSeqRef.current += 1;
+      const transferId = `xfer-${transferSeqRef.current}`;
       const controller = new AbortController();
       const item: TransferItem = {
-        id,
+        id: transferId,
         file,
         status: 'uploading',
         progress: 0,
         controller,
       };
       setTransfersAndRef((prev) => [...prev, item]);
-      void runTransfer(id, file, controller);
+      void runTransfer(transferId, file, controller);
     },
-    [runTransfer, setTransfersAndRef],
+    [abortAllTransfers, runTransfer, setTransfersAndRef],
   );
 
   const handleCancelTransfer = useCallback(
-    (id: string) => {
-      const item = transfersRef.current.find((row) => row.id === id);
+    (transferId: string) => {
+      const item = transfersRef.current.find((row) => row.id === transferId);
       item?.controller.abort();
-      setTransfersAndRef((prev) => prev.filter((row) => row.id !== id));
+      removeTransferRow(transferId);
     },
-    [setTransfersAndRef],
+    [removeTransferRow],
   );
 
   const handleRetryTransfer = useCallback(
-    (id: string) => {
-      const item = transfersRef.current.find((row) => row.id === id);
+    (transferId: string) => {
+      const item = transfersRef.current.find((row) => row.id === transferId);
       if (!item) {
         return;
       }
       item.controller.abort();
       const controller = new AbortController();
-      setTransfersAndRef((prev) =>
-        prev.map((row) =>
-          row.id === id ? { ...row, status: 'uploading', progress: 0, error: undefined, controller } : row,
-        ),
-      );
-      void runTransfer(id, item.file, controller);
+      patchTransferRow(transferId, { status: 'uploading', progress: 0, error: null, controller });
+      void runTransfer(transferId, item.file, controller);
     },
-    [runTransfer, setTransfersAndRef],
+    [patchTransferRow, runTransfer],
   );
 
+  const revokePreviewUrl = useCallback((file: File) => {
+    const previewUrl = previewUrlsRef.current.get(file);
+    if (previewUrl !== undefined) {
+      URL.revokeObjectURL(previewUrl);
+      previewUrlsRef.current.delete(file);
+    }
+  }, []);
+
   const handleRemoveTransfer = useCallback(
-    (id: string) => {
-      const item = transfersRef.current.find((row) => row.id === id);
+    (transferId: string) => {
+      const item = transfersRef.current.find((row) => row.id === transferId);
       item?.controller.abort();
       if (isWeb && item) {
-        const previewUrl = previewUrlsRef.current.get(item.file);
-        if (previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-          previewUrlsRef.current.delete(item.file);
-        }
+        revokePreviewUrl(item.file);
       }
-      setTransfersAndRef((prev) => prev.filter((row) => row.id !== id));
+      removeTransferRow(transferId);
     },
-    [setTransfersAndRef],
+    [removeTransferRow, revokePreviewUrl],
   );
 
   const handleFileSelect = useCallback(
@@ -474,28 +537,28 @@ export function FileUpload<
         return;
       }
 
-      const fileArray = Array.isArray(files) ? files : Array.from(files);
+      const fileArray = Array.isArray(files) ? files : [...files];
       const validFiles: File[] = [];
       const errors: string[] = [];
 
-      fileArray.forEach((file) => {
+      for (const file of fileArray) {
         const error = validateFile(file);
-        if (error) {
-          errors.push(`${file.name}: ${error}`);
-        } else {
+        if (error === null) {
           validFiles.push(file);
+        } else {
+          errors.push(`${file.name}: ${error}`);
         }
-      });
+      }
 
       // Surface every rejected file (even when other files passed); clear only on a fully valid selection
       setValidationError(errors.length > 0 ? errors.join('\n') : undefined);
 
       if (validFiles.length > 0) {
-        emitFieldRef.current = onValueChange;
+        emitFieldRef.current = onValueChange ?? null;
         if (onUploadRef.current) {
-          validFiles.forEach((file) => {
+          for (const file of validFiles) {
             startTransfer(file);
-          });
+          }
         } else {
           setSelectedFiles((prev) => {
             const nextFiles = multiple ? [...prev, ...validFiles] : validFiles.slice(0, 1);
@@ -512,11 +575,7 @@ export function FileUpload<
   const handleFileRemove = useCallback(
     (fileToRemove: File, onValueChange?: (nextValue: TData) => void) => {
       if (isWeb) {
-        const previewUrl = previewUrlsRef.current.get(fileToRemove);
-        if (previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-          previewUrlsRef.current.delete(fileToRemove);
-        }
+        revokePreviewUrl(fileToRemove);
       }
 
       setSelectedFiles((prev) => {
@@ -527,7 +586,7 @@ export function FileUpload<
 
       onFileRemove?.(fileToRemove);
     },
-    [onFileRemove, syncFieldValue],
+    [onFileRemove, revokePreviewUrl, syncFieldValue],
   );
 
   // Depth counter so dragenter/dragleave pairs from nested children don't cancel the highlight
@@ -567,7 +626,7 @@ export function FileUpload<
       e.preventDefault();
       dragDepthRef.current = 0;
       setIsDragOver(false);
-      if (dragDrop && e.dataTransfer.files) {
+      if (dragDrop && e.dataTransfer.files != null) {
         handleFileSelect(e.dataTransfer.files, onValueChange, e.dataTransfer.files);
       }
     },
@@ -590,8 +649,7 @@ export function FileUpload<
       if (disabled || readOnly || nativePickInFlightRef.current) {
         return;
       }
-      nativePickInFlightRef.current = true;
-      try {
+      await holdFlag(nativePickInFlightRef, async () => {
         const outcome = await pickFilesNatively({ accept, multiple, mode: pickerMode });
         if (outcome.unavailable) {
           setValidationError(t('No file picker is available on this device.'));
@@ -609,11 +667,10 @@ export function FileUpload<
         // The picked shape is `{ uri, name, type, size }` — what React Native's
         // FormData accepts for a multipart upload — not a DOM File. Everything
         // downstream reads name/size/type only, so this cast is the whole bridge.
+        // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- SAFETY: NativePickedFile and File share no type overlap; downstream reads only name/size/type/uri (see above)
         handleFileSelect(outcome.files as unknown as File[], onValueChange);
         onBlurHandler?.();
-      } finally {
-        nativePickInFlightRef.current = false;
-      }
+      });
     },
     [accept, disabled, handleFileSelect, multiple, pickerMode, readOnly],
   );
@@ -621,18 +678,18 @@ export function FileUpload<
   // DROPZONE-FULL-TARGET: the whole dropzone surface opens the file chooser.
   // Interactive children (Choose File button, per-file remove buttons, links)
   // handle their own press and are excluded here so remove never opens the chooser.
-  const isInteractiveChild = useCallback((e: { target: unknown; currentTarget: unknown }) => {
-    const target = e.target as HTMLElement | null;
-    const current = e.currentTarget as HTMLElement | null;
-    if (!target?.closest || !current) {
+  // Only wired on web (see `zoneInteractionProps`), so the targets are DOM nodes.
+  const isInteractiveChild = useCallback((e: { target: EventTarget | null; currentTarget: EventTarget | null }) => {
+    const { target, currentTarget: current } = e;
+    if (!(target instanceof Element) || current == null) {
       return false;
     }
     const interactive = target.closest('button, a, input, select, textarea, [role="button"]');
-    return !!interactive && interactive !== current;
+    return interactive !== null && interactive !== current;
   }, []);
 
   const handleZoneClick = useCallback(
-    (e: { target: unknown; currentTarget: unknown }) => {
+    (e: { target: EventTarget | null; currentTarget: EventTarget | null }) => {
       if (isInteractiveChild(e)) {
         return;
       }
@@ -642,7 +699,12 @@ export function FileUpload<
   );
 
   const handleZoneKeyDown = useCallback(
-    (e: { target: unknown; currentTarget: unknown; key?: string; preventDefault?: () => void }) => {
+    (e: {
+      target: EventTarget | null;
+      currentTarget: EventTarget | null;
+      key?: string;
+      preventDefault?: () => void;
+    }) => {
       if (e.target !== e.currentTarget) {
         return;
       }
@@ -661,10 +723,9 @@ export function FileUpload<
   }, []);
 
   const bindZoneNode = useCallback(
-    (node: HTMLElement | null) => {
-      zoneCleanupRef.current?.();
-      zoneCleanupRef.current = null;
-      if (!node || !isWeb) {
+    (node: TamaguiElement | null) => {
+      releaseZoneListeners();
+      if (!isWeb || !(node instanceof HTMLElement)) {
         return;
       }
       const onFocus = () => {
@@ -673,6 +734,7 @@ export function FileUpload<
       const onBlur = () => {
         setKbZoneFocus(false);
       };
+      // oxlint-disable-next-line react-doctor/effect-needs-cleanup -- the matching removeEventListener calls are stored in zoneCleanupRef and run by releaseZoneListeners (rebind and unmount)
       node.addEventListener('focus', onFocus);
       node.addEventListener('blur', onBlur);
       zoneCleanupRef.current = () => {
@@ -680,7 +742,7 @@ export function FileUpload<
         node.removeEventListener('blur', onBlur);
       };
     },
-    [paintZoneRing],
+    [paintZoneRing, releaseZoneListeners],
   );
 
   const handleZoneFocus = paintZoneRing;
@@ -693,12 +755,13 @@ export function FileUpload<
     if (!isWeb) {
       // Native picks carry a device URI instead of a blob; tamagui's Image
       // takes it through the same `src` prop the web preview uses.
-      const uri = (file as Partial<NativePickedFile>).uri;
-      return uri && file.type?.startsWith('image/') ? uri : null;
+      // SAFETY: native picks are NativePickedFile objects (see openNativePicker), so `uri` is present or the object is a plain File without it.
+      const { uri } = file as Partial<NativePickedFile>;
+      return uri !== undefined && uri !== '' && file.type?.startsWith('image/') ? uri : null;
     }
     if (file.type.startsWith('image/')) {
       const existingUrl = previewUrlsRef.current.get(file);
-      if (existingUrl) {
+      if (existingUrl !== undefined) {
         return existingUrl;
       }
       const nextUrl = URL.createObjectURL(file);
@@ -708,17 +771,29 @@ export function FileUpload<
     return null;
   }, []);
 
+  const frameMinHeight = getFieldHeight(fieldProps.size ?? knobSizeToken, 5, hydrationTouch);
+
   // Render skeleton placeholder
   if (skeleton) {
-    const minHeightPx = getFieldHeight((fieldProps.size || knobProps.sizeToken) as SizeTokens, 5, hydrationTouch);
+    const minHeightPx = frameMinHeight;
     return (
-      <FieldLayout id={id} label={fieldProps.label} size={fieldProps.size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={minHeightPx} />
+      <FieldLayout
+        id={id}
+        label={fieldProps.label}
+        size={fieldProps.size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={minHeightPx}
+        />
       </FieldLayout>
     );
   }
 
   const canInteract = !disabled && !readOnly;
+  const showDropOverlay = isDragOver && canInteract && dragDrop;
+  const edgeWidth = knobProps.borderRadius.borderWidth ?? 1;
   const hasRows = selectedFiles.length > 0 || transfers.length > 0;
 
   const renderRemoveDisc = (ariaLabel: string, onPress: () => void) =>
@@ -748,8 +823,11 @@ export function FileUpload<
     ) : null;
 
   const renderFileMeta = (file: File, preview: string | null, extra?: ReactNode) => (
-    <XStack flex={1} gap="$2" alignItems="center">
-      {preview ? (
+    <XStack
+      flex={1}
+      gap="$2"
+      alignItems="center">
+      {preview !== null && preview !== '' ? (
         <Image
           borderRadius={cappedRadius}
           // src (string), not source: the RN source object leaks
@@ -761,19 +839,31 @@ export function FileUpload<
           objectFit="cover"
         />
       ) : (
-        <XStack width={rowMediaPx} height={rowMediaPx} justifyContent="center" alignItems="center">
+        <XStack
+          width={rowMediaPx}
+          height={rowMediaPx}
+          justifyContent="center"
+          alignItems="center">
           <FileIcon size={rowGlyphSize} />
         </XStack>
       )}
-      <YStack flex={1} gap="$1">
-        <Text numberOfLines={1} {...knobProps.body}>
+      <YStack
+        flex={1}
+        gap="$1">
+        <Text
+          numberOfLines={1}
+          {...knobProps.body}>
           {file.name}
         </Text>
         {/* Bento (bento-pickers-measured.md §2): the size is a
             SECOND LINE, BOLD, one type step down (the label
             tier — 13/24 at medium). The 700 is the Bento
             treatment, a deliberate eject over the weight knob. */}
-        <Text numberOfLines={1} color={formCommonColors.text} {...knobProps.label} fontWeight="700">
+        <Text
+          numberOfLines={1}
+          color={formCommonColors.text}
+          {...knobProps.label}
+          fontWeight="700">
           {formatFileSize(file.size)}
         </Text>
         {extra}
@@ -805,10 +895,273 @@ export function FileUpload<
           top={tileRemoveInset}
           right={tileRemoveInset}
           zIndex={1}>
-          {renderRemoveDisc(t('Remove {{name}}', { name: file.name }), () => {
+          {renderRemoveDisc(removeLabel(file.name), () => {
             handleFileRemove(file, onValueChange);
           })}
         </YStack>
+      ) : null}
+    </YStack>
+  );
+
+  // Drag-and-drop, keyboard activation and the focus ring are DOM concerns;
+  // native gets a plain press target on the same surface instead.
+  const getZoneInteractionProps = (
+    requestFiles: () => void,
+    onValueChange?: (nextValue: TData) => void,
+    onBlurHandler?: () => void,
+  ) => {
+    if (!canInteract) {
+      return { cursor: disabled ? ('not-allowed' as const) : undefined };
+    }
+    if (!isWeb) {
+      return { role: 'button' as const, onPress: requestFiles };
+    }
+    return {
+      // DROPZONE-FULL-TARGET: the entire surface is the click target.
+      role: 'button' as const,
+      tabIndex: 0,
+      onFocus: handleZoneFocus,
+      onBlur: handleZoneBlur,
+      cursor: 'pointer' as const,
+      onClick: handleZoneClick,
+      onKeyDown: handleZoneKeyDown,
+      ...(dragDrop
+        ? {
+            onDragEnter: handleDragEnter,
+            onDragOver: handleDragOver,
+            onDragLeave: handleDragLeave,
+            onDrop: (e: DragEvent) => {
+              handleDrop(e, onValueChange);
+              onBlurHandler?.();
+            },
+          }
+        : null),
+    };
+  };
+
+  // Labeled fields get aria-labelledby auto-wired by the FieldLayout Label
+  // (tamagui Label htmlFor → this id); the aria-label fallback covers
+  // label-less usage, and is what a screen reader announces for the native
+  // press target too.
+  const getZoneAriaLabelProps = () => {
+    const { label } = fieldProps;
+    const hasLabel = Boolean(label);
+    if (!canInteract || hasLabel) {
+      return null;
+    }
+    // An empty-string label is the only string that reaches here; it keeps its labeled phrasing.
+    return { 'aria-label': label === '' ? t('{{label}}: choose file', { label }) : t('Choose file') };
+  };
+
+  const renderTransferRow = (item: TransferItem) => {
+    const preview = showPreview ? getFilePreview(item.file) : null;
+    const isUploading = item.status === 'uploading';
+    const failed = item.status === 'failed' ? item.error : undefined;
+    const removeDisc = isUploading
+      ? renderRemoveDisc(t('Cancel {{name}}', { name: item.file.name }), () => {
+          handleCancelTransfer(item.id);
+        })
+      : renderRemoveDisc(removeLabel(item.file.name), () => {
+          handleRemoveTransfer(item.id);
+        });
+    return (
+      <XStack
+        key={item.id}
+        data-transfer-status={item.status}
+        width="100%"
+        {...knobProps.gap}
+        alignItems="center"
+        justifyContent="space-between"
+        {...knobProps.panelPadding}>
+        {renderFileMeta(
+          item.file,
+          preview,
+          <>
+            {isUploading ? (
+              <YStack
+                data-file-upload="progress"
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui YStack renders a div; a native <progress> cannot take the styled track/fill children
+                role="progressbar"
+                aria-label={t('Uploading {{name}}', { name: item.file.name })}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={item.progress}
+                height={11}
+                width="100%"
+                borderRadius={1000}
+                backgroundColor={formDropzoneColors.progress.track}
+                overflow="hidden">
+                <YStack
+                  height="100%"
+                  width={`${item.progress}%`}
+                  backgroundColor={formDropzoneColors.progress.fill}
+                />
+              </YStack>
+            ) : null}
+            {failed ? (
+              <YStack gap="$1">
+                <Text
+                  color={formCommonColors.error}
+                  {...knobProps.label}>
+                  {failed.problem}
+                </Text>
+                <Text
+                  color={formCommonColors.muted}
+                  {...knobProps.label}>
+                  {failed.action}
+                </Text>
+              </YStack>
+            ) : null}
+          </>,
+        )}
+        <XStack
+          {...knobProps.gap}
+          alignItems="center">
+          {canInteract && failed ? (
+            <Button
+              outlined
+              size="$2"
+              aria-label={t('Retry {{name}}', { name: item.file.name })}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleRetryTransfer(item.id);
+              }}>
+              {failed.cta ?? t('Retry')}
+            </Button>
+          ) : null}
+          {removeDisc}
+        </XStack>
+      </XStack>
+    );
+  };
+
+  const renderDropOverlay = (hasError: boolean) => (
+    <DropOverlayFrame
+      data-file-upload="overlay"
+      borderRadius={cappedRadius}
+      borderWidth={edgeWidth}
+      {...getErrorBorder(hasError)}
+      {...knobProps.gap}
+      {...knobProps.panelPadding}>
+      <XStack
+        width={rowMediaPx}
+        height={rowMediaPx}
+        alignItems="center"
+        justifyContent="center"
+        // `color` tints the phosphor glyph via currentColor; Tamagui applies
+        // it on web Stacks though the RN-flavored View type omits it.
+        {...overlayGlyphColor}>
+        <UploadIcon
+          size={rowMediaPx}
+          aria-hidden
+        />
+      </XStack>
+      <Text
+        color={formCommonColors.text}
+        textAlign="center"
+        {...knobProps.body}>
+        {multiple ? t('Drop files to upload') : t('Drop a file to upload')}
+      </Text>
+    </DropOverlayFrame>
+  );
+
+  const renderFileList = (onValueChange?: (nextValue: TData) => void) => {
+    // Committed image picks become tiles; everything else stays a row.
+    const imageTiles: { file: File; preview: string }[] = [];
+    const fileRows: { file: File; preview: string | null; index: number }[] = [];
+    for (const [index, file] of selectedFiles.entries()) {
+      const preview = showPreview ? getFilePreview(file) : null;
+      if (preview !== null && preview !== '') {
+        imageTiles.push({ file, preview });
+      } else {
+        fileRows.push({ file, preview, index });
+      }
+    }
+    return (
+      <UploadFileListFrame
+        data-file-upload="files"
+        // The hairline tracks the frame edge's knob width — one dash voice.
+        borderTopWidth={edgeWidth}>
+        {imageTiles.length > 0 ? (
+          <UploadTileGridFrame
+            data-file-upload="tiles"
+            {...knobProps.gap}
+            {...knobProps.panelPadding}>
+            {imageTiles.map(({ file, preview }) => renderImageTile(file, preview, onValueChange))}
+          </UploadTileGridFrame>
+        ) : null}
+        {fileRows.map(({ file, preview, index }) => (
+          <XStack
+            key={`${file.name}-${index}`}
+            width="100%"
+            {...knobProps.gap}
+            alignItems="center"
+            justifyContent="space-between"
+            {...knobProps.panelPadding}>
+            {renderFileMeta(file, preview)}
+            {renderRemoveDisc(removeLabel(file.name), () => {
+              handleFileRemove(file, onValueChange);
+            })}
+          </XStack>
+        ))}
+        {transfers.map((item) => renderTransferRow(item))}
+      </UploadFileListFrame>
+    );
+  };
+
+  const renderPicker = (
+    requestFiles: () => void,
+    onValueChange?: (nextValue: TData) => void,
+    onBlurHandler?: () => void,
+  ) => (
+    <YStack
+      {...knobProps.panelPadding}
+      flexGrow={1}
+      width="100%"
+      alignItems="center"
+      justifyContent="center"
+      {...knobProps.gap}>
+      <XStack
+        alignItems="center"
+        {...knobProps.gap}>
+        <Button
+          onPress={requestFiles}
+          disabled={!canInteract}
+          size={knobProps.sizeToken}
+          tabIndex={-1}
+          // BENTO-DERIVED (bento-pickers-measured.md §2/§4): NO standalone
+          // glyph exists — the upload mark rides INSIDE the CTA. Held at
+          // the house 44 control with the recipe's 16px icon (Bento draws
+          // 14 on its own 36/$3 button — ruled exception).
+          icon={UploadIcon}>
+          <Button.Text {...knobProps.body}>{buttonText}</Button.Text>
+        </Button>
+        {actions}
+      </XStack>
+
+      {selectedFiles.length === 0 && transfers.length === 0 && (
+        <Text
+          color={formCommonColors.muted}
+          textAlign="center"
+          {...knobProps.body}>
+          {placeholder}
+        </Text>
+      )}
+
+      {isWeb ? (
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          tabIndex={-1}
+          onChange={(e) => {
+            handleFileSelect(e.target.files, onValueChange, e.target.files);
+            onBlurHandler?.();
+          }}
+          style={{ display: 'none' }}
+          disabled={!canInteract}
+        />
       ) : null}
     </YStack>
   );
@@ -818,7 +1171,8 @@ export function FileUpload<
     onValueChange?: (nextValue: TData) => void,
     onBlurHandler?: () => void,
   ) => {
-    emitFieldRef.current = onValueChange;
+    emitFieldRef.current = onValueChange ?? null;
+    const hasError = isErrorShown(errorProp);
     // The press that opens a picker: the hidden <input> on web, the OS sheet
     // on native. Both land in the same handleFileSelect pipeline.
     const requestFiles = isWeb
@@ -827,45 +1181,7 @@ export function FileUpload<
           void openNativePicker(onValueChange, onBlurHandler);
         };
 
-    // Drag-and-drop, keyboard activation and the focus ring are DOM concerns;
-    // native gets a plain press target on the same surface instead.
-    const zoneInteractionProps = canInteract
-      ? isWeb
-        ? ({
-            // DROPZONE-FULL-TARGET: the entire surface is the click target.
-            role: 'button',
-            tabIndex: 0,
-            onFocus: handleZoneFocus,
-            onBlur: handleZoneBlur,
-            cursor: 'pointer',
-            onClick: handleZoneClick,
-            onKeyDown: handleZoneKeyDown,
-            ...(dragDrop
-              ? {
-                  onDragEnter: handleDragEnter,
-                  onDragOver: handleDragOver,
-                  onDragLeave: handleDragLeave,
-                  onDrop: (e: DragEvent) => {
-                    handleDrop(e, onValueChange);
-                    onBlurHandler?.();
-                  },
-                }
-              : null),
-          } as any)
-        : ({ role: 'button', onPress: requestFiles } as any)
-      : { cursor: disabled ? 'not-allowed' : undefined };
-
-    // Committed image picks become tiles; everything else stays a row.
-    const imageTiles: { file: File; preview: string }[] = [];
-    const fileRows: { file: File; preview: string | null; index: number }[] = [];
-    selectedFiles.forEach((file, index) => {
-      const preview = showPreview ? getFilePreview(file) : null;
-      if (preview) {
-        imageTiles.push({ file, preview });
-      } else {
-        fileRows.push({ file, preview, index });
-      }
-    });
+    const zoneInteractionProps = getZoneInteractionProps(requestFiles, onValueChange, onBlurHandler);
 
     return (
       <UploadAreaFrame
@@ -873,9 +1189,9 @@ export function FileUpload<
         // so the rendered `<label htmlFor>` resolves (family pattern — see
         // Barcode / ColorPicker for other non-native-input controls).
         id={id}
-        ref={bindZoneNode as any}
+        ref={bindZoneNode}
         data-file-upload="dropzone"
-        data-drag-over={isDragOver && canInteract && dragDrop ? 'true' : undefined}
+        data-drag-over={showDropOverlay ? 'true' : undefined}
         data-kb-ring={kbZoneFocus ? 'true' : undefined}
         // No `outlined` here: UploadAreaFrame declares no such variant, so the
         // prop styled nothing and went straight to the DOM host ("Received
@@ -888,18 +1204,18 @@ export function FileUpload<
         {...(disabled ? disabledState.surfaceKnobProps : undefined)}
         borderRadius={cappedRadius}
         // Keep width stable on drag (Polaris overlay, not a 1→2 layout shift).
-        borderWidth={knobProps.borderRadius.borderWidth ?? 1}
-        {...(errorProp ? { borderColor: formCommonColors.error } : undefined)}
+        borderWidth={edgeWidth}
+        {...getErrorBorder(hasError)}
         elevation={knobProps.elevation}
         transition={knobProps.transition}
         // CONTRACT (boards media-01..03): the getFieldHeight floor sits on
         // the FRAME, so the frame border-box measures 220 — hanging it on
         // the inner stack painted 222, a number no token expresses.
-        minHeight={getFieldHeight((fieldProps.size || knobProps.sizeToken) as SizeTokens, 5, hydrationTouch)}
-        aria-required={fieldProps.required || undefined}
-        aria-invalid={!!errorProp || undefined}
-        aria-readonly={readOnly || undefined}
-        aria-disabled={disabled || undefined}
+        minHeight={frameMinHeight}
+        aria-required={fieldProps.required ? true : undefined}
+        aria-invalid={hasError || undefined}
+        aria-readonly={readOnly ? true : undefined}
+        aria-disabled={disabled ? true : undefined}
         // One family ring rule (boards media-01 dz-ring): 2px $outlineColor at
         // offset 0. The old -2 inset was the F1 defect — an element's own
         // outline is never clipped by its own overflow:hidden.
@@ -913,207 +1229,19 @@ export function FileUpload<
         // the source: the pre-fix spec asserted the atom's PRESENCE, which was
         // true while nothing painted.
         {...(kbZoneFocus ? withZoneFocusRing() : undefined)}
-        hoverStyle={
-          canInteract
-            ? {
-                borderColor: errorProp ? formCommonColors.error : formInputColors.border.hover,
-                // Held exception: the measured mpo $color4 hover flood stays
-                // (Bento's hover/drag states were not measurable headlessly).
-                backgroundColor: formInputColors.background.focus,
-              }
-            : undefined
-        }
+        hoverStyle={getHoverStyle(canInteract, hasError)}
         {...zoneInteractionProps}
-        {...(canInteract
-          ? // Labeled fields get aria-labelledby auto-wired by the FieldLayout
-            // Label (tamagui Label htmlFor → this id); the aria-label fallback
-            // covers label-less usage, and is what a screen reader announces
-            // for the native press target too.
-            fieldProps.label && id
-            ? null
-            : {
-                'aria-label':
-                  typeof fieldProps.label === 'string'
-                    ? t('{{label}}: choose file', { label: fieldProps.label })
-                    : t('Choose file'),
-              }
-          : null)}>
-        {isDragOver && canInteract && dragDrop ? (
-          <DropOverlayFrame
-            data-file-upload="overlay"
-            borderRadius={cappedRadius}
-            borderWidth={knobProps.borderRadius.borderWidth ?? 1}
-            {...(errorProp ? { borderColor: formCommonColors.error } : undefined)}
-            {...knobProps.gap}
-            {...knobProps.panelPadding}>
-            <XStack
-              width={rowMediaPx}
-              height={rowMediaPx}
-              alignItems="center"
-              justifyContent="center"
-              // `color` tints the phosphor glyph via currentColor; Tamagui applies
-              // it on web Stacks though the RN-flavored View type omits it.
-              {...({ color: formCommonColors.text } as Record<string, unknown>)}>
-              <UploadIcon size={rowMediaPx} aria-hidden />
-            </XStack>
-            <Text color={formCommonColors.text} textAlign="center" {...knobProps.body}>
-              {multiple ? t('Drop files to upload') : t('Drop a file to upload')}
-            </Text>
-          </DropOverlayFrame>
-        ) : null}
+        {...getZoneAriaLabelProps()}>
+        {showDropOverlay ? renderDropOverlay(hasError) : null}
 
-        <YStack
-          {...knobProps.panelPadding}
-          flexGrow={1}
-          width="100%"
-          alignItems="center"
-          justifyContent="center"
-          {...knobProps.gap}>
-          <XStack alignItems="center" {...knobProps.gap}>
-            <Button
-              onPress={requestFiles}
-              disabled={!canInteract}
-              size={knobProps.sizeToken}
-              tabIndex={-1}
-              // BENTO-DERIVED (bento-pickers-measured.md §2/§4): NO standalone
-              // glyph exists — the upload mark rides INSIDE the CTA. Held at
-              // the house 44 control with the recipe's 16px icon (Bento draws
-              // 14 on its own 36/$3 button — ruled exception).
-              icon={UploadIcon}>
-              <Button.Text {...knobProps.body}>{buttonText}</Button.Text>
-            </Button>
-            {actions}
-          </XStack>
+        {renderPicker(requestFiles, onValueChange, onBlurHandler)}
 
-          {selectedFiles.length === 0 && transfers.length === 0 && (
-            <Text color={formCommonColors.muted} textAlign="center" {...knobProps.body}>
-              {placeholder}
-            </Text>
-          )}
-
-          {isWeb ? (
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={accept}
-              multiple={multiple}
-              tabIndex={-1}
-              onChange={(e) => {
-                handleFileSelect(e.target.files, onValueChange, e.target.files);
-                onBlurHandler?.();
-              }}
-              style={{ display: 'none' }}
-              disabled={!canInteract}
-            />
-          ) : null}
-        </YStack>
-
-        {hasRows && (
-          <UploadFileListFrame
-            data-file-upload="files"
-            // The hairline tracks the frame edge's knob width — one dash voice.
-            borderTopWidth={knobProps.borderRadius.borderWidth ?? 1}>
-            {imageTiles.length > 0 ? (
-              <UploadTileGridFrame data-file-upload="tiles" {...knobProps.gap} {...knobProps.panelPadding}>
-                {imageTiles.map(({ file, preview }) => renderImageTile(file, preview, onValueChange))}
-              </UploadTileGridFrame>
-            ) : null}
-            {fileRows.map(({ file, preview, index }) => {
-              return (
-                <XStack
-                  key={`${file.name}-${index}`}
-                  width="100%"
-                  {...knobProps.gap}
-                  alignItems="center"
-                  justifyContent="space-between"
-                  {...knobProps.panelPadding}>
-                  {renderFileMeta(file, preview)}
-                  {renderRemoveDisc(t('Remove {{name}}', { name: file.name }), () => {
-                    handleFileRemove(file, onValueChange);
-                  })}
-                </XStack>
-              );
-            })}
-            {transfers.map((item) => {
-              const preview = showPreview ? getFilePreview(item.file) : null;
-              const isUploading = item.status === 'uploading';
-              const failed = item.status === 'failed' ? item.error : undefined;
-              return (
-                <XStack
-                  key={item.id}
-                  data-transfer-status={item.status}
-                  width="100%"
-                  {...knobProps.gap}
-                  alignItems="center"
-                  justifyContent="space-between"
-                  {...knobProps.panelPadding}>
-                  {renderFileMeta(
-                    item.file,
-                    preview,
-                    <>
-                      {isUploading ? (
-                        <YStack
-                          data-file-upload="progress"
-                          role="progressbar"
-                          aria-label={t('Uploading {{name}}', { name: item.file.name })}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={item.progress}
-                          height={11}
-                          width="100%"
-                          borderRadius={1000}
-                          backgroundColor={formDropzoneColors.progress.track}
-                          overflow="hidden">
-                          <YStack
-                            height="100%"
-                            width={`${item.progress}%`}
-                            backgroundColor={formDropzoneColors.progress.fill}
-                          />
-                        </YStack>
-                      ) : null}
-                      {failed ? (
-                        <YStack gap="$1">
-                          <Text color={formCommonColors.error} {...knobProps.label}>
-                            {failed.problem}
-                          </Text>
-                          <Text color={formCommonColors.muted} {...knobProps.label}>
-                            {failed.action}
-                          </Text>
-                        </YStack>
-                      ) : null}
-                    </>,
-                  )}
-                  <XStack {...knobProps.gap} alignItems="center">
-                    {canInteract && failed ? (
-                      <Button
-                        outlined
-                        size="$2"
-                        aria-label={t('Retry {{name}}', { name: item.file.name })}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleRetryTransfer(item.id);
-                        }}>
-                        {failed.cta ?? t('Retry')}
-                      </Button>
-                    ) : null}
-                    {isUploading
-                      ? renderRemoveDisc(t('Cancel {{name}}', { name: item.file.name }), () => {
-                          handleCancelTransfer(item.id);
-                        })
-                      : renderRemoveDisc(t('Remove {{name}}', { name: item.file.name }), () => {
-                          handleRemoveTransfer(item.id);
-                        })}
-                  </XStack>
-                </XStack>
-              );
-            })}
-          </UploadFileListFrame>
-        )}
+        {hasRows ? renderFileList(onValueChange) : null}
       </UploadAreaFrame>
     );
   };
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name === undefined || name === '') {
     const standaloneError = fieldProps.error ?? validationError;
     return (
       <FieldLayout
@@ -1128,6 +1256,7 @@ export function FileUpload<
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
+        {/* oxlint-disable-next-line react/refs -- renderUploadArea publishes the latest field handler to a ref that the async upload completion reads; it has no render-phase access to it otherwise */}
         {renderUploadArea(standaloneError, emitChange)}
       </FieldLayout>
     );
@@ -1159,7 +1288,7 @@ export function FileUpload<
             {renderUploadArea(
               error,
               (nextValue) => {
-                field.handleChange(nextValue as any);
+                field.handleChange(nextValue);
                 // Form mode also notifies user callbacks (family norm).
                 emitChange(nextValue);
               },
@@ -1170,11 +1299,11 @@ export function FileUpload<
       }}
     </Field>
   );
-}
+};
 
 /**
  * The value shape a native pick binds. `{ uri, name, type, size }` is what
  * React Native's FormData accepts for a multipart upload, so a form value can
  * be posted straight through; on web the value stays a DOM `File`.
  */
-export type { NativePickedFile, NativePickerMode } from './filePickerTypes';
+export type { NativePickedFile, NativePickerMode } from './file-picker-types';

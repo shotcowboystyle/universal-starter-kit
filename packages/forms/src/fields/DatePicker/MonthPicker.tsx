@@ -1,18 +1,21 @@
 import { useGlyphColor } from '@repo/theme';
 import { ChevronLeft, ChevronRight } from '@tamagui/lucide-icons-2';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, useProps, type Popover } from 'tamagui';
+import { useCallback, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Text, View, useProps } from 'tamagui';
+import type { Popover } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { FieldValueSync } from './fieldValueSync';
+import { FieldValueSync } from './FieldValueSync';
 import {
   CalendarChromeButton,
   CalendarPanelFrame,
@@ -38,13 +41,19 @@ export interface MonthPickerValue {
 }
 
 export type MonthPickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TParentData = object,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
-> = Omit<FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'field'> &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+> = Omit<
+  FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  'children' | 'field' | 'onChange'
+> &
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: FieldValidators;
     readOnly?: boolean;
     /** When true, render a non-interactive skeleton instead of the picker. */
     skeleton?: boolean;
@@ -66,12 +75,37 @@ export type MonthPickerProps<
 // formatMonthDisplay — format month/year for display
 // ---------------------------------------------------------------------------
 
-function formatMonthDisplay(value: MonthPickerValue | null): string {
+type FieldChange = (value: MonthPickerValue | null) => void;
+
+const isNumber = (value: unknown): value is number => typeof value === 'number';
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- boundary parser: field state arrives untyped from TanStack
+const parseMonthPickerValue = (raw: unknown): MonthPickerValue | null => {
+  if (!(raw instanceof Object) || !('month' in raw) || !('year' in raw)) {
+    return null;
+  }
+  return isNumber(raw.month) && isNumber(raw.year) ? { month: raw.month, year: raw.year } : null;
+};
+
+const sameMonthValue = (prev: MonthPickerValue | null, next: MonthPickerValue | null): MonthPickerValue | null => {
+  if (prev === next) {
+    return prev;
+  }
+  if (prev === null || next === null) {
+    return next;
+  }
+  return prev.month === next.month && prev.year === next.year ? prev : next;
+};
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+const formatMonthDisplay = (value: MonthPickerValue | null): string => {
   if (!value) {
     return '';
   }
   return `${months[value.month]} ${value.year}`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthPickerBody — month and year selection
@@ -88,14 +122,14 @@ interface MonthPickerBodyProps {
   maxYear?: number;
 }
 
-function MonthPickerBody({
+const MonthPickerBody = ({
   displayDate,
   selectedValue,
   onSelectMonth,
   onSetDisplayDate,
   minYear,
   maxYear,
-}: MonthPickerBodyProps) {
+}: MonthPickerBodyProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px } = knobProps.nestedControl;
@@ -125,7 +159,7 @@ function MonthPickerBody({
     const newDate = new Date(displayDate);
     newDate.setDate(1);
     newDate.setFullYear(newDate.getFullYear() - 1);
-    if (minYear && newDate.getFullYear() < minYear) {
+    if (minYear !== undefined && newDate.getFullYear() < minYear) {
       return;
     }
     onSetDisplayDate(newDate);
@@ -135,7 +169,7 @@ function MonthPickerBody({
     const newDate = new Date(displayDate);
     newDate.setDate(1);
     newDate.setFullYear(newDate.getFullYear() + 1);
-    if (maxYear && newDate.getFullYear() > maxYear) {
+    if (maxYear !== undefined && newDate.getFullYear() > maxYear) {
       return;
     }
     onSetDisplayDate(newDate);
@@ -174,7 +208,11 @@ function MonthPickerBody({
         width={px * 7}
         {...animation}
         transition={knobProps.transition}>
-        <View flexDirection="row" width={px * 7} alignItems="center" justifyContent="space-between">
+        <View
+          flexDirection="row"
+          width={px * 7}
+          alignItems="center"
+          justifyContent="space-between">
           <CalendarChromeButton
             onPress={() => {
               if (!prevDisabled) {
@@ -183,7 +221,10 @@ function MonthPickerBody({
             }}
             label={t('Previous year')}>
             <View opacity={prevDisabled ? 0.4 : 1}>
-              <ChevronLeft size={knobProps.controlIcon.width} color={glyphColor} />
+              <ChevronLeft
+                size={knobProps.controlIcon.width}
+                color={glyphColor}
+              />
             </View>
           </CalendarChromeButton>
 
@@ -191,7 +232,10 @@ function MonthPickerBody({
             onPress={() => {
               setViewMode('year');
             }}>
-            <Text color="$color" {...knobProps.label} {...knobProps.textWeight}>
+            <Text
+              color="$color"
+              {...knobProps.label}
+              {...knobProps.textWeight}>
               {year}
             </Text>
           </CalendarTextButton>
@@ -204,7 +248,10 @@ function MonthPickerBody({
             }}
             label={t('Next year')}>
             <View opacity={nextDisabled ? 0.4 : 1}>
-              <ChevronRight size={knobProps.controlIcon.width} color={glyphColor} />
+              <ChevronRight
+                size={knobProps.controlIcon.width}
+                color={glyphColor}
+              />
             </View>
           </CalendarChromeButton>
         </View>
@@ -217,23 +264,24 @@ function MonthPickerBody({
       </View>
     </CalendarPanelFrame>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthPicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function MonthPicker<
+export const MonthPicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: MonthPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: MonthPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
-    inputProps: _inputProps,
     placeholder = t('Select month'),
     minYear,
     maxYear,
@@ -254,7 +302,6 @@ export function MonthPicker<
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
@@ -265,43 +312,34 @@ export function MonthPicker<
   const { displayDate, setDisplayDate } = useDateNavigation();
   const popoverRef = useRef<Popover>(null);
 
-  // Display comes from `selectedValue`, which only user picks used to set —
-  // a field value applied AFTER mount (create-mode seeding, setFieldValue,
-  // even the Field-level defaultValue) never rendered. Adopt the live field
-  // value without emitting onChange. Identity is preserved when the
-  // month is unchanged so the close-on-select effect never re-fires.
-  const adoptFieldValue = useCallback((raw: unknown) => {
-    const next =
-      raw !== null &&
-      typeof raw === 'object' &&
-      typeof (raw as MonthPickerValue).month === 'number' &&
-      typeof (raw as MonthPickerValue).year === 'number'
-        ? (raw as MonthPickerValue)
-        : null;
-    setSelectedValue((prev) =>
-      prev === next || (prev !== null && next !== null && prev.month === next.month && prev.year === next.year)
-        ? prev
-        : next,
-    );
-  }, []);
-
   const closePopover = useCallback(() => {
     setOpen(false);
     popoverRef.current?.close();
   }, []);
 
-  useEffect(() => {
-    if (selectedValue) {
-      closePopover();
-    }
-  }, [selectedValue, closePopover]);
+  // Display comes from `selectedValue`, which only user picks used to set —
+  // a field value applied AFTER mount (create-mode seeding, setFieldValue,
+  // even the Field-level defaultValue) never rendered. Adopt the live field
+  // value without emitting onChange. Identity is preserved when the
+  // month is unchanged so the close-on-select effect never re-fires.
+  const adoptFieldValue = useCallback(
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- FieldValueSync's onSync contract is (value: unknown)
+    (raw: unknown) => {
+      const next = parseMonthPickerValue(raw);
+      setSelectedValue((prev) => sameMonthValue(prev, next));
+      if (next !== null) {
+        closePopover();
+      }
+    },
+    [closePopover],
+  );
 
   const handleMonthSelect = useCallback(
-    (value: MonthPickerValue, fieldChange?: (value: any) => void) => {
-      if (minYear && value.year < minYear) {
+    (value: MonthPickerValue, fieldChange?: FieldChange) => {
+      if (minYear !== undefined && value.year < minYear) {
         return;
       }
-      if (maxYear && value.year > maxYear) {
+      if (maxYear !== undefined && value.year > maxYear) {
         return;
       }
       setSelectedValue(value);
@@ -313,7 +351,7 @@ export function MonthPicker<
   );
 
   const handleClear = useCallback(
-    (fieldChange?: (value: any) => void) => {
+    (fieldChange?: FieldChange) => {
       setSelectedValue(null);
       setDisplayDate(new Date());
       fieldChange?.(null);
@@ -322,7 +360,7 @@ export function MonthPicker<
     [setDisplayDate, onChange],
   );
 
-  const pickerContent = (fieldChange?: (value: any) => void) => (
+  const pickerContent = (fieldChange?: FieldChange) => (
     <MonthPickerBody
       displayDate={displayDate}
       selectedValue={selectedValue}
@@ -335,11 +373,7 @@ export function MonthPicker<
     />
   );
 
-  const renderPopover = (
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (value: any) => void,
-  ) => {
+  const renderPopover = (hasError = false, blurHandler?: () => void, fieldChange?: FieldChange) => {
     if (readOnly) {
       return (
         <InputParts.Box>
@@ -347,8 +381,8 @@ export function MonthPicker<
             value={formatMonthDisplay(selectedValue)}
             readOnly
             aria-readonly="true"
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
+            aria-required={required ? true : undefined}
+            aria-invalid={hasError ? true : undefined}
             placeholder={placeholder}
           />
         </InputParts.Box>
@@ -378,15 +412,15 @@ export function MonthPicker<
             onButtonPress={() => {
               setOpen(true);
             }}
-            error={!!hasError}
+            error={hasError}
             // SB-KS-04: without the field id the sibling FieldLayout label's
             // `htmlFor` resolves to nothing — a dangling label and a control
             // with no accessible name. Carrying it also lets the Label wire
             // `aria-labelledby`, which is the only name source (see
             // fieldLayout.tsx).
             id={id}
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
+            aria-required={required ? true : undefined}
+            aria-invalid={hasError ? true : undefined}
           />
         }
         clearValue={formatMonthDisplay(selectedValue)}
@@ -401,13 +435,21 @@ export function MonthPicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -421,7 +463,7 @@ export function MonthPicker<
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderPopover(!!errorProp)}</InputParts>
+        <InputParts size={size ?? knobProps.sizeToken}>{renderPopover(hasErrorValue(errorProp))}</InputParts>
       </FieldLayout>
     );
   }
@@ -441,7 +483,10 @@ export function MonthPicker<
           <>
             {/* Form branch displays from `selectedValue` — keep it synced to
                 the live field value (late seeds / programmatic updates). */}
-            <FieldValueSync value={field.state.value} onSync={adoptFieldValue} />
+            <FieldValueSync
+              value={field.state.value}
+              onSync={adoptFieldValue}
+            />
             <FieldLayout
               id={id}
               label={label}
@@ -453,9 +498,9 @@ export function MonthPicker<
               knobProps={knobProps}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={size ?? knobProps.sizeToken}>
                 {renderPopover(
-                  !!resolvedError,
+                  hasErrorValue(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', _onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}
@@ -466,4 +511,4 @@ export function MonthPicker<
       }}
     </Field>
   );
-}
+};

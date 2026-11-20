@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import PageContainer from '@/components/layout/PageContainer';
 
-describe('PageContainer', () => {
+describe(PageContainer, () => {
   it('renders children inside a scroll area by default', () => {
     renderWithProviders(
       <PageContainer>

@@ -4,14 +4,14 @@ import { useTranslation } from '../shared/i18n';
 
 import { chartDatumText, describeChart } from './accessibility';
 import { ChartSurface } from './ChartSurface';
-import { createLinearScale, createPointScale, valueDomain } from './math';
+import { createLinearScale, createPointScale, normalizeChartData, valueDomain } from './math';
 import { AreaSeries, LineSeries } from './series';
 import type { ChartCurve, ChartDatum } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface SparklineProps extends Omit<YStackProps, 'children' | 'width' | 'height'> {
   /** Series values — bare numbers or full data points. */
-  data: Array<number | ChartDatum>;
+  data: (number | ChartDatum)[];
   /** Drawing height in px (default 36 — inline metric scale). */
   height?: number;
   /** Fixed width; omit to track the parent responsively. */
@@ -35,7 +35,7 @@ export interface SparklineProps extends Omit<YStackProps, 'children' | 'width' |
  * one identity-colored line with an optional soft area. The generated
  * accessible summary carries the data shape a glance conveys visually.
  */
-export function Sparkline({
+export const Sparkline = ({
   data,
   height = 36,
   width,
@@ -47,13 +47,11 @@ export function Sparkline({
   label,
   valueFormatter,
   ...stackProps
-}: SparklineProps) {
+}: SparklineProps) => {
   const { t } = useTranslation();
   const { palette } = useChartTheme();
   const stroke = color ?? palette.single;
-  const normalized: ChartDatum[] = data.map((entry, index) =>
-    typeof entry === 'number' ? { label: String(index + 1), value: entry } : entry,
-  );
+  const normalized = normalizeChartData(data);
   const ariaLabel =
     label ??
     describeChart({
@@ -100,7 +98,12 @@ export function Sparkline({
         return (
           <>
             {showArea ? (
-              <AreaSeries points={points} baseline={size.height - inset} color={stroke} curve={curve} />
+              <AreaSeries
+                points={points}
+                baseline={size.height - inset}
+                color={stroke}
+                curve={curve}
+              />
             ) : null}
             <LineSeries
               data={normalized}
@@ -115,4 +118,4 @@ export function Sparkline({
       }}
     </ChartSurface>
   );
-}
+};

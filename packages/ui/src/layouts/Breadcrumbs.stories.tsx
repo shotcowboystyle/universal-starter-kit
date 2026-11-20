@@ -33,7 +33,9 @@ const deepItems = [
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack gap="$4" padding="$4">
+    <YStack
+      gap="$4"
+      padding="$4">
       <Breadcrumbs
         items={[
           { label: 'Home', href: '/' },
@@ -58,7 +60,10 @@ export const Default: Story = {
 export const Overflow: Story = {
   name: 'Overflow',
   render: () => (
-    <YStack gap="$4" maxWidth={480} padding="$4">
+    <YStack
+      gap="$4"
+      maxWidth={480}
+      padding="$4">
       <Breadcrumbs
         items={deepItems}
         maxVisible={4}

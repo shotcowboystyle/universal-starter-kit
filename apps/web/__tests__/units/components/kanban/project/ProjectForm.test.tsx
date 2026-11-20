@@ -5,31 +5,42 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectForm } from '@/components/kanban/project/ProjectForm';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+// SAFETY: translators here only need to map a key to itself
+vi.mock(
+  import('next-intl'),
+  () =>
+    ({
+      useTranslations: () => (key: string) => key,
+    }) as never,
+);
 
-function renderForm(props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+const renderForm = (props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) => {
+  const onSubmit = vi.fn<() => Promise<void>>(async () => {
+    await Promise.resolve();
+  });
   renderWithProviders(
-    <ProjectForm onSubmit={onSubmit} {...props}>
-      <Button action="submit" testID="submit">
+    <ProjectForm
+      onSubmit={onSubmit}
+      {...props}>
+      <Button
+        action="submit"
+        testID="submit">
         Submit
       </Button>
     </ProjectForm>,
   );
   return { onSubmit };
-}
+};
 
-describe('ProjectForm', () => {
+describe(ProjectForm, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders labelled title and description fields', () => {
+  it('renders labeled title and description fields', () => {
     renderForm();
-    expect(screen.getByText(/titleLabel/)).toBeInTheDocument();
-    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/titleLabel/u)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/u)).toBeInTheDocument();
     expect(screen.getByTestId('project-title-input')).toHaveAttribute('placeholder', 'titlePlaceholder');
     expect(screen.getByTestId('project-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });
@@ -55,7 +66,7 @@ describe('ProjectForm', () => {
     const { onSubmit } = renderForm();
     fireEvent.click(screen.getByTestId('submit'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });

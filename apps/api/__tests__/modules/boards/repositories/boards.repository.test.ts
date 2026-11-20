@@ -1,43 +1,51 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardRepository } from "../../../../src/modules/boards/repositories/boards.repository";
+import { BoardRepository } from '../../../../src/modules/boards/repositories/boards.repository';
+import type { Board } from '../../../../src/modules/boards/schemas/boards.schema';
 
-describe("BoardRepository", () => {
+type AnyFn = (...args: any[]) => any;
+
+describe(BoardRepository, () => {
   let repository: BoardRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function (data) {
-      return {
-        ...data,
-        save: vi.fn().mockResolvedValue(data)
-      };
-    }) as any;
-
-    MockModel.aggregate = vi.fn().mockResolvedValue([]);
-    MockModel.findById = vi.fn().mockReturnThis();
-    MockModel.findByIdAndUpdate = vi.fn().mockReturnThis();
-    MockModel.deleteOne = vi.fn().mockReturnThis();
-    MockModel.findOneAndUpdate = vi.fn().mockReturnThis();
-    MockModel.exec = vi.fn();
+    const MockModel = Object.assign(
+      vi
+        .fn<(data: Partial<Board>) => Partial<Board> & { save: AnyFn }>()
+        .mockImplementation(function MockBoardModel(data) {
+          return {
+            ...data,
+            save: vi.fn<AnyFn>().mockResolvedValue(data),
+          };
+        }),
+      {
+        aggregate: vi.fn<AnyFn>().mockResolvedValue([]),
+        findById: vi.fn<AnyFn>().mockReturnThis(),
+        findByIdAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        deleteOne: vi.fn<AnyFn>().mockReturnThis(),
+        findOneAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        exec: vi.fn<AnyFn>(),
+      },
+    );
 
     mockModel = MockModel;
     repository = new BoardRepository(mockModel);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(repository).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should create a board", async () => {
+  describe('create', () => {
+    it('should create a board', async () => {
       const data = {
-        title: "Test Board",
-        description: "Test Description",
+        title: 'Test Board',
+        description: 'Test Description',
         owner: new Types.ObjectId(),
-        members: [new Types.ObjectId()]
+        members: [new Types.ObjectId()],
       };
 
       // Default implementation handles creation
@@ -45,50 +53,50 @@ describe("BoardRepository", () => {
       const result = await repository.create(data);
 
       expect(mockModel).toHaveBeenCalledWith(data);
-      expect(result).toEqual(expect.objectContaining(data));
+      expect(result).toStrictEqual(expect.objectContaining(data));
     });
   });
 
-  describe("findByOwner", () => {
-    it("should find boards by owner", async () => {
+  describe('findByOwner', () => {
+    it('should find boards by owner', async () => {
       const userId = new Types.ObjectId();
-      const mockBoards = [{ _id: new Types.ObjectId(), title: "Board 1" }];
+      const mockBoards = [{ _id: new Types.ObjectId(), title: 'Board 1' }];
 
       mockModel.aggregate.mockResolvedValue(mockBoards);
 
       const result = await repository.findByOwner(userId);
 
-      expect(result).toEqual(mockBoards);
+      expect(result).toStrictEqual(mockBoards);
     });
   });
 
-  describe("findByMemberNotOwner", () => {
-    it("should find boards where user is member but not owner", async () => {
+  describe('findByMemberNotOwner', () => {
+    it('should find boards where user is member but not owner', async () => {
       const userId = new Types.ObjectId();
-      const mockBoards = [{ _id: new Types.ObjectId(), title: "Board 1" }];
+      const mockBoards = [{ _id: new Types.ObjectId(), title: 'Board 1' }];
 
       mockModel.aggregate.mockResolvedValue(mockBoards);
 
       const result = await repository.findByMemberNotOwner(userId);
 
-      expect(result).toEqual(mockBoards);
+      expect(result).toStrictEqual(mockBoards);
     });
   });
 
-  describe("findOneWithAccess", () => {
-    it("should find a board with access check", async () => {
+  describe('findOneWithAccess', () => {
+    it('should find a board with access check', async () => {
       const boardId = new Types.ObjectId();
       const userId = new Types.ObjectId();
-      const mockBoard = { _id: boardId, title: "Board 1" };
+      const mockBoard = { _id: boardId, title: 'Board 1' };
 
       mockModel.aggregate.mockResolvedValue([mockBoard]);
 
       const result = await repository.findOneWithAccess(boardId, userId);
 
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
 
-    it("should return null if board not found", async () => {
+    it('should return null if board not found', async () => {
       const boardId = new Types.ObjectId();
       const userId = new Types.ObjectId();
 
@@ -100,97 +108,89 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("findById", () => {
-    it("should find a board by id", async () => {
+  describe('findById', () => {
+    it('should find a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
-      const mockBoard = { _id: boardId, title: "Board 1" };
+      const mockBoard = { _id: boardId, title: 'Board 1' };
 
       mockModel.exec.mockResolvedValue(mockBoard);
 
       const result = await repository.findById(boardId);
 
       expect(mockModel.findById).toHaveBeenCalledWith(boardId);
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
-  describe("updateById", () => {
-    it("should update a board by id", async () => {
+  describe('updateById', () => {
+    it('should update a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
-      const updateData = { title: "Updated Board" };
+      const updateData = { title: 'Updated Board' };
       const mockBoard = { _id: boardId, ...updateData };
 
       mockModel.exec.mockResolvedValue(mockBoard);
 
       const result = await repository.updateById(boardId, updateData);
 
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        boardId,
-        { $set: updateData },
-        { new: true }
-      );
-      expect(result).toEqual(mockBoard);
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(boardId, { $set: updateData }, { new: true });
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
-  describe("deleteById", () => {
-    it("should delete a board by id", async () => {
+  describe('deleteById', () => {
+    it('should delete a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
-      mockModel.deleteOne.mockReturnValue({ exec: vi.fn().mockResolvedValue({ deletedCount: 1 }) });
+      mockModel.deleteOne.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue({ deletedCount: 1 }) });
 
       const result = await repository.deleteById(boardId);
 
       expect(mockModel.deleteOne).toHaveBeenCalledWith({ _id: boardId });
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toStrictEqual({ deletedCount: 1 });
     });
   });
 
-  describe("addMember", () => {
-    it("should add a member to a board", async () => {
+  describe('addMember', () => {
+    it('should add a member to a board', async () => {
       const boardId = new Types.ObjectId();
       const ownerId = new Types.ObjectId();
       const memberId = new Types.ObjectId();
       const mockBoard = { _id: boardId.toHexString(), members: [memberId.toHexString()] };
 
-      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn().mockResolvedValue(mockBoard) });
+      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue(mockBoard) });
 
-      const result = await repository.addMember(
-        boardId.toHexString(),
-        ownerId.toHexString(),
-        memberId.toHexString()
-      );
+      const result = await repository.addMember(boardId.toHexString(), ownerId.toHexString(), memberId.toHexString());
 
       expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $addToSet: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       );
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
-  describe("removeMember", () => {
-    it("should remove a member from a board", async () => {
+  describe('removeMember', () => {
+    it('should remove a member from a board', async () => {
       const boardId = new Types.ObjectId();
       const ownerId = new Types.ObjectId();
       const memberId = new Types.ObjectId();
       const mockBoard = { _id: boardId.toHexString(), members: [] };
 
-      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn().mockResolvedValue(mockBoard) });
+      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue(mockBoard) });
 
       const result = await repository.removeMember(
         boardId.toHexString(),
         ownerId.toHexString(),
-        memberId.toHexString()
+        memberId.toHexString(),
       );
 
       expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $pull: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       );
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 });

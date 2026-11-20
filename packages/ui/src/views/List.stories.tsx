@@ -3,7 +3,7 @@ import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 import type { ReactNode } from 'react';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 import { List, ListRow, ListRowMeta } from './List';
 
@@ -74,13 +74,15 @@ const documents: DocumentRow[] = [
   },
 ];
 
-function DocumentItem({ item }: { item: DocumentRow }) {
-  const statusColor =
-    item.statusTone === 'success'
-      ? componentColors.semantic.success
-      : item.statusTone === 'warning'
-        ? componentColors.badge.orange
-        : undefined;
+const statusToneColor = (tone: DocumentRow['statusTone']) => {
+  if (tone === 'success') {
+    return componentColors.semantic.success;
+  }
+  return tone === 'warning' ? componentColors.badge.orange : undefined;
+};
+
+const DocumentItem = ({ item }: { item: DocumentRow }) => {
+  const statusColor = statusToneColor(item.statusTone);
   return (
     <ListRow
       icon={item.icon}
@@ -91,14 +93,16 @@ function DocumentItem({ item }: { item: DocumentRow }) {
           <ListRowMeta width={80}>{item.modified}</ListRowMeta>
           <ListRowMeta width={56}>{item.size}</ListRowMeta>
           <ListRowMeta width={40}>{item.kind}</ListRowMeta>
-          <ListRowMeta width={48} color={statusColor}>
+          <ListRowMeta
+            width={48}
+            color={statusColor}>
             {item.status}
           </ListRowMeta>
         </>
       }
     />
   );
-}
+};
 
 const meta: Meta = {
   title: 'Components/List',
@@ -125,7 +129,12 @@ export const Default = {
 
 export const Loading = {
   render: () => (
-    <List<DocumentRow> items={[]} renderItem={(item) => <DocumentItem item={item} />} isLoading height={280} />
+    <List<DocumentRow>
+      items={[]}
+      renderItem={(item) => <DocumentItem item={item} />}
+      isLoading
+      height={280}
+    />
   ),
 };
 
@@ -142,7 +151,7 @@ export const Empty = {
 };
 
 /** Failed load wins over empty — error chrome with retry, never empty chrome. */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <List<DocumentRow>
       items={[]}
@@ -169,3 +178,5 @@ export const NoResults = {
     />
   ),
 };
+
+export { ErrorStory as Error };

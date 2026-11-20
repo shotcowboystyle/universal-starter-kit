@@ -1,7 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,13 +11,64 @@ import {
   plugin,
 } from '../oxlint.mjs';
 
-const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8')) as {
-  exports: Record<string, string | { import?: string; default?: string; types?: string }>;
-  files: string[];
+type FixtureValue = string | number | boolean | FixtureNode | FixtureNode[] | null | undefined;
+
+/** A fixture ESTree node: only the members the rules read. */
+interface FixtureNode {
+  type: string;
+  [member: string]: FixtureValue;
+}
+
+interface Report {
+  messageId?: string;
+  data?: Record<string, string>;
+}
+
+interface RuleOptionsStub {
+  slotMargins?: string[];
+  drawings?: string[];
+  chromeAllow?: string[];
+}
+
+interface RuleContextStub {
+  filename: string;
+  options?: RuleOptionsStub[];
+  sourceCode?: { text: string };
+  report: (report: Report) => void;
+}
+
+type Visitors = Record<string, ((node: FixtureNode) => void) | undefined>;
+
+/** Builds the visitors a registered rule returns for one fixture context. */
+const createVisitors = (ruleName: string, context: RuleContextStub): Visitors => {
+  const rule = plugin.rules?.[ruleName];
+  if (rule === undefined) {
+    throw new Error(`rule ${ruleName} is not registered`);
+  }
+  return rule.create(context);
 };
 
-describe('matchColorLiteral', () => {
-  it('matches hex and functional CSS colours, not a Pokedex number in isolation of AST', () => {
+/** Visitors for a rule that is expected to define the named visitor, called with `node`. */
+const visit = (visitors: Visitors, key: string, node: FixtureNode): void => {
+  visitors[key]?.(node);
+};
+
+const reportedNames = (source: string, names: string[]): string[] => {
+  const reports: Report[] = [];
+  const visitors = createVisitors('no-raw-typography', {
+    filename: 'apps/one/app/index.tsx',
+    report: (report) => reports.push(report),
+  });
+  visit(visitors, 'ImportDeclaration', {
+    type: 'ImportDeclaration',
+    source: { type: 'Literal', value: source },
+    specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { type: 'Identifier', name } })),
+  });
+  return reports.map((report) => report.data?.name ?? '');
+};
+
+describe(matchColorLiteral, () => {
+  it('matches hex and functional CSS colors, not a Pokedex number in isolation of AST', () => {
     expect(matchColorLiteral('#34c759')).toBe('#34c759');
     expect(matchColorLiteral('#fff')).toBe('#fff');
     expect(matchColorLiteral('rgba(0,0,0,0.35)')).toBe('rgba(0,0,0,0.35)');
@@ -31,7 +78,7 @@ describe('matchColorLiteral', () => {
   });
 });
 
-describe('isPaletteModule', () => {
+describe(isPaletteModule, () => {
   it('exempts themes/base, themes/accent, and *palette* files', () => {
     expect(isPaletteModule('packages/themes/base.ts')).toBe(true);
     expect(isPaletteModule('packages/themes/accent.ts')).toBe(true);
@@ -55,45 +102,13 @@ describe('export surface', () => {
 });
 
 /**
- * no-raw-typography behavioural teeth. The block above only asserts the rule
+ * no-raw-typography behavioral teeth. The block above only asserts the rule
  * is DEFINED — a rule that never reports would pass it. These cases drive the
  * rule's own visitor and assert it reports on every raw typography hatch and
  * stays silent on the house names, so "the lint fails on raw typography in app
  * code" is a checked claim rather than a registration.
  */
 describe('mpo-conventions/no-raw-typography', () => {
-  const rule = plugin.rules?.['no-raw-typography'];
-
-  interface Report {
-    data?: { name?: string };
-  }
-  interface ImportVisitor {
-    ImportDeclaration: (node: unknown) => void;
-  }
-  interface Creatable {
-    create: (context: unknown) => ImportVisitor;
-  }
-
-  /** Minimal ESTree ImportDeclaration — the only node shape the rule visits. */
-  function importDeclaration(source: string, names: string[]) {
-    return {
-      type: 'ImportDeclaration',
-      source: { value: source },
-      specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { name } })),
-    };
-  }
-
-  function reportedNames(source: string, names: string[]): string[] {
-    const reports: Report[] = [];
-    const context = {
-      filename: 'apps/one/app/index.tsx',
-      report: (report: Report) => reports.push(report),
-    };
-    const visitors = (rule as unknown as Creatable).create(context);
-    visitors.ImportDeclaration(importDeclaration(source, names));
-    return reports.map((report) => report.data?.name ?? '');
-  }
-
   const hatches = [
     'TamaguiText',
     'TamaguiSizableText',
@@ -105,107 +120,132 @@ describe('mpo-conventions/no-raw-typography', () => {
   ];
 
   it.each(hatches)('reports %s imported from the components barrel', (name) => {
-    expect(reportedNames('@repo/ui', [name])).toEqual([name]);
+    expect(reportedNames('@repo/ui', [name])).toStrictEqual([name]);
   });
 
   it('stays silent on the house shadows — the bare names ARE the fix', () => {
-    expect(reportedNames('@repo/ui', ['Text', 'SizableText', 'Paragraph', 'Heading', 'H1', 'H6', 'Anchor'])).toEqual(
-      [],
-    );
+    expect(
+      reportedNames('@repo/ui', ['Text', 'SizableText', 'Paragraph', 'Heading', 'H1', 'H6', 'Anchor']),
+    ).toStrictEqual([]);
   });
 
   it('stays silent on non-typography hatches and on other packages', () => {
-    expect(reportedNames('@repo/ui', ['TamaguiButton', 'TamaguiSeparator'])).toEqual([]);
-    expect(reportedNames('some-other-package', ['TamaguiText'])).toEqual([]);
+    expect(reportedNames('@repo/ui', ['TamaguiButton', 'TamaguiSeparator'])).toStrictEqual([]);
+    expect(reportedNames('some-other-package', ['TamaguiText'])).toStrictEqual([]);
   });
 
   it('reports every offending specifier in one import, not just the first', () => {
-    expect(reportedNames('@repo/ui', ['Text', 'TamaguiText', 'TamaguiHeading'])).toEqual([
+    expect(reportedNames('@repo/ui', ['Text', 'TamaguiText', 'TamaguiHeading'])).toStrictEqual([
       'TamaguiText',
       'TamaguiHeading',
     ]);
   });
 });
 
-interface Report {
-  messageId?: string;
-  data?: Record<string, string>;
-}
-interface HouseVisitors {
-  ImportDeclaration: (node: unknown) => void;
-  JSXOpeningElement: (node: unknown) => void;
-}
-interface Creatable {
-  create: (context: unknown) => HouseVisitors;
-}
+const houseImport = (source: string, names: string[]): FixtureNode => ({
+  type: 'ImportDeclaration',
+  source: { type: 'Literal', value: source },
+  specifiers: names.map((name) => ({
+    type: 'ImportSpecifier',
+    imported: { type: 'Identifier', name },
+    local: { type: 'Identifier', name },
+  })),
+});
 
-function houseImport(source: string, names: string[]) {
-  return {
-    type: 'ImportDeclaration',
-    source: { value: source },
-    specifiers: names.map((name) => ({
-      type: 'ImportSpecifier',
-      imported: { name },
-      local: { name },
-    })),
-  };
-}
+const jsxOpen = (name: string, attrs: { prop: string; value: FixtureValue }[]): FixtureNode => ({
+  type: 'JSXOpeningElement',
+  name: { type: 'JSXIdentifier', name },
+  attributes: attrs.map((attr) => ({
+    type: 'JSXAttribute',
+    name: { type: 'JSXIdentifier', name: attr.prop },
+    value: attr.value,
+  })),
+});
 
-function jsxOpen(name: string, attrs: { prop: string; value: unknown }[]) {
-  return {
-    type: 'JSXOpeningElement',
-    name: { type: 'JSXIdentifier', name },
-    attributes: attrs.map((attr) => ({
-      type: 'JSXAttribute',
-      name: { type: 'JSXIdentifier', name: attr.prop },
-      value: attr.value,
-    })),
-  };
-}
+const token = (value: string): FixtureNode => ({ type: 'Literal', value });
 
-function token(value: string) {
-  return { type: 'Literal', value };
-}
+const numeric = (value: number): FixtureNode => ({
+  type: 'JSXExpressionContainer',
+  expression: { type: 'Literal', value },
+});
 
-function numeric(value: number) {
-  return { type: 'JSXExpressionContainer', expression: { type: 'Literal', value } };
-}
+const escaped = (value: number): FixtureNode => ({
+  type: 'JSXExpressionContainer',
+  expression: {
+    type: 'CallExpression',
+    callee: { type: 'Identifier', name: 'sizeRecipeEscape' },
+    arguments: [{ type: 'Literal', value }],
+  },
+});
 
-function escaped(value: number) {
-  return {
-    type: 'JSXExpressionContainer',
-    expression: {
-      type: 'CallExpression',
-      callee: { type: 'Identifier', name: 'sizeRecipeEscape' },
-      arguments: [{ type: 'Literal', value }],
-    },
-  };
-}
+const reportsFor = (filename: string, text: string) => {
+  const reports: Report[] = [];
+  const visitors = createVisitors('no-hex-literals', {
+    filename,
+    sourceCode: { text },
+    report: (report) => reports.push(report),
+  });
+  visit(visitors, 'Literal', { type: 'Literal', value: '#ffffff' });
+  return reports.map((r) => r.data?.value);
+};
 
-function driveHouseRule(
+const element = (
+  name: string,
+  attrs: { prop: string; value: FixtureValue }[],
+  children: FixtureNode[] = [],
+): FixtureNode => ({
+  type: 'JSXElement',
+  openingElement: jsxOpen(name, attrs),
+  children,
+});
+
+const fragment = (children: FixtureNode[]): FixtureNode => ({ type: 'JSXFragment', children });
+
+const walk = (visitors: Visitors, node: FixtureNode) => {
+  visit(visitors, node.type, node);
+  if (node.type === 'JSXElement' && !Array.isArray(node.openingElement) && node.openingElement !== undefined) {
+    walk(visitors, node.openingElement as FixtureNode);
+  }
+  if (node.type === 'JSXElement' || node.type === 'JSXFragment') {
+    for (const child of node.children as FixtureNode[]) {
+      walk(visitors, child);
+    }
+  }
+  visit(visitors, `${node.type}:exit`, node);
+};
+
+const lint = (tree: FixtureNode, options?: { slotMargins?: string[] }) => {
+  const reports: Report[] = [];
+  walk(
+    createVisitors('no-child-margin', {
+      filename: 'features/demo/screen.tsx',
+      options: [options ?? { slotMargins: [] }],
+      report: (report) => reports.push(report),
+    }),
+    tree,
+  );
+  return reports.map((r) => `${r.data?.name}.${r.data?.prop}`);
+};
+
+const driveHouseRule = (
   ruleName: 'no-chrome-props' | 'no-raw-geometry',
   filename: string,
-  nodes: unknown[],
-  options?: { drawings?: string[]; chromeAllow?: string[] },
-): Report[] {
+  nodes: FixtureNode[],
+  options?: RuleOptionsStub,
+): Report[] => {
   const reports: Report[] = [];
-  const rule = plugin.rules?.[ruleName] as unknown as Creatable;
-  const visitors = rule.create({
+  const visitors = createVisitors(ruleName, {
     filename,
     options: options ? [options] : [],
-    report: (report: Report) => reports.push(report),
+    report: (report) => reports.push(report),
   });
   for (const node of nodes) {
-    const typed = node as { type?: string };
-    if (typed.type === 'ImportDeclaration') {
-      visitors.ImportDeclaration(node);
-    }
-    if (typed.type === 'JSXOpeningElement') {
-      visitors.JSXOpeningElement(node);
+    if (node.type === 'ImportDeclaration' || node.type === 'JSXOpeningElement') {
+      visit(visitors, node.type, node);
     }
   }
   return reports;
-}
+};
 
 describe('mpo-conventions/no-chrome-props', () => {
   const filename = 'features/lookout/src/WallScreen.tsx';
@@ -216,13 +256,13 @@ describe('mpo-conventions/no-chrome-props', () => {
       importCard,
       jsxOpen('Card', [{ prop: 'backgroundColor', value: token('$color5') }]),
     ]);
-    expect(chrome.map((r) => r.data?.prop)).toEqual(['backgroundColor']);
+    expect(chrome.map((r) => r.data?.prop)).toStrictEqual(['backgroundColor']);
 
     const layout = driveHouseRule('no-chrome-props', filename, [
       importCard,
       jsxOpen('Card', [{ prop: 'flex', value: numeric(1) }]),
     ]);
-    expect(layout).toEqual([]);
+    expect(layout).toStrictEqual([]);
   });
 
   it('stays silent on a CHROME-ALLOW member and on a non-house import', () => {
@@ -233,13 +273,13 @@ describe('mpo-conventions/no-chrome-props', () => {
         [importCard, jsxOpen('Card', [{ prop: 'bg', value: token('$color2') }])],
         { chromeAllow: ['Card'] },
       ),
-    ).toEqual([]);
+    ).toStrictEqual([]);
     expect(
       driveHouseRule('no-chrome-props', filename, [
         houseImport('somewhere-else', ['Card']),
         jsxOpen('Card', [{ prop: 'backgroundColor', value: token('$color5') }]),
       ]),
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });
 
@@ -252,13 +292,13 @@ describe('mpo-conventions/no-raw-geometry', () => {
       importCard,
       jsxOpen('Card', [{ prop: 'height', value: numeric(20) }]),
     ]);
-    expect(raw.map((r) => r.data?.prop)).toEqual(['height']);
+    expect(raw.map((r) => r.data?.prop)).toStrictEqual(['height']);
 
     const wrapped = driveHouseRule('no-raw-geometry', filename, [
       importCard,
       jsxOpen('Card', [{ prop: 'height', value: escaped(20) }]),
     ]);
-    expect(wrapped).toEqual([]);
+    expect(wrapped).toStrictEqual([]);
   });
 
   it('never flags a zero-reset but still flags any other number', () => {
@@ -280,7 +320,7 @@ describe('mpo-conventions/no-raw-geometry', () => {
         },
       ]),
     ]);
-    expect(zero).toEqual([]);
+    expect(zero).toStrictEqual([]);
 
     const small = driveHouseRule('no-raw-geometry', filename, [
       importCard,
@@ -289,7 +329,7 @@ describe('mpo-conventions/no-raw-geometry', () => {
         { prop: 'minWidth', value: numeric(0.5) },
       ]),
     ]);
-    expect(small.map((r) => r.data?.prop)).toEqual(['padding', 'minWidth']);
+    expect(small.map((r) => r.data?.prop)).toStrictEqual(['padding', 'minWidth']);
   });
 
   it('stays silent inside a registered drawing file', () => {
@@ -300,16 +340,15 @@ describe('mpo-conventions/no-raw-geometry', () => {
         [importCard, jsxOpen('Card', [{ prop: 'height', value: numeric(14) }])],
         { drawings: ['springboard-ui/src/StatusGlyphs.tsx'] },
       ),
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });
 
 describe('no-hex-literals comments and palette', () => {
   it('does not visit comments, so a JSDoc #025 never reaches the matcher', () => {
-    const rule = plugin.rules?.['no-hex-literals'] as { create: (c: unknown) => object };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'features/pokemon/logic.ts',
-      report() {},
+      report: () => {},
     });
     expect(visitors).not.toHaveProperty('Comment');
     expect(visitors).not.toHaveProperty('Block');
@@ -318,53 +357,33 @@ describe('no-hex-literals comments and palette', () => {
 
   it('stays silent in packages/themes/base.ts even for rgba', () => {
     const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal?: (n: unknown) => void };
-    };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'packages/themes/base.ts',
-      report: (report: Report) => reports.push(report),
+      report: (report) => reports.push(report),
     });
-    visitors.Literal?.({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
-    expect(reports).toEqual([]);
+    visit(visitors, 'Literal', { type: 'Literal', value: 'rgba(0,0,0,0.35)' });
+    expect(reports).toStrictEqual([]);
   });
 
   it('errors on an rgba() literal in features/**', () => {
     const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal: (n: unknown) => void };
-    };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'features/console/src/DeskShell.tsx',
-      report: (report: Report) => reports.push(report),
+      report: (report) => reports.push(report),
     });
-    visitors.Literal({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
-    expect(reports.map((r) => r.data?.value ?? r.messageId)).toEqual(['rgba(0,0,0,0.35)']);
+    visit(visitors, 'Literal', { type: 'Literal', value: 'rgba(0,0,0,0.35)' });
+    expect(reports.map((r) => r.data?.value ?? r.messageId)).toStrictEqual(['rgba(0,0,0,0.35)']);
   });
 });
 
 describe('no-hex-literals hex-escape comment', () => {
-  function reportsFor(filename: string, text: string) {
-    const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal?: (n: unknown) => void };
-    };
-    const visitors = rule.create({
-      filename,
-      sourceCode: { text },
-      report: (report: Report) => reports.push(report),
-    });
-    visitors.Literal?.({ type: 'Literal', value: '#ffffff' });
-    return reports.map((r) => r.data?.value);
-  }
-
   it('errors on a hex in apps/ when the file carries no hex-escape comment', () => {
-    expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toEqual(['#ffffff']);
+    expect(reportsFor('apps/one/canvas/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
   });
 
   it('skips the file whose line comment writes a reason', () => {
-    const text = '// hex-escape: GTK widget paint outside TamaguiProvider\nexport const bg = "#ffffff";\n';
-    expect(reportsFor('apps/one/gnome/gtk-paint.ts', text)).toEqual([]);
+    const text = '// hex-escape: canvas paint outside TamaguiProvider\nexport const bg = "#ffffff";\n';
+    expect(reportsFor('apps/one/canvas/canvas-paint.ts', text)).toStrictEqual([]);
   });
 
   it('does not take a comment with no reason, a JSDoc line or a backticked mention as the marker', () => {
@@ -373,7 +392,7 @@ describe('no-hex-literals hex-escape comment', () => {
       '/**\n * hex-escape: in prose\n */\nexport const bg = "#ffffff";\n',
       '// opt out with `// hex-escape: <reason>`\nexport const bg = "#ffffff";\n',
     ]) {
-      expect(reportsFor('apps/one/spa/main.tsx', text)).toEqual(['#ffffff']);
+      expect(reportsFor('apps/one/spa/main.tsx', text)).toStrictEqual(['#ffffff']);
     }
   });
 
@@ -388,7 +407,7 @@ describe('no-hex-literals hex-escape comment', () => {
           '// hex-escape:',
         ].join('\n'),
       ),
-    ).toEqual([
+    ).toStrictEqual([
       { line: 1, reason: 'content script on third-party pages' },
       { line: 3, reason: 'Storybook manager panel' },
       { line: 5, reason: '' },
@@ -397,63 +416,13 @@ describe('no-hex-literals hex-escape comment', () => {
 });
 
 /**
- * no-child-margin behavioural teeth. The rule counts JSX depth on enter and
+ * no-child-margin behavioral teeth. The rule counts JSX depth on enter and
  * exit, so the driver walks a small tree the way the linter does: enter a
  * node, visit its children, then fire `<type>:exit`.
  */
 describe('mpo-conventions/no-child-margin', () => {
-  interface Node {
-    type: string;
-    [key: string]: unknown;
-  }
-  type Visitors = Record<string, ((node: Node) => void) | undefined>;
-
-  function element(name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) {
-    return {
-      type: 'JSXElement',
-      openingElement: jsxOpen(name, attrs),
-      children,
-    };
-  }
-
-  function fragment(children: Node[]) {
-    return { type: 'JSXFragment', children };
-  }
-
-  function walk(visitors: Visitors, node: Node) {
-    visitors[node.type]?.(node);
-    if (node.type === 'JSXElement') {
-      walk(visitors, node.openingElement as Node);
-      for (const child of node.children as Node[]) {
-        walk(visitors, child);
-      }
-    }
-    if (node.type === 'JSXFragment') {
-      for (const child of node.children as Node[]) {
-        walk(visitors, child);
-      }
-    }
-    visitors[`${node.type}:exit`]?.(node);
-  }
-
-  function lint(tree: Node, options?: { slotMargins?: string[] }) {
-    const reports: Report[] = [];
-    const rule = plugin.rules?.['no-child-margin'] as unknown as {
-      create: (context: unknown) => Visitors;
-    };
-    walk(
-      rule.create({
-        filename: 'features/demo/screen.tsx',
-        options: [options ?? { slotMargins: [] }],
-        report: (report: Report) => reports.push(report),
-      }),
-      tree,
-    );
-    return reports.map((r) => `${r.data?.name}.${r.data?.prop}`);
-  }
-
   it('covers every long margin prop and every Tamagui shorthand for one', () => {
-    expect(MARGIN_PROPS).toEqual(
+    expect(MARGIN_PROPS).toStrictEqual(
       expect.arrayContaining(['margin', 'marginTop', 'marginHorizontal', 'm', 'mt', 'mx', 'my']),
     );
     expect(plugin.rules?.['no-child-margin']).toBeDefined();
@@ -470,12 +439,17 @@ describe('mpo-conventions/no-child-margin', () => {
         element('XStack', [{ prop: 'marginLeft', value: token('auto') }]),
       ],
     );
-    expect(lint(tree)).toEqual(['Button.marginTop', 'Paragraph.mb', 'Separator.marginHorizontal', 'XStack.marginLeft']);
+    expect(lint(tree)).toStrictEqual([
+      'Button.marginTop',
+      'Paragraph.mb',
+      'Separator.marginHorizontal',
+      'XStack.marginLeft',
+    ]);
   });
 
   it("errors on a margin under a fragment too: a fragment's children are still siblings", () => {
     const tree = fragment([element('Card', [{ prop: 'margin', value: token('$4') }])]);
-    expect(lint(tree)).toEqual(['Card.margin']);
+    expect(lint(tree)).toStrictEqual(['Card.margin']);
   });
 
   it('leaves the outermost element alone and never flags a zero-reset', () => {
@@ -492,7 +466,7 @@ describe('mpo-conventions/no-child-margin', () => {
         ]),
       ],
     );
-    expect(lint(tree)).toEqual([]);
+    expect(lint(tree)).toStrictEqual([]);
   });
 
   it('stays silent on an element the spec declares a slot, by full or bare name', () => {
@@ -504,7 +478,7 @@ describe('mpo-conventions/no-child-margin', () => {
         element('Header', [{ prop: 'marginBottom', value: token('auto') }]),
       ],
     );
-    expect(lint(tree, { slotMargins: ['Card.Footer', 'Header'] })).toEqual([]);
-    expect(lint(tree, { slotMargins: [] })).toEqual(['Card.Footer.marginTop', 'Header.marginBottom']);
+    expect(lint(tree, { slotMargins: ['Card.Footer', 'Header'] })).toStrictEqual([]);
+    expect(lint(tree, { slotMargins: [] })).toStrictEqual(['Card.Footer.marginTop', 'Header.marginBottom']);
   });
 });

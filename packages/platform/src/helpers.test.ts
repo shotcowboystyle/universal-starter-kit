@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { fastUnique, isText } from './helpers';
 
-describe('fastUnique', () => {
+describe(fastUnique, () => {
   it('returns a string', () => {
-    expect(typeof fastUnique()).toBe('string');
+    expect(fastUnique()).toBeTypeOf('string');
   });
 
   it('returns unique values on consecutive calls', () => {
     const results = new Set<string>();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 100; i += 1) {
       results.add(fastUnique());
     }
     expect(results.size).toBe(100);
@@ -20,7 +20,7 @@ describe('fastUnique', () => {
   });
 });
 
-describe('isText', () => {
+describe(isText, () => {
   it('returns true for a plain string', () => {
     expect(isText('hello')).toBe(true);
   });
@@ -34,6 +34,7 @@ describe('isText', () => {
   });
 
   it('returns false for undefined', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(isText(undefined)).toBe(false);
   });
 

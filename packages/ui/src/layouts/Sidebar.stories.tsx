@@ -35,7 +35,12 @@ export const Default = () => {
     ...extras,
   });
   return (
-    <XStack height={320} borderWidth={1} borderColor="$borderColor" {...knobProps.borderRadiusNested} overflow="hidden">
+    <XStack
+      height={320}
+      borderWidth={1}
+      borderColor="$borderColor"
+      {...knobProps.borderRadiusNested}
+      overflow="hidden">
       <Sidebar
         sections={[
           {
@@ -57,7 +62,11 @@ export const Default = () => {
           },
         ]}
       />
-      <YStack flex={1} padding="$4" justifyContent="center" alignItems="center">
+      <YStack
+        flex={1}
+        padding="$4"
+        justifyContent="center"
+        alignItems="center">
         <Paragraph color="$color10">Main content area</Paragraph>
       </YStack>
     </XStack>

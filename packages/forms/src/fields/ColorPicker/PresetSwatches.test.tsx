@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PresetSwatches } from './parts';
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Palette: () => null,
   X: () => null,
   Check: () => null,
@@ -18,16 +18,28 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
 
 const BRAND = ['#1E40AF', '#3B82F6', '#BFDBFE'];
 
-describe('PresetSwatches', () => {
+describe(PresetSwatches, () => {
   it('renders a radiogroup of radios for each preset', () => {
-    renderWithProviders(<PresetSwatches presetColors={BRAND} selectedColor="#3B82F6" onSelect={vi.fn()} />);
+    renderWithProviders(
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor="#3B82F6"
+        onSelect={vi.fn<(color: string | null) => void>()}
+      />,
+    );
     expect(screen.getByRole('radiogroup', { name: 'Color presets' })).toBeTruthy();
     const radios = screen.getAllByRole('radio');
     expect(radios).toHaveLength(BRAND.length);
   });
 
   it('marks the selected hex aria-checked', () => {
-    renderWithProviders(<PresetSwatches presetColors={BRAND} selectedColor="#3B82F6" onSelect={vi.fn()} />);
+    renderWithProviders(
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor="#3B82F6"
+        onSelect={vi.fn<(color: string | null) => void>()}
+      />,
+    );
     const selected = screen.getByRole('radio', { name: 'Color #3B82F6' });
     expect(selected.getAttribute('aria-checked')).toBe('true');
     const other = screen.getByRole('radio', { name: 'Color #1E40AF' });
@@ -35,22 +47,32 @@ describe('PresetSwatches', () => {
   });
 
   it('onSelect fires with the hex of the pressed swatch', () => {
-    const onSelect = vi.fn();
-    renderWithProviders(<PresetSwatches presetColors={BRAND} selectedColor={null} onSelect={onSelect} />);
+    const onSelect = vi.fn<(color: string | null) => void>();
+    renderWithProviders(
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor={null}
+        onSelect={onSelect}
+      />,
+    );
     fireEvent.click(screen.getByRole('radio', { name: 'Color #1E40AF' }));
     expect(onSelect).toHaveBeenCalledWith('#1E40AF');
   });
 
   it('empty presetColors renders nothing', () => {
     const { container } = renderWithProviders(
-      <PresetSwatches presetColors={[]} selectedColor={null} onSelect={vi.fn()} />,
+      <PresetSwatches
+        presetColors={[]}
+        selectedColor={null}
+        onSelect={vi.fn<(color: string | null) => void>()}
+      />,
     );
     expect(container.querySelector('[role="radiogroup"]')).toBeNull();
     expect(container.textContent).toBe('');
   });
 
   it('null entry is the no-color radio and reports null', () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<(color: string | null) => void>();
     renderWithProviders(
       <PresetSwatches
         presetColors={[{ name: 'None', value: null }, '#3B82F6']}

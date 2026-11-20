@@ -16,40 +16,42 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Chip } from './index';
 
-afterEach(cleanup);
-
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
-function renderAt(stop: (typeof STOPS)[number], outlined = false): string[] {
+const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
   const result = renderWithProviders(
     <Preset overrides={{ fillStyle: outlined ? 'outlined' : 'filled', borderWidth: stop }}>
-      <Chip variant="outlined" onPress={() => {}}>
+      <Chip
+        variant="outlined"
+        onPress={() => {}}>
         Fire
       </Chip>
     </Preset>,
   );
-  const frame = result.container.querySelector('[data-chip]') as HTMLElement;
-  const atoms = String(frame.className || '')
-    .split(/\s+/)
+  const frame = result.container.querySelector<HTMLElement>('[data-chip]')!;
+  const atoms = frame.className
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_btw-'))
-    .sort();
+    .toSorted();
   cleanup();
   return atoms;
-}
+};
 
 describe('Chip borderWidth ladder', () => {
-  it("the frame honours the resolver's edge: 0 / 0.5 / 1 / 2", () => {
-    expect(renderAt('none')).toEqual(['_btw-0px']);
-    expect(renderAt('small')).toEqual(['_btw-0--5px']);
-    expect(renderAt('medium')).toEqual(['_btw-1px']);
-    expect(renderAt('large')).toEqual(['_btw-2px']);
+  afterEach(cleanup);
+
+  it("the frame honors the resolver's edge: 0 / 0.5 / 1 / 2", () => {
+    expect(renderAt('none')).toStrictEqual(['_btw-0px']);
+    expect(renderAt('small')).toStrictEqual(['_btw-0--5px']);
+    expect(renderAt('medium')).toStrictEqual(['_btw-1px']);
+    expect(renderAt('large')).toStrictEqual(['_btw-2px']);
   });
 
   it('medium and large differ, so the chip box moves with the stop', () => {
-    expect(renderAt('medium')).not.toEqual(renderAt('large'));
+    expect(renderAt('medium')).not.toStrictEqual(renderAt('large'));
   });
 
   it("none under fillStyle:outlined is the resolver's hairline, not a local floor", () => {
-    expect(renderAt('none', true)).toEqual(['_btw-0--5px']);
+    expect(renderAt('none', true)).toStrictEqual(['_btw-0--5px']);
   });
 });

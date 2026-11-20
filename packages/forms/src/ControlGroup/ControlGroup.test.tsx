@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -11,19 +9,31 @@ import { Button } from '../Button';
 
 import { ControlGroup } from './index';
 
-afterEach(cleanup);
+const group = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-mp-control-group]');
 
-function group(container: HTMLElement) {
-  return container.querySelector('[data-mp-control-group]') as HTMLElement | null;
-}
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- computed widths carry a "px" suffix, which Number() would turn into NaN
+const widthPx = (value: string): number => Number.parseFloat(value === '' ? '0' : value);
 
-function radiusClasses(el: HTMLElement | null): string[] {
-  return String(el?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
-}
+const fontWeightOf = (el: Element | null | undefined): string => {
+  if (!(el instanceof HTMLElement)) {
+    return '';
+  }
+  if (el.style.fontWeight !== '') {
+    return el.style.fontWeight;
+  }
+  const computed = getComputedStyle(el).fontWeight;
+  if (computed !== '') {
+    return computed;
+  }
+  return /fw-400|fow-400|font-weight-400/u.test(el.className) ? '400' : '';
+};
 
-describe('ControlGroup', () => {
+const radiusClasses = (el: HTMLElement | null): string[] =>
+  (el?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
+
+describe(ControlGroup, () => {
+  afterEach(cleanup);
+
   it('keeps inner seams square while the outer frame rides the radius knob (R-OUTER)', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
@@ -33,11 +43,11 @@ describe('ControlGroup', () => {
         </ControlGroup>
       </Preset>,
     );
-    expect(radiusClasses(group(result.container))).toEqual(['_btlr-t-radius-12']);
-    const inners = result.container.querySelectorAll('[data-mp-group-position]');
-    expect(inners.length).toBe(2);
+    expect(radiusClasses(group(result.container))).toStrictEqual(['_btlr-t-radius-12']);
+    const inners = result.container.querySelectorAll<HTMLElement>('[data-mp-group-position]');
+    expect(inners).toHaveLength(2);
     for (const node of inners) {
-      expect((node as HTMLElement).getAttribute('data-mp-inner-radius')).toBe('0');
+      expect(node.dataset.mpInnerRadius).toBe('0');
     }
   });
 
@@ -62,8 +72,8 @@ describe('ControlGroup', () => {
       </Preset>,
     );
     const largeWidth = getComputedStyle(group(large.container)!).borderTopWidth;
-    expect(parseFloat(noneWidth || '0')).toBe(0);
-    expect(parseFloat(largeWidth || '0')).toBeGreaterThan(parseFloat(noneWidth || '0'));
+    expect(widthPx(noneWidth)).toBe(0);
+    expect(widthPx(largeWidth)).toBeGreaterThan(widthPx(noneWidth));
   });
 
   it('addon label is weight 400', () => {
@@ -73,16 +83,11 @@ describe('ControlGroup', () => {
         <Button>Go</Button>
       </ControlGroup>,
     );
-    const addon = (result.container.querySelector('[data-mp-control-group-addon]') ||
-      result.findTextElement('@')) as HTMLElement | null;
+    const addon =
+      result.container.querySelector<HTMLElement>('[data-mp-control-group-addon]') ?? result.findTextElement('@');
     expect(addon).toBeTruthy();
-    const text = (
-      addon?.matches('[data-mp-control-group-addon]') ? addon.querySelector('*') : addon
-    ) as HTMLElement | null;
-    const weight =
-      text?.style.fontWeight ||
-      (text ? getComputedStyle(text).fontWeight : '') ||
-      (text?.className.match(/fw-400|fow-400|font-weight-400/) ? '400' : '');
-    expect(['400', 'normal']).toContain(String(weight));
+    const text = addon?.matches('[data-mp-control-group-addon]') ? addon.querySelector<HTMLElement>('*') : addon;
+    const weight = fontWeightOf(text);
+    expect(['400', 'normal']).toContain(weight);
   });
 });

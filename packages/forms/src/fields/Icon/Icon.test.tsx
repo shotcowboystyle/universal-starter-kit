@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { renderWithProviders } from '@repo/test-utils';
 import { act, fireEvent, waitFor } from '@testing-library/react';
 import { Theme } from 'tamagui';
@@ -5,34 +7,55 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DrawnIcon, Icon } from './index';
 
-describe('Icon', () => {
+describe(Icon, () => {
   it('renders an icon control, not an unsupported-type string', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     const text = result.container.textContent ?? '';
-    expect(text).not.toMatch(/Unsupported field type/);
+    expect(text).not.toMatch(/Unsupported field type/u);
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeTruthy();
     const input = result.container.querySelector('input');
     expect(input?.value).toBe('mail');
   });
 
   it('shows a dashed well when empty', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" placeholder="Choose an icon" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        placeholder="Choose an icon"
+      />,
+    );
     expect(result.container.querySelector('[data-testid="icon-empty-well"]')).toBeTruthy();
     const input = result.container.querySelector('input');
     expect(input?.getAttribute('placeholder')).toBe('Choose an icon');
   });
 
   it('read-only renders the glyph well without a picker trigger', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" readOnly />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        readOnly
+      />,
+    );
     expect(result.container.querySelector('[data-testid="icon-field-readonly"]')).toBeTruthy();
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeNull();
-    expect(result.container.textContent ?? '').not.toMatch(/Unsupported field type/);
+    expect(result.container.textContent ?? '').not.toMatch(/Unsupported field type/u);
   });
 
   it('opens a FloatingPanel grid and commits a drawn-set pick', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
-      <Icon label="Workspace icon" value="" placeholder="Choose an icon" onChange={onChange} />,
+      <Icon
+        label="Workspace icon"
+        value=""
+        placeholder="Choose an icon"
+        onChange={onChange}
+      />,
     );
 
     const input = result.container.querySelector('input');
@@ -61,8 +84,14 @@ describe('Icon', () => {
   });
 
   it('uses fixed glyph cells and keeps search and selection working', async () => {
-    const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        onChange={onChange}
+      />,
+    );
     const input = result.container.querySelector('input')!;
     fireEvent.click(input);
     await waitFor(() => {
@@ -86,7 +115,12 @@ describe('Icon', () => {
   });
 
   it('does not paint typed icon glyphs in the trigger', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     const text = result.container.textContent ?? '';
     for (const glyph of ['∨', '∧', '✓', '×', '▸', '☰']) {
       expect(text).not.toContain(glyph);
@@ -95,7 +129,12 @@ describe('Icon', () => {
   });
 
   it('keeps desktop option semantics without adding a second search field', async () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     fireEvent.click(result.container.querySelector('input')!);
     await waitFor(() => {
       expect(document.querySelector('[data-testid="icon-panel"]')).toBeTruthy();
@@ -108,8 +147,14 @@ describe('Icon', () => {
   it('lets a narrow sheet search, commit and reopen with a cleared query', async () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
-    const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        onChange={onChange}
+      />,
+    );
     try {
       const input = result.container.querySelector('input')!;
       fireEvent.click(input);
@@ -142,8 +187,13 @@ describe('Icon', () => {
   it('returns focus after a sheet pick without reopening and supports keyboard reopening', async () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
-    const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" onChange={onChange} />);
+    const onChange = vi.fn<(value: string) => void>();
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        onChange={onChange}
+      />,
+    );
     try {
       const input = result.container.querySelector('input')!;
       await act(async () => {
@@ -160,7 +210,9 @@ describe('Icon', () => {
       fireEvent.change(search, { target: { value: 'chev' } });
       fireEvent.click(document.querySelector('[data-testid="icon-option-chev-u"]')!);
       expect(onChange).toHaveBeenCalledWith('chev-u');
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+      await act(async () => {
+        await sleep(400);
+      });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       expect(document.activeElement).toBe(input);
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -182,7 +234,9 @@ describe('Icon', () => {
       return element!;
     });
     fireEvent.click(option);
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => {
+      await sleep(400);
+    });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(input);
   });
@@ -207,7 +261,9 @@ describe('Icon', () => {
     });
     fireEvent.pointerDown(next);
     fireEvent.click(next);
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => {
+      await sleep(400);
+    });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(next);
   });
@@ -222,9 +278,12 @@ describe('Icon', () => {
         expect(document.querySelector('[data-testid="icon-option-mail"]')).toBeTruthy();
       });
       fireEvent.click(document.querySelector('[data-testid="icon-option-mail"]')!);
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 500)));
+      await act(async () => {
+        await sleep(500);
+      });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       await act(async () => {
+        // oxlint-disable-next-line github/no-blur -- the test needs a real blur to leave the field before refocusing it
         input.blur();
       });
       await act(async () => {
@@ -237,12 +296,18 @@ describe('Icon', () => {
     }
   });
 
-  // A glyph outside InputParts.Icon has nothing injecting a colour, and
+  // A glyph outside InputParts.Icon has nothing injecting a color, and
   // `currentColor` does not cascade on react-native-svg: iOS resolved it to nil
   // and Core Graphics then painted with whatever stroke was last in the
   // context. Every paint has to leave here as a concrete value.
-  it('paints the readOnly glyph with a resolved colour, never currentColor', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" readOnly />);
+  it('paints the readOnly glyph with a resolved color, never currentColor', () => {
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        readOnly
+      />,
+    );
     const svg = result.container.querySelector('svg');
     expect(svg).toBeTruthy();
     const color = svg?.getAttribute('color');
@@ -250,7 +315,7 @@ describe('Icon', () => {
     expect(color).not.toBe('currentColor');
     // No token survives to the renderer either: "$color11" is not a paint.
     expect(color?.startsWith('$')).toBe(false);
-    const strokes = Array.from(svg?.querySelectorAll('[stroke]') ?? []).map((el) => el.getAttribute('stroke'));
+    const strokes = [...(svg?.querySelectorAll('[stroke]') ?? [])].map((el) => el.getAttribute('stroke'));
     expect(strokes.length).toBeGreaterThan(0);
     for (const stroke of strokes) {
       expect(stroke).not.toBe('currentColor');
@@ -258,33 +323,41 @@ describe('Icon', () => {
     }
   });
 
-  for (const scheme of ['light', 'dark'] as const) {
-    it(`${scheme} resolves default, token, and filled glyph paint`, () => {
-      const { container } = renderWithProviders(
-        <Theme name={scheme}>
-          <DrawnIcon name="mail" />
-          <DrawnIcon name="mail" color="$color11" />
-          <DrawnIcon name="mail" color="currentColor" />
-          <DrawnIcon name="grip" color="$unknownIconToken" />
-          <DrawnIcon name="mail" color="rebeccapurple" />
-        </Theme>,
-      );
-      const svgs = Array.from(container.querySelectorAll('svg'));
-      const ink = svgs[0].getAttribute('color');
-      expect(ink).toBeTruthy();
-      expect(ink).not.toMatch(/^(currentColor|\$)/);
-      for (const svg of svgs.slice(0, 4)) {
-        expect(svg.getAttribute('color')).toBe(ink);
-        for (const part of svg.querySelectorAll('[stroke], [fill]')) {
-          for (const attr of ['stroke', 'fill']) {
-            const paint = part.getAttribute(attr);
-            if (paint && paint !== 'none') {
-              expect(paint).toBe(ink);
-            }
-          }
+  it.each(['light', 'dark'] as const)('%s resolves default, token, and filled glyph paint', (scheme) => {
+    const { container } = renderWithProviders(
+      <Theme name={scheme}>
+        <DrawnIcon name="mail" />
+        <DrawnIcon
+          name="mail"
+          color="$color11"
+        />
+        <DrawnIcon
+          name="mail"
+          color="currentColor"
+        />
+        <DrawnIcon
+          name="grip"
+          color="$unknownIconToken"
+        />
+        <DrawnIcon
+          name="mail"
+          color="rebeccapurple"
+        />
+      </Theme>,
+    );
+    const svgs = [...container.querySelectorAll('svg')];
+    const ink = svgs[0].getAttribute('color');
+    expect(ink).toBeTruthy();
+    expect(ink).not.toMatch(/^(?:currentColor|\$)/u);
+    for (const svg of svgs.slice(0, 4)) {
+      expect(svg.getAttribute('color')).toBe(ink);
+      for (const part of svg.querySelectorAll('[stroke], [fill]')) {
+        for (const attr of ['stroke', 'fill']) {
+          const paint = part.getAttribute(attr);
+          expect(paint === null || paint === '' || paint === 'none' || paint === ink).toBe(true);
         }
       }
-      expect(svgs[4].getAttribute('color')).toBe('rebeccapurple');
-    });
-  }
+    }
+    expect(svgs[4].getAttribute('color')).toBe('rebeccapurple');
+  });
 });

@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { isWeb } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { FloatingPanel } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
@@ -15,10 +15,11 @@ import {
   TimePanel,
   TimePickerClearButton,
   TimePickerInputTrigger,
+  firstError,
   formatTimeDisplay,
   isValidTimeString,
-  type TimeFormat,
 } from './parts';
+import type { TimeFormat } from './parts';
 
 export type { TimeFormat } from './parts';
 export { formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
@@ -26,7 +27,7 @@ export { formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } f
 export interface TimePickerProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -38,7 +39,7 @@ export interface TimePickerProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: ComponentProps<typeof FieldLayout>['onBlur'];
   disabled?: boolean;
   readOnly?: boolean;
   /** Display format (default "12h") */
@@ -57,7 +58,15 @@ export interface TimePickerProps {
   native?: boolean;
 }
 
-export function TimePicker({
+type FieldChange = (value: string) => void;
+
+const triggerLabel = (label: ReactNode): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is a ReactNode; only a non-empty string can name the trigger for assistive tech
+  const text = typeof label === 'string' && label !== '' ? label : undefined;
+  return text ?? t('Time');
+};
+
+export const TimePicker = ({
   name,
   form: formProp,
   validators,
@@ -81,12 +90,13 @@ export function TimePicker({
   clockIcon,
   skeleton,
   compact,
-}: TimePickerProps) {
+}: TimePickerProps) => {
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
     id: idProp,
     compact,
   });
+  const hasLabel = Boolean(label);
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState<string>(() => valueProp ?? defaultValue ?? '');
@@ -94,6 +104,7 @@ export function TimePicker({
     if (valueProp === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
     setInternalValue(valueProp);
   }, [valueProp]);
   const value = internalValue;
@@ -106,7 +117,7 @@ export function TimePicker({
   );
 
   const handleChange = useCallback(
-    (time: string, fieldChange?: (v: any) => void) => {
+    (time: string, fieldChange?: FieldChange) => {
       setInternalValue(time);
       fieldChange?.(time);
       onChange?.(time);
@@ -115,18 +126,13 @@ export function TimePicker({
   );
 
   const handleClear = useCallback(
-    (fieldChange?: (v: any) => void) => {
+    (fieldChange?: FieldChange) => {
       handleChange('', fieldChange);
     },
     [handleChange],
   );
 
-  const renderTrigger = (
-    triggerValue: string,
-    hasError?: boolean,
-    fieldChange?: (v: any) => void,
-    readonly?: boolean,
-  ) => (
+  const renderTrigger = (triggerValue: string, hasError = false, fieldChange?: FieldChange, readonly = false) => (
     <TimePickerInputTrigger
       value={triggerValue}
       placeholder={placeholder}
@@ -140,16 +146,16 @@ export function TimePicker({
       onClear={() => {
         handleClear(fieldChange);
       }}
-      aria-label={label ? undefined : t('Time')}
+      aria-label={hasLabel ? undefined : t('Time')}
       aria-readonly={readonly || undefined}
-      aria-required={required || undefined}
+      aria-required={required === true || undefined}
       aria-invalid={hasError || undefined}
     />
   );
 
   const panelContent = (currentValue: string, onValueChange: (next: string) => void) => (
     <TimePanel
-      value={currentValue || '00:00'}
+      value={currentValue === '' ? '00:00' : currentValue}
       onChange={onValueChange}
       timeFormat={timeFormat}
       minuteStep={minuteStep}
@@ -159,17 +165,25 @@ export function TimePicker({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
 
   const renderField = (
     triggerValue: string,
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (v: any) => void,
+    hasError = false,
+    blurHandler?: () => void,
+    fieldChange?: FieldChange,
     fieldValue?: string,
   ) => {
     if (readOnly) {
@@ -189,13 +203,13 @@ export function TimePicker({
         widthMode="at-least-trigger"
         contentPadding="none"
         triggerA11y={{
-          label: (typeof label === 'string' && label) || t('Time'),
-          value: triggerValue || placeholder,
-          hint: typeof helperText === 'string' ? helperText : undefined,
+          label: triggerLabel(label),
+          value: triggerValue === '' ? placeholder : triggerValue,
+          hint: helperText,
         }}
         trigger={renderTrigger(triggerValue, hasError, fieldChange)}
         triggerEnd={
-          !isWeb && triggerValue ? (
+          !isWeb && triggerValue !== '' ? (
             <TimePickerClearButton
               onClear={() => {
                 handleClear(fieldChange);
@@ -211,28 +225,32 @@ export function TimePicker({
     );
   };
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
         label={label}
         labelProps={labelProps}
-        error={error || formatError}
+        error={firstError(error, formatError)}
         helperText={helperText}
         required={required}
         size={size}
         knobProps={knobProps}
         onBlur={onBlur}
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>
-          {renderField(displayValue, !!error || valueIsInvalid, onBlur)}
+        <InputParts size={size ?? knobProps.sizeToken}>
+          {renderField(displayValue, Boolean(error) || valueIsInvalid, onBlur)}
         </InputParts>
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = field.state.value ?? '';
@@ -244,17 +262,17 @@ export function TimePicker({
             id={id}
             label={label}
             labelProps={labelProps}
-            error={resolvedError || fieldFormatError}
+            error={firstError(resolvedError, fieldFormatError)}
             helperText={helperText}
             required={required}
             size={size}
             knobProps={knobProps}
             onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}
             disabled={disabled}>
-            <InputParts size={size || knobProps.sizeToken}>
+            <InputParts size={size ?? knobProps.sizeToken}>
               {renderField(
                 fieldDisplay,
-                !!resolvedError || fieldIsInvalid,
+                Boolean(resolvedError) || fieldIsInvalid,
                 mergeFieldHandler(field, 'handleBlur', onBlur),
                 (v) => {
                   field.handleChange(v);
@@ -267,4 +285,4 @@ export function TimePicker({
       }}
     </Field>
   );
-}
+};

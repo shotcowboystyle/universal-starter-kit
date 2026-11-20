@@ -7,13 +7,14 @@ import {
   useGlyphColor,
   useResolvedKnobs,
 } from '@repo/theme';
-import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { AnimatePresence, Text, View, isWeb } from 'tamagui';
 
 import { FloatingPanel, floatingPanelActionProps, isNestedPanelAction } from '../../FloatingPanel';
-import type { PanelActionEvent } from '../../FloatingPanel/nestedAction';
+import type { PanelActionEvent } from '../../FloatingPanel/nested-action';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
 // ---------------------------------------------------------------------------
@@ -34,7 +35,9 @@ export interface CalendarData {
 // Constants
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const months = [
   'January',
   'February',
@@ -59,19 +62,23 @@ export const yearPageSize = 12;
 // useDateAnimation — smooth directional transitions
 // ---------------------------------------------------------------------------
 
-export function useDateAnimation(current: string | number) {
-  const prev = useRef<string | number | null>(null);
+const directionOf = (current: string | number, prev: string | number): -1 | 0 | 1 => {
+  if (current > prev) {
+    return 1;
+  }
+  return current < prev ? -1 : 0;
+};
 
-  const direction = useMemo(() => {
-    if (prev.current === null) {
-      return 0;
-    }
-    return current > prev.current ? 1 : current < prev.current ? -1 : 0;
-  }, [current]);
-
-  useEffect(() => {
-    prev.current = current;
-  }, [current]);
+export const useDateAnimation = (current: string | number) => {
+  const [tracked, setTracked] = useState<{ value: string | number; direction: -1 | 0 | 1 }>({
+    value: current,
+    direction: 0,
+  });
+  let { direction } = tracked;
+  if (tracked.value !== current) {
+    direction = directionOf(current, tracked.value);
+    setTracked({ value: current, direction });
+  }
 
   const animation = useMemo(
     () => ({
@@ -82,7 +89,7 @@ export function useDateAnimation(current: string | number) {
   );
 
   return { animation, animationKey: current };
-}
+};
 
 // ---------------------------------------------------------------------------
 // useCalendarData — compute calendar grid for a given month
@@ -92,41 +99,33 @@ export function useDateAnimation(current: string | number) {
 // a locale pinned to en-US at the call site.
 const monthNames = getMonthNames();
 
-export function useCalendarData(displayDate: Date): CalendarData {
-  return useMemo(() => {
+export const useCalendarData = (displayDate: Date): CalendarData =>
+  useMemo(() => {
     const year = displayDate.getFullYear();
     const month = displayDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
-
-    const days: Date[] = [];
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
+    // Whole weeks: pad back to the Sunday before the 1st and forward to the Saturday after the last day.
+    const dayCount = firstDay.getDay() + lastDay.getDate() + (6 - lastDay.getDay());
+    const days = Array.from({ length: dayCount }, (_, i) => new Date(year, month, 1 - firstDay.getDay() + i));
 
     return {
       year,
       month,
       monthName: monthNames[month],
       days,
+      // oxlint-disable-next-line react/purity -- "today" is the wall clock by definition; recomputed whenever the displayed month changes
       today: new Date(),
     };
   }, [displayDate]);
-}
 
 // ---------------------------------------------------------------------------
 // useDateNavigation — shared month/display date management
 // ---------------------------------------------------------------------------
 
-export function useDateNavigation(initialDate?: Date) {
-  const [displayDate, setDisplayDate] = useState<Date>(initialDate ?? new Date());
+export const useDateNavigation = (initialDate?: Date) => {
+  const [displayDate, setDisplayDate] = useState<Date>(() => initialDate ?? new Date());
 
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
     setDisplayDate((prev) => {
@@ -138,30 +137,32 @@ export function useDateNavigation(initialDate?: Date) {
   }, []);
 
   return { displayDate, setDisplayDate, navigateMonth };
-}
+};
 
 // ---------------------------------------------------------------------------
 // toWeeks — split days array into 7-day rows
 // ---------------------------------------------------------------------------
 
-export function toWeeks(days: Date[]): Date[][] {
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
+export const toWeeks = (days: Date[]): Date[][] => {
   const result: Date[][] = [];
   for (let i = 0; i < days.length; i += 7) {
     result.push(days.slice(i, i + 7));
   }
   return result;
-}
+};
 
 // ---------------------------------------------------------------------------
 // isSameDay — date comparison utility
 // ---------------------------------------------------------------------------
 
-export function isSameDay(a: Date | null | undefined, b: Date | null | undefined): boolean {
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
+export const isSameDay = (a: Date | null | undefined, b: Date | null | undefined): boolean => {
   if (!a || !b) {
     return false;
   }
   return a.toDateString() === b.toDateString();
-}
+};
 
 // ---------------------------------------------------------------------------
 // dayCellRadius — binary-pointy day cells
@@ -172,19 +173,16 @@ export function isSameDay(a: Date | null | undefined, b: Date | null | undefined
  * square (binary-pointy, same contract as Switch/Radio). Inline style so a
  * consumer `circular` variant cannot expand past the nested-control box.
  */
-export function dayCellRadius(knobProps: { pointy?: boolean }): {
-  style: { borderRadius: number };
-} {
-  return { style: { borderRadius: knobProps.pointy ? 0 : 9999 } };
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
+export const dayCellRadius = (knobProps: { pointy?: boolean }) => ({
+  style: { borderRadius: knobProps.pointy ? 0 : 9999 },
+});
 
 /** Calendar chrome sits one density step below the page. */
-export function useCalendarKnobs() {
-  return useResolvedKnobs({ compact: true });
-}
+export const useCalendarKnobs = () => useResolvedKnobs({ compact: true });
 
 /** Overlay/dialog calendar frame: compact padding + a 7-cell content width. */
-export function CalendarPanelFrame({ children }: { children: ReactNode }) {
+export const CalendarPanelFrame = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
@@ -199,9 +197,9 @@ export function CalendarPanelFrame({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
-}
+};
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -210,21 +208,27 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
+};
+
+interface KeyEventLike {
+  key?: string;
+  preventDefault?: () => void;
 }
 
-function calendarKeyHandler(onPress: () => void) {
-  return (e: { key?: string; preventDefault?: () => void }) => {
+// The defaulted event keeps the handler assignable to the zero-arg `onKeyDown` type View exposes.
+const calendarKeyHandler =
+  (onPress: () => void) =>
+  (e: KeyEventLike = {}) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault?.();
       onPress();
     }
   };
-}
 
-export function CalendarChromeButton({
+export const CalendarChromeButton = ({
   onPress,
   label,
   children,
@@ -232,12 +236,13 @@ export function CalendarChromeButton({
   onPress: () => void;
   label: string;
   children: ReactNode;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const { hitSlop, box } = splitNestedControl(knobProps.nestedControl);
   return (
     <View
       {...box}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
       role="button"
       aria-label={label}
       cursor="pointer"
@@ -247,55 +252,70 @@ export function CalendarChromeButton({
       outlineWidth={0}
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing()}
-      {...(!isWeb ? { hitSlop } : {})}
-      {...(isWeb
-        ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
-        : { accessible: true })}>
+      {...(isWeb ? {} : { hitSlop })}
+      {...(isWeb ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) } : { accessible: true })}>
       {children}
     </View>
   );
-}
+};
 
-export function CalendarTextButton({ onPress, children }: { onPress: () => void; children: ReactNode }) {
+export const CalendarTextButton = ({ onPress, children }: { onPress: () => void; children: ReactNode }) => (
+  <View
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
+    role="button"
+    cursor="pointer"
+    paddingVertical={2}
+    paddingHorizontal={4}
+    onPress={onPress}
+    outlineWidth={0}
+    focusStyle={{ outlineWidth: 0 }}
+    focusVisibleStyle={ensureFocusVisibleRing()}
+    {...(isWeb ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) } : { accessible: true })}>
+    {children}
+  </View>
+);
+
+export const CalendarDaySlot = ({ children }: { children?: ReactNode }) => {
+  const { knobProps } = useCalendarKnobs();
+  const { px } = knobProps.nestedControl;
   return (
     <View
-      role="button"
-      cursor="pointer"
-      paddingVertical={2}
-      paddingHorizontal={4}
-      onPress={onPress}
-      outlineWidth={0}
-      focusStyle={{ outlineWidth: 0 }}
-      focusVisibleStyle={ensureFocusVisibleRing()}
-      {...(isWeb
-        ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
-        : { accessible: true })}>
+      width={px}
+      height={px}
+      justifyContent="center"
+      alignItems="center"
+      position="relative">
       {children}
     </View>
   );
-}
+};
 
-export function CalendarDaySlot({ children }: { children?: ReactNode }) {
+export const CalendarWeekRow = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
-    <View width={px} height={px} justifyContent="center" alignItems="center" position="relative">
+    <View
+      flexDirection="row"
+      width={px * 7}>
       {children}
     </View>
   );
-}
+};
 
-export function CalendarWeekRow({ children }: { children: ReactNode }) {
-  const { knobProps } = useCalendarKnobs();
-  const { px } = knobProps.nestedControl;
-  return (
-    <View flexDirection="row" width={px * 7}>
-      {children}
-    </View>
-  );
-}
+const TRANSPARENT = 'transparent';
+const POINTER_NONE = 'none';
+const BACKGROUND_TOKEN = '$background';
 
-export function CalendarDayCell({
+const dayCellOpacity = (disabled = false, dimmed = false): number => {
+  if (disabled) {
+    return 0.5;
+  }
+  return dimmed ? 0.45 : 1;
+};
+
+const unselectedTextColor = (accentText: string, today = false) => (today ? accentText : formCommonColors.text);
+
+export const CalendarDayCell = ({
   day,
   selected,
   today,
@@ -315,15 +335,20 @@ export function CalendarDayCell({
   dimmed?: boolean;
   tabIndex?: number;
   onPress: () => void;
-  onKeyDown?: (e: { key?: string; preventDefault?: () => void }) => void;
+  onKeyDown?: (e: KeyEventLike) => void;
   selectedBackground?: string;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const accentText = useAccentOnSurface();
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
 
   if (!visible) {
-    return <View width={px} height={px} />;
+    return (
+      <View
+        width={px}
+        height={px}
+      />
+    );
   }
 
   const showTodayMark = !!today && !selected;
@@ -333,10 +358,11 @@ export function CalendarDayCell({
     <View
       {...box}
       {...dayCellRadius(knobProps)}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
       role="button"
       aria-label={String(day.getDate())}
-      aria-disabled={disabled || undefined}
-      aria-pressed={selected || undefined}
+      aria-disabled={disabled ? true : undefined}
+      aria-pressed={selected ? true : undefined}
       aria-current={today ? 'date' : undefined}
       cursor={disabled ? 'not-allowed' : 'pointer'}
       alignItems="center"
@@ -352,42 +378,76 @@ export function CalendarDayCell({
       // wins when both apply so an out-of-range adjacent day does not
       // look like a pickable spill-over day. Bento paints this state
       // identical to a choosable cell; we do not adopt that.
-      opacity={disabled ? 0.5 : dimmed ? 0.45 : 1}
-      pointerEvents={disabled ? 'none' : 'auto'}
-      backgroundColor={selected ? (selectedBackground ?? '$background') : 'transparent'}
-      theme={selected ? ('accent' as any) : undefined}
+      opacity={dayCellOpacity(disabled, dimmed)}
+      pointerEvents={disabled ? POINTER_NONE : 'auto'}
+      backgroundColor={selected ? (selectedBackground ?? BACKGROUND_TOKEN) : TRANSPARENT}
+      theme={selected ? 'accent' : undefined}
       borderWidth={showTodayMark ? 2 : 0}
-      borderColor={showTodayMark ? accentText : 'transparent'}
+      borderColor={showTodayMark ? accentText : TRANSPARENT}
       zIndex={1}
       outlineWidth={0}
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
       data-nested-px={px}
       data-calendar-day={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-      {...(!isWeb ? { hitSlop } : {})}
+      {...(isWeb ? {} : { hitSlop })}
       {...(isWeb
         ? {
             tabIndex: resolvedTabIndex,
-            onKeyDown: ((e: { key?: string; preventDefault?: () => void }) => {
+            onKeyDown: (e: KeyEventLike = {}) => {
               if (!disabled) {
                 calendarKeyHandler(onPress)(e);
               }
               onKeyDown?.(e);
-            }) as unknown as () => void,
+            },
           }
         : { accessible: true })}>
       <Text
         {...knobProps.label}
         {...knobProps.textWeight}
         fontWeight={selected ? 'bold' : knobProps.textWeight.fontWeight}
-        color={selected ? undefined : today ? accentText : formCommonColors.text}>
+        color={selected ? undefined : unselectedTextColor(accentText, today)}>
         {day.getDate()}
       </Text>
     </View>
   );
-}
+};
 
-export function CalendarDays({
+// ---------------------------------------------------------------------------
+// WeekView — weekday header row
+// ---------------------------------------------------------------------------
+
+export const WeekView = () => {
+  const { knobProps } = useCalendarKnobs();
+  const { px } = knobProps.nestedControl;
+  return (
+    <View
+      flexDirection="row"
+      width={px * 7}
+      alignSelf="center">
+      {weekdays.map((day) => (
+        <Text
+          key={day}
+          width={px}
+          textAlign="center"
+          color={formCommonColors.muted}
+          {...knobProps.label}
+          {...knobProps.textWeight}>
+          {t(day)}
+        </Text>
+      ))}
+    </View>
+  );
+};
+
+const arrowKeyDeltas = new Map([
+  ['ArrowLeft', -1],
+  ['ArrowRight', 1],
+  ['ArrowUp', -7],
+  ['ArrowDown', 7],
+]);
+
+export const CalendarDays = ({
   calendarData,
   minDate,
   maxDate,
@@ -410,33 +470,32 @@ export function CalendarDays({
   onToday?: () => void;
   /** Multiple-mode is at `limit`; unselected cells look unavailable. */
   selectionCapped?: boolean;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const { animation, animationKey } = useDateAnimation(`${calendarData.year}-${calendarData.month}`);
   const weeks = toWeeks(calendarData.days);
   const { px } = knobProps.nestedControl;
 
-  const [focusedDay, setFocusedDay] = useState<Date | null>(() => {
-    const selected = calendarData.days.find((day) => day.getMonth() === calendarData.month && isSelected(day));
-    const today = calendarData.days.find(
-      (day) => day.getMonth() === calendarData.month && isSameDay(calendarData.today, day),
-    );
-    return selected ?? today ?? calendarData.days.find((day) => day.getMonth() === calendarData.month) ?? null;
-  });
-
-  useEffect(() => {
-    const selected = calendarData.days.find((day) => day.getMonth() === calendarData.month && isSelected(day));
-    const today = calendarData.days.find(
-      (day) => day.getMonth() === calendarData.month && isSameDay(calendarData.today, day),
-    );
-    setFocusedDay(selected ?? today ?? calendarData.days.find((day) => day.getMonth() === calendarData.month) ?? null);
-  }, [calendarData.year, calendarData.month]);
+  const pickFocusDay = () => {
+    const inMonth = (day: Date) => day.getMonth() === calendarData.month;
+    const selected = calendarData.days.find((day) => inMonth(day) && isSelected(day));
+    const today = calendarData.days.find((day) => inMonth(day) && isSameDay(calendarData.today, day));
+    return selected ?? today ?? calendarData.days.find(inMonth) ?? null;
+  };
+  const [focusedDay, setFocusedDay] = useState<Date | null>(pickFocusDay);
+  // Re-seed the roving focus target when the displayed month changes.
+  const monthKey = `${calendarData.year}-${calendarData.month}`;
+  const [seededMonthKey, setSeededMonthKey] = useState(monthKey);
+  if (seededMonthKey !== monthKey) {
+    setSeededMonthKey(monthKey);
+    setFocusedDay(pickFocusDay());
+  }
 
   const moveFocus = useCallback(
     (from: Date, delta: number) => {
       const idx = calendarData.days.findIndex((day) => isSameDay(day, from));
-      const next = calendarData.days[idx + delta];
-      if (!next) {
+      const next: Date | undefined = calendarData.days[idx + delta];
+      if (next === undefined) {
         return;
       }
       setFocusedDay(next);
@@ -445,7 +504,7 @@ export function CalendarDays({
       }
       const key = `${next.getFullYear()}-${next.getMonth()}-${next.getDate()}`;
       requestAnimationFrame(() => {
-        (document.querySelector(`[data-calendar-day="${key}"]`) as HTMLElement | null)?.focus?.();
+        document.querySelector<HTMLElement>(`[data-calendar-day="${key}"]`)?.focus();
       });
     },
     [calendarData.days],
@@ -468,7 +527,12 @@ export function CalendarDays({
         {weeks.map((week) => {
           const hasCurrentMonthDay = week.some((d) => d.getMonth() === calendarData.month);
           if (skipEmptyWeeks && !hasCurrentMonthDay) {
-            return <View key={week[0].toISOString()} height="$3" />;
+            return (
+              <View
+                key={week[0].toISOString()}
+                height="$3"
+              />
+            );
           }
           return (
             <CalendarWeekRow key={week[0].toISOString()}>
@@ -491,17 +555,8 @@ export function CalendarDays({
                       onSelect(day);
                     }}
                     onKeyDown={(e) => {
-                      const delta =
-                        e.key === 'ArrowLeft'
-                          ? -1
-                          : e.key === 'ArrowRight'
-                            ? 1
-                            : e.key === 'ArrowUp'
-                              ? -7
-                              : e.key === 'ArrowDown'
-                                ? 7
-                                : 0;
-                      if (!delta) {
+                      const delta = e.key === undefined ? 0 : (arrowKeyDeltas.get(e.key) ?? 0);
+                      if (delta === 0) {
                         return;
                       }
                       e.preventDefault?.();
@@ -524,7 +579,12 @@ export function CalendarDays({
           );
         })}
         {onToday ? (
-          <CalendarTextButton onPress={todayOutOfRange ? () => {} : onToday}>
+          <CalendarTextButton
+            onPress={() => {
+              if (!todayOutOfRange) {
+                onToday();
+              }
+            }}>
             <Text
               {...knobProps.label}
               {...knobProps.textWeight}
@@ -537,31 +597,7 @@ export function CalendarDays({
       </View>
     </AnimatePresence>
   );
-}
-
-// ---------------------------------------------------------------------------
-// WeekView — weekday header row
-// ---------------------------------------------------------------------------
-
-export function WeekView() {
-  const { knobProps } = useCalendarKnobs();
-  const { px } = knobProps.nestedControl;
-  return (
-    <View flexDirection="row" width={px * 7} alignSelf="center">
-      {weekdays.map((day) => (
-        <Text
-          key={day}
-          width={px}
-          textAlign="center"
-          color={formCommonColors.muted}
-          {...knobProps.label}
-          {...knobProps.textWeight}>
-          {t(day)}
-        </Text>
-      ))}
-    </View>
-  );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarHeader — clickable year + month with nav arrows
@@ -578,7 +614,7 @@ interface CalendarHeaderProps {
   showNext?: boolean;
 }
 
-export function CalendarHeader({
+export const CalendarHeader = ({
   year,
   monthName,
   onPrevMonth,
@@ -587,43 +623,74 @@ export function CalendarHeader({
   onMonthPress,
   showPrev = true,
   showNext = true,
-}: CalendarHeaderProps) {
+}: CalendarHeaderProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px } = knobProps.nestedControl;
   return (
-    <View flexDirection="row" width={px * 7} alignSelf="center" alignItems="center" justifyContent="space-between">
+    <View
+      flexDirection="row"
+      width={px * 7}
+      alignSelf="center"
+      alignItems="center"
+      justifyContent="space-between">
       {showPrev && onPrevMonth ? (
-        <CalendarChromeButton onPress={onPrevMonth} label={t('Previous month')}>
-          <CaretLeftIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onPrevMonth}
+          label={t('Previous month')}>
+          <CaretLeftIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       ) : (
-        <View width={px} height={px} />
+        <View
+          width={px}
+          height={px}
+        />
       )}
 
-      <View flexDirection="row" alignItems="center" {...knobProps.gap}>
+      <View
+        flexDirection="row"
+        alignItems="center"
+        {...knobProps.gap}>
         <CalendarTextButton onPress={onMonthPress}>
-          <Text color="$color" {...knobProps.label} {...knobProps.textWeight} fontWeight="600">
+          <Text
+            color="$color"
+            {...knobProps.label}
+            {...knobProps.textWeight}
+            fontWeight="600">
             {monthName}
           </Text>
         </CalendarTextButton>
         <CalendarTextButton onPress={onYearPress}>
-          <Text color={formCommonColors.muted} {...knobProps.label} {...knobProps.textWeight}>
+          <Text
+            color={formCommonColors.muted}
+            {...knobProps.label}
+            {...knobProps.textWeight}>
             {year}
           </Text>
         </CalendarTextButton>
       </View>
 
       {showNext && onNextMonth ? (
-        <CalendarChromeButton onPress={onNextMonth} label={t('Next month')}>
-          <CaretRightIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onNextMonth}
+          label={t('Next month')}>
+          <CaretRightIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       ) : (
-        <View width={px} height={px} />
+        <View
+          width={px}
+          height={px}
+        />
       )}
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthGrid — 4x3 month selector
@@ -635,7 +702,7 @@ interface MonthGridProps {
   onSelectMonth: (month: number) => void;
 }
 
-export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGridProps) {
+export const MonthGrid = ({ currentYear, selectedMonth, onSelectMonth }: MonthGridProps) => {
   const { knobProps } = useCalendarKnobs();
   const { animation, animationKey } = useDateAnimation(currentYear);
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
@@ -662,13 +729,14 @@ export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGr
               height={px}
               minHeight={px}
               maxHeight={px}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
               role="button"
-              aria-pressed={isSelected || undefined}
+              aria-pressed={isSelected ? true : undefined}
               cursor="pointer"
               alignItems="center"
               justifyContent="center"
-              theme={isSelected ? ('accent' as any) : undefined}
-              backgroundColor={isSelected ? '$background' : 'transparent'}
+              theme={isSelected ? 'accent' : undefined}
+              backgroundColor={isSelected ? BACKGROUND_TOKEN : TRANSPARENT}
               onPress={() => {
                 onSelectMonth(index);
               }}
@@ -676,13 +744,13 @@ export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGr
               focusStyle={{ outlineWidth: 0 }}
               focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
               data-nested-px={px}
-              {...(!isWeb ? { hitSlop } : {})}
+              {...(isWeb ? {} : { hitSlop })}
               {...(isWeb
                 ? {
                     tabIndex: 0,
                     onKeyDown: calendarKeyHandler(() => {
                       onSelectMonth(index);
-                    }) as unknown as () => void,
+                    }),
                   }
                 : { accessible: true })}>
               <Text
@@ -697,7 +765,7 @@ export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGr
       </View>
     </AnimatePresence>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // YearGrid — paginated year selector with range slider
@@ -711,37 +779,55 @@ interface YearGridProps {
   onNextPage: () => void;
 }
 
-export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage, onNextPage }: YearGridProps) {
+export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage, onNextPage }: YearGridProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
   const cellW = (px * 7) / 3;
-  const years = useMemo(() => {
-    const result: number[] = [];
-    for (let i = 0; i < yearPageSize; i++) {
-      result.push(yearPageStart + i);
-    }
-    return result;
-  }, [yearPageStart]);
+  const years = useMemo(() => Array.from({ length: yearPageSize }, (_, i) => yearPageStart + i), [yearPageStart]);
 
   const { animation, animationKey } = useDateAnimation(yearPageStart);
 
   return (
-    <View width={px * 7} alignSelf="center" {...knobProps.gap}>
-      <View flexDirection="row" width={px * 7} alignItems="center" justifyContent="space-between">
-        <CalendarChromeButton onPress={onPrevPage} label={t('Previous years')}>
-          <CaretLeftIcon size={knobProps.controlIcon.width} color={glyphColor} />
+    <View
+      width={px * 7}
+      alignSelf="center"
+      {...knobProps.gap}>
+      <View
+        flexDirection="row"
+        width={px * 7}
+        alignItems="center"
+        justifyContent="space-between">
+        <CalendarChromeButton
+          onPress={onPrevPage}
+          label={t('Previous years')}>
+          <CaretLeftIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
-        <Text {...knobProps.label} {...knobProps.textWeight}>
-          {years[0]} – {years[years.length - 1]}
+        <Text
+          {...knobProps.label}
+          {...knobProps.textWeight}>
+          {years[0]} – {years.at(-1)}
         </Text>
-        <CalendarChromeButton onPress={onNextPage} label={t('Next years')}>
-          <CaretRightIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onNextPage}
+          label={t('Next years')}>
+          <CaretRightIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       </View>
 
       <AnimatePresence key={animationKey}>
-        <View {...animation} transition={knobProps.transition} flexDirection="row" flexWrap="wrap" width={px * 7}>
+        <View
+          {...animation}
+          transition={knobProps.transition}
+          flexDirection="row"
+          flexWrap="wrap"
+          width={px * 7}>
           {years.map((year) => {
             const isSelected = year === selectedYear;
             return (
@@ -754,13 +840,14 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
                 height={px}
                 minHeight={px}
                 maxHeight={px}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
                 role="button"
-                aria-pressed={isSelected || undefined}
+                aria-pressed={isSelected ? true : undefined}
                 cursor="pointer"
                 alignItems="center"
                 justifyContent="center"
-                theme={isSelected ? ('accent' as any) : undefined}
-                backgroundColor={isSelected ? '$background' : 'transparent'}
+                theme={isSelected ? 'accent' : undefined}
+                backgroundColor={isSelected ? BACKGROUND_TOKEN : TRANSPARENT}
                 onPress={() => {
                   onSelectYear(year);
                 }}
@@ -768,13 +855,13 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
                 focusStyle={{ outlineWidth: 0 }}
                 focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
                 data-nested-px={px}
-                {...(!isWeb ? { hitSlop } : {})}
+                {...(isWeb ? {} : { hitSlop })}
                 {...(isWeb
                   ? {
                       tabIndex: 0,
                       onKeyDown: calendarKeyHandler(() => {
                         onSelectYear(year);
-                      }) as unknown as () => void,
+                      }),
                     }
                   : { accessible: true })}>
                 <Text
@@ -790,7 +877,7 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
       </AnimatePresence>
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePickerInputTrigger — compound input with calendar/clear icon
@@ -814,7 +901,7 @@ interface DatePickerInputTriggerProps {
   'aria-invalid'?: boolean;
 }
 
-export function DatePickerClearButton({
+export const DatePickerClearButton = ({
   onReset,
   disabled,
   label,
@@ -822,25 +909,23 @@ export function DatePickerClearButton({
   onReset: () => void;
   disabled?: boolean;
   label?: string;
-}) {
-  return (
-    <InputParts.Button
-      {...floatingPanelActionProps}
-      data-testid="date-picker-clear"
-      aria-label={label ?? t('Clear date')}
-      disabled={disabled}
-      onPress={(e) => {
-        e.stopPropagation();
-        onReset();
-      }}>
-      <InputParts.Icon>
-        <XIcon />
-      </InputParts.Icon>
-    </InputParts.Button>
-  );
-}
+}) => (
+  <InputParts.Button
+    {...floatingPanelActionProps}
+    data-testid="date-picker-clear"
+    aria-label={label ?? t('Clear date')}
+    disabled={disabled}
+    onPress={(e) => {
+      e.stopPropagation();
+      onReset();
+    }}>
+    <InputParts.Icon>
+      <XIcon />
+    </InputParts.Icon>
+  </InputParts.Button>
+);
 
-export function DatePickerInputTrigger({
+export const DatePickerInputTrigger = ({
   value,
   onButtonPress,
   onReset,
@@ -855,12 +940,12 @@ export function DatePickerInputTrigger({
   'aria-describedby': ariaDescribedBy,
   'aria-required': ariaRequired,
   'aria-invalid': ariaInvalid,
-}: DatePickerInputTriggerProps) {
-  const handleTriggerKey = (e: PanelActionEvent & { key?: string; code?: string; preventDefault?: () => void }) => {
+}: DatePickerInputTriggerProps) => {
+  const handleTriggerKey = (e: PanelActionEvent & KeyEventLike & { code?: string } = {}) => {
     if (disabled || isNestedPanelAction(e)) {
       return;
     }
-    const key = e.key;
+    const { key } = e;
     if (key === 'Enter' || key === ' ' || key === 'ArrowDown' || e.code === 'Space') {
       e.preventDefault?.();
       onButtonPress();
@@ -885,7 +970,7 @@ export function DatePickerInputTrigger({
       width="100%"
       cursor={disabled ? 'not-allowed' : 'pointer'}
       // Native parents own the tap; expanded field paint must not consume it.
-      pointerEvents={isWeb ? undefined : 'none'}>
+      pointerEvents={isWeb ? undefined : POINTER_NONE}>
       <InputParts.Box
         theme={error ? 'error' : undefined}
         // Yoga has no intrinsic TextInput width to size this row child.
@@ -896,7 +981,7 @@ export function DatePickerInputTrigger({
         data-testid="date-picker-trigger"
         id={id}
         onPress={isWeb && !disabled ? onButtonPress : undefined}
-        {...(disabled ? { opacity: 0.5, pointerEvents: 'none' } : undefined)}
+        {...(disabled ? { opacity: 0.5, pointerEvents: POINTER_NONE } : undefined)}
         {...(isWeb
           ? {
               role: 'combobox' as const,
@@ -908,11 +993,13 @@ export function DatePickerInputTrigger({
               'aria-required': ariaRequired,
               'aria-invalid': ariaInvalid,
               tabIndex: disabled ? -1 : 0,
-              onKeyDown: handleTriggerKey as unknown as () => void,
+              onKeyDown: handleTriggerKey,
             }
           : undefined)}>
         <InputParts.Section data-testid="date-picker-glyph">
-          <InputParts.Icon adornment="leading" color={formCommonColors.muted}>
+          <InputParts.Icon
+            adornment="leading"
+            color={formCommonColors.muted}>
             <Glyph />
           </InputParts.Icon>
         </InputParts.Section>
@@ -930,13 +1017,16 @@ export function DatePickerInputTrigger({
         </InputParts.Section>
         {value && isWeb ? (
           <InputParts.Section>
-            <DatePickerClearButton onReset={onReset} disabled={disabled} />
+            <DatePickerClearButton
+              onReset={onReset}
+              disabled={disabled}
+            />
           </InputParts.Section>
         ) : null}
       </InputParts.Box>
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePickerPopoverShell — FloatingPanel (sheet below OVERLAY_BREAKPOINT)
@@ -949,7 +1039,7 @@ interface DatePickerPopoverShellProps {
   triggerEnd?: ReactNode;
   children: ReactNode;
   disabled?: boolean;
-  popoverRef?: RefObject<any>;
+  popoverRef?: RefObject<unknown>;
   /** Native trigger announcement (name / current value / hint) — see FloatingPanel. */
   triggerA11y?: { label?: string; value?: string; hint?: string };
   /** When set, native hosts render Clear outside the pointerEvents-none trigger. */
@@ -957,7 +1047,7 @@ interface DatePickerPopoverShellProps {
   onClear?: () => void;
 }
 
-export function DatePickerPopoverShell({
+export const DatePickerPopoverShell = ({
   open,
   onOpenChange,
   trigger,
@@ -967,9 +1057,15 @@ export function DatePickerPopoverShell({
   triggerA11y,
   clearValue,
   onClear,
-}: DatePickerPopoverShellProps) {
+}: DatePickerPopoverShellProps) => {
+  const hasClearValue = clearValue !== undefined && clearValue !== '';
   const nativeClear =
-    !isWeb && clearValue && onClear ? <DatePickerClearButton onReset={onClear} disabled={disabled} /> : undefined;
+    !isWeb && hasClearValue && onClear ? (
+      <DatePickerClearButton
+        onReset={onClear}
+        disabled={disabled}
+      />
+    ) : undefined;
   return (
     <FloatingPanel
       open={open}
@@ -985,7 +1081,7 @@ export function DatePickerPopoverShell({
       {children}
     </FloatingPanel>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarViewSwitcher — orchestrates day/month/year view modes
@@ -1002,7 +1098,7 @@ interface CalendarViewSwitcherProps {
   children: ReactNode;
 }
 
-export function CalendarViewSwitcher({
+export const CalendarViewSwitcher = ({
   calendarData,
   displayDate,
   onSetDisplayDate,
@@ -1011,7 +1107,7 @@ export function CalendarViewSwitcher({
   yearPageStart,
   setYearPageStart,
   children,
-}: CalendarViewSwitcherProps) {
+}: CalendarViewSwitcherProps) => {
   const { knobProps } = useCalendarKnobs();
   const handleSelectMonth = useCallback(
     (month: number) => {
@@ -1038,7 +1134,10 @@ export function CalendarViewSwitcher({
   if (viewMode === 'month') {
     return (
       <CalendarPanelFrame>
-        <Text alignSelf="center" {...knobProps.label} {...knobProps.textWeight}>
+        <Text
+          alignSelf="center"
+          {...knobProps.label}
+          {...knobProps.textWeight}>
           Select a month
         </Text>
         <MonthGrid
@@ -1068,8 +1167,9 @@ export function CalendarViewSwitcher({
     );
   }
 
+  // oxlint-disable-next-line react/jsx-no-useless-fragment -- children is a ReactNode (may be a Promise type); a component must return a JSX element
   return <>{children}</>;
-}
+};
 
 // ---------------------------------------------------------------------------
 // formatDateDisplay — shared date formatting
@@ -1080,9 +1180,10 @@ export function CalendarViewSwitcher({
  * "Jan 15, 2024" — same voice as table date cells and Timeline, with the
  * year always shown because an editing surface is a precision context.
  */
-export function formatDateDisplay(date: Date | null): string {
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
+export const formatDateDisplay = (date: Date | null): string => {
   if (!date) {
     return '';
   }
   return formatAbsoluteDate(date, { year: 'always' });
-}
+};

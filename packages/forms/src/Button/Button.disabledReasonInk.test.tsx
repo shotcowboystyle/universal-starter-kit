@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * T-HELPER: a disabled Button's reason is copy on the host surface,
  * not button chrome. Rendered inside the Button's intent <Theme>, its
  * `$color11` resolved on the intent's on-fill ramp and "Enter a title first"
@@ -25,9 +25,8 @@ import { render, cleanup, screen } from '@testing-library/react';
 import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Button, type ButtonProps } from './index';
-
-afterEach(cleanup);
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 const houseConfig = createDefaultThemeConfig();
 const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
@@ -45,21 +44,27 @@ const CHANNELS: { name: string; themeName: string; props: Partial<ButtonProps> }
   { name: 'theme="accent"', themeName: 'accent', props: { theme: 'accent' } },
 ];
 
-function houseRender(ui: React.ReactElement, scheme: 'light' | 'dark') {
-  return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+const MATRIX = SCHEMES.flatMap((scheme) =>
+  PLACEMENTS.flatMap((placement) => CHANNELS.map((channel) => ({ scheme, placement, ...channel }))),
+);
+
+const houseRender = (ui: React.ReactElement, scheme: 'light' | 'dark') =>
+  render(
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
-}
 
-function scopeThemeKey(node: HTMLElement, scheme: string): string {
+const scopeThemeKey = (node: HTMLElement, scheme: string): string => {
   const names: string[] = [];
   for (let el: HTMLElement | null = node; el; el = el.parentElement) {
     if (!el.classList.contains('is_Theme')) {
       continue;
     }
-    for (const cls of Array.from(el.classList)) {
+    for (const cls of el.classList) {
       if (!cls.startsWith('t_') || cls === 't_sub_theme') {
         continue;
       }
@@ -70,61 +75,70 @@ function scopeThemeKey(node: HTMLElement, scheme: string): string {
     }
   }
   return [scheme, ...names].join('_');
+};
+
+interface ResolvedInk {
+  key: string;
+  token: string;
+  ink: string;
 }
 
-function resolvedInk(node: HTMLElement, scheme: string): { key: string; token: string; ink: string } {
-  const token = node.className.match(/(?:^|\s)_col-(\w+)(?:\s|$)/)?.[1];
-  expect(token, `reason carries a colour token class: ${node.className}`).toBeTruthy();
+const resolvedInk = (node: HTMLElement, scheme: string): ResolvedInk => {
+  const token = /(?:^|\s)_col-(?<token>\w+)(?:\s|$)/u.exec(node.className)?.groups?.token;
+  expect(token, `reason carries a color token class: ${node.className}`).toBeTruthy();
   const key = scopeThemeKey(node, scheme);
   const ink = houseThemes[key]?.[token!];
   expect(ink, `${key}.${token} resolves in the house themes`).toBeTruthy();
-  return { key, token: token!, ink: ink };
-}
+  return { key, token: token!, ink };
+};
 
 describe('Button disabledReason ink (T-HELPER)', () => {
-  for (const scheme of SCHEMES) {
-    for (const placement of PLACEMENTS) {
-      it.each(CHANNELS)(
-        `${scheme} ${placement}: the $name reason clears 4.5:1 on every page surface`,
-        ({ name, props }) => {
-          const reason = `Reason ${name}`;
-          houseRender(
-            <Button {...props} disabled disabledReason={reason} disabledReasonPlacement={placement}>
-              Add
-            </Button>,
-            scheme,
-          );
-          const { key, token, ink } = resolvedInk(screen.getByText(reason), scheme);
-          for (const surface of PAGE_SURFACES) {
-            const ground = houseThemes[scheme][surface];
-            const label = `${key}.${token} ${ink} on ${scheme}.${surface} ${ground}`;
-            expect(measureContrast({ foreground: ink, background: ground, label }).ratio, label).toBeGreaterThanOrEqual(
-              aaTextContrastRatio,
-            );
-          }
-        },
-      );
+  afterEach(cleanup);
 
-      it.each(CHANNELS)(
-        `${scheme} ${placement}: the $name theme scopes the button, never its reason`,
-        ({ name, themeName, props }) => {
-          const reason = `Reason ${name}`;
-          houseRender(
-            <Button {...props} disabled disabledReason={reason} disabledReasonPlacement={placement}>
-              Add
-            </Button>,
-            scheme,
-          );
-          const button = screen.getByRole('button');
-          expect(button.getAttribute('aria-disabled')).toBe('true');
-          expect(button.closest(`.t_${themeName}`), 'the frame keeps its intent theme').toBeTruthy();
-          expect(
-            screen.getByText(reason).closest(`.t_${themeName}`),
-            'the reason resolves on the host surface',
-          ).toBeNull();
-          expect(scopeThemeKey(screen.getByText(reason), scheme)).toBe(scheme);
-        },
+  it.each(MATRIX)(
+    '$scheme $placement: the $name reason clears 4.5:1 on every page surface',
+    ({ scheme, placement, name, props }) => {
+      const reason = `Reason ${name}`;
+      houseRender(
+        <Button
+          {...props}
+          disabled
+          disabledReason={reason}
+          disabledReasonPlacement={placement}>
+          Add
+        </Button>,
+        scheme,
       );
-    }
-  }
+      const { key, token, ink } = resolvedInk(screen.getByText(reason), scheme);
+      for (const surface of PAGE_SURFACES) {
+        const ground = houseThemes[scheme][surface];
+        const label = `${key}.${token} ${ink} on ${scheme}.${surface} ${ground}`;
+        expect(measureContrast({ foreground: ink, background: ground, label }).ratio, label).toBeGreaterThanOrEqual(
+          aaTextContrastRatio,
+        );
+      }
+    },
+  );
+
+  it.each(MATRIX)(
+    '$scheme $placement: the $name theme scopes the button, never its reason',
+    ({ scheme, placement, name, themeName, props }) => {
+      const reason = `Reason ${name}`;
+      houseRender(
+        <Button
+          {...props}
+          disabled
+          disabledReason={reason}
+          disabledReasonPlacement={placement}>
+          Add
+        </Button>,
+        scheme,
+      );
+      const button = screen.getByRole('button');
+      expect(button.getAttribute('aria-disabled')).toBe('true');
+      expect(button.closest(`.t_${themeName}`), 'the frame keeps its intent theme').toBeTruthy();
+      expect(screen.getByText(reason).closest(`.t_${themeName}`), 'the reason resolves on the host surface').toBeNull();
+      expect(scopeThemeKey(screen.getByText(reason), scheme)).toBe(scheme);
+    },
+  );
 });

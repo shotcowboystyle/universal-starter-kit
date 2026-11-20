@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   splitCookieValue,
@@ -12,38 +12,39 @@ import {
   cookiePreset,
   cookieOverridesPrefix,
 } from './cookies';
-import { defaultKnobs, type Knobs } from './knobs';
+import { defaultKnobs } from './knobs';
+import type { Knobs } from './knobs';
 
-describe('splitCookieValue', () => {
+describe(splitCookieValue, () => {
   it('returns a single chunk for small values', () => {
     const result = splitCookieValue('small');
-    expect(result).toEqual(['small']);
+    expect(result).toStrictEqual(['small']);
   });
 
   it('splits values exceeding 3500 chars into chunks', () => {
     const large = 'x'.repeat(7500);
     const chunks = splitCookieValue(large);
-    expect(chunks.length).toBe(3);
-    expect(chunks[0].length).toBe(3500);
-    expect(chunks[1].length).toBe(3500);
-    expect(chunks[2].length).toBe(500);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toHaveLength(3500);
+    expect(chunks[1]).toHaveLength(3500);
+    expect(chunks[2]).toHaveLength(500);
   });
 
   it('handles value at exact threshold boundary', () => {
     const exact = 'a'.repeat(3500);
-    expect(splitCookieValue(exact)).toEqual([exact]);
+    expect(splitCookieValue(exact)).toStrictEqual([exact]);
   });
 
   it('handles value one over threshold', () => {
     const over = 'b'.repeat(3501);
     const chunks = splitCookieValue(over);
-    expect(chunks.length).toBe(2);
-    expect(chunks[0].length).toBe(3500);
-    expect(chunks[1].length).toBe(1);
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toHaveLength(3500);
+    expect(chunks[1]).toHaveLength(1);
   });
 });
 
-describe('joinSplitCookieValues', () => {
+describe(joinSplitCookieValues, () => {
   it('joins chunks back together', () => {
     expect(joinSplitCookieValues(['abc', 'def', 'ghi'])).toBe('abcdefghi');
   });
@@ -65,43 +66,43 @@ describe('splitCookieValue + joinSplitCookieValues roundtrip', () => {
   });
 });
 
-describe('readOverridesCookie', () => {
+describe(readOverridesCookie, () => {
   it('returns empty object when no chunks exist', () => {
-    expect(readOverridesCookie({})).toEqual({});
+    expect(readOverridesCookie({})).toStrictEqual({});
   });
 
   it('reads a single chunk override', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined' };
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': JSON.stringify(overrides),
     };
-    expect(readOverridesCookie(cookies)).toEqual(overrides);
+    expect(readOverridesCookie(cookies)).toStrictEqual(overrides);
   });
 
   it('reads and joins multiple chunks', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined', size: 'large' };
     const json = JSON.stringify(overrides);
     const mid = Math.floor(json.length / 2);
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': json.slice(0, mid),
       'mp.ov.1': json.slice(mid),
     };
-    expect(readOverridesCookie(cookies)).toEqual(overrides);
+    expect(readOverridesCookie(cookies)).toStrictEqual(overrides);
   });
 
   it('returns empty object for malformed JSON', () => {
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': 'not{valid json',
     };
-    expect(readOverridesCookie(cookies)).toEqual({});
+    expect(readOverridesCookie(cookies)).toStrictEqual({});
   });
 
   it('stops reading at first missing chunk', () => {
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': '{"fill',
       'mp.ov.2': 'Style":"outlined"}',
     };
-    expect(readOverridesCookie(cookies)).toEqual({});
+    expect(readOverridesCookie(cookies)).toStrictEqual({});
   });
 });
 
@@ -112,17 +113,17 @@ describe('readOverridesCookie', () => {
 describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
   it('accepts an already-parsed object cookie value (universal-cookie shape)', () => {
     const overrides: Partial<Knobs> = { borderRadius: 'none', space: 'small' };
-    expect(readOverridesCookie({ 'mp.ov.0': overrides })).toEqual(overrides);
+    expect(readOverridesCookie({ 'mp.ov.0': overrides })).toStrictEqual(overrides);
   });
 
   it('accepts a raw JSON string cookie value (document.cookie / SSR shape)', () => {
     const overrides: Partial<Knobs> = { borderRadius: 'none', space: 'small' };
-    expect(readOverridesCookie({ 'mp.ov.0': JSON.stringify(overrides) })).toEqual(overrides);
+    expect(readOverridesCookie({ 'mp.ov.0': JSON.stringify(overrides) })).toStrictEqual(overrides);
   });
 
   it('preserves nested interaction-state overrides from a parsed object', () => {
     const overrides: Partial<Knobs> = { hover: { elevation: 'large' } };
-    expect(readOverridesCookie({ 'mp.ov.0': overrides })).toEqual(overrides);
+    expect(readOverridesCookie({ 'mp.ov.0': overrides })).toStrictEqual(overrides);
   });
 
   it('round-trips writeOverridesCookie output through an auto-parsing jar', () => {
@@ -131,7 +132,7 @@ describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
     // Simulate universal-cookie readCookie: JSON.parse succeeds on the
     // single-chunk value, so the jar hands back an object.
     const jar = Object.fromEntries(toSet.map(({ key, value }) => [key, JSON.parse(value)]));
-    expect(readOverridesCookie(jar)).toEqual(overrides);
+    expect(readOverridesCookie(jar)).toStrictEqual(overrides);
   });
 
   it('round-trips oversized multi-chunk payloads through an auto-parsing jar', () => {
@@ -150,15 +151,15 @@ describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
         }
       }),
     );
-    expect(readOverridesCookie(jar)).toEqual(overrides);
+    expect(readOverridesCookie(jar)).toStrictEqual(overrides);
   });
 
   it('returns safe empty for garbage values', () => {
-    expect(readOverridesCookie({ 'mp.ov.0': 42 })).toEqual({});
-    expect(readOverridesCookie({ 'mp.ov.0': true })).toEqual({});
-    expect(readOverridesCookie({ 'mp.ov.0': ['not', 'overrides'] })).toEqual({});
-    expect(readOverridesCookie({ 'mp.ov.0': 'not{valid json' })).toEqual({});
-    expect(readOverridesCookie({ 'mp.ov.0': '[object Object]' })).toEqual({});
+    expect(readOverridesCookie({ 'mp.ov.0': 42 })).toStrictEqual({});
+    expect(readOverridesCookie({ 'mp.ov.0': true })).toStrictEqual({});
+    expect(readOverridesCookie({ 'mp.ov.0': ['not', 'overrides'] })).toStrictEqual({});
+    expect(readOverridesCookie({ 'mp.ov.0': 'not{valid json' })).toStrictEqual({});
+    expect(readOverridesCookie({ 'mp.ov.0': '[object Object]' })).toStrictEqual({});
   });
 
   it('returns safe empty for mixed chunk types (object followed by string)', () => {
@@ -167,7 +168,7 @@ describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
         'mp.ov.0': { borderRadius: 'none' },
         'mp.ov.1': '{"space":"small"}',
       }),
-    ).toEqual({});
+    ).toStrictEqual({});
   });
 
   it('drops non-knob-shaped entries inside a parsed object', () => {
@@ -180,11 +181,11 @@ describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
           hover: { elevation: 'large', depth: { nested: true } },
         },
       }),
-    ).toEqual({ borderRadius: 'none', hover: { elevation: 'large' } });
+    ).toStrictEqual({ borderRadius: 'none', hover: { elevation: 'large' } });
   });
 });
 
-describe('readPresetCookie', () => {
+describe(readPresetCookie, () => {
   it('returns undefined when cookie is missing', () => {
     expect(readPresetCookie({})).toBeUndefined();
   });
@@ -203,22 +204,22 @@ describe('readPresetCookie', () => {
   });
 });
 
-describe('writePresetCookie', () => {
+describe(writePresetCookie, () => {
   it('returns the correct key and value', () => {
-    expect(writePresetCookie('my-preset')).toEqual({
+    expect(writePresetCookie('my-preset')).toStrictEqual({
       key: cookiePreset,
       value: 'my-preset',
     });
   });
 });
 
-describe('writeOverridesCookie', () => {
+describe(writeOverridesCookie, () => {
   it('returns a single chunk for small overrides', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined' };
     const { toSet, toRemove } = writeOverridesCookie(overrides);
     expect(toSet).toHaveLength(1);
     expect(toSet[0].key).toBe('mp.ov.0');
-    expect(JSON.parse(toSet[0].value)).toEqual(overrides);
+    expect(JSON.parse(toSet[0].value)).toStrictEqual(overrides);
     expect(toRemove.length).toBeGreaterThan(0);
   });
 
@@ -230,38 +231,38 @@ describe('writeOverridesCookie', () => {
 
   it('handles empty overrides', () => {
     const { toSet } = writeOverridesCookie({});
-    expect(JSON.parse(toSet[0].value)).toEqual({});
+    expect(JSON.parse(toSet[0].value)).toStrictEqual({});
   });
 });
 
-describe('computeOverrides', () => {
+describe(computeOverrides, () => {
   it('returns empty object when current matches base', () => {
-    expect(computeOverrides(defaultKnobs, { ...defaultKnobs })).toEqual({});
+    expect(computeOverrides(defaultKnobs, { ...defaultKnobs })).toStrictEqual({});
   });
 
   it('returns only changed keys', () => {
     const current: Knobs = { ...defaultKnobs, fillStyle: 'outlined', size: 'large' };
     const overrides = computeOverrides(defaultKnobs, current);
-    expect(overrides).toEqual({ fillStyle: 'outlined', size: 'large' });
+    expect(overrides).toStrictEqual({ fillStyle: 'outlined', size: 'large' });
   });
 
   it('does not include unchanged keys', () => {
     const current: Knobs = { ...defaultKnobs, fillStyle: 'outlined' };
     const overrides = computeOverrides(defaultKnobs, current);
-    expect(Object.keys(overrides)).toEqual(['fillStyle']);
+    expect(Object.keys(overrides)).toStrictEqual(['fillStyle']);
   });
 
   it('persists density override via mp.ov.* pattern', () => {
     const current: Knobs = { ...defaultKnobs, density: 'compact' };
     const overrides = computeOverrides(defaultKnobs, current);
-    expect(overrides).toEqual({ density: 'compact' });
+    expect(overrides).toStrictEqual({ density: 'compact' });
 
     const { toSet } = writeOverridesCookie(overrides);
     expect(toSet[0].key).toBe('mp.ov.0');
-    expect(JSON.parse(toSet[0].value)).toEqual({ density: 'compact' });
+    expect(JSON.parse(toSet[0].value)).toStrictEqual({ density: 'compact' });
 
     const roundtrip = readOverridesCookie({ 'mp.ov.0': toSet[0].value });
-    expect(roundtrip).toEqual({ density: 'compact' });
+    expect(roundtrip).toStrictEqual({ density: 'compact' });
   });
 
   it('persists house-decision overrides via mp.ov.* pattern', () => {
@@ -272,19 +273,19 @@ describe('computeOverrides', () => {
       formAutofocus: 'on',
     };
     const overrides = computeOverrides(defaultKnobs, current);
-    expect(overrides).toEqual({
+    expect(overrides).toStrictEqual({
       fieldLabelPlacement: 'side',
       tableZebra: 'on',
       formAutofocus: 'on',
     });
 
     const { toSet } = writeOverridesCookie(overrides);
-    expect(JSON.parse(toSet[0].value)).toEqual(overrides);
-    expect(readOverridesCookie({ 'mp.ov.0': toSet[0].value })).toEqual(overrides);
+    expect(JSON.parse(toSet[0].value)).toStrictEqual(overrides);
+    expect(readOverridesCookie({ 'mp.ov.0': toSet[0].value })).toStrictEqual(overrides);
   });
 });
 
-describe('getCookieWatchList', () => {
+describe(getCookieWatchList, () => {
   it('includes the preset cookie key', () => {
     const list = getCookieWatchList();
     expect(list).toContain(cookiePreset);

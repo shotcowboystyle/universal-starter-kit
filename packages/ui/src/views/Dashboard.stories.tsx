@@ -10,7 +10,8 @@ import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 import { YStack } from 'tamagui';
 
-import { Dashboard, KPICard, type DashboardWidget } from './Dashboard';
+import { Dashboard, KPICard } from './Dashboard';
+import type { DashboardWidget } from './Dashboard';
 
 const iconSize = 16;
 
@@ -24,13 +25,13 @@ const widgets: DashboardWidget[] = [
       id: 'kpi-1',
       title: 'Total Revenue',
       value: '$12,450',
-      previousValue: 11116,
+      previousValue: 11_116,
       format: 'currency',
       trend: 'up',
       trendValue: '+12%',
       goodDirection: 'up',
       icon: <CurrencyDollarIcon size={iconSize} />,
-      sparkline: [8200, 9100, 8800, 10200, 11100, 12450],
+      sparkline: [8200, 9100, 8800, 10_200, 11_100, 12_450],
     },
   },
   {
@@ -169,7 +170,10 @@ export default meta;
 
 export const TrendSentiment = {
   render: () => (
-    <YStack width="100%" maxWidth={360} gap="$3">
+    <YStack
+      width="100%"
+      maxWidth={360}
+      gap="$3">
       <KPICard
         config={{
           id: 'improving',
@@ -216,18 +220,35 @@ export const Default = {
 
 /** Initial load with no widgets renders the dashboard skeleton. */
 export const Loading = {
-  render: () => <Dashboard widgets={[]} title="Sales Dashboard" isLoading />,
+  render: () => (
+    <Dashboard
+      widgets={[]}
+      title="Sales Dashboard"
+      isLoading
+    />
+  ),
 };
 
 /** No widgets, no failure — neutral empty state (Axiom 6: empty ≠ error). */
 export const Empty = {
-  render: () => <Dashboard widgets={[]} title="Sales Dashboard" emptyMessage="No widgets configured" />,
+  render: () => (
+    <Dashboard
+      widgets={[]}
+      title="Sales Dashboard"
+      emptyMessage="No widgets configured"
+    />
+  ),
 };
 
 /** Failed load — error chrome with retry wins over empty; KPI chrome hides. */
-export const Error = {
+const ErrorStory = {
   render: () => (
-    <Dashboard widgets={[]} title="Sales Dashboard" error="Metrics service unavailable." onRetry={action('onRetry')} />
+    <Dashboard
+      widgets={[]}
+      title="Sales Dashboard"
+      error="Metrics service unavailable."
+      onRetry={action('onRetry')}
+    />
   ),
 };
 
@@ -244,9 +265,9 @@ export const Stat = {
           kpiConfig: {
             id: 'stat',
             title: 'Monthly recurring',
-            value: 84200,
+            value: 84_200,
             format: 'currency',
-            previousValue: 79100,
+            previousValue: 79_100,
             trend: 'up',
             trendValue: '+6.4%',
             goodDirection: 'up',
@@ -258,3 +279,5 @@ export const Stat = {
     />
   ),
 };
+
+export { ErrorStory as Error };

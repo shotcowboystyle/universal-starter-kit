@@ -1,10 +1,11 @@
 import { act, render, screen } from '@testing-library/react';
-import { StrictMode, useEffect, useRef } from 'react';
+import { StrictMode, useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DomNavigationHost } from './DomNavigationHost';
 import { stackNavigator } from './navigator';
-import { useParams } from './oneAdapter';
+import type { NavParams } from './navigator';
+import { useParams } from './one-adapter';
 
 const ROUTES = [
   { pattern: '/', tag: 'home', title: 'Home' },
@@ -12,12 +13,19 @@ const ROUTES = [
   { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Detail' },
 ];
 
-function DetailProbe() {
+const DetailProbe = () => {
   const params = useParams();
   return <span data-testid="detail-params">{String(params.id ?? '')}</span>;
-}
+};
 
-function renderHost(initialHref?: string) {
+const RedirectingHome = () => {
+  useEffect(() => {
+    stackNavigator.push('/pokemon/pikachu');
+  }, []);
+  return <div data-testid="home-screen" />;
+};
+
+const renderHost = (initialHref?: string) => {
   stackNavigator.detach();
   stackNavigator.configure(ROUTES);
   return render(
@@ -30,15 +38,15 @@ function renderHost(initialHref?: string) {
       ]}
     />,
   );
-}
+};
 
-function pageByTag(container: HTMLElement, tag: string): HTMLElement {
+const pageByTag = (container: HTMLElement, tag: string): HTMLElement => {
   const page = container.querySelector(`[data-seam-page="${tag}"]`);
   expect(page).not.toBeNull();
   return page as HTMLElement;
-}
+};
 
-describe('DomNavigationHost', () => {
+describe(DomNavigationHost, () => {
   beforeEach(() => {
     stackNavigator.detach();
   });
@@ -140,16 +148,13 @@ describe('DomNavigationHost', () => {
   // useLocalSearchParams) reads an empty object and the URL round-trip
   // silently drops the restored filters.
   it("seeds a restored route's params before the first content render", () => {
-    const firstRenderParams: Array<Record<string, unknown>> = [];
-    function SeedProbe() {
+    const firstRenderParams: NavParams[] = [];
+    const SeedProbe = () => {
       const params = useParams();
-      const first = useRef(true);
-      if (first.current) {
-        first.current = false;
-        firstRenderParams.push({ ...params });
-      }
+      // Every render is recorded; the assertion reads only the first.
+      firstRenderParams.push({ ...params });
       return <span data-testid="seed-params">{String(params.q ?? '')}</span>;
-    }
+    };
     stackNavigator.detach();
     stackNavigator.configure(ROUTES);
     render(
@@ -171,12 +176,6 @@ describe('DomNavigationHost', () => {
   // first). It must queue and apply, not vanish based on timing.
   it('applies a deep link dispatched from a screen effect before the host attached', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    function RedirectingHome() {
-      useEffect(() => {
-        stackNavigator.push('/pokemon/pikachu');
-      }, []);
-      return <div data-testid="home-screen" />;
-    }
     stackNavigator.detach();
     stackNavigator.configure(ROUTES);
     const { container } = render(

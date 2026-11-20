@@ -40,7 +40,7 @@ const meta: Meta<typeof TreeSelect> = {
     docs: {
       description: {
         component:
-          'FloatingPanel whose body is a tree, for Link fields whose target DocType is a tree. Cover at OVERLAY_ATTACH_GAP 0; width mode at-least-trigger; caret expands, row pick commits.',
+          'FloatingPanel whose body is a tree, for link fields whose target records form a tree. Cover at OVERLAY_ATTACH_GAP 0; width mode at-least-trigger; caret expands, row pick commits.',
       },
     },
   },
@@ -49,70 +49,94 @@ export default meta;
 
 type Story = StoryObj<typeof TreeSelect>;
 
+const DefaultStory = () => {
+  const [value, setValue] = useState('hdfc');
+  return (
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value={value}
+        onChange={setValue}
+        placeholder="Select account"
+        searchPlaceholder="Filter accounts"
+        emptyMessage="No matching accounts"
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />
+    </YStack>
+  );
+};
+
+const OpenStory = () => {
+  const [value, setValue] = useState('hdfc');
+  const [open, setOpen] = useState(true);
+  return (
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value={value}
+        onChange={setValue}
+        open={open}
+        onOpenChange={setOpen}
+        placeholder="Select account"
+        searchPlaceholder="Filter accounts"
+        emptyMessage="No matching accounts"
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />
+    </YStack>
+  );
+};
+
 export const Default: Story = {
-  render: function Render() {
-    const [value, setValue] = useState('hdfc');
-    return (
-      <YStack width={280} padding="$4">
-        <TreeSelect
-          label="Account"
-          nodes={accounts}
-          value={value}
-          onChange={setValue}
-          placeholder="Select account"
-          searchPlaceholder="Filter accounts"
-          emptyMessage="No matching accounts"
-          defaultExpandedIds={['assets', 'current', 'bank']}
-        />
-      </YStack>
-    );
-  },
+  render: () => <DefaultStory />,
 };
 
 export const Open: Story = {
-  render: function Render() {
-    const [value, setValue] = useState('hdfc');
-    const [open, setOpen] = useState(true);
-    return (
-      <YStack width={280} padding="$4">
-        <TreeSelect
-          label="Account"
-          nodes={accounts}
-          value={value}
-          onChange={setValue}
-          open={open}
-          onOpenChange={setOpen}
-          placeholder="Select account"
-          searchPlaceholder="Filter accounts"
-          emptyMessage="No matching accounts"
-          defaultExpandedIds={['assets', 'current', 'bank']}
-        />
-      </YStack>
-    );
-  },
+  render: () => <OpenStory />,
 };
 
 export const Account: Story = Default;
 
 export const Empty: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
-      <TreeSelect label="Account" nodes={accounts} placeholder="Select account" />
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        placeholder="Select account"
+      />
     </YStack>
   ),
 };
 
 export const Disabled: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
-      <TreeSelect label="Account" nodes={accounts} value="hdfc" disabled placeholder="Select account" />
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value="hdfc"
+        disabled
+        placeholder="Select account"
+      />
     </YStack>
   ),
 };
 
 export const WithError: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
+    <YStack
+      width={280}
+      padding="$4">
       <TreeSelect
         label="Account"
         nodes={accounts}
@@ -126,16 +150,31 @@ export const WithError: Story = {
 
 export const ReadOnly: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
-      <TreeSelect label="Account" nodes={accounts} value="hdfc" readOnly placeholder="Select account" />
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value="hdfc"
+        readOnly
+        placeholder="Select account"
+      />
     </YStack>
   ),
 };
 
 export const Skeleton: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
-      <TreeSelect label="Account" nodes={accounts} skeleton placeholder="Select account" />
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        skeleton
+        placeholder="Select account"
+      />
     </YStack>
   ),
 };

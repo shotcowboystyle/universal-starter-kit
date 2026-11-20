@@ -11,9 +11,7 @@
     "./theme/*": "./src/theme/*.json"
   },
   "scripts": {
-    "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/tokens",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix"
+    "build": "tsgo --noEmit"
   },
   "devDependencies": {
     "@repo/config": "workspace:*",

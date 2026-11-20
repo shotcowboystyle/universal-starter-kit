@@ -4,25 +4,84 @@ import type { QrErrorCorrectionLevel, QrMatrix } from './qr';
 import { QR_QUIET_ZONE_MODULES, encodeQr, qrRowRuns } from './qr';
 
 /** Rebuild row strings ("1" = dark) from a matrix for vector comparison. */
-function toRowStrings(matrix: QrMatrix): string[] {
+const toRowStrings = (matrix: QrMatrix): string[] => {
   const rows: string[] = [];
-  for (let r = 0; r < matrix.size; r++) {
+  for (let r = 0; r < matrix.size; r += 1) {
     let row = '';
-    for (let c = 0; c < matrix.size; c++) {
+    for (let c = 0; c < matrix.size; c += 1) {
       row += matrix.modules[r * matrix.size + c] ? '1' : '0';
     }
     rows.push(row);
   }
   return rows;
-}
+};
 
-function darkCount(matrix: QrMatrix): number {
+const darkCount = (matrix: QrMatrix): number => {
   let count = 0;
-  for (const module of matrix.modules) {
-    count += module;
+  for (const cell of matrix.modules) {
+    count += cell;
   }
   return count;
-}
+};
+
+// Independent of the encoder's own helper: the spec checks recompute BCH/format words themselves.
+// oxlint-disable-next-line eslint/no-bitwise -- carry-less XOR has no arithmetic equivalent
+const xor = (a: number, b: number): number => a ^ b;
+
+const isDark = (matrix: QrMatrix, row: number, col: number) => matrix.modules[row * matrix.size + col] === 1;
+
+/** The 7×7 finder ring: dark border, light ring, dark 3×3 core. */
+const expectFinderAt = (matrix: QrMatrix, top: number, left: number) => {
+  for (let r = 0; r < 7; r += 1) {
+    for (let c = 0; c < 7; c += 1) {
+      const onBorder = r === 0 || r === 6 || c === 0 || c === 6;
+      const inCore = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+      expect(isDark(matrix, top + r, left + c)).toBe(onBorder || inCore);
+    }
+  }
+};
+
+const samples = ['A', 'SKU-001234', '0123456789'.repeat(8), 'x'.repeat(213)].map((value) => ({
+  value,
+  bytes: value.length,
+}));
+
+/** Copy 1 of the 15 format bits, read around the top-left finder (bit 14 → bit 0). */
+const readFormatCopyOne = (matrix: QrMatrix): number[] => {
+  const bits = Array.from({ length: 15 }, () => 0);
+  for (let i = 0; i <= 5; i += 1) {
+    bits[14 - i] = isDark(matrix, 8, i) ? 1 : 0;
+  }
+  bits[8] = isDark(matrix, 8, 7) ? 1 : 0;
+  bits[7] = isDark(matrix, 8, 8) ? 1 : 0;
+  bits[6] = isDark(matrix, 7, 8) ? 1 : 0;
+  for (let i = 0; i <= 5; i += 1) {
+    bits[i] = isDark(matrix, i, 8) ? 1 : 0;
+  }
+  return bits;
+};
+
+/** Copy 2, split between the bottom-left (col 8) and top-right (row 8) finders. */
+const readFormatCopyTwo = (matrix: QrMatrix): number[] => {
+  const { size } = matrix;
+  const bits = Array.from({ length: 15 }, () => 0);
+  for (let i = 0; i < 7; i += 1) {
+    bits[14 - i] = isDark(matrix, size - 1 - i, 8) ? 1 : 0;
+  }
+  for (let i = 0; i < 8; i += 1) {
+    bits[i] = isDark(matrix, 8, size - 1 - i) ? 1 : 0;
+  }
+  return bits;
+};
+
+/** Number of bits needed to represent a non-negative integer. */
+const bitLengthOf = (value: number): number => {
+  let length = 0;
+  for (let v = value; v > 0; v = Math.floor(v / 2)) {
+    length += 1;
+  }
+  return length;
+};
 
 /**
  * Reference vectors generated with the battle-tested `qrcode` npm package
@@ -96,7 +155,7 @@ const REFERENCE_VECTORS: {
     ],
   },
   {
-    value: 'https://multiplatform.one',
+    value: 'https://universal-starter-kit',
     ecLevel: 'M',
     version: 2,
     mask: 2,
@@ -154,26 +213,25 @@ const REFERENCE_FINGERPRINTS: [
 ];
 
 describe('encodeQr — reference vectors', () => {
-  for (const vector of REFERENCE_VECTORS) {
-    it(`reproduces the reference matrix for ${JSON.stringify(vector.value)} (${vector.ecLevel}, v${vector.version})`, () => {
-      const matrix = encodeQr(vector.value, { ecLevel: vector.ecLevel });
-      expect(matrix).not.toBeNull();
-      expect(matrix!.version).toBe(vector.version);
-      expect(matrix!.mask).toBe(vector.mask);
-      expect(matrix!.size).toBe(17 + 4 * vector.version);
-      expect(toRowStrings(matrix!)).toEqual(vector.rows);
-    });
-  }
+  it.each(REFERENCE_VECTORS)('reproduces the reference matrix for $value ($ecLevel, v$version)', (vector) => {
+    const matrix = encodeQr(vector.value, { ecLevel: vector.ecLevel });
+    expect(matrix).not.toBeNull();
+    expect(matrix!.version).toBe(vector.version);
+    expect(matrix!.mask).toBe(vector.mask);
+    expect(matrix!.size).toBe(17 + 4 * vector.version);
+    expect(toRowStrings(matrix!)).toStrictEqual(vector.rows);
+  });
 
-  for (const [label, value, ecLevel, version, mask, dark] of REFERENCE_FINGERPRINTS) {
-    it(`matches the reference fingerprint for ${label}`, () => {
+  it.each(REFERENCE_FINGERPRINTS)(
+    'matches the reference fingerprint for %s',
+    (_label, value, ecLevel, version, mask, dark) => {
       const matrix = encodeQr(value, { ecLevel });
       expect(matrix).not.toBeNull();
       expect(matrix!.version).toBe(version);
       expect(matrix!.mask).toBe(mask);
       expect(darkCount(matrix!)).toBe(dark);
-    });
-  }
+    },
+  );
 
   it('encodes what Code 128 B cannot — the scan-but-cannot-draw asymmetry is closed', () => {
     // encodeCode128B("héllo") is null (non-ASCII); the QR encoder draws it.
@@ -182,101 +240,67 @@ describe('encodeQr — reference vectors', () => {
 });
 
 describe('encodeQr — structural invariants', () => {
-  const isDark = (matrix: QrMatrix, row: number, col: number) => matrix.modules[row * matrix.size + col] === 1;
-
-  /** The 7×7 finder ring: dark border, light ring, dark 3×3 core. */
-  function expectFinderAt(matrix: QrMatrix, top: number, left: number) {
-    for (let r = 0; r < 7; r++) {
-      for (let c = 0; c < 7; c++) {
-        const expected = r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4);
-        expect(isDark(matrix, top + r, left + c)).toBe(expected);
-      }
+  it.each(samples)('places finders, timing, and the dark module for $bytes byte(s)', ({ value }) => {
+    const matrix = encodeQr(value)!;
+    const { size } = matrix;
+    expect(size).toBe(17 + 4 * matrix.version);
+    expectFinderAt(matrix, 0, 0);
+    expectFinderAt(matrix, 0, size - 7);
+    expectFinderAt(matrix, size - 7, 0);
+    // Separators are light.
+    for (let i = 0; i < 8; i += 1) {
+      expect(isDark(matrix, 7, i)).toBe(false);
+      expect(isDark(matrix, i, 7)).toBe(false);
+      expect(isDark(matrix, 7, size - 1 - i)).toBe(false);
+      expect(isDark(matrix, i, size - 8)).toBe(false);
+      expect(isDark(matrix, size - 8, i)).toBe(false);
+      expect(isDark(matrix, size - 1 - i, 7)).toBe(false);
     }
-  }
-
-  const samples = ['A', 'SKU-001234', '0123456789'.repeat(8), 'x'.repeat(213)];
-
-  for (const value of samples) {
-    it(`places finders, timing, and the dark module for ${value.length} byte(s)`, () => {
-      const matrix = encodeQr(value)!;
-      const { size } = matrix;
-      expect(size).toBe(17 + 4 * matrix.version);
-      expectFinderAt(matrix, 0, 0);
-      expectFinderAt(matrix, 0, size - 7);
-      expectFinderAt(matrix, size - 7, 0);
-      // Separators are light.
-      for (let i = 0; i < 8; i++) {
-        expect(isDark(matrix, 7, i)).toBe(false);
-        expect(isDark(matrix, i, 7)).toBe(false);
-        expect(isDark(matrix, 7, size - 1 - i)).toBe(false);
-        expect(isDark(matrix, i, size - 8)).toBe(false);
-        expect(isDark(matrix, size - 8, i)).toBe(false);
-        expect(isDark(matrix, size - 1 - i, 7)).toBe(false);
-      }
-      // Timing patterns alternate, dark on even coordinates.
-      for (let i = 8; i < size - 8; i++) {
-        expect(isDark(matrix, 6, i)).toBe(i % 2 === 0);
-        expect(isDark(matrix, i, 6)).toBe(i % 2 === 0);
-      }
-      // The always-dark module beside the bottom-left finder.
-      expect(isDark(matrix, size - 8, 8)).toBe(true);
-    });
-  }
-
-  it('agrees between both format information copies and encodes the declared mask', () => {
-    for (const value of samples) {
-      const matrix = encodeQr(value)!;
-      const { size } = matrix;
-      const bits = new Array<number>(15).fill(0);
-      // Copy 1 around the top-left finder (bit 14 → bit 0).
-      for (let i = 0; i <= 5; i++) {
-        bits[14 - i] = isDark(matrix, 8, i) ? 1 : 0;
-      }
-      bits[8] = isDark(matrix, 8, 7) ? 1 : 0;
-      bits[7] = isDark(matrix, 8, 8) ? 1 : 0;
-      bits[6] = isDark(matrix, 7, 8) ? 1 : 0;
-      for (let i = 0; i <= 5; i++) {
-        bits[i] = isDark(matrix, i, 8) ? 1 : 0;
-      }
-      // Copy 2 must agree bit-for-bit.
-      const copy2 = new Array<number>(15).fill(0);
-      for (let i = 0; i < 7; i++) {
-        copy2[14 - i] = isDark(matrix, size - 1 - i, 8) ? 1 : 0;
-      }
-      for (let i = 0; i < 8; i++) {
-        copy2[i] = isDark(matrix, 8, size - 1 - i) ? 1 : 0;
-      }
-      expect(copy2).toEqual(bits);
-      // Unmask (XOR 0x5412) and check the declared mask and EC level survive.
-      const raw = bits.reduce((acc, bit, index) => acc | (bit << index), 0) ^ 0x5412;
-      expect((raw >> 10) & 0b111).toBe(matrix.mask);
-      const ecIndicator = { L: 1, M: 0, Q: 3, H: 2 }[matrix.ecLevel];
-      expect((raw >> 13) & 0b11).toBe(ecIndicator);
+    // Timing patterns alternate, dark on even coordinates.
+    for (let i = 8; i < size - 8; i += 1) {
+      expect(isDark(matrix, 6, i)).toBe(i % 2 === 0);
+      expect(isDark(matrix, i, 6)).toBe(i % 2 === 0);
     }
+    // The always-dark module beside the bottom-left finder.
+    expect(isDark(matrix, size - 8, 8)).toBe(true);
   });
 
+  it.each(samples)(
+    'agrees between both format information copies and encodes the declared mask for $bytes byte(s)',
+    ({ value }) => {
+      const matrix = encodeQr(value)!;
+      const bits = readFormatCopyOne(matrix);
+      // Copy 2 must agree bit-for-bit.
+      expect(readFormatCopyTwo(matrix)).toStrictEqual(bits);
+      // Unmask (XOR 0x5412) and check the declared mask and EC level survive.
+      const packed = bits.reduce((acc, bit, index) => acc + bit * 2 ** index, 0);
+      const raw = xor(packed, 0x54_12);
+      expect(Math.floor(raw / 2 ** 10) % 8).toBe(matrix.mask);
+      const ecIndicator = { L: 1, M: 0, Q: 3, H: 2 }[matrix.ecLevel];
+      expect(Math.floor(raw / 2 ** 13) % 4).toBe(ecIndicator);
+    },
+  );
+
   it('emits BCH-valid version information blocks for versions ≥ 7', () => {
-    const matrix = encodeQr('x'.repeat(213))!; // v10
+    // v10
+    const matrix = encodeQr('x'.repeat(213))!;
     const { size } = matrix;
     let info = 0;
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 18; i += 1) {
       const row = size - 11 + (i % 3);
       const col = Math.floor(i / 3);
       if (isDark(matrix, row, col)) {
-        info |= 1 << i;
+        info += 2 ** i;
       }
       // The top-right copy mirrors the bottom-left one.
       expect(isDark(matrix, col, row)).toBe(isDark(matrix, row, col));
     }
-    expect(info >> 12).toBe(matrix.version);
+    expect(Math.floor(info / 2 ** 12)).toBe(matrix.version);
     // Golay(18,6) residue check: the whole 18-bit word divides by 0x1f25.
     let remainder = info;
-    while (remainder >= 1 << 12) {
-      let shift = 0;
-      for (let v = remainder >> 13; v > 0; v >>= 1) {
-        shift++;
-      }
-      remainder ^= 0x1f25 << shift;
+    while (remainder >= 2 ** 12) {
+      const shift = bitLengthOf(Math.floor(remainder / 2 ** 13));
+      remainder = xor(remainder, 0x1f_25 * 2 ** shift);
     }
     expect(remainder).toBe(0);
   });
@@ -307,7 +331,7 @@ describe('encodeQr — capacity and null contract', () => {
 describe('encodeQr — masks', () => {
   it('produces eight distinct, format-consistent symbols when pinned', () => {
     const seen = new Set<string>();
-    for (let mask = 0; mask < 8; mask++) {
+    for (let mask = 0; mask < 8; mask += 1) {
       const matrix = encodeQr('SKU-001234', { mask })!;
       expect(matrix.mask).toBe(mask);
       seen.add(toRowStrings(matrix).join(''));
@@ -322,21 +346,20 @@ describe('encodeQr — masks', () => {
   });
 });
 
-describe('qrRowRuns', () => {
+describe(qrRowRuns, () => {
   it('compresses rows into alternating runs that rebuild the matrix', () => {
     const matrix = encodeQr('SKU-001234')!;
     const rows = qrRowRuns(matrix);
     expect(rows).toHaveLength(matrix.size);
-    for (let r = 0; r < matrix.size; r++) {
+    for (let r = 0; r < matrix.size; r += 1) {
       let col = 0;
-      for (let i = 0; i < rows[r].length; i++) {
+      for (let i = 0; i < rows[r].length; i += 1) {
         const run = rows[r][i];
-        if (i > 0) {
-          expect(run.dark).toBe(!rows[r][i - 1].dark);
-        }
-        for (let k = 0; k < run.modules; k++) {
+        // The first run has no predecessor, so it only has to agree with itself.
+        expect(run.dark).toBe(i === 0 ? run.dark : !rows[r][i - 1].dark);
+        for (let k = 0; k < run.modules; k += 1) {
           expect(matrix.modules[r * matrix.size + col] === 1).toBe(run.dark);
-          col++;
+          col += 1;
         }
       }
       expect(col).toBe(matrix.size);

@@ -1,0 +1,122 @@
+{
+  "name": "@repo/node-graph",
+  "version": "0.0.0",
+  "description": "Node graph editor — React Flow on web, Tamagui knob-aware nodes, an Expo DOM host on native",
+  "license": "Apache-2.0",
+  "source": "src/index.ts",
+  "files": [
+    "css",
+    "demo.ts",
+    "dist",
+    "dom-inner.ts",
+    "metro",
+    "model.ts",
+    "src",
+    "types",
+    "!types/.tsbuildinfo"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "types/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
+    ".": {
+      "source": "./src/index.ts",
+      "react-native": {
+        "types": "./types/index.native.d.ts",
+        "default": "./src/index.native.ts"
+      },
+      "types": "./types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./src/index.native.ts"
+    },
+    "./model": {
+      "source": "./src/model/index.ts",
+      "types": "./types/model/index.d.ts",
+      "import": "./dist/esm/model/index.mjs",
+      "require": "./dist/cjs/model/index.cjs"
+    },
+    "./dom": {
+      "source": "./src/dom/node-graph-dom.ts",
+      "react-native": "./src/dom/node-graph-dom.ts",
+      "types": "./types/dom/node-graph-dom.d.ts",
+      "default": "./src/dom/node-graph-dom.ts"
+    },
+    "./dom-inner": {
+      "source": "./src/dom/node-graph-dom-shell.ts",
+      "react-native": "./src/dom/node-graph-dom-shell.ts",
+      "types": "./types/dom/node-graph-dom-shell.d.ts",
+      "default": "./src/dom/node-graph-dom-shell.ts"
+    },
+    "./demo": {
+      "source": "./src/react-flow/demo-node-body.tsx",
+      "react-native": "./src/react-flow/demo-node-body.tsx",
+      "types": "./types/react-flow/demo-node-body.d.ts",
+      "default": "./src/react-flow/demo-node-body.tsx"
+    },
+    "./metro": "./metro/index.js",
+    "./css/graph.css": "./css/graph.css"
+  },
+  "scripts": {
+    "bench": "node scripts/bench.mjs",
+    "build": "node scripts/build-layout-worker.mjs --check && rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.|\\.native\\.|dom/NodeGraphDom|dom/node-graph-dom|diagnostics/deliberate-break'",
+    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^3.1.1",
+    "@repo/forms": "workspace:*",
+    "@repo/platform": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@tamagui/web": "catalog:",
+    "@xyflow/react": "^12.11.5",
+    "@xyflow/system": "0.0.81",
+    "tamagui": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@tamagui/build": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "esbuild": "^0.28.2",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "subset-font": "^2.7.0",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@repo/ui": "workspace:*",
+    "expo": ">=55",
+    "expo-haptics": "*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-native": ">=0.83.0",
+    "react-native-webview": ">=13.16.0"
+  },
+  "peerDependenciesMeta": {
+    "@repo/ui": {
+      "optional": true
+    },
+    "expo": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-webview": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
+}

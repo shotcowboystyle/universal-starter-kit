@@ -13,21 +13,19 @@ import { AnimateHeight } from './index';
  * install this controllable observer plus a fixed getBoundingClientRect.
  */
 class FiringResizeObserver {
-  static instances: FiringResizeObserver[] = [];
-  callback: ResizeObserverCallback;
-  constructor(callback: ResizeObserverCallback) {
-    this.callback = callback;
-    FiringResizeObserver.instances.push(this);
+  handler: ResizeObserverCallback;
+  constructor(handler: ResizeObserverCallback) {
+    this.handler = handler;
   }
   observe() {
     // real observers fire an initial measurement on observe
-    this.callback([], this as unknown as ResizeObserver);
+    this.handler([], this as unknown as ResizeObserver);
   }
-  unobserve() {}
-  disconnect() {}
+  unobserve = vi.fn<() => void>();
+  disconnect = vi.fn<() => void>();
 }
 
-function Harness({ initialOpen }: { initialOpen: boolean }) {
+const Harness = ({ initialOpen }: { initialOpen: boolean }) => {
   const [open, setOpen] = useState(initialOpen);
   return (
     <>
@@ -39,17 +37,18 @@ function Harness({ initialOpen }: { initialOpen: boolean }) {
         }}>
         toggle
       </button>
-      <AnimateHeight open={open} testID="animate-height-outer">
+      <AnimateHeight
+        open={open}
+        testID="animate-height-outer">
         <Text>Collapsible body</Text>
       </AnimateHeight>
     </>
   );
-}
+};
 
 const originalResizeObserver = window.ResizeObserver;
 
-function installFiringObserver(height: number) {
-  FiringResizeObserver.instances = [];
+const installFiringObserver = (height: number) => {
   window.ResizeObserver = FiringResizeObserver as unknown as typeof ResizeObserver;
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     height,
@@ -62,9 +61,9 @@ function installFiringObserver(height: number) {
     bottom: height,
     toJSON: () => ({}),
   } as DOMRect);
-}
+};
 
-describe('AnimateHeight', () => {
+describe(AnimateHeight, () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

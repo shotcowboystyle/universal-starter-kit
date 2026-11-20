@@ -5,9 +5,7 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { DebugLayout, createWithDebugLayout } from './index';
 
-function DebugRows() {
-  return <Paragraph>scheme / knobs / env</Paragraph>;
-}
+const DebugRows = () => <Paragraph>scheme / knobs / env</Paragraph>;
 
 const meta: Meta<typeof DebugLayout> = {
   title: 'Components/DebugLayout',
@@ -36,9 +34,17 @@ type Story = StoryObj<typeof DebugLayout>;
 export const Default: Story = {
   name: 'Main',
   render: (args) => (
-    <YStack minHeight={240} width="100%" backgroundColor="$background" padding="$4">
-      <DebugLayout {...args} debugView={DebugRows}>
-        <Button alignSelf="flex-start" onPress={action('onPress')}>
+    <YStack
+      minHeight={240}
+      width="100%"
+      backgroundColor="$background"
+      padding="$4">
+      <DebugLayout
+        {...args}
+        debugView={DebugRows}>
+        <Button
+          alignSelf="flex-start"
+          onPress={action('onPress')}>
           Hello, world!
         </Button>
       </DebugLayout>
@@ -48,16 +54,27 @@ export const Default: Story = {
 
 export const EmptyChildren: Story = {
   render: (args) => (
-    <YStack minHeight={160} width="100%" padding="$4">
-      <DebugLayout {...args} debugView={DebugRows} />
+    <YStack
+      minHeight={160}
+      width="100%"
+      padding="$4">
+      <DebugLayout
+        {...args}
+        debugView={DebugRows}
+      />
     </YStack>
   ),
 };
 
 export const Nested: Story = {
   render: (args) => (
-    <YStack minHeight={240} width="100%" padding="$4">
-      <DebugLayout {...args} debugView={DebugRows}>
+    <YStack
+      minHeight={240}
+      width="100%"
+      padding="$4">
+      <DebugLayout
+        {...args}
+        debugView={DebugRows}>
         <YStack gap="$3">
           <Paragraph>Outer layout</Paragraph>
           <Button alignSelf="flex-start">Nested child</Button>
@@ -70,7 +87,9 @@ export const Nested: Story = {
 export const Disabled: Story = {
   args: { enabled: false },
   render: (args) => (
-    <YStack minHeight={160} padding="$4">
+    <YStack
+      minHeight={160}
+      padding="$4">
       <DebugLayout {...args}>
         <Button alignSelf="flex-start">No debug chrome</Button>
       </DebugLayout>
@@ -79,7 +98,9 @@ export const Disabled: Story = {
 };
 
 const HocPage = createWithDebugLayout([], { enabled: true, debugView: DebugRows })(() => (
-  <Button alignSelf="flex-start" onPress={action('onHocPress')}>
+  <Button
+    alignSelf="flex-start"
+    onPress={action('onHocPress')}>
     HOC child
   </Button>
 ));
@@ -87,7 +108,9 @@ const HocPage = createWithDebugLayout([], { enabled: true, debugView: DebugRows 
 export const WithHoc: Story = {
   name: 'withDebugLayout',
   render: () => (
-    <YStack minHeight={160} padding="$4">
+    <YStack
+      minHeight={160}
+      padding="$4">
       <HocPage />
     </YStack>
   ),

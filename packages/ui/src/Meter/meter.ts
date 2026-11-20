@@ -6,7 +6,8 @@
  * (`low` / `high` / `optimum`, the HTML <meter> model) and never guessed.
  * The rail is DEFAULT, not BINARY: there is no thumb to square with.
  */
-import { formatNumber, formatPercent, resolveRadiusClass, sizeRecipeForToken, type BorderRadius } from '@repo/theme';
+import { formatNumber, formatPercent, resolveRadiusClass, sizeRecipeForToken } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
 
 export type MeterZone = 'ok' | 'warn' | 'critical';
 export type MeterFormat = 'number' | 'percent';
@@ -37,35 +38,32 @@ export const UNKNOWN_VALUE = '\u2014';
 
 const SIZE_TOKEN = { small: '$3', medium: '$4', large: '$5' } as const;
 
-export function resolveMeterRailRadius(stop: BorderRadius): number {
-  return resolveRadiusClass(METER_RADIUS_CLASS, stop);
-}
+export const resolveMeterRailRadius = (stop: BorderRadius): number => resolveRadiusClass(METER_RADIUS_CLASS, stop);
 
 /** Track height = round(0.25 × $size) — the Progress formula, unchanged. */
-export function meterTrackHeightPx(size: 'small' | 'medium' | 'large'): number {
-  return Math.round(sizeRecipeForToken(SIZE_TOKEN[size]).height * 0.25);
-}
+export const meterTrackHeightPx = (size: 'small' | 'medium' | 'large'): number =>
+  Math.round(sizeRecipeForToken(SIZE_TOKEN[size]).height * 0.25);
 
-export function meterFillRatio(value: number | null | undefined, min: number, max: number): number | null {
+export const meterFillRatio = (value: number | null | undefined, min: number, max: number): number | null => {
   if (value == null || !Number.isFinite(value) || max === min) {
     return null;
   }
   return Math.max(0, Math.min(1, (value - min) / (max - min)));
-}
+};
 
 /**
  * HTML <meter> regions. No `low`/`high`/`optimum` → always ok (undeclared
  * never wears a verdict). `optimum` names the good end so battery inverts
  * without new chrome.
  */
-export function resolveMeterZone(opts: {
+export const resolveMeterZone = (opts: {
   value: number;
   min: number;
   max: number;
   low?: number;
   high?: number;
   optimum?: number;
-}): MeterZone {
+}): MeterZone => {
   const { value, min, max, low, high, optimum } = opts;
   if (low === undefined && high === undefined && optimum === undefined) {
     return 'ok';
@@ -95,16 +93,16 @@ export function resolveMeterZone(opts: {
     return 'ok';
   }
   return 'warn';
-}
+};
 
-export function formatMeterValue(opts: {
+export const formatMeterValue = (opts: {
   value?: number | null;
   min: number;
   max: number;
   unit?: string;
   format?: MeterFormat;
   valueLabel?: string;
-}): string {
+}): string => {
   if (opts.valueLabel !== undefined) {
     return opts.valueLabel;
   }
@@ -117,5 +115,5 @@ export function formatMeterValue(opts: {
   }
   const amount = formatNumber(opts.value);
   const cap = formatNumber(opts.max);
-  return opts.unit ? `${amount} of ${cap} ${opts.unit}` : `${amount} of ${cap}`;
-}
+  return opts.unit !== undefined && opts.unit !== '' ? `${amount} of ${cap} ${opts.unit}` : `${amount} of ${cap}`;
+};

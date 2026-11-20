@@ -21,7 +21,7 @@ consuming package's `dependencies`.
 
 - No data-table features (filtering, sorting, pagination, virtualization) —
   data tables are out of scope for this package
-- No form fields, no Frappe/API assumptions
+- No form fields, no backend/API assumptions
 
 ## Usage
 
@@ -57,5 +57,3 @@ overriding style props.
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

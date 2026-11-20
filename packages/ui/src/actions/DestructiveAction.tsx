@@ -5,21 +5,18 @@
  * typed `expectedText`). Pass `confirm` to eject to a custom gate.
  */
 
-import { Button, formatActionLabel, type ButtonProps } from '@repo/forms';
-import { useCallback, useState, type ReactNode } from 'react';
+import { Button, formatActionLabel } from '@repo/forms';
+import type { ButtonProps } from '@repo/forms';
+import { useCallback, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Input, Paragraph, YStack } from 'tamagui';
 
 import { ConfirmDialog } from '../feedback/ConfirmDialog';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
-import {
-  resolveDestructiveSeverity,
-  severityRequiresConfirm,
-  severityUsesDangerTone,
-  type DestructiveSeverity,
-  type DestructiveSeverityHints,
-} from './severity';
+import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
+import type { DestructiveSeverity, DestructiveSeverityHints } from './severity';
 
 export interface DestructiveConfirmContext {
   verb: string;
@@ -64,13 +61,13 @@ export type DestructiveActionProps = Omit<
     disabledReason?: string;
   };
 
-function buildConfirmContext(props: {
+const buildConfirmContext = (props: {
   verb: string;
   noun?: string;
   severity: DestructiveSeverity;
   consequence?: string;
   confirmationText?: string;
-}): DestructiveConfirmContext {
+}): DestructiveConfirmContext => {
   const actionLabel = formatActionLabel({ verb: props.verb, noun: props.noun });
   const confirmLabel = formatActionLabel({ verb: props.verb });
   const expectedText =
@@ -85,9 +82,20 @@ function buildConfirmContext(props: {
     expectedText,
     confirmationText: props.confirmationText,
   };
-}
+};
 
-export function DestructiveAction({
+const isNonEmpty = (value: string | undefined): value is string => value != null && value !== '';
+
+const withPending = async (setPending: (pending: boolean) => void, task: () => void | Promise<void>): Promise<void> => {
+  setPending(true);
+  try {
+    await task();
+  } finally {
+    setPending(false);
+  }
+};
+
+export const DestructiveAction = ({
   verb,
   noun,
   severity: severityProp,
@@ -103,7 +111,7 @@ export function DestructiveAction({
   disabledReason,
   loading,
   ...buttonProps
-}: DestructiveActionProps) {
+}: DestructiveActionProps) => {
   const { t } = useTranslation();
   const severity = resolveDestructiveSeverity({
     severity: severityProp,
@@ -126,24 +134,20 @@ export function DestructiveAction({
     confirmationText,
   });
   const useCustomConfirm = Boolean(confirm);
-  const typedMatch = !dialogCtx.expectedText || typedText.trim() === dialogCtx.expectedText;
+  const hasDisabledReason = isNonEmpty(disabledReason);
+  const typedMatch = !isNonEmpty(dialogCtx.expectedText) || typedText.trim() === dialogCtx.expectedText;
 
   const runAction = useCallback(async () => {
-    setPending(true);
-    try {
-      await onAction();
-    } finally {
-      setPending(false);
-    }
-  }, [onAction]);
+    await withPending(setPending, onAction);
+  }, [onAction, setPending]);
 
   const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setTypedText('');
-  }, []);
+  }, [setDialogOpen, setTypedText]);
 
   const handlePress = useCallback(async () => {
-    if (disabled || disabledReason || pending) {
+    if (disabled || isNonEmpty(disabledReason) || pending) {
       return;
     }
     const ctx = buildConfirmContext({
@@ -155,16 +159,12 @@ export function DestructiveAction({
     });
     if (needsConfirm) {
       if (confirm) {
-        setPending(true);
-        try {
+        await withPending(setPending, async () => {
           const ok = await confirm(ctx);
-          if (!ok) {
-            return;
+          if (ok) {
+            await onAction();
           }
-          await onAction();
-        } finally {
-          setPending(false);
-        }
+        });
         return;
       }
       setTypedText('');
@@ -183,12 +183,15 @@ export function DestructiveAction({
     onAction,
     pending,
     runAction,
+    setDialogOpen,
+    setPending,
+    setTypedText,
     severity,
     verb,
   ]);
 
   const handleDialogConfirm = useCallback(async () => {
-    if (dialogCtx.expectedText && typedText.trim() !== dialogCtx.expectedText) {
+    if (isNonEmpty(dialogCtx.expectedText) && typedText.trim() !== dialogCtx.expectedText) {
       return;
     }
     closeDialog();
@@ -198,24 +201,28 @@ export function DestructiveAction({
   const markers = {
     'data-mp-destructive': 'true',
     'data-mp-destructive-severity': severity,
-    ...(needsConfirm && useCustomConfirm ? { 'data-mp-confirmed-upstream': 'true' } : {}),
-    ...(needsConfirm && !useCustomConfirm ? { 'data-mp-confirm-dialog': 'true' } : {}),
-  } as Record<string, string>;
+    'data-mp-confirmed-upstream': needsConfirm && useCustomConfirm ? 'true' : undefined,
+    'data-mp-confirm-dialog': needsConfirm && !useCustomConfirm ? 'true' : undefined,
+  };
 
   // Build outside Tamagui <Paragraph>/<Text> children — the compiler extracts those
   // into `{{var}}` placeholders and drops runtime values in unit tests.
   const typedPrompt =
-    dialogCtx.expectedText != null
-      ? withInterp(t('Type "{{text}}" to confirm.'), {
+    dialogCtx.expectedText == null
+      ? null
+      : withInterp(t('Type "{{text}}" to confirm.'), {
           text: dialogCtx.expectedText,
-        })
-      : null;
+        });
 
   const dialogBody =
-    dialogCtx.expectedText != null ? (
+    dialogCtx.expectedText == null ? (
+      consequence
+    ) : (
       <YStack gap="$3">
-        {consequence ? <Paragraph size="$3">{consequence}</Paragraph> : null}
-        <Paragraph size="$3" data-mp-confirm-prompt="">
+        {consequence != null && consequence !== '' ? <Paragraph size="$3">{consequence}</Paragraph> : null}
+        <Paragraph
+          size="$3"
+          data-mp-confirm-prompt="">
           {typedPrompt}
         </Paragraph>
         <Input
@@ -230,8 +237,6 @@ export function DestructiveAction({
           width="100%"
         />
       </YStack>
-    ) : (
-      consequence
     );
 
   return (
@@ -244,10 +249,12 @@ export function DestructiveAction({
         error={useDanger || undefined}
         // Button renders the explain affordance (aria-disabled +
         // visible reason via aria-describedby) when disabledReason is set.
-        disabled={disabled || Boolean(disabledReason) || undefined}
+        disabled={disabled === true || hasDisabledReason ? true : undefined}
         disabledReason={disabledReason}
-        loading={loading || pending}
-        onPress={handlePress}>
+        loading={loading === true || pending}
+        onPress={() => {
+          void handlePress();
+        }}>
         {label}
       </Button>
       {needsConfirm && !useCustomConfirm ? (
@@ -267,16 +274,16 @@ export function DestructiveAction({
           }}
           onCancel={closeDialog}
           onOpenChange={(next) => {
-            if (!next) {
-              closeDialog();
-            } else {
+            if (next) {
               setDialogOpen(true);
+            } else {
+              closeDialog();
             }
           }}
         />
       ) : null}
     </>
   );
-}
+};
 
-export type { DestructiveSeverity };
+export type { DestructiveSeverity } from './severity';

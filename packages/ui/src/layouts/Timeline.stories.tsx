@@ -1,7 +1,8 @@
 import { action } from '@repo/storybook';
 import { YStack, Text, XStack } from 'tamagui';
 
-import { Timeline, type TimelineEntry } from './Timeline';
+import { Timeline } from './Timeline';
+import type { TimelineEntry } from './Timeline';
 
 export default {
   title: 'Components/Timeline',
@@ -23,11 +24,14 @@ export default {
   },
 };
 
+const AUTHOR_JOHN = 'john@example.com';
+const AUTHOR_SARAH = 'sarah.chen@acme.com';
+
 const sampleEntries: TimelineEntry[] = [
   {
     id: 'entry-1',
     type: 'version',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T12:00:00Z',
     changes: [
       { field: 'status', old: 'Draft', new: 'Submitted' },
@@ -45,14 +49,14 @@ const sampleEntries: TimelineEntry[] = [
     id: 'entry-3',
     type: 'comment',
     content: 'Please review the pricing before approval.',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T10:30:00Z',
   },
   {
     id: 'entry-4',
     type: 'attachment',
     content: 'Added invoice-draft.pdf',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T09:15:00Z',
   },
   {
@@ -71,7 +75,7 @@ const commentFeedEntries: TimelineEntry[] = [
   {
     id: 'c-1',
     type: 'comment',
-    author: 'sarah.chen@acme.com',
+    author: AUTHOR_SARAH,
     content:
       'I walked the customer through the migration plan this morning. They want the cutover moved to the first week of November.',
     timestamp: minutesAgo(120),
@@ -96,7 +100,7 @@ const commentFeedEntries: TimelineEntry[] = [
   {
     id: 's-1',
     type: 'version',
-    author: 'sarah.chen@acme.com',
+    author: AUTHOR_SARAH,
     timestamp: minutesAgo(60 * 5),
     changes: [
       { field: 'status', fieldLabel: 'Status', old: 'Draft', new: 'In Review' },
@@ -128,7 +132,11 @@ const commentFeedEntries: TimelineEntry[] = [
 ];
 
 export const Comments = () => (
-  <Timeline label="Activity" entries={commentFeedEntries} onCommentSubmit={action('onCommentSubmit')} />
+  <Timeline
+    label="Activity"
+    entries={commentFeedEntries}
+    onCommentSubmit={action('onCommentSubmit')}
+  />
 );
 Comments.parameters = {
   docs: {
@@ -219,7 +227,12 @@ Empty.parameters = {
 };
 
 export const Loading = () => (
-  <Timeline label="Activity" entries={[]} isLoading onCommentSubmit={action('onCommentSubmit')} />
+  <Timeline
+    label="Activity"
+    entries={[]}
+    isLoading
+    onCommentSubmit={action('onCommentSubmit')}
+  />
 );
 Loading.parameters = {
   docs: {
@@ -230,6 +243,7 @@ Loading.parameters = {
   },
 };
 
+// oxlint-disable-next-line sonarjs/no-globals-shadowing, sonarjs/no-built-in-override -- the export name is the Storybook story id ('Error'); renaming would change it
 export const Error = () => (
   <Timeline
     label="Activity"
@@ -252,17 +266,23 @@ export const CustomEntryRenderer = () => (
   <Timeline
     entries={sampleEntries}
     renderEntry={(entry: TimelineEntry, defaultContent) => (
-      <YStack key={entry.id} paddingBottom="$2">
+      <YStack
+        key={entry.id}
+        paddingBottom="$2">
         <YStack
           padding="$3"
           gap="$1"
           backgroundColor={entry.type === 'comment' ? '$blue2' : '$gray2'}
           borderRadius="$3">
           <XStack justifyContent="space-between">
-            <Text fontSize="$2" fontWeight="600">
+            <Text
+              fontSize="$2"
+              fontWeight="600">
               {entry.author}
             </Text>
-            <Text fontSize="$1" color="$gray10">
+            <Text
+              fontSize="$1"
+              color="$gray10">
               {entry.type}
             </Text>
           </XStack>
@@ -299,7 +319,10 @@ export const AllStates = () => (
 
     <YStack gap="$2">
       <Text fontWeight="600">Compact</Text>
-      <Timeline entries={sampleEntries.slice(0, 2)} compact />
+      <Timeline
+        entries={sampleEntries.slice(0, 2)}
+        compact
+      />
     </YStack>
   </YStack>
 );

@@ -15,15 +15,21 @@ import type { StarIconType } from './types';
  * driver animates, driven by the knob token, with silence at `none`.
  */
 
-const captured: Array<{ size: number; weight: string; color: string; keys: string[] }> = [];
+const captured: { size: number; weight: string; color: string; keys: string[] }[] = [];
 
 /** Records EVERY prop the contract hands the glyph, so an added one shows up. */
 const SpyStarIcon: StarIconType = (props) => {
-  captured.push({ ...props, keys: Object.keys(props).sort() });
-  return <span data-testid="glyph" data-weight={props.weight} data-color={props.color} />;
+  captured.push({ ...props, keys: Object.keys(props).toSorted() });
+  return (
+    <span
+      data-testid="glyph"
+      data-weight={props.weight}
+      data-color={props.color}
+    />
+  );
 };
 
-function renderInk(overrides: Partial<Parameters<typeof StarInk>[0]> = {}) {
+const renderInk = (overrides: Partial<Parameters<typeof StarInk>[0]> = {}, { motion = true } = {}) => {
   captured.length = 0;
   return renderWithProviders(
     <StarInk
@@ -32,42 +38,42 @@ function renderInk(overrides: Partial<Parameters<typeof StarInk>[0]> = {}) {
       filled={false}
       filledColor="#634FC4"
       emptyColor="#D3D1D6"
-      transition="quick"
+      transition={motion ? 'quick' : undefined}
       {...overrides}
     />,
   );
-}
+};
 
 const layer = (container: HTMLElement, which: 'empty' | 'filled') =>
-  container.querySelector(`[data-rating-ink='${which}']`) as HTMLElement | null;
+  container.querySelector<HTMLElement>(`[data-rating-ink='${which}']`);
 
 /** Tamagui emits opacity as the atomic class `_o-<value>`, not inline style. */
-function opacityOf(container: HTMLElement, which: 'empty' | 'filled'): number | null {
-  const match = layer(container, which)?.className.match(/(?:^|\s)_o-([\d.]+)(?:\s|$)/);
-  return match ? Number(match[1]) : null;
-}
+const opacityOf = (container: HTMLElement, which: 'empty' | 'filled'): number | null => {
+  const match = layer(container, which)?.className.match(/(?:^|\s)_o-(?<opacity>[\d.]+)(?:\s|$)/u);
+  return match?.groups ? Number(match.groups.opacity) : null;
+};
 
 describe('StarInk (native) motion props', () => {
   // Axiom 4: the token IS the knob's. A hardcoded duration, or a token not
   // scoped to opacity, fails here.
   it('scopes the knob token to opacity', () => {
-    expect(inkMotionProps('quick')).toEqual({ transition: { opacity: 'quick' } });
+    expect(inkMotionProps('quick')).toStrictEqual({ transition: { opacity: 'quick' } });
     // A different knob must produce a different token — pinning only "quick"
     // would pass against a hardcoded default.
-    expect(inkMotionProps('bouncy')).toEqual({ transition: { opacity: 'bouncy' } });
+    expect(inkMotionProps('bouncy')).toStrictEqual({ transition: { opacity: 'bouncy' } });
   });
 
   // Axiom 3. The positive control is the assertion above: the same
   // helper demonstrably yields a transition when a token exists, so the empty
   // object here is a measured absence rather than a probe that sees nothing.
   it('emits NO transition at animation=none / reduced motion', () => {
-    expect(inkMotionProps(undefined)).toEqual({});
+    expect(inkMotionProps()).toStrictEqual({});
   });
 
   // The web fix deliberately dropped `|| "quick"`; native must not reintroduce
   // it. `none` resolving to a token is exactly the regression this catches.
   it('never substitutes a default token for a missing knob', () => {
-    expect(inkMotionProps(undefined)).not.toHaveProperty('transition');
+    expect(inkMotionProps()).not.toHaveProperty('transition');
   });
 });
 
@@ -78,7 +84,7 @@ describe('StarInk (native) layer stack', () => {
     const { container } = renderInk({ filled: false });
     expect(layer(container, 'empty')).not.toBeNull();
     expect(layer(container, 'filled')).not.toBeNull();
-    expect(captured.map((c) => c.weight).sort()).toEqual(['fill', 'regular']);
+    expect(captured.map((c) => c.weight).toSorted()).toStrictEqual(['fill', 'regular']);
   });
 
   it('cross-fades opacity with the filled state', () => {
@@ -130,7 +136,7 @@ describe('StarInk (native) layer stack', () => {
   // same probe reading a real transition off these same layers, so an empty
   // string here is a measured silence, not a blind spot.
   it('declares no transition at all when the knob is none', () => {
-    const { container } = renderInk({ transition: undefined });
+    const { container } = renderInk({}, { motion: false });
     for (const which of ['empty', 'filled'] as const) {
       expect(layer(container, which)?.style.transition ?? '').toBe('');
     }
@@ -141,7 +147,7 @@ describe('StarInk (native) layer stack', () => {
     renderInk({ filled: true });
     expect(captured).toHaveLength(2);
     for (const props of captured) {
-      expect(props.keys).toEqual(['color', 'size', 'weight']);
+      expect(props.keys).toStrictEqual(['color', 'size', 'weight']);
     }
     expect(captured.find((c) => c.weight === 'fill')?.color).toBe('#634FC4');
     expect(captured.find((c) => c.weight === 'regular')?.color).toBe('#D3D1D6');
@@ -167,7 +173,7 @@ describe('StarInk web/native parity', () => {
     expect(captured).toHaveLength(1);
     expect(captured[0]?.weight).toBe('fill');
     expect(captured[0]?.color).toBe('#634FC4');
-    expect(captured[0]?.keys).toEqual(['color', 'size', 'weight']);
+    expect(captured[0]?.keys).toStrictEqual(['color', 'size', 'weight']);
     // No ink layers on web: the cascade does that job there.
     expect(container.querySelector('[data-rating-ink]')).toBeNull();
   });

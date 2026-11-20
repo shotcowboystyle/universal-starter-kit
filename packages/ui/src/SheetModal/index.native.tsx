@@ -23,18 +23,19 @@ import {
   StyleSheet,
   View as RNView,
   useWindowDimensions,
-  type GestureResponderEvent,
 } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, YStack } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
 import { DialogRegionContext } from '../surfaces';
 
 import { minSheetHeight, resolveSheetDetents } from './detents';
 
 import type { SheetModalProps } from './index';
+
 export type { SheetModalProps } from './index';
 
 const sheetMaxHeightRatio = 0.85;
@@ -62,7 +63,8 @@ const stopAtModal = (event: GestureResponderEvent) => {
   event.stopPropagation();
 };
 
-export function SheetModal({
+// oxlint-disable-next-line react-doctor/no-giant-component -- one animation state machine (refs, springs, presentation epochs) shared by drag, detents and entrance; splitting it would scatter the invariants documented inline
+export const SheetModal = ({
   open,
   onOpenChange,
   children,
@@ -70,13 +72,13 @@ export function SheetModal({
   snapPoint,
   scrollable,
   fill = false,
-}: SheetModalProps) {
+}: SheetModalProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { height: windowHeight } = useWindowDimensions();
   const keyboardInset = useKeyboardInset();
   const topInset = useContext(SafeAreaInsetsContext)?.top ?? initialWindowMetrics?.insets.top ?? 0;
-  const [backdropArmed, setBackdropArmed] = useState(false);
+  const backdropArmedRef = useRef(false);
   const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const close = useCallback(() => {
@@ -84,10 +86,10 @@ export function SheetModal({
   }, [onOpenChange]);
 
   const handleBackdropPress = useCallback(() => {
-    if (backdropArmed) {
+    if (backdropArmedRef.current) {
       close();
     }
-  }, [backdropArmed, close]);
+  }, [close]);
 
   // The sheet ends above the keyboard rather than running under it,
   // and below the status bar with a strip of backdrop still showing.
@@ -115,6 +117,7 @@ export function SheetModal({
    * doing nothing on device. Keep the math in one place so a rewrite of the
    * animation cannot take the geometry with it again.
    */
+  const hasHeader = Boolean(header);
   const [measuredHeight, setMeasuredHeight] = useState(0);
   const travel = measuredHeight || maxHeight;
   const detents = useMemo(
@@ -135,12 +138,15 @@ export function SheetModal({
    * window-derived), so the very first present is already primed; the effect
    * below re-parks after every close for the ones after that.
    */
-  const translateY = useRef(new Animated.Value(travel)).current;
+  // oxlint-disable-next-line react/hook-use-state -- lazily created once; the Animated.Value is mutated in place and never replaced
+  const [translateY] = useState(() => new Animated.Value(travel));
   const restRef = useRef(travel);
   const travelRef = useRef(travel);
   const detentsRef = useRef(detents);
-  travelRef.current = travel;
-  detentsRef.current = detents;
+  useLayoutEffect(() => {
+    travelRef.current = travel;
+    detentsRef.current = detents;
+  }, [travel, detents]);
 
   // Async callbacks belong to one committed presentation, never its successor.
   const presentationRef = useRef(0);
@@ -157,7 +163,8 @@ export function SheetModal({
    * commit and the top edge does not move. `restHeightRef` is null at full
    * height; a gesture always runs uncapped, in `travel` coordinates.
    */
-  const frameCap = useRef(new Animated.Value(maxHeight)).current;
+  // oxlint-disable-next-line react/hook-use-state -- lazily created once; the Animated.Value is mutated in place and never replaced
+  const [frameCap] = useState(() => new Animated.Value(maxHeight));
   const maxHeightRef = useRef(maxHeight);
   const restHeightRef = useRef<number | null>(null);
   // The last uncapped layout, and whether it filled the max height. A capped
@@ -171,6 +178,7 @@ export function SheetModal({
     const rest = restHeightRef.current;
     frameCap.setValue(rest === null ? maxHeight : Math.min(maxHeight, rest));
     if (rest !== null && naturalRef.current > 0) {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- must land in the same commit as the frameCap swap so the sheet's top edge does not move when the keyboard changes the max height
       setMeasuredHeight(filledRef.current ? maxHeight : Math.min(naturalRef.current, maxHeight));
     }
   }, [frameCap, maxHeight]);
@@ -251,6 +259,7 @@ export function SheetModal({
 
   const panResponder = useMemo(
     () =>
+      // oxlint-disable-next-line react/refs -- the PanResponder callbacks read refs only when a gesture event fires, never during render
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dy) > 2,
@@ -260,7 +269,7 @@ export function SheetModal({
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           translateY.stopAnimation((value) => {
-            if (typeof value === 'number' && Number.isFinite(value)) {
+            if (Number.isFinite(value)) {
               restRef.current = value;
             }
           });
@@ -275,12 +284,12 @@ export function SheetModal({
           const tvl = travelRef.current;
           const current = Math.max(0, restRef.current + g.dy);
           const projected = current + g.vy * 120;
-          const smallestRest = tvl - points[points.length - 1];
+          const smallestRest = tvl - Math.min(...points);
           if (projected > smallestRest + dismissThreshold || g.vy > 1.1) {
             dismiss(g.vy);
             return;
           }
-          let best = points[0];
+          let [best] = points;
           let bestDelta = Number.POSITIVE_INFINITY;
           for (const height of points) {
             const delta = Math.abs(projected - (tvl - height));
@@ -312,18 +321,18 @@ export function SheetModal({
     }
     const presentation = presentationRef.current;
     enteredRef.current = true;
-    if (armTimerRef.current) {
+    if (armTimerRef.current !== null) {
       clearTimeout(armTimerRef.current);
     }
     armTimerRef.current = setTimeout(() => {
       if (activeRef.current && presentation === presentationRef.current) {
         armTimerRef.current = null;
-        setBackdropArmed(true);
+        backdropArmedRef.current = true;
       }
     }, 280);
     // The modal fades (backdrop dims IN PLACE); only the panel slides.
     // The sheet is already parked off-screen before the present, so
-    // this setValue only normalises the start to exactly `travel` once the
+    // this setValue only normalizes the start to exactly `travel` once the
     // sheet has measured. Priming it here ALONE is the open-close-open bug:
     // by the time onShow runs the dissolve has already shown the sheet.
     translateY.setValue(travelRef.current);
@@ -348,8 +357,8 @@ export function SheetModal({
     if (open) {
       enter();
     } else {
-      setBackdropArmed(false);
-      const parked = travelRef.current || 10000;
+      backdropArmedRef.current = false;
+      const parked = travelRef.current || 10_000;
       translateY.setValue(parked);
       restRef.current = parked;
     }
@@ -358,7 +367,7 @@ export function SheetModal({
       activeRef.current = false;
       presentationRef.current += 1;
       enteredRef.current = false;
-      if (armTimerRef.current) {
+      if (armTimerRef.current !== null) {
         clearTimeout(armTimerRef.current);
         armTimerRef.current = null;
       }
@@ -367,7 +376,13 @@ export function SheetModal({
   }, [open, enter, frameCap, translateY]);
 
   return (
-    <Modal visible={open} transparent animationType="fade" statusBarTranslucent onRequestClose={close} onShow={enter}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={close}
+      onShow={enter}>
       <RNView
         style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: keyboardInset }}
         onTouchStart={stopAtModal}
@@ -379,7 +394,10 @@ export function SheetModal({
           onPress={handleBackdropPress}
           accessibilityRole="button"
           accessibilityLabel={t('Close')}>
-          <View flex={1} backgroundColor="$shadow6" />
+          <View
+            flex={1}
+            backgroundColor="$shadow6"
+          />
         </Pressable>
         <Animated.View
           onLayout={(e) => {
@@ -463,10 +481,15 @@ export function SheetModal({
                 {...(fill ? fillSlot : null)}>
                 {fill ? (
                   <>
-                    {header ? <RNView style={nonShrinking}>{header}</RNView> : null}
-                    <RNView testID="sheet-modal-body" style={fillSlot}>
+                    {hasHeader ? <RNView style={nonShrinking}>{header}</RNView> : null}
+                    <RNView
+                      testID="sheet-modal-body"
+                      style={fillSlot}>
                       {scrollable ? (
-                        <RNScrollView testID="sheet-modal-scroll" style={fillSlot} keyboardShouldPersistTaps="handled">
+                        <RNScrollView
+                          testID="sheet-modal-scroll"
+                          style={fillSlot}
+                          keyboardShouldPersistTaps="handled">
                           {children}
                         </RNScrollView>
                       ) : (
@@ -496,4 +519,4 @@ export function SheetModal({
       </RNView>
     </Modal>
   );
-}
+};

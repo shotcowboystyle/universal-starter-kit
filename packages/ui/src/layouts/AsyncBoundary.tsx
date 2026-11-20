@@ -14,8 +14,11 @@
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import { Button, Spinner } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { XStack, YStack, type YStackProps } from 'tamagui';
+import type { KnobProps } from '@repo/theme';
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { Alert } from '../Alert';
 import { useTranslation } from '../shared/i18n';
@@ -47,39 +50,37 @@ export interface AsyncBoundaryContextValue {
 const AsyncBoundaryContext = createContext<AsyncBoundaryContextValue | null>(null);
 
 /** Read async status from the nearest AsyncBoundary (null outside). */
-export function useAsyncBoundary(): AsyncBoundaryContextValue | null {
-  return useContext(AsyncBoundaryContext);
-}
+export const useAsyncBoundary = (): AsyncBoundaryContextValue | null => useContext(AsyncBoundaryContext);
 
 /**
  * Count / badge value that degrades on failure.
  * Returns `undefined` when the nearest boundary is in `error` (or when
  * `value` is already undefined) so Badge/count chrome hides instead of lying.
  */
-export function useAsyncCount(value: number | undefined): number | undefined {
+export const useAsyncCount = (value: number | undefined): number | undefined => {
   const ctx = useAsyncBoundary();
   if (ctx?.hideBadges) {
     return undefined;
   }
   return value;
-}
+};
 
 export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
   /**
    * Loading slot. `true` → layout skeleton; custom node replaces it.
    * Boolean false / undefined → not loading.
    */
-  loading?: boolean | ReactNode;
+  loading?: ReactNode;
   /**
    * Empty slot. `true` → default EmptyState; custom node replaces it.
    * Ignored entirely when `error` is set.
    */
-  empty?: boolean | ReactNode;
+  empty?: ReactNode;
   /**
    * Error slot. Truthy string / Error / node / `true` → error UI.
    * Wins over loading and empty.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Ready content. Alias of `children`. */
   data?: ReactNode;
   children?: ReactNode;
@@ -115,7 +116,7 @@ export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isReactNodeSlot(value: unknown): value is ReactNode {
+const isReactNodeSlot = (value: Error | ReactNode): value is ReactNode => {
   if (value == null || typeof value === 'boolean') {
     return false;
   }
@@ -126,27 +127,18 @@ function isReactNodeSlot(value: unknown): value is ReactNode {
     return false;
   }
   return true;
-}
+};
 
-function isActiveError(error: AsyncBoundaryProps['error']): boolean {
-  if (error == null || error === false) {
-    return false;
-  }
-  return true;
-}
+const isActiveError = (error: AsyncBoundaryProps['error']): boolean => error != null && error !== false;
 
-function isActiveFlag(value: boolean | ReactNode | undefined): boolean {
-  if (value == null || value === false) {
-    return false;
-  }
-  return true;
-}
+const isActiveFlag = (value: ReactNode): boolean => value != null && value !== false;
 
-export function resolveAsyncStatus(opts: {
-  loading?: boolean | ReactNode;
-  empty?: boolean | ReactNode;
-  error?: boolean | string | Error | ReactNode | null;
-}): AsyncStatus {
+// oxlint-disable-next-line react-doctor/only-export-components -- status resolver is part of the public AsyncBoundary API and stays beside the component
+export const resolveAsyncStatus = (opts: {
+  loading?: ReactNode;
+  empty?: ReactNode;
+  error?: Error | ReactNode;
+}): AsyncStatus => {
   if (isActiveError(opts.error)) {
     return 'error';
   }
@@ -157,25 +149,28 @@ export function resolveAsyncStatus(opts: {
     return 'empty';
   }
   return 'data';
+};
+
+interface ErrorCopy {
+  title: string;
+  description?: string;
 }
 
-function errorCopy(
-  error: AsyncBoundaryProps['error'],
-  errorTitle: string,
-  errorDescription?: string,
-): { title: string; description?: string } {
-  if (typeof error === 'string') {
+const isErrorText = (error: AsyncBoundaryProps['error']): error is string => typeof error === 'string';
+
+const errorCopy = (error: AsyncBoundaryProps['error'], errorTitle: string, errorDescription?: string): ErrorCopy => {
+  if (isErrorText(error)) {
     return { title: errorTitle, description: errorDescription ?? error };
   }
   if (error instanceof Error) {
     return { title: errorTitle, description: errorDescription ?? error.message };
   }
   return { title: errorTitle, description: errorDescription };
-}
+};
 
 const seenDevWarns = new Set<string>();
 
-function asyncDevWarn(code: string, detail = ''): void {
+const asyncDevWarn = (code: string, detail = ''): void => {
   if (process.env.NODE_ENV === 'production') {
     return;
   }
@@ -184,58 +179,124 @@ function asyncDevWarn(code: string, detail = ''): void {
     return;
   }
   seenDevWarns.add(key);
-  console.warn(`[AsyncBoundary] ${code}${detail ? ` (${detail})` : ''}`);
-}
+  const suffix = detail === '' ? '' : ` (${detail})`;
+  console.warn(`[AsyncBoundary] ${code}${suffix}`);
+};
 
-/** @internal test helper */
-export function __resetAsyncDevWarnSeen(): void {
+/** Test helper; not for consumer use. */
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/variable-name, sonarjs/function-name -- exported test hook; the leading double underscore marks it test-only and renaming would change the public export
+export const __resetAsyncDevWarnSeen = (): void => {
   seenDevWarns.clear();
-}
+};
 
 // ---------------------------------------------------------------------------
 // Layout skeletons
 // ---------------------------------------------------------------------------
 
-export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) {
+export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) => {
   const { t } = useTranslation();
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- `generic` is the intentional default so an unrecognized layout from untyped callers still paints the generic skeleton
   switch (layout) {
-    case 'list':
+    case 'list': {
       return (
-        <YStack gap="$3" width="100%" data-async-skeleton="list" aria-busy aria-label={t('Loading')} {...rest}>
+        <YStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="list"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <XStack key={i} gap="$3" alignItems="center" paddingVertical="$2">
+            <XStack
+              key={i}
+              gap="$3"
+              alignItems="center"
+              paddingVertical="$2">
               <Skeleton.Circle size={40} />
-              <YStack flex={1} gap="$1">
-                <Skeleton width="70%" height={14} />
-                <Skeleton width="40%" height={12} />
+              <YStack
+                flex={1}
+                gap="$1">
+                <Skeleton
+                  width="70%"
+                  height={14}
+                />
+                <Skeleton
+                  width="40%"
+                  height={12}
+                />
               </YStack>
             </XStack>
           ))}
         </YStack>
       );
-    case 'table':
+    }
+    case 'table': {
       return (
-        <YStack gap="$2" width="100%" data-async-skeleton="table" aria-busy aria-label={t('Loading')} {...rest}>
-          <XStack gap="$3" paddingBottom="$2" borderBottomWidth={1} borderColor="$color5">
-            <Skeleton width={120} height={14} />
-            <Skeleton width={100} height={14} />
-            <Skeleton width={80} height={14} />
-            <Skeleton width={60} height={14} />
+        <YStack
+          gap="$2"
+          width="100%"
+          data-async-skeleton="table"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
+          <XStack
+            gap="$3"
+            paddingBottom="$2"
+            borderBottomWidth={1}
+            borderColor="$color5">
+            <Skeleton
+              width={120}
+              height={14}
+            />
+            <Skeleton
+              width={100}
+              height={14}
+            />
+            <Skeleton
+              width={80}
+              height={14}
+            />
+            <Skeleton
+              width={60}
+              height={14}
+            />
           </XStack>
           {Array.from({ length: 5 }).map((_, i) => (
-            <XStack key={i} gap="$3" paddingVertical="$2">
-              <Skeleton width={120} height={14} />
-              <Skeleton width={100} height={14} />
-              <Skeleton width={80} height={14} />
-              <Skeleton width={60} height={14} />
+            <XStack
+              key={i}
+              gap="$3"
+              paddingVertical="$2">
+              <Skeleton
+                width={120}
+                height={14}
+              />
+              <Skeleton
+                width={100}
+                height={14}
+              />
+              <Skeleton
+                width={80}
+                height={14}
+              />
+              <Skeleton
+                width={60}
+                height={14}
+              />
             </XStack>
           ))}
         </YStack>
       );
-    case 'kanban':
+    }
+    case 'kanban': {
       return (
-        <XStack gap="$3" width="100%" data-async-skeleton="kanban" aria-busy aria-label={t('Loading')} {...rest}>
-          {Array.from({ length: 3 }).map((_, col) => (
+        <XStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="kanban"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
+          {Array.from({ length: 3 }).map((_column, col) => (
             <YStack
               key={col}
               width={260}
@@ -244,21 +305,40 @@ export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncB
               borderWidth={1}
               borderColor="$borderColor"
               borderRadius="$4">
-              <XStack justifyContent="space-between" alignItems="center">
-                <Skeleton width={100} height={14} />
+              <XStack
+                justifyContent="space-between"
+                alignItems="center">
+                <Skeleton
+                  width={100}
+                  height={14}
+                />
                 {/* No count badge skeleton — avoid promising a count */}
               </XStack>
-              {Array.from({ length: 3 }).map((_, row) => (
-                <Skeleton key={row} variant="rounded" width="100%" height={64} />
+              {Array.from({ length: 3 }).map((_cell, row) => (
+                <Skeleton
+                  key={row}
+                  variant="rounded"
+                  width="100%"
+                  height={64}
+                />
               ))}
             </YStack>
           ))}
         </XStack>
       );
-    case 'dashboard':
+    }
+    case 'dashboard': {
       return (
-        <YStack gap="$4" width="100%" data-async-skeleton="dashboard" aria-busy aria-label={t('Loading')} {...rest}>
-          <XStack gap="$3" flexWrap="wrap">
+        <YStack
+          gap="$4"
+          width="100%"
+          data-async-skeleton="dashboard"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
+          <XStack
+            gap="$3"
+            flexWrap="wrap">
             {Array.from({ length: 4 }).map((_, i) => (
               <YStack
                 key={i}
@@ -268,48 +348,75 @@ export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncB
                 borderWidth={1}
                 borderColor="$borderColor"
                 borderRadius="$4">
-                <Skeleton width="50%" height={12} />
-                <Skeleton width="70%" height={28} />
-                <Skeleton width="40%" height={12} />
+                <Skeleton
+                  width="50%"
+                  height={12}
+                />
+                <Skeleton
+                  width="70%"
+                  height={28}
+                />
+                <Skeleton
+                  width="40%"
+                  height={12}
+                />
               </YStack>
             ))}
           </XStack>
-          <Skeleton variant="rounded" width="100%" height={200} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={200}
+          />
         </YStack>
       );
-    default:
+    }
+    default: {
       return (
-        <YStack gap="$3" width="100%" data-async-skeleton="generic" aria-busy aria-label={t('Loading')} {...rest}>
+        <YStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="generic"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
           <Skeleton.Text lines={4} />
         </YStack>
       );
+    }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Pending bar (refetch over settled content)
 // ---------------------------------------------------------------------------
 
-function AsyncPendingBar() {
+const AsyncPendingBar = () => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact: true });
   return (
     <XStack
       data-async-pending="true"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui `role` also maps to the native accessibilityRole; `<output>` is web-only
       role="status"
       aria-live="polite"
       aria-label={t('Updating...')}
       alignItems="center"
       {...knobProps.gap}>
-      <Spinner size="small" aria-hidden />
-      <Text {...knobProps.label} color={knobProps.textAccentColor}>
+      <Spinner
+        size="small"
+        aria-hidden
+      />
+      <Text
+        {...knobProps.label}
+        color={knobProps.textAccentColor}>
         {t('Updating...')}
       </Text>
     </XStack>
   );
-}
+};
 
-function defaultEmptyBody({
+const defaultEmptyBody = ({
   empty,
   compact,
   emptyTitle,
@@ -319,7 +426,7 @@ function defaultEmptyBody({
   compact: boolean;
   emptyTitle: string;
   emptyDescription?: string;
-}): ReactNode {
+}): ReactNode => {
   if (empty !== true && isReactNodeSlot(empty)) {
     return empty;
   }
@@ -332,9 +439,9 @@ function defaultEmptyBody({
       description={emptyDescription}
     />
   );
-}
+};
 
-function defaultErrorBody({
+const defaultErrorBody = ({
   error,
   compact,
   errorTitle,
@@ -348,7 +455,7 @@ function defaultErrorBody({
   errorDescription?: string;
   onRetry?: () => void;
   retryLabel: string;
-}): ReactNode {
+}): ReactNode => {
   if (isReactNodeSlot(error)) {
     return error;
   }
@@ -363,14 +470,137 @@ function defaultErrorBody({
       icon=<WarningCircleIcon size={compact ? 24 : 32} />
       action={
         onRetry ? (
-          <Button size={compact ? '$3' : '$4'} onPress={onRetry}>
+          <Button
+            size={compact ? '$3' : '$4'}
+            onPress={onRetry}>
             <Text fontWeight="400">{retryLabel}</Text>
           </Button>
         ) : undefined
       }
     />
   );
+};
+
+interface SettledPaint {
+  kind: 'data' | 'empty';
+  body: ReactNode;
 }
+
+const nextSettledPaint = (
+  previous: SettledPaint | null,
+  status: AsyncStatus,
+  content: ReactNode,
+  emptyBody: ReactNode,
+): SettledPaint | null => {
+  if (status === 'data') {
+    return { kind: 'data', body: content };
+  }
+  if (status === 'empty') {
+    return { kind: 'empty', body: emptyBody };
+  }
+  return previous;
+};
+
+interface AsyncViewArgs {
+  status: AsyncStatus;
+  error: AsyncBoundaryProps['error'];
+  loading: AsyncBoundaryProps['loading'];
+  layout: AsyncBoundaryLayout;
+  content: ReactNode;
+  emptyBody: ReactNode;
+  settled: SettledPaint | null;
+  compact: boolean;
+  errorTitle: string;
+  errorDescription?: string;
+  onRetry?: () => void;
+  retryLabel: string;
+  gap: KnobProps['gap'];
+}
+
+interface AsyncView {
+  body: ReactNode;
+  displayStatus: AsyncStatus;
+  pending: boolean;
+  stale: boolean;
+  showChrome: boolean;
+}
+
+const errorView = (args: AsyncViewArgs): AsyncView => {
+  const { error, settled, content, compact, errorTitle, errorDescription, onRetry, retryLabel, gap } = args;
+  if (isReactNodeSlot(error)) {
+    return { body: error, displayStatus: 'error', pending: false, stale: false, showChrome: false };
+  }
+  if (settled?.kind !== 'data') {
+    return {
+      body: defaultErrorBody({ error, compact, errorTitle, errorDescription, onRetry, retryLabel }),
+      displayStatus: 'error',
+      pending: false,
+      stale: false,
+      showChrome: false,
+    };
+  }
+  const copy = errorCopy(error, errorTitle, errorDescription);
+  const body = (
+    <YStack
+      width="100%"
+      {...gap}>
+      <Alert
+        compact={compact}
+        intent="error"
+        title={copy.title}
+        action={
+          onRetry ? (
+            <Text
+              fontWeight="400"
+              color="$color12"
+              cursor="pointer"
+              userSelect="none"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui Text with onPress; role also maps to the native accessibilityRole and a nested <button> would change the Alert action markup
+              role="button"
+              tabIndex={0}
+              onPress={onRetry}>
+              {retryLabel}
+            </Text>
+          ) : undefined
+        }>
+        {copy.description}
+      </Alert>
+      {content ?? settled.body}
+    </YStack>
+  );
+  return { body, displayStatus: 'data', pending: false, stale: true, showChrome: true };
+};
+
+const loadingView = (args: AsyncViewArgs): AsyncView => {
+  const { settled, content, loading, layout, gap } = args;
+  if (settled === null) {
+    const body = loading !== true && isReactNodeSlot(loading) ? loading : <AsyncSkeleton layout={layout} />;
+    return { body, displayStatus: 'loading', pending: false, stale: false, showChrome: true };
+  }
+  const kept = settled.kind === 'data' ? (content ?? settled.body) : settled.body;
+  const body = (
+    <YStack
+      width="100%"
+      {...gap}>
+      <AsyncPendingBar />
+      {kept}
+    </YStack>
+  );
+  return { body, displayStatus: settled.kind, pending: true, stale: false, showChrome: true };
+};
+
+const deriveAsyncView = (args: AsyncViewArgs): AsyncView => {
+  if (args.status === 'error') {
+    return errorView(args);
+  }
+  if (args.status === 'loading') {
+    return loadingView(args);
+  }
+  if (args.status === 'empty') {
+    return { body: args.emptyBody, displayStatus: 'empty', pending: false, stale: false, showChrome: true };
+  }
+  return { body: args.content, displayStatus: 'data', pending: false, stale: false, showChrome: true };
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -395,7 +625,7 @@ function defaultErrorBody({
  * </AsyncBoundary>
  * ```
  */
-export function AsyncBoundary({
+export const AsyncBoundary = ({
   loading,
   empty,
   error,
@@ -411,7 +641,7 @@ export function AsyncBoundary({
   chrome,
   keepPrevious = true,
   ...stackProps
-}: AsyncBoundaryProps) {
+}: AsyncBoundaryProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact });
   const status = resolveAsyncStatus({ loading, empty, error });
@@ -421,12 +651,10 @@ export function AsyncBoundary({
   const retryLabel = t('Retry');
 
   const emptyBody = defaultEmptyBody({ empty, compact, emptyTitle, emptyDescription });
-  const settledRef = useRef<{ kind: 'data' | 'empty'; body: ReactNode } | null>(null);
-  if (status === 'data') {
-    settledRef.current = { kind: 'data', body: content };
-  } else if (status === 'empty') {
-    settledRef.current = { kind: 'empty', body: emptyBody };
-  }
+  const settledRef = useRef<SettledPaint | null>(null);
+  // oxlint-disable-next-line react/refs -- the last settled paint must be readable in this same render; an effect-updated ref would lag one render and flash the skeleton over kept data
+  settledRef.current = nextSettledPaint(settledRef.current, status, content, emptyBody);
+  // oxlint-disable-next-line react/refs -- same synchronous read of the settled paint recorded above
   const settled = keepPrevious ? settledRef.current : null;
 
   useEffect(() => {
@@ -435,84 +663,33 @@ export function AsyncBoundary({
     }
   }, [status, empty]);
 
-  let displayStatus: AsyncStatus = status;
-  let pending = false;
-  let stale = false;
-  let body: ReactNode = null;
-  let showChrome = status !== 'error';
-
-  if (status === 'error') {
-    if (isReactNodeSlot(error)) {
-      body = error;
-    } else if (settled?.kind === 'data') {
-      stale = true;
-      displayStatus = 'data';
-      showChrome = true;
-      const copy = errorCopy(error, errorTitle, errorDescription);
-      body = (
-        <YStack width="100%" {...knobProps.gap}>
-          <Alert
-            compact={compact}
-            intent="error"
-            title={copy.title}
-            action={
-              onRetry ? (
-                <Text
-                  fontWeight="400"
-                  color="$color12"
-                  cursor="pointer"
-                  userSelect="none"
-                  role="button"
-                  tabIndex={0}
-                  onPress={onRetry}>
-                  {retryLabel}
-                </Text>
-              ) : undefined
-            }>
-            {copy.description}
-          </Alert>
-          {content ?? settled.body}
-        </YStack>
-      );
-    } else {
-      body = defaultErrorBody({
-        error,
-        compact,
-        errorTitle,
-        errorDescription,
-        onRetry,
-        retryLabel,
-      });
-    }
-  } else if (status === 'loading') {
-    if (settled) {
-      pending = true;
-      displayStatus = settled.kind;
-      showChrome = true;
-      const kept = settled.kind === 'data' ? (content ?? settled.body) : settled.body;
-      body = (
-        <YStack width="100%" {...knobProps.gap}>
-          <AsyncPendingBar />
-          {kept}
-        </YStack>
-      );
-    } else {
-      body = loading !== true && isReactNodeSlot(loading) ? loading : <AsyncSkeleton layout={layout} />;
-    }
-  } else if (status === 'empty') {
-    body = emptyBody;
-  } else {
-    body = content;
-  }
+  const { body, displayStatus, pending, stale, showChrome } = deriveAsyncView({
+    status,
+    error,
+    loading,
+    layout,
+    content,
+    emptyBody,
+    settled,
+    compact,
+    errorTitle,
+    errorDescription,
+    onRetry,
+    retryLabel,
+    gap: knobProps.gap,
+  });
 
   const hideBadges = displayStatus === 'error';
-  const ctx: AsyncBoundaryContextValue = {
-    status: displayStatus,
-    hideBadges,
-    error: error ?? null,
-    pending,
-    stale,
-  };
+  const ctx = useMemo<AsyncBoundaryContextValue>(
+    () => ({
+      status: displayStatus,
+      hideBadges,
+      error: error ?? null,
+      pending,
+      stale,
+    }),
+    [displayStatus, hideBadges, error, pending, stale],
+  );
 
   return (
     <AsyncBoundaryContext.Provider value={ctx}>
@@ -529,4 +706,4 @@ export function AsyncBoundary({
       </YStack>
     </AsyncBoundaryContext.Provider>
   );
-}
+};

@@ -34,8 +34,8 @@ type _ValueIsDateRange =
       ? true
       : never
     : never;
-const _valueShape: _ValueIsDateRange = true;
-void _valueShape;
+const valueTypeCheck: _ValueIsDateRange = true;
+void valueTypeCheck;
 
 const NOW = new Date('2026-08-28T14:30:00.000Z');
 const WINDOW = {
@@ -43,8 +43,8 @@ const WINDOW = {
   end: new Date('2026-08-28T14:30:00.000Z'),
 };
 
-function mockRailRect(container: HTMLElement) {
-  const rail = container.querySelector("[data-testid='trs-rail']") as HTMLElement | null;
+const mockRailRect = (container: HTMLElement) => {
+  const rail = container.querySelector<HTMLElement>("[data-testid='trs-rail']");
   if (!rail) {
     return;
   }
@@ -61,9 +61,9 @@ function mockRailRect(container: HTMLElement) {
       return {};
     },
   });
-}
+};
 
-function stubReducedMotion(matches: boolean) {
+const stubReducedMotion = (matches: boolean) => {
   const original = window.matchMedia;
   window.matchMedia = ((query: string) => ({
     matches: query.includes('prefers-reduced-motion') ? matches : false,
@@ -78,7 +78,7 @@ function stubReducedMotion(matches: boolean) {
   return () => {
     window.matchMedia = original;
   };
-}
+};
 
 describe('TimeRangeScrubber geometry', () => {
   it('resolves BINARY via resolveRadiusClass: 0 at none, h/2 at every other stop', () => {
@@ -136,15 +136,15 @@ describe('TimeRangeScrubber geometry', () => {
 
   it("emits DateRangePicker's keys and rejects EUI relative strings", () => {
     const range = applyQuickRange(DEFAULT_QUICK_RANGES[0], NOW);
-    expect(dateRangeKeys(range)).toEqual(['end', 'start']);
+    expect(dateRangeKeys(range)).toStrictEqual(['end', 'start']);
     expect(range.start).toBeInstanceOf(Date);
     expect(range.end).toBeInstanceOf(Date);
     expect(range.end?.getTime()).toBe(NOW.getTime());
     expect(range.start?.getTime()).toBe(NOW.getTime() - 15 * 60 * 1000);
     const asPicker: DateRange = range;
     expect(asPicker.start).toBe(range.start);
-    expect(() => applyQuickRange('now-15m', NOW)).toThrow(/relative/);
-    expect(() => assertAbsoluteDateRange({ start: 'now-15m', end: 'now' })).toThrow(/relative/);
+    expect(() => applyQuickRange('now-15m', NOW)).toThrow(/relative/u);
+    expect(() => assertAbsoluteDateRange({ start: 'now-15m', end: 'now' })).toThrow(/relative/u);
   });
 
   it('drag and mount stay none; jumps tween quick unless reduced motion', () => {
@@ -164,7 +164,7 @@ describe('TimeRangeScrubber geometry', () => {
   });
 });
 
-describe('TimeRangeScrubber', () => {
+describe(TimeRangeScrubber, () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -190,7 +190,7 @@ describe('TimeRangeScrubber', () => {
     expect(result.container.querySelector("[data-part='brush-end']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='brush-band']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='playhead']")).toBeTruthy();
-    expect(result.container.querySelectorAll("[data-part='frame-tick']").length).toBe(2);
+    expect(result.container.querySelectorAll("[data-part='frame-tick']")).toHaveLength(2);
     expect(result.container.querySelector("[data-part='key-tick']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='activity']")).toBeTruthy();
   });
@@ -212,62 +212,75 @@ describe('TimeRangeScrubber', () => {
     );
     const cap = result.container.querySelector("[data-part='cap']");
     expect(cap).toBeTruthy();
-    expect(cap?.textContent?.trim()).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-    expect(cap?.textContent).not.toMatch(/frame/i);
+    expect(cap?.textContent?.trim()).toMatch(/^\d{2}:\d{2}:\d{2}$/u);
+    expect(cap?.textContent).not.toMatch(/frame/iu);
     const nested = cap?.querySelector("[data-part='frame-stale']");
     expect(nested).toBeFalsy();
     const stale = result.container.querySelector("[data-part='frame-stale']");
     expect(stale).toBeTruthy();
-    expect(stale?.textContent).toMatch(/frame/i);
+    expect(stale?.textContent).toMatch(/frame/iu);
     expect(cap?.contains(stale)).toBe(false);
   });
 
   it('paints the grip 0 at borderRadius:none and h/2 at medium', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <TimeRangeScrubber label="None" now={NOW} window={WINDOW} />
+        <TimeRangeScrubber
+          label="None"
+          now={NOW}
+          window={WINDOW}
+        />
       </Preset>,
     );
-    const noneGrip = none.container.querySelector("[data-part='grip']");
-    expect(noneGrip?.getAttribute('data-radius')).toBe('0');
-    expect(noneGrip?.getAttribute('data-radius-class')).toBe('binary');
-    expect(none.container.querySelector("[data-part='brush-band']")?.getAttribute('data-radius')).toBe('0');
+    const noneGrip = none.container.querySelector<HTMLElement>("[data-part='grip']");
+    expect(noneGrip?.dataset.radius).toBe('0');
+    expect(noneGrip?.dataset.radiusClass).toBe('binary');
+    expect(none.container.querySelector<HTMLElement>("[data-part='brush-band']")?.dataset.radius).toBe('0');
 
     const medium = renderWithProviders(
       <Preset overrides={{ borderRadius: 'medium' }}>
-        <TimeRangeScrubber label="Medium" now={NOW} window={WINDOW} />
+        <TimeRangeScrubber
+          label="Medium"
+          now={NOW}
+          window={WINDOW}
+        />
       </Preset>,
     );
-    const mediumGrip = medium.container.querySelector("[data-part='grip']");
-    expect(mediumGrip?.getAttribute('data-radius')).toBe('10');
-    expect(medium.container.querySelector("[data-part='brush-band']")?.getAttribute('data-radius')).toBe('14');
-    expect(medium.container.querySelector("[data-part='brush-start']")?.getAttribute('data-radius')).toBe('3.5');
+    const mediumGrip = medium.container.querySelector<HTMLElement>("[data-part='grip']");
+    expect(mediumGrip?.dataset.radius).toBe('10');
+    expect(medium.container.querySelector<HTMLElement>("[data-part='brush-band']")?.dataset.radius).toBe('14');
+    expect(medium.container.querySelector<HTMLElement>("[data-part='brush-start']")?.dataset.radius).toBe('3.5');
   });
 
   it('a quick-range chip writes absolute DateRange, never a relative string', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: DateRange | null) => void>();
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Range" now={NOW} window={WINDOW} onChange={onChange} />,
+      <TimeRangeScrubber
+        label="Range"
+        now={NOW}
+        window={WINDOW}
+        onChange={onChange}
+      />,
     );
-    const chip = Array.from(result.container.querySelectorAll("[data-part='quick-range']")).find((node) =>
+    const chip = [...result.container.querySelectorAll("[data-part='quick-range']")].find((node) =>
       node.textContent?.includes('15 m'),
     );
     expect(chip).toBeTruthy();
     await act(async () => {
       fireEvent.click(chip!);
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
-    const emitted = onChange.mock.calls[0][0] as DateRange;
-    expect(dateRangeKeys(emitted)).toEqual(['end', 'start']);
+    expect(onChange).toHaveBeenCalledOnce();
+    const emitted = onChange.mock.calls[0][0]!;
+    expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.start).toBeInstanceOf(Date);
     expect(emitted.end).toBeInstanceOf(Date);
-    expect(JSON.stringify(emitted)).not.toMatch(/now-/);
+    expect(JSON.stringify(emitted)).not.toMatch(/now-/u);
     expect(emitted.end?.getTime()).toBe(NOW.getTime());
     expect(emitted.start?.getTime()).toBe(NOW.getTime() - 15 * 60 * 1000);
   });
 
   it('keyboard moves the playhead and announces with position context', async () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn<(time: Date) => void>();
     const result = renderWithProviders(
       <TimeRangeScrubber
         label="Session"
@@ -278,20 +291,18 @@ describe('TimeRangeScrubber', () => {
         gridStepMs={1000}
       />,
     );
-    const grip = result.container.querySelector("[data-part='grip']") as HTMLElement;
+    const grip = result.container.querySelector<HTMLElement>("[data-part='grip']")!;
     expect(Number(grip.getAttribute('tabindex'))).toBeGreaterThan(0);
     await act(async () => {
       fireEvent.keyDown(grip, { key: 'ArrowRight' });
     });
-    expect(onScrub).toHaveBeenCalled();
-    const next = onScrub.mock.calls[0][0] as Date;
-    expect(next.getTime()).toBe(new Date('2026-08-28T14:15:01.000Z').getTime());
+    expect(onScrub).toHaveBeenCalledWith(new Date('2026-08-28T14:15:01.000Z'));
     const live = result.container.querySelector('[aria-live]');
-    expect(live?.textContent).toMatch(/playhead|14:15/i);
+    expect(live?.textContent).toMatch(/playhead|14:15/iu);
   });
 
   it('keyboard selects a brush range and announces it', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: DateRange | null) => void>();
     const start = new Date('2026-08-28T14:10:00.000Z');
     const end = new Date('2026-08-28T14:20:00.000Z');
     const result = renderWithProviders(
@@ -304,20 +315,20 @@ describe('TimeRangeScrubber', () => {
         gridStepMs={60_000}
       />,
     );
-    const handle = result.container.querySelector("[data-part='brush-end']") as HTMLElement;
+    const handle = result.container.querySelector<HTMLElement>("[data-part='brush-end']")!;
     expect(Number(handle.getAttribute('tabindex'))).toBeGreaterThan(0);
     await act(async () => {
       fireEvent.keyDown(handle, { key: 'ArrowRight' });
     });
-    expect(onChange).toHaveBeenCalled();
-    const emitted = onChange.mock.calls[0][0] as DateRange;
-    expect(dateRangeKeys(emitted)).toEqual(['end', 'start']);
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ end: new Date('2026-08-28T14:21:00.000Z') }));
+    const emitted = onChange.mock.calls[0][0]!;
+    expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.end?.getTime()).toBe(new Date('2026-08-28T14:21:00.000Z').getTime());
-    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/range/i);
+    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/range/iu);
   });
 
   it('continuous drag stays 1:1 with the pointer (no jump tween)', async () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn<(time: Date) => void>();
     const result = renderWithProviders(
       <TimeRangeScrubber
         label="Drag"
@@ -328,28 +339,31 @@ describe('TimeRangeScrubber', () => {
       />,
     );
     mockRailRect(result.container);
-    const grip = result.container.querySelector("[data-part='grip']") as HTMLElement;
+    const grip = result.container.querySelector<HTMLElement>("[data-part='grip']")!;
     await act(async () => {
       fireEvent.pointerDown(grip, { clientX: 200, pointerId: 1 });
       fireEvent.pointerMove(grip, { clientX: 300, pointerId: 1 });
     });
-    expect(grip.getAttribute('data-session')).toBe('drag');
-    expect(grip.getAttribute('data-transition')).toBe('none');
-    expect(onScrub).toHaveBeenCalled();
-    const last = onScrub.mock.calls.at(-1)?.[0] as Date;
-    expect(last.getTime()).toBe(fractionToTime(300 / 400, WINDOW).getTime());
+    expect(grip.dataset.session).toBe('drag');
+    expect(grip.dataset.transition).toBe('none');
+    expect(onScrub).toHaveBeenLastCalledWith(fractionToTime(300 / 400, WINDOW));
   });
 
   it('discrete jumps arm the quick tween; reduced motion drops it to none', async () => {
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Jump" now={NOW} window={WINDOW} scrubTime={new Date('2026-08-28T14:15:00.000Z')} />,
+      <TimeRangeScrubber
+        label="Jump"
+        now={NOW}
+        window={WINDOW}
+        scrubTime={new Date('2026-08-28T14:15:00.000Z')}
+      />,
     );
-    const grip = result.container.querySelector("[data-part='grip']") as HTMLElement;
+    const grip = result.container.querySelector<HTMLElement>("[data-part='grip']")!;
     await act(async () => {
       fireEvent.keyDown(grip, { key: 'Home' });
     });
-    expect(grip.getAttribute('data-session')).toBe('jump');
-    expect(grip.getAttribute('data-transition')).toBe('quick');
+    expect(grip.dataset.session).toBe('jump');
+    expect(grip.dataset.transition).toBe('quick');
 
     const restore = stubReducedMotion(true);
     try {
@@ -361,18 +375,18 @@ describe('TimeRangeScrubber', () => {
           scrubTime={new Date('2026-08-28T14:15:00.000Z')}
         />,
       );
-      const reducedGrip = reduced.container.querySelector("[data-part='grip']") as HTMLElement;
+      const reducedGrip = reduced.container.querySelector<HTMLElement>("[data-part='grip']")!;
       await act(async () => {
         fireEvent.keyDown(reducedGrip, { key: 'End' });
       });
-      expect(reducedGrip.getAttribute('data-transition')).toBe('none');
+      expect(reducedGrip.dataset.transition).toBe('none');
     } finally {
       restore();
     }
   });
 
   it('Space lifts and drops; Escape cancels back to the lift origin', async () => {
-    const onScrub = vi.fn();
+    const onScrub = vi.fn<(time: Date) => void>();
     const origin = new Date('2026-08-28T14:15:00.000Z');
     const result = renderWithProviders(
       <TimeRangeScrubber
@@ -384,15 +398,14 @@ describe('TimeRangeScrubber', () => {
         gridStepMs={1000}
       />,
     );
-    const grip = result.container.querySelector("[data-part='grip']") as HTMLElement;
+    const grip = result.container.querySelector<HTMLElement>("[data-part='grip']")!;
     await act(async () => {
       fireEvent.keyDown(grip, { key: ' ' });
       fireEvent.keyDown(grip, { key: 'ArrowRight' });
       fireEvent.keyDown(grip, { key: 'Escape' });
     });
-    const last = onScrub.mock.calls.at(-1)?.[0] as Date;
-    expect(last.getTime()).toBe(origin.getTime());
-    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/cancel/i);
+    expect(onScrub).toHaveBeenLastCalledWith(origin);
+    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/cancel/iu);
   });
 
   it('overflow quick ranges open a FloatingPanel', async () => {
@@ -405,7 +418,7 @@ describe('TimeRangeScrubber', () => {
         quickRanges={[...DEFAULT_QUICK_RANGES]}
       />,
     );
-    const more = result.container.querySelector("[data-part='quick-range-more']") as HTMLElement;
+    const more = result.container.querySelector<HTMLElement>("[data-part='quick-range-more']")!;
     expect(more).toBeTruthy();
     await act(async () => {
       fireEvent.click(more);
@@ -442,7 +455,7 @@ describe('TimeRangeScrubber', () => {
   });
 
   it('form-integrated value is the DateRange shape', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<(value: { window: DateRange }) => void>();
     const Test = () => {
       const form = useForm({
         defaultValues: {
@@ -457,8 +470,15 @@ describe('TimeRangeScrubber', () => {
       });
       return (
         <Form form={form}>
-          <TimeRangeScrubber label="Window" name="window" now={NOW} window={WINDOW} />
-          <Button action="submit" testID="submit-button">
+          <TimeRangeScrubber
+            label="Window"
+            name="window"
+            now={NOW}
+            window={WINDOW}
+          />
+          <Button
+            action="submit"
+            testID="submit-button">
             Save
           </Button>
         </Form>
@@ -473,14 +493,18 @@ describe('TimeRangeScrubber', () => {
       fireEvent.click(result.container.querySelector("[data-testid='submit-button']")!);
     });
     await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalled();
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          window: expect.objectContaining({ start: expect.any(Date), end: expect.any(Date) }),
+        }),
+      );
     });
-    const submitted = onSubmit.mock.calls[0][0].window as DateRange;
-    expect(dateRangeKeys(submitted)).toEqual(['end', 'start']);
+    const submitted = onSubmit.mock.calls[0][0].window;
+    expect(dateRangeKeys(submitted)).toStrictEqual(['end', 'start']);
   });
 
   it('controlled standalone adopts a late value without onChange', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: DateRange | null) => void>();
     const first: DateRange = {
       start: new Date('2026-08-28T14:00:00.000Z'),
       end: new Date('2026-08-28T14:10:00.000Z'),
@@ -490,13 +514,27 @@ describe('TimeRangeScrubber', () => {
       end: new Date('2026-08-28T14:20:00.000Z'),
     };
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Seed" now={NOW} window={WINDOW} value={first} onChange={onChange} />,
+      <TimeRangeScrubber
+        label="Seed"
+        now={NOW}
+        window={WINDOW}
+        value={first}
+        onChange={onChange}
+      />,
     );
-    result.rerender(<TimeRangeScrubber label="Seed" now={NOW} window={WINDOW} value={late} onChange={onChange} />);
+    result.rerender(
+      <TimeRangeScrubber
+        label="Seed"
+        now={NOW}
+        window={WINDOW}
+        value={late}
+        onChange={onChange}
+      />,
+    );
     await waitFor(() => {
-      const readout = result.container.querySelector("[data-part='readout']");
-      expect(readout?.getAttribute('data-start')).toBe(late.start?.toISOString());
-      expect(readout?.getAttribute('data-end')).toBe(late.end?.toISOString());
+      const readout = result.container.querySelector<HTMLElement>("[data-part='readout']");
+      expect(readout?.dataset.start).toBe(late.start?.toISOString());
+      expect(readout?.dataset.end).toBe(late.end?.toISOString());
     });
     expect(onChange).not.toHaveBeenCalled();
   });

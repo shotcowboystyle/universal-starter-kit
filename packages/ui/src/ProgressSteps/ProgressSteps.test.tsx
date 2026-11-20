@@ -21,9 +21,14 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-describe('ProgressSteps', () => {
+describe(ProgressSteps, () => {
   it('marks the current step with aria-current=step', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} />);
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+      />,
+    );
     const current = container.querySelector('[aria-current="step"]');
     expect(current).toBeTruthy();
     expect(container.textContent).toContain('Two');
@@ -35,103 +40,164 @@ describe('ProgressSteps', () => {
   // stock test themes carry no $accentBackground.
   it('paints the current marker with the accent mark', () => {
     const { container } = render(
-      <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-        <ProgressSteps steps={steps} current={1} />
+      <TamaguiProvider
+        config={houseConfig}
+        defaultTheme="light"
+        disableInjectCSS>
+        <ProgressSteps
+          steps={steps}
+          current={1}
+        />
       </TamaguiProvider>,
     );
-    const current = container.querySelector('[aria-current="step"]') as HTMLElement;
+    const current = container.querySelector<HTMLElement>('[aria-current="step"]')!;
     expect(current).toBeTruthy();
     expect(current.className).toContain('_bg-accentBackg');
   });
 
   it('keeps the dark current fill on $accentBackground now the build holds it to 4.5', () => {
     const { container } = render(
-      <TamaguiProvider config={houseConfig} defaultTheme="dark" disableInjectCSS>
-        <ProgressSteps steps={steps} current={1} />
+      <TamaguiProvider
+        config={houseConfig}
+        defaultTheme="dark"
+        disableInjectCSS>
+        <ProgressSteps
+          steps={steps}
+          current={1}
+        />
       </TamaguiProvider>,
     );
-    const current = container.querySelector('[aria-current="step"]') as HTMLElement;
+    const current = container.querySelector<HTMLElement>('[aria-current="step"]')!;
     expect(current).toBeTruthy();
     expect(current.className).toContain('_bg-accentBackg');
   });
 
   it('calls onStepChange when jumping back to a completed step', () => {
-    const onStepChange = vi.fn();
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} onStepChange={onStepChange} />);
+    const onStepChange = vi.fn<(index: number) => void>();
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+        onStepChange={onStepChange}
+      />,
+    );
     const jump = container.querySelector('[aria-label="Go to step 1: One"]');
     expect(jump).toBeTruthy();
-    fireEvent.click(jump as Element);
+    fireEvent.click(jump!);
     expect(onStepChange).toHaveBeenCalledWith(0);
   });
 
   it('keeps upcoming steps inert when linear', () => {
-    const onStepChange = vi.fn();
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={0} onStepChange={onStepChange} />);
+    const onStepChange = vi.fn<(index: number) => void>();
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={0}
+        onStepChange={onStepChange}
+      />,
+    );
     expect(container.querySelector('[aria-label="Go to step 2: Two"]')).toBeFalsy();
     expect(onStepChange).not.toHaveBeenCalled();
   });
 
   it('jumps to upcoming steps when linear is false', () => {
-    const onStepChange = vi.fn();
+    const onStepChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
-      <ProgressSteps steps={steps} current={0} linear={false} onStepChange={onStepChange} />,
+      <ProgressSteps
+        steps={steps}
+        current={0}
+        linear={false}
+        onStepChange={onStepChange}
+      />,
     );
     const jump = container.querySelector('[aria-label="Go to step 2: Two"]');
     expect(jump).toBeTruthy();
-    fireEvent.click(jump as Element);
+    fireEvent.click(jump!);
     expect(onStepChange).toHaveBeenCalledWith(1);
   });
 
   it('does not expose jump buttons without onStepChange', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={0} />);
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={0}
+      />,
+    );
     expect(container.querySelector('[aria-label="Go to step 2: Two"]')).toBeFalsy();
   });
 
   it('publishes density without pinning compact (labels at 400)', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} />);
-    const root = container.querySelector('[role="list"]') as HTMLElement;
-    expect(root.getAttribute('data-density')).toBeTruthy();
-    const labels = Array.from(container.querySelectorAll('[role="list"] *')).filter(
-      (el) => el.textContent === 'Two' && (el as HTMLElement).style?.fontWeight,
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+      />,
+    );
+    const root = container.querySelector<HTMLElement>('[role="list"]')!;
+    expect(root.dataset.density).toBeTruthy();
+    const labels = [...container.querySelectorAll('[role="list"] *')].filter(
+      (el) => el.textContent === 'Two' && ((el as HTMLElement).style?.fontWeight ?? '') !== '',
     );
     for (const el of labels) {
       const weight = (el as HTMLElement).style.fontWeight || getComputedStyle(el).fontWeight;
-      expect(['400', 'normal', '']).toContain(String(weight));
+      expect(['400', 'normal', '']).toContain(weight);
     }
   });
 
   it('paints markers at nestedControl size, not the 44px press floor', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} />);
-    const marker = container.querySelector('[data-nested-px]') as HTMLElement;
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+      />,
+    );
+    const marker = container.querySelector<HTMLElement>('[data-nested-px]')!;
     expect(marker).toBeTruthy();
-    expect(marker.getAttribute('data-nested-px')).toBe('32');
-    const target = container.querySelector('[data-press-min]') as HTMLElement;
-    expect(target.getAttribute('data-press-min')).toBe('44');
+    expect(marker.dataset.nestedPx).toBe('32');
+    const target = container.querySelector<HTMLElement>('[data-press-min]')!;
+    expect(target.dataset.pressMin).toBe('44');
   });
 
   it('declares the marker R-PILL and tracks the borderWidth knob for the ring', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} />);
-    const marker = container.querySelector('[data-nested-px]') as HTMLElement;
-    expect(marker.getAttribute('data-radius-class')).toBe('R-PILL');
-    expect(marker.getAttribute('data-radius-part')).toBe('ProgressSteps marker');
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+      />,
+    );
+    const marker = container.querySelector<HTMLElement>('[data-nested-px]')!;
+    expect(marker.dataset.radiusClass).toBe('R-PILL');
+    expect(marker.dataset.radiusPart).toBe('ProgressSteps marker');
     // Default knobs: borderWidth medium = 1. The previous 2px pin is gone.
-    const upcoming = container.querySelector('[data-step-state="upcoming"]') as HTMLElement;
-    expect(upcoming.getAttribute('data-marker-ring')).toBe('1');
-    const current = container.querySelector('[data-step-state="current"]') as HTMLElement;
-    expect(current.getAttribute('data-marker-ring')).toBe('1');
+    const upcoming = container.querySelector<HTMLElement>('[data-step-state="upcoming"]')!;
+    expect(upcoming.dataset.markerRing).toBe('1');
+    const current = container.querySelector<HTMLElement>('[data-step-state="current"]')!;
+    expect(current.dataset.markerRing).toBe('1');
   });
 
   it('keeps nested marker size on the size channel under compact', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={0} compact />);
-    const root = container.querySelector('[role="list"]') as HTMLElement;
-    expect(root.getAttribute('data-density')).toBe('compact');
-    const marker = container.querySelector('[data-nested-px]') as HTMLElement;
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={0}
+        compact
+      />,
+    );
+    const root = container.querySelector<HTMLElement>('[role="list"]')!;
+    expect(root.dataset.density).toBe('compact');
+    const marker = container.querySelector<HTMLElement>('[data-nested-px]')!;
     // Compact steps space only — nestedControl follows size (medium = 32).
-    expect(marker.getAttribute('data-nested-px')).toBe('32');
+    expect(marker.dataset.nestedPx).toBe('32');
   });
 
   it('hides visible step labels when labels is hidden', () => {
-    const { container } = renderWithProviders(<ProgressSteps steps={steps} current={1} labels="hidden" />);
+    const { container } = renderWithProviders(
+      <ProgressSteps
+        steps={steps}
+        current={1}
+        labels="hidden"
+      />,
+    );
     expect(container.querySelector("[data-labels='hidden']")).toBeTruthy();
     expect(container.textContent).not.toContain('One');
     expect(container.textContent).not.toContain('Two');
@@ -140,7 +206,10 @@ describe('ProgressSteps', () => {
 
   it('flags an error step on the marker', () => {
     const { container } = renderWithProviders(
-      <ProgressSteps steps={[{ label: 'One' }, { label: 'Two', error: true, description: 'Fix this' }]} current={1} />,
+      <ProgressSteps
+        steps={[{ label: 'One' }, { label: 'Two', error: true, description: 'Fix this' }]}
+        current={1}
+      />,
     );
     const marker = container.querySelector('[data-step-state="error"]');
     expect(marker).toBeTruthy();

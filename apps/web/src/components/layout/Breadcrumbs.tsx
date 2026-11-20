@@ -2,10 +2,10 @@
 
 import { Breadcrumbs as BreadcrumbTrail } from '@repo/ui';
 
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
 import { useRouter } from '@/i18n/navigation';
 
-export function Breadcrumbs() {
+export const Breadcrumbs = () => {
   const { items } = useBreadcrumbs();
   const router = useRouter();
 
@@ -18,4 +18,4 @@ export function Breadcrumbs() {
       maxVisible={3}
     />
   );
-}
+};

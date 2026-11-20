@@ -4,19 +4,19 @@ import { createThemesBuilder, defaultAccentTheme, defaultBaseTheme, defaultBuild
 import { configWithoutAnimations } from '@tamagui/config';
 import { animationsCSS } from '@tamagui/config/v5-css';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import * as React from 'react';
 import { TamaguiProvider, createTamagui } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
-import * as Debug from './Debug';
-import * as EmptyStateModule from './EmptyState';
-import { Sidebar, type SidebarSection } from './Sidebar';
-import { Tags, type TagItem } from './Tags';
-import { Toolbar, type ToolbarAction } from './Toolbar';
-import { ViewSwitcher, type ViewOption } from './ViewSwitcher';
-
-import * as Layouts from './index';
+import { Breadcrumbs } from './Breadcrumbs';
+import type { BreadcrumbItem } from './Breadcrumbs';
+import { Sidebar } from './Sidebar';
+import type { SidebarSection } from './Sidebar';
+import { Tags } from './Tags';
+import type { TagItem } from './Tags';
+import { Toolbar } from './Toolbar';
+import type { ToolbarAction } from './Toolbar';
+import { ViewSwitcher } from './ViewSwitcher';
+import type { ViewOption } from './ViewSwitcher';
 
 // House builder themes for the mark assertion — created at MODULE
 // scope: tamagui registers a config's theme variables globally at
@@ -29,13 +29,28 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-afterEach(cleanup);
+const Debug = await import('./Debug');
+const EmptyStateModule = await import('./EmptyState');
+const Layouts = await import('./index');
+
+const classesByPrefix = (el: Element, prefix: string) =>
+  el.className
+    .split(' ')
+    .filter((c) => c.startsWith(prefix))
+    .toSorted();
+
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  el.className
+    .split(' ')
+    .filter((c) => prefixes.some((p) => c.startsWith(p)))
+    .toSorted();
 
 describe('Layouts Index', () => {
+  afterEach(cleanup);
+
   it('should export everything from Debug', () => {
-    for (const key of Object.keys(Debug)) {
-      expect(Layouts).toHaveProperty(key);
-      expect(Layouts[key as keyof typeof Layouts]).toBe((Debug as Record<string, unknown>)[key]);
+    for (const [key, value] of Object.entries(Debug)) {
+      expect(Layouts).toHaveProperty(key, value);
     }
   });
 
@@ -87,7 +102,7 @@ describe('Layouts Index', () => {
     // already been loaded — and loading one drags the storybook runtime into a
     // vitest environment that has no preview API (measured: "does not provide
     // an export named 'definePreview'", whole suite fails to collect).
-    const modules = import.meta.glob<Record<string, unknown>>(
+    const modules = import.meta.glob<object>(
       [
         './*.tsx',
         './*/index.tsx',
@@ -110,7 +125,7 @@ describe('Layouts Index', () => {
         }
       }
     }
-    expect(unreachable).toEqual([]);
+    expect(unreachable).toStrictEqual([]);
   });
 
   // The import a consumer actually writes. It passed before EmptyState was
@@ -125,7 +140,9 @@ describe('Layouts Index', () => {
 // ---------------------------------------------------------------------------
 // Test 1: Sidebar renders sections with ListItem
 // ---------------------------------------------------------------------------
-describe('Sidebar', () => {
+describe(Sidebar, () => {
+  afterEach(cleanup);
+
   it('renders sections and items as ListItem with title and count', () => {
     const sections: SidebarSection[] = [
       {
@@ -156,15 +173,22 @@ describe('Sidebar', () => {
 // ---------------------------------------------------------------------------
 // Test 2: Toolbar action anatomy + callbacks
 // ---------------------------------------------------------------------------
-describe('Toolbar', () => {
+describe(Toolbar, () => {
+  afterEach(cleanup);
+
   it('renders actions from props and calls action callbacks', () => {
-    const onSave = vi.fn();
-    const onDelete = vi.fn();
+    const onSave = vi.fn<() => void>();
+    const onDelete = vi.fn<() => void>();
 
     const primaryActions: ToolbarAction[] = [{ label: 'Save', onPress: onSave, variant: 'primary' }];
     const secondaryActions: ToolbarAction[] = [{ label: 'Delete', onPress: onDelete, variant: 'destructive' }];
 
-    renderWithProviders(<Toolbar primaryActions={primaryActions} secondaryActions={secondaryActions} />);
+    renderWithProviders(
+      <Toolbar
+        primaryActions={primaryActions}
+        secondaryActions={secondaryActions}
+      />,
+    );
 
     const saveButton = screen.getByText('Save');
     const deleteButton = screen.getByText('Delete');
@@ -173,10 +197,10 @@ describe('Toolbar', () => {
     expect(deleteButton).toBeInTheDocument();
 
     fireEvent.click(saveButton);
-    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledOnce();
 
     fireEvent.click(deleteButton);
-    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 
   it('renders independent clusters with gap markers and separates destructive', () => {
@@ -193,8 +217,8 @@ describe('Toolbar', () => {
       />,
     );
 
-    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]').length).toBe(3);
-    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]').length).toBe(0);
+    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]')).toHaveLength(0);
     expect(container.querySelector('[data-toolbar-separator="destructive"]')).toBeTruthy();
     expect(container.querySelector('[data-toolbar-region="destructive"]')).toBeTruthy();
     expect(screen.getByText('Save')).toBeInTheDocument();
@@ -205,14 +229,9 @@ describe('Toolbar', () => {
     // jsdom cannot cascade Tamagui class CSS — measure via atomic classes
     // (tags-trigger.spec idiom). The toolbar button's height class must
     // match a bare size="$3" Button and differ from the ambient default.
-    const classesByPrefix = (el: Element, prefix: string) =>
-      String((el as HTMLElement).className || '')
-        .split(' ')
-        .filter((c) => c.startsWith(prefix))
-        .sort();
     const frameOf = (label: HTMLElement) => {
       let el: HTMLElement | null = label.parentElement;
-      for (let i = 0; i < 8 && el; i++) {
+      for (let i = 0; i < 8 && el; i += 1) {
         if (classesByPrefix(el, '_h-').length > 0) {
           return el;
         }
@@ -230,8 +249,8 @@ describe('Toolbar', () => {
     const toolbarBtn = frameOf(screen.getByText('Save'));
     const small = frameOf(screen.getByText('Small'));
     const medium = frameOf(screen.getByText('Medium'));
-    expect(classesByPrefix(toolbarBtn, '_h-')).toEqual(classesByPrefix(small, '_h-'));
-    expect(classesByPrefix(toolbarBtn, '_h-')).not.toEqual(classesByPrefix(medium, '_h-'));
+    expect(classesByPrefix(toolbarBtn, '_h-')).toStrictEqual(classesByPrefix(small, '_h-'));
+    expect(classesByPrefix(toolbarBtn, '_h-')).not.toStrictEqual(classesByPrefix(medium, '_h-'));
   });
 
   it('fuses consecutive fused actions into a segmented cluster', () => {
@@ -245,8 +264,8 @@ describe('Toolbar', () => {
       />,
     );
 
-    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]').length).toBe(1);
-    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]')).toHaveLength(1);
     expect(screen.getByText('Day')).toBeInTheDocument();
     expect(screen.getByText('Week')).toBeInTheDocument();
     expect(screen.getByText('Refresh')).toBeInTheDocument();
@@ -256,14 +275,14 @@ describe('Toolbar', () => {
     renderWithProviders(<Toolbar primaryActions={[{ label: 'Save', onPress: () => {} }]} />);
     const node = screen.getByText('Save');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
   });
 
   it('explains disabled actions via disabledReason; loading is busy, not bare-disabled', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const onPublish = vi.fn();
+    const onPublish = vi.fn<() => void>();
     renderWithProviders(
       <Toolbar
         primaryActions={[
@@ -297,9 +316,11 @@ describe('Toolbar', () => {
 // ---------------------------------------------------------------------------
 // Test 3: ViewSwitcher renders as ToggleGroup and calls onViewChange
 // ---------------------------------------------------------------------------
-describe('ViewSwitcher', () => {
+describe(ViewSwitcher, () => {
+  afterEach(cleanup);
+
   it('renders view options as ToggleGroup items', () => {
-    const onViewChange = vi.fn();
+    const onViewChange = vi.fn<(view: string) => void>();
 
     const views: ViewOption[] = [
       { type: 'list', label: 'List' },
@@ -307,7 +328,13 @@ describe('ViewSwitcher', () => {
       { type: 'kanban', label: 'Kanban' },
     ];
 
-    renderWithProviders(<ViewSwitcher views={views} currentView="list" onViewChange={onViewChange} />);
+    renderWithProviders(
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={onViewChange}
+      />,
+    );
 
     // All view labels should be visible as ToggleGroup items
     expect(screen.getByText('List')).toBeInTheDocument();
@@ -323,42 +350,48 @@ describe('ViewSwitcher', () => {
     const tint = houseThemes.light.accent11;
     expect(tint).toBeTruthy();
     // Digit prefix Tamagui embeds in the atomic class for a concrete color.
-    const tintDigits = (tint.match(/\d+/g) ?? []).slice(0, 3).join('');
+    const tintDigits = (tint.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
     const views: ViewOption[] = [
       { type: 'list', label: 'List' },
       { type: 'table', label: 'Table' },
     ];
     const { container } = render(
-      <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-        <ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />
+      <TamaguiProvider
+        config={houseConfig}
+        defaultTheme="light"
+        disableInjectCSS>
+        <ViewSwitcher
+          views={views}
+          currentView="list"
+          onViewChange={() => {}}
+        />
       </TamaguiProvider>,
     );
-    const selected = container.querySelector('[data-state="on"]') as HTMLElement;
-    const idle = container.querySelector('[data-state="off"]') as HTMLElement;
+    const selected = container.querySelector<HTMLElement>('[data-state="on"]')!;
+    const idle = container.querySelector<HTMLElement>('[data-state="off"]')!;
     expect(selected).toBeTruthy();
     expect(idle).toBeTruthy();
     expect(selected.className).toContain(`_bg-hsla${tintDigits}`);
     expect(idle.className).not.toContain(`_bg-hsla${tintDigits}`);
   });
 
-  function atoms(el: Element, prefixes: string[]): string[] {
-    return String((el as HTMLElement).className || '')
-      .split(' ')
-      .filter((c) => prefixes.some((p) => c.startsWith(p)))
-      .sort();
-  }
-
   it('measures the segment label on the text node — never 500 or 600 (§6.1)', () => {
     const views: ViewOption[] = [
       { type: 'list', label: 'List' },
       { type: 'table', label: 'Table' },
     ];
-    renderWithProviders(<ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />);
+    renderWithProviders(
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={() => {}}
+      />,
+    );
     const textNode = screen.getByText('List');
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/u);
   });
 
   it('puts data-testid, data-density and data-size on the root', () => {
@@ -367,28 +400,39 @@ describe('ViewSwitcher', () => {
       { type: 'table', label: 'Table' },
     ];
     const { container } = renderWithProviders(
-      <ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />,
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={() => {}}
+      />,
     );
-    const root = container.querySelector('[data-testid="view-switcher"]') as HTMLElement;
+    const root = container.querySelector<HTMLElement>('[data-testid="view-switcher"]')!;
     expect(root).toBeTruthy();
-    expect(root.getAttribute('data-size')).toBeTruthy();
-    expect(root.getAttribute('data-density')).toBeTruthy();
+    expect(root.dataset.size).toBeTruthy();
+    expect(root.dataset.density).toBeTruthy();
   });
 });
 
 // ---------------------------------------------------------------------------
 // Test 4: Breadcrumbs renders items with theme-aware tokens
 // ---------------------------------------------------------------------------
-describe('Breadcrumbs', () => {
+describe(Breadcrumbs, () => {
+  afterEach(cleanup);
+
   it('renders items from props and calls onNavigate', () => {
-    const onNavigate = vi.fn();
+    const onNavigate = vi.fn<(href: string) => void>();
     const items: BreadcrumbItem[] = [
       { label: 'Home', href: '/' },
       { label: 'Products', href: '/products' },
       { label: 'Widget' },
     ];
 
-    renderWithProviders(<Breadcrumbs items={items} onNavigate={onNavigate} />);
+    renderWithProviders(
+      <Breadcrumbs
+        items={items}
+        onNavigate={onNavigate}
+      />,
+    );
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Products')).toBeInTheDocument();
@@ -405,10 +449,12 @@ describe('Breadcrumbs', () => {
 // ---------------------------------------------------------------------------
 // Test 5: Tags render with Button chip patterns
 // ---------------------------------------------------------------------------
-describe('Tags', () => {
+describe(Tags, () => {
+  afterEach(cleanup);
+
   it('renders tag list with chip-styled buttons', () => {
-    const onRemove = vi.fn();
-    const onAdd = vi.fn();
+    const onRemove = vi.fn<(tag: TagItem) => void>();
+    const onAdd = vi.fn<(tagName: string) => void>();
 
     const tags: TagItem[] = [
       { id: 'tag-1', label: 'urgent' },
@@ -416,7 +462,13 @@ describe('Tags', () => {
       { id: 'tag-3', label: 'review' },
     ];
 
-    renderWithProviders(<Tags tags={tags} onAdd={onAdd} onRemove={onRemove} />);
+    renderWithProviders(
+      <Tags
+        tags={tags}
+        onAdd={onAdd}
+        onRemove={onRemove}
+      />,
+    );
 
     expect(screen.getByText('urgent')).toBeInTheDocument();
     expect(screen.getByText('important')).toBeInTheDocument();
@@ -428,6 +480,8 @@ describe('Tags', () => {
 // Test 6: Attachments renders items as ListItem with title and subtitle
 // ---------------------------------------------------------------------------
 describe('Attachments', () => {
+  afterEach(cleanup);
+
   it('renders attachment items with file name and size', () => {
     const { Attachments } = Layouts;
     const items = [
@@ -455,7 +509,12 @@ describe('Attachments', () => {
 
   it('shows the row-shaped skeleton twin while loading with no items', () => {
     const { Attachments } = Layouts;
-    renderWithProviders(<Attachments items={[]} isLoading />);
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        isLoading
+      />,
+    );
 
     expect(document.querySelector('[data-async-skeleton="attachments"]')).toBeTruthy();
     expect(screen.queryByText('No attachments')).toBeNull();
@@ -463,8 +522,14 @@ describe('Attachments', () => {
 
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Attachments } = Layouts;
-    const onRetry = vi.fn();
-    renderWithProviders(<Attachments items={[]} error="File list failed to load" onRetry={onRetry} />);
+    const onRetry = vi.fn<() => void>();
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        error="File list failed to load"
+        onRetry={onRetry}
+      />,
+    );
 
     // Failed load must never masquerade as "no attachments"
     expect(screen.queryByText('No attachments')).toBeNull();
@@ -472,27 +537,38 @@ describe('Attachments', () => {
     expect(screen.getByText('File list failed to load')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('hides the count badge and upload affordance on error', () => {
     const { Attachments } = Layouts;
     renderWithProviders(
-      <Attachments items={[]} label="Files" maxAttachments={10} onAdd={() => {}} error="File list failed to load" />,
+      <Attachments
+        items={[]}
+        label="Files"
+        maxAttachments={10}
+        onAdd={() => {}}
+        error="File list failed to load"
+      />,
     );
 
-    expect(screen.queryByText(/\(0\/10\)/)).toBeNull();
+    expect(screen.queryByText(/\(0\/10\)/u)).toBeNull();
     expect(screen.queryByText('Upload')).toBeNull();
   });
 
   it('Upload label TEXT NODE is weight 400', () => {
     const { Attachments } = Layouts;
-    renderWithProviders(<Attachments items={[]} onAdd={() => {}} />);
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        onAdd={() => {}}
+      />,
+    );
     const node = screen.getByText('Upload');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
   });
 });
 
@@ -500,6 +576,8 @@ describe('Attachments', () => {
 // Test 7: Timeline renders entries as ListItem with author and timestamp
 // ---------------------------------------------------------------------------
 describe('Timeline', () => {
+  afterEach(cleanup);
+
   it('renders timeline entries with author names', () => {
     const { Timeline } = Layouts;
     const entries = [
@@ -527,7 +605,12 @@ describe('Timeline', () => {
 
   it('shows the comment-row skeleton twin while loading with no entries', () => {
     const { Timeline } = Layouts;
-    renderWithProviders(<Timeline entries={[]} isLoading />);
+    renderWithProviders(
+      <Timeline
+        entries={[]}
+        isLoading
+      />,
+    );
 
     expect(document.querySelector('[data-async-skeleton="timeline"]')).toBeTruthy();
     expect(screen.queryByText('No activity yet')).toBeNull();
@@ -535,8 +618,14 @@ describe('Timeline', () => {
 
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Timeline } = Layouts;
-    const onRetry = vi.fn();
-    renderWithProviders(<Timeline entries={[]} error="Activity feed failed to load" onRetry={onRetry} />);
+    const onRetry = vi.fn<() => void>();
+    renderWithProviders(
+      <Timeline
+        entries={[]}
+        error="Activity feed failed to load"
+        onRetry={onRetry}
+      />,
+    );
 
     // Failed load must never masquerade as "no activity"
     expect(screen.queryByText('No activity yet')).toBeNull();
@@ -544,7 +633,7 @@ describe('Timeline', () => {
     expect(screen.getByText('Activity feed failed to load')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('hides the composer and entry count on error', () => {
@@ -559,13 +648,18 @@ describe('Timeline', () => {
       },
     ];
     renderWithProviders(
-      <Timeline entries={entries} label="Activity" error="Activity feed failed to load" onCommentSubmit={() => {}} />,
+      <Timeline
+        entries={entries}
+        label="Activity"
+        error="Activity feed failed to load"
+        onCommentSubmit={() => {}}
+      />,
     );
 
     // Composer would invite comments into a feed that failed to load
     expect(screen.queryByLabelText('Add Comment')).toBeNull();
     // Count badge and stale feed rows hide behind the error chrome
-    expect(screen.queryByText(/1 entry/)).toBeNull();
+    expect(screen.queryByText(/1 entry/u)).toBeNull();
     expect(screen.queryByText('Stale entry')).toBeNull();
   });
 
@@ -587,7 +681,12 @@ describe('Timeline', () => {
         timestamp: '2026-01-15T11:00:00Z',
       },
     ];
-    renderWithProviders(<Timeline entries={entries} label="Activity" />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        label="Activity"
+      />,
+    );
 
     // The whole formatted run rides FSI…PDI — under RTL "2 entries" must not
     // reorder to "entries 2" (the measured pre-fix failure).

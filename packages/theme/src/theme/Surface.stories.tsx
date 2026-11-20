@@ -1,7 +1,7 @@
 import { SizableText, XStack, YStack } from 'tamagui';
 
 import { Surface } from './Surface';
-import { useResolvedKnobs } from './useResolvedKnobs';
+import { useResolvedKnobs } from './use-resolved-knobs';
 
 export default {
   title: 'Theme/Surface',
@@ -18,14 +18,14 @@ export default {
 };
 
 /** Spreads the resolved recipe on a stack so the wrapper's effect is measurable. */
-function Probe({ label }: { label: string }) {
+const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
-    'data-size': String(knobProps.size),
-    'data-space': String(knobProps.space),
-    'data-size-token': String(knobProps.sizeToken),
-    'data-gap': String(knobProps.gap.gap),
-  } as Record<string, unknown>;
+    'data-size': knobProps.size,
+    'data-space': knobProps.space,
+    'data-size-token': knobProps.sizeToken,
+    'data-gap': knobProps.gap.gap,
+  };
   return (
     <YStack
       {...knobProps.surface}
@@ -34,17 +34,22 @@ function Probe({ label }: { label: string }) {
       padding={knobProps.gap.gap}
       testID={`surface-probe-${label}`}
       {...attrs}>
-      <SizableText fontSize={knobProps.sizeToken as never} testID={`surface-text-${label}`}>
-        {label}: token {String(knobProps.sizeToken)}, gap {String(knobProps.gap.gap)}
+      <SizableText
+        fontSize={knobProps.sizeToken as never}
+        testID={`surface-text-${label}`}>
+        {label}: token {knobProps.sizeToken}, gap {knobProps.gap.gap}
       </SizableText>
     </YStack>
   );
-}
+};
 
 export const main = {
   name: 'Main',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Probe label="outside" />
       <Surface size="small">
         <Probe label="small" />
@@ -60,7 +65,10 @@ export const main = {
 export const nestedClamp = {
   name: 'Nested clamp',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Surface size="small">
         <Surface size="large">
           <Probe label="large-in-small" />
@@ -79,7 +87,10 @@ export const nestedClamp = {
 export const density = {
   name: 'Density',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Surface density="comfortable">
         <Probe label="comfortable" />
       </Surface>

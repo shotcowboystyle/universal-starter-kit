@@ -8,13 +8,14 @@ import { YStack } from 'tamagui';
 
 import { EmptyState } from './EmptyState';
 
-function PageCanvas({ children }: { children: ReactNode }) {
-  return (
-    <YStack minHeight={520} width="100%" backgroundColor="$background">
-      {children}
-    </YStack>
-  );
-}
+const PageCanvas = ({ children }: { children: ReactNode }) => (
+  <YStack
+    minHeight={520}
+    width="100%"
+    backgroundColor="$background">
+    {children}
+  </YStack>
+);
 
 const meta: Meta<typeof EmptyState> = {
   title: 'Components/EmptyState',
@@ -47,12 +48,17 @@ export const Default: Story = {
   name: 'Main',
   render: (args) => (
     <PageCanvas>
-      <EmptyState {...args} icon=<TrayIcon size={40} /> action={<Button>Create record</Button>} />
+      <EmptyState
+        {...args}
+        icon=<TrayIcon size={40} />
+        action={<Button>Create record</Button>}
+      />
     </PageCanvas>
   ),
 };
 
 export const TitleOnly: Story = {
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- must be undefined (not null) to override the meta-level default description arg
   args: { description: undefined },
   render: (args) => (
     <PageCanvas>
@@ -64,7 +70,10 @@ export const TitleOnly: Story = {
 export const NoIcon: Story = {
   render: (args) => (
     <PageCanvas>
-      <EmptyState {...args} action={<Button>Retry</Button>} />
+      <EmptyState
+        {...args}
+        action={<Button>Retry</Button>}
+      />
     </PageCanvas>
   ),
 };
@@ -90,16 +99,25 @@ export const LongCopyNarrow: Story = {
   args: {
     title: 'Zusammengehörigkeitsgefühl-Konfigurationsproblem',
     description:
-      'A very long translated description that runs on and on to verify the copy stays centred, wraps within its reading width, and never overflows the narrow container horizontally.',
+      'A very long translated description that runs on and on to verify the copy stays centered, wraps within its reading width, and never overflows the narrow container horizontally.',
   },
   render: (args) => (
-    <YStack width={300} borderWidth={1} borderColor="$color6" borderStyle="dashed">
-      <EmptyState {...args} icon=<TrayIcon size={32} /> action={<Button>Act</Button>} />
+    <YStack
+      width={300}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
+      <EmptyState
+        {...args}
+        icon=<TrayIcon size={32} />
+        action={<Button>Act</Button>}
+      />
     </YStack>
   ),
 };
 
 export const Compact: Story = {
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- must be undefined (not null) to override the meta-level default description arg
   args: { title: 'No matching records', description: undefined },
   parameters: {
     docs: {
@@ -109,8 +127,15 @@ export const Compact: Story = {
     },
   },
   render: (args) => (
-    <YStack width={360} borderWidth={1} borderColor="$color6" borderStyle="dashed">
-      <EmptyState compact {...args} />
+    <YStack
+      width={360}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
+      <EmptyState
+        compact
+        {...args}
+      />
     </YStack>
   ),
 };
@@ -130,12 +155,16 @@ export const NoResults: Story = {
   },
   render: (args) => (
     <PageCanvas>
-      <EmptyState {...args} icon=<MagnifyingGlassIcon size={40} /> action={<Button>Clear filters</Button>} />
+      <EmptyState
+        {...args}
+        icon=<MagnifyingGlassIcon size={40} />
+        action={<Button>Clear filters</Button>}
+      />
     </PageCanvas>
   ),
 };
 
-export const Error: Story = {
+const ErrorState: Story = {
   args: {
     title: "Couldn't load records",
     description: 'Check your connection, then try again.',
@@ -152,9 +181,14 @@ export const Error: Story = {
       <EmptyState
         {...args}
         intent="error"
-        icon=<WarningCircleIcon size={40} weight="fill" />
+        icon=<WarningCircleIcon
+          size={40}
+          weight="fill"
+        />
         action={<Button>Retry</Button>}
       />
     </PageCanvas>
   ),
 };
+
+export { ErrorState as Error };

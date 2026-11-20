@@ -25,40 +25,34 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { H1, H2, H3, Heading } from './Heading';
 
-afterEach(cleanup);
-
 const TITLE = 'Workspace Settings';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_heading` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
-  return (
-    String((el as HTMLElement).className || '')
-      .split(' ')
-      .find((c) => c.startsWith('font_')) ?? ''
-  );
-}
+const fontScopeClass = (el: Element): string =>
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
-function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] {
+const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
-  if (expectedTag) {
+  if (expectedTag !== undefined && expectedTag !== '') {
     // The text node IS the heading element — not a frame around it.
     expect(textNode.tagName).toBe(expectedTag);
   }
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Heading — fontWeight reaches the heading text node', () => {
+  afterEach(cleanup);
+
   it('changes weight on a fontWeight flip, pinned to 400/700', () => {
     const regular = renderHeadingClasses(
       <Preset overrides={{ fontWeight: 'regular' }}>
@@ -75,9 +69,9 @@ describe('house Heading — fontWeight reaches the heading text node', () => {
     const explicit400 = renderHeadingClasses(<Heading fontWeight="400">{TITLE}</Heading>, ['_fow-']);
     const explicit700 = renderHeadingClasses(<Heading fontWeight="700">{TITLE}</Heading>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('H1 changes weight on the same flip (the page title is a heading too)', () => {
@@ -98,9 +92,9 @@ describe('house Heading — fontWeight reaches the heading text node', () => {
     const explicit400 = renderHeadingClasses(<H1 fontWeight="400">{TITLE}</H1>, ['_fow-'], 'H1');
     const explicit700 = renderHeadingClasses(<H1 fontWeight="700">{TITLE}</H1>, ['_fow-'], 'H1');
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('changes family on a headingFont flip (props, not the web-only CSS rescue)', () => {
@@ -126,10 +120,14 @@ describe('house Heading — fontWeight reaches the heading text node', () => {
 });
 
 describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () => {
+  afterEach(cleanup);
+
   it('pins family and weight to mono 400, ignoring heading knobs', () => {
     const byDefault = renderHeadingClasses(<H3>{TITLE}</H3>, ['_fow-'], 'H3');
     const explicit = renderHeadingClasses(
-      <H3 fontFamily="$mono" fontWeight="400">
+      <H3
+        fontFamily="$mono"
+        fontWeight="400">
         {TITLE}
       </H3>,
       ['_fow-'],
@@ -143,8 +141,8 @@ describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () =
       'H3',
     );
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(explicit);
-    expect(headingSans).toEqual(explicit);
+    expect(byDefault).toStrictEqual(explicit);
+    expect(headingSans).toStrictEqual(explicit);
 
     renderWithProviders(<H3>{TITLE}</H3>);
     expect(fontScopeClass(screen.getByText(TITLE))).toBe('font_mono');
@@ -153,25 +151,31 @@ describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () =
 
   it('consumer eject still wins over the house pin (STD-EJECT-LAST)', () => {
     const ejected = renderHeadingClasses(
-      <H3 fontFamily="$heading" fontWeight="700">
+      <H3
+        fontFamily="$heading"
+        fontWeight="700">
         {TITLE}
       </H3>,
       ['_ff-', '_fow-'],
       'H3',
     );
     const explicit = renderHeadingClasses(
-      <H3 fontFamily="$heading" fontWeight="700">
+      <H3
+        fontFamily="$heading"
+        fontWeight="700">
         {TITLE}
       </H3>,
       ['_ff-', '_fow-'],
       'H3',
     );
-    expect(ejected).toEqual(explicit);
-    expect(ejected).not.toEqual(renderHeadingClasses(<H3>{TITLE}</H3>, ['_ff-', '_fow-'], 'H3'));
+    expect(ejected).toStrictEqual(explicit);
+    expect(ejected).not.toStrictEqual(renderHeadingClasses(<H3>{TITLE}</H3>, ['_ff-', '_fow-'], 'H3'));
   });
 });
 
 describe('house H1 — pageTitleScale reaches the title text node', () => {
+  afterEach(cleanup);
+
   it('changes size on a pageTitleScale flip, and moderate is the default', () => {
     const byDefault = renderHeadingClasses(<H1>{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
     const moderate = renderHeadingClasses(
@@ -189,8 +193,8 @@ describe('house H1 — pageTitleScale reaches the title text node', () => {
       'H1',
     );
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(moderate);
-    expect(byDefault).not.toEqual(display);
+    expect(byDefault).toStrictEqual(moderate);
+    expect(byDefault).not.toStrictEqual(display);
   });
 
   it('resolves through the one page-title table: the knob equals the explicit size step', () => {
@@ -207,8 +211,8 @@ describe('house H1 — pageTitleScale reaches the title text node', () => {
       'H1',
     );
     const explicit10 = renderHeadingClasses(<H1 size="$10">{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
-    expect(moderate).toEqual(explicit8);
-    expect(display).toEqual(explicit10);
+    expect(moderate).toStrictEqual(explicit8);
+    expect(display).toStrictEqual(explicit10);
   });
 
   it("does NOT re-step H2 — the dial is the page title's, not every heading's", () => {
@@ -226,7 +230,7 @@ describe('house H1 — pageTitleScale reaches the title text node', () => {
       ['_fos-', '_lh-'],
       'H2',
     );
-    expect(moderate).toEqual(display);
+    expect(moderate).toStrictEqual(display);
   });
 
   it('the per-instance eject still wins over the knob (PageHeader contract)', () => {
@@ -238,7 +242,7 @@ describe('house H1 — pageTitleScale reaches the title text node', () => {
       'H1',
     );
     const moderate = renderHeadingClasses(<H1>{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
-    expect(ejected).toEqual(moderate);
+    expect(ejected).toStrictEqual(moderate);
   });
 });
 

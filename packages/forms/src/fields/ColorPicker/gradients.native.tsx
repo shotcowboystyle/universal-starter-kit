@@ -14,10 +14,29 @@ const HUE_LOCATIONS = [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1] as const;
 
 const TRANSPARENT = 'rgba(0,0,0,0)';
 
-export function SaturationBackground({ hueColor, width, height }: { hueColor: string; width: number; height: number }) {
+const styles = StyleSheet.create({
+  host: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+  },
+});
+
+export const SaturationBackground = ({
+  hueColor,
+  width,
+  height,
+}: {
+  hueColor: string;
+  width: number;
+  height: number;
+}) => {
   const box = { width, height };
   return (
-    <RNView style={[styles.host, box]} pointerEvents="none">
+    <RNView
+      style={[styles.host, box]}
+      pointerEvents="none">
       <LinearGradient
         colors={['#FFFFFF', hueColor]}
         start={{ x: 0, y: 0.5 }}
@@ -32,15 +51,14 @@ export function SaturationBackground({ hueColor, width, height }: { hueColor: st
       />
     </RNView>
   );
-}
+};
 
-function axis(orientation: 'horizontal' | 'vertical' | undefined) {
-  return orientation === 'vertical'
+const axis = (orientation: 'horizontal' | 'vertical' | undefined) =>
+  orientation === 'vertical'
     ? { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } }
     : { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } };
-}
 
-export function HueBackground({
+export const HueBackground = ({
   width,
   height,
   orientation = 'horizontal',
@@ -48,7 +66,7 @@ export function HueBackground({
   width: number;
   height: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const { start, end } = axis(orientation);
   return (
     <LinearGradient
@@ -60,9 +78,9 @@ export function HueBackground({
       pointerEvents="none"
     />
   );
-}
+};
 
-export function AlphaBackground({
+export const AlphaBackground = ({
   hex,
   width,
   height,
@@ -72,23 +90,21 @@ export function AlphaBackground({
   width: number;
   height: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const box = { width, height };
   const { start, end } = axis(orientation);
   return (
-    <RNView style={[styles.host, box]} pointerEvents="none">
+    <RNView
+      style={[styles.host, box]}
+      pointerEvents="none">
       <RNView style={[StyleSheet.absoluteFill, { backgroundColor: '#E5E5E5' }]} />
       <RNView style={[StyleSheet.absoluteFill, { backgroundColor: '#BBBBBB', opacity: 0.35 }]} />
-      <LinearGradient colors={[TRANSPARENT, hex]} start={start} end={end} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={[TRANSPARENT, hex]}
+        start={start}
+        end={end}
+        style={StyleSheet.absoluteFill}
+      />
     </RNView>
   );
-}
-
-const styles = StyleSheet.create({
-  host: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    overflow: 'hidden',
-  },
-});
+};

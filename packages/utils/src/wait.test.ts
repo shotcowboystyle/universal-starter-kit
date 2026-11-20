@@ -2,17 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { formatServiceList, waitServices } from './wait';
 
-describe('formatServiceList', () => {
+describe(formatServiceList, () => {
   it('returns single service as-is', () => {
-    expect(formatServiceList(['frappe'])).toBe('frappe');
+    expect(formatServiceList(['api'])).toBe('api');
   });
 
   it("joins two services with 'and'", () => {
-    expect(formatServiceList(['frappe', 'postgres'])).toBe('frappe and postgres');
+    expect(formatServiceList(['api', 'postgres'])).toBe('api and postgres');
   });
 
   it("joins three services with commas and 'and'", () => {
-    expect(formatServiceList(['frappe', 'postgres', 'keycloak'])).toBe('frappe, postgres and keycloak');
+    expect(formatServiceList(['api', 'postgres', 'keycloak'])).toBe('api, postgres and keycloak');
   });
 
   it('joins four services correctly', () => {
@@ -20,15 +20,13 @@ describe('formatServiceList', () => {
   });
 });
 
-describe('waitServices', () => {
+describe('waitServices constant', () => {
   it('contains the expected service names', () => {
-    expect(waitServices).toContain('frappe');
     expect(waitServices).toContain('postgres');
-    expect(waitServices).toContain('mariadb');
     expect(waitServices).toContain('keycloak');
   });
 
-  it('has exactly 4 services', () => {
-    expect(waitServices).toHaveLength(4);
+  it('has exactly 2 services', () => {
+    expect(waitServices).toHaveLength(2);
   });
 });

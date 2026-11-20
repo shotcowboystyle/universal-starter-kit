@@ -15,10 +15,10 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
   wasKeyboardFocus,
-  type GroupPosition,
   transitionProps,
 } from '@repo/theme';
-import type { ReactNode } from 'react';
+import type { GroupPosition } from '@repo/theme';
+import type { ComponentProps, ReactNode } from 'react';
 import {
   Children,
   Fragment,
@@ -29,8 +29,8 @@ import {
   useId,
   useMemo,
   useState,
+  forwardRef,
 } from 'react';
-import { forwardRef } from 'react';
 // tamagui 2.0.0-rc dropped the StackProps alias; YStackProps is the same shape.
 import type { SizeTokens, YStackProps as StackProps, TamaguiElement } from 'tamagui';
 import {
@@ -44,9 +44,9 @@ import {
 } from 'tamagui';
 
 import { AnimateHeight } from '../AnimateHeight';
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { themed } from '../icons/themed';
-import { wrapBareTextChildren } from '../shared/textRidesText';
+import { wrapBareTextChildren } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -104,7 +104,7 @@ type AccordionAnyModeProps = AccordionCommonProps & {
   type?: AccordionType;
   value?: string | string[];
   defaultValue?: string | string[];
-  onValueChange?: (value: any) => void;
+  onValueChange?: (value: string | string[]) => void;
   collapsible?: boolean;
 };
 
@@ -177,31 +177,32 @@ const AccordionTriggerFillCtx = createContext<string | undefined>(undefined);
  * accent tint measured 4.05:1). Bare string titles already get this
  * from the trigger.
  */
-export function useAccordionTriggerInk(preferred: string): string {
-  return useLegibleInkOn(useContext(AccordionTriggerFillCtx), preferred);
-}
+export const useAccordionTriggerInk = (preferred: string): string =>
+  useLegibleInkOn(useContext(AccordionTriggerFillCtx), preferred);
 
-function useAccordionKnobs() {
+const useAccordionKnobs = () => {
   const { compact, size } = useContext(AccordionCtx);
   return useResolvedKnobs({ component: 'Accordion', compact, size });
-}
+};
 
-function tokenPx(token: string | number | undefined, fallback: number, scale: 'size' | 'fontSize'): number {
-  if (typeof token === 'number' && Number.isFinite(token)) {
-    return token;
+const tokenPx = (token: string | number | undefined, fallback: number, scale: 'size' | 'fontSize'): number => {
+  if (Number.isFinite(token)) {
+    return Number(token);
   }
   if (token == null) {
     return fallback;
   }
   try {
     const tokens = getTokens();
-    const raw = getVariableValue((tokens as any)[scale]?.[token] ?? token);
-    const n = typeof raw === 'number' ? raw : Number.parseFloat(String(raw));
+    const raw: unknown = getVariableValue(tokens[scale][token] ?? token);
+    // parseFloat (not Number) so unit-suffixed strings like "12px" still resolve.
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- parseFloat tolerates trailing units, Number() would not
+    const n = Number.parseFloat(String(raw));
     return Number.isFinite(n) && n > 0 ? n : fallback;
   } catch {
     return fallback;
   }
-}
+};
 
 // ── Elevation ─────────────────────────────────────────────────
 // The card item frame is a plain (Collapsible) View — tamagui's `elevation`
@@ -210,51 +211,69 @@ function tokenPx(token: string | number | undefined, fallback: number, scale: 's
 // mirror forms/InputParts + elevationToProps; native theme emits numeric
 // tokens 20/28/44 per SB-N-04).
 
-const cardElevationShadow: Record<string, Record<string, any>> = {
-  $1: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
-    // house light angle: blur = 2 x y-offset on every tier (Axiom 14)
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  $2: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  $4: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
-  },
+interface CardShadow {
+  shadowColor: string;
+  shadowOffset: { width: number; height: number };
+  shadowOpacity: number;
+  shadowRadius: number;
+  elevation: number;
+}
+
+const CARD_SHADOW_1: CardShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.12,
+  // house light angle: blur = 2 x y-offset on every tier (Axiom 14)
+  shadowRadius: 2,
+  elevation: 2,
 };
 
-const elevationKeyAlias: Record<string, string> = { '20': '$1', '28': '$2', '44': '$4' };
+const CARD_SHADOW_2: CardShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.15,
+  shadowRadius: 6,
+  elevation: 4,
+};
 
-function getCardElevationProps(token: string | number | undefined): Record<string, any> {
+const CARD_SHADOW_4: CardShadow = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 10 },
+  shadowOpacity: 0.15,
+  shadowRadius: 20,
+  elevation: 8,
+};
+
+const cardElevationShadow = new Map<string, CardShadow>([
+  ['$1', CARD_SHADOW_1],
+  ['$2', CARD_SHADOW_2],
+  ['$4', CARD_SHADOW_4],
+]);
+
+const elevationKeyAlias = new Map<string, string>([
+  ['20', '$1'],
+  ['28', '$2'],
+  ['44', '$4'],
+]);
+
+const getCardElevationProps = (token: string | number | undefined): Partial<CardShadow> => {
   if (token == null) {
     return {};
   }
-  const key = elevationKeyAlias[String(token)] ?? String(token);
-  const shadow = cardElevationShadow[key] ?? cardElevationShadow.$2;
+  const key = elevationKeyAlias.get(String(token)) ?? String(token);
+  const shadow = cardElevationShadow.get(key) ?? CARD_SHADOW_2;
   if (isWeb) {
-    const { elevation: _elevation, ...webShadow } = shadow;
-    return webShadow;
+    const { shadowColor, shadowOffset, shadowOpacity, shadowRadius } = shadow;
+    return { shadowColor, shadowOffset, shadowOpacity, shadowRadius };
   }
   return shadow;
-}
+};
 
 // ── Chevron ───────────────────────────────────────────────────
 
-const ThemedCaretDown = themed(CaretDownIcon as any);
+const ThemedCaretDown = themed(CaretDownIcon);
 
-function Chevron({
+const Chevron = ({
   open,
   size,
   color,
@@ -264,20 +283,21 @@ function Chevron({
   size: number;
   color: string | undefined;
   transition: ReturnType<typeof useResolvedKnobs>['knobProps']['transition'];
-}) {
-  return (
-    <View
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-      rotate={open ? '180deg' : '0deg'}
-      aria-hidden
-      pointerEvents="none"
-      {...transitionProps(transition)}>
-      <ThemedCaretDown color={color} size={size} />
-    </View>
-  );
-}
+}) => (
+  <View
+    alignItems="center"
+    justifyContent="center"
+    flexShrink={0}
+    rotate={open ? '180deg' : '0deg'}
+    aria-hidden
+    pointerEvents="none"
+    {...transitionProps(transition)}>
+    <ThemedCaretDown
+      color={color}
+      size={size}
+    />
+  </View>
+);
 
 // ── Stacked-group children ────────────────────────────────────
 
@@ -288,34 +308,133 @@ function Chevron({
  * rounded) and a DEV warn fires, because that silent fallback is exactly
  * the geometry defect the stacked-group rule bans.
  */
-function flattenStackChildren(children: ReactNode): ReturnType<typeof Children.toArray> {
+const flattenStackChildren = (children: ReactNode): ReturnType<typeof Children.toArray> => {
   const out: ReturnType<typeof Children.toArray> = [];
+  // oxlint-disable-next-line react/no-react-children -- toArray flattens arrays and assigns stable keys, which the stacked-group position count relies on
   for (const child of Children.toArray(children)) {
-    if (isValidElement(child) && child.type === Fragment) {
-      out.push(...flattenStackChildren((child.props as { children?: ReactNode }).children));
+    if (isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment) {
+      out.push(...flattenStackChildren(child.props.children));
     } else {
       out.push(child);
     }
   }
   return out;
-}
+};
+
+// ── Item ──────────────────────────────────────────────────────
+
+const AccordionItem = forwardRef<TamaguiElement, AccordionItemProps>(function AccordionItem(
+  { value, disabled: disabledProp, children, ...props },
+  ref,
+) {
+  const { knobProps } = useAccordionKnobs();
+  const { variant, openValues, disabled: rootDisabled } = useContext(AccordionCtx);
+  // Plain items get their stacked-group position from the root; card items
+  // are discrete surfaces, each its own group of one.
+  const position = useGroupPosition() ?? 'only';
+  const open = openValues.includes(value);
+  const disabled = rootDisabled === true ? true : disabledProp;
+
+  // Stable ids for aria wiring (React.useId is stable across renders).
+  const uid = useId();
+  const itemCtx = useMemo<AccordionItemCtxValue>(
+    () => ({
+      open,
+      disabled,
+      triggerId: `mp1-accordion-trigger-${uid}`,
+      contentId: `mp1-accordion-content-${uid}`,
+      position,
+    }),
+    [open, disabled, uid, position],
+  );
+
+  const { elevation: elevationToken, ...elevatedSurfaceRest } = knobProps.elevatedSurface;
+  const variantProps =
+    variant === 'card'
+      ? {
+          // card surface honoring radius/elevation/border knobs
+          ...elevatedSurfaceRest,
+          ...getCardElevationProps(elevationToken),
+          overflow: 'hidden' as const,
+        }
+      : {
+          // plain: edge-to-edge divider rows (SP-EDGE); the divider sits
+          // BETWEEN items only — a rule under the last item would put a
+          // straight edge against the group's rounded bottom highlight.
+          borderBottomWidth: position === 'last' || position === 'only' ? 0 : 1,
+          borderColor: componentColors.surface.border,
+        };
+
+  return (
+    <AccordionItemCtx.Provider value={itemCtx}>
+      <TamaguiAccordion.Item
+        ref={ref}
+        value={value}
+        disabled={disabled}
+        {...variantProps}
+        {...props}>
+        {children}
+      </TamaguiAccordion.Item>
+    </AccordionItemCtx.Provider>
+  );
+});
 
 // ── Root ──────────────────────────────────────────────────────
 
+const toOpenValues = (current: string | string[] | undefined): string[] => {
+  if (Array.isArray(current)) {
+    return current;
+  }
+  return current == null || current === '' ? [] : [current];
+};
+
+/**
+ * Flush plain items form ONE stacked group: tell each item its position so
+ * triggers round only the group's outer corners (Axiom 1 R-OUTER via theme
+ * groupGeometry). Card items are discrete gapped surfaces — each is its own
+ * group of one.
+ */
+const PlainItemGroup = ({ children }: { children?: ReactNode }) => {
+  const items = flattenStackChildren(children);
+  return items.map((child, index) => {
+    if (isValidElement(child) && child.type !== AccordionItem) {
+      devWarn('opaque-stack-group', {
+        component: 'Accordion',
+        suggest:
+          'render Accordion.Item as direct children (arrays/fragments are fine) so first/middle/last corner geometry can resolve',
+      });
+    }
+    const position = getGroupPosition(index, items.length);
+    // toArray assigns every element a stable key; only bare text children fall back to the index.
+    const key = (isValidElement(child) ? child.key : null) ?? index;
+    return (
+      <GroupPositionContext.Provider
+        // oxlint-disable-next-line react-doctor/no-array-index-as-key -- Children.toArray keys every element; the index only keys bare text nodes
+        key={key}
+        value={position}>
+        {child}
+      </GroupPositionContext.Provider>
+    );
+  });
+};
+
 const AccordionRoot = forwardRef<TamaguiElement, AccordionProps>(function Accordion(props, ref) {
+  // SAFETY: AccordionProps is the discriminated union of the two modes; AccordionAnyModeProps is their non-discriminated merge and only widens the callback/value shapes the handlers below re-narrow by `type`.
   const {
     type = 'single',
     value: valueProp,
     defaultValue,
     onValueChange,
+    collapsible: collapsibleProp,
     variant = 'plain',
     disabled,
     compact: compactProp,
     size,
     children,
     ...stackProps
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the two mode interfaces cannot be intersected (disjoint `type` literals), so the merged shape is narrower than the union by construction
   } = props as AccordionAnyModeProps;
-  const collapsible = type === 'single' ? ((props as AccordionSingleModeProps).collapsible ?? true) : true;
+  const collapsible = type === 'single' ? (collapsibleProp ?? true) : true;
   const parent = useContext(AccordionCtx);
   // Nested accordions only step DOWN (compact density). A nested root cannot
   // opt into a larger scale than the surface it sits in. Do not coerce an
@@ -339,17 +458,25 @@ const AccordionRoot = forwardRef<TamaguiElement, AccordionProps>(function Accord
       if (!isControlled) {
         setInternalValue(next);
       }
-      onValueChange?.(next as any);
+      onValueChange?.(next);
     },
     [isControlled, onValueChange],
   );
 
-  const openValues = useMemo<string[]>(() => (Array.isArray(current) ? current : current ? [current] : []), [current]);
+  const openValues = useMemo<string[]>(() => toOpenValues(current), [current]);
 
   const ctx = useMemo<AccordionCtxValue>(
     () => ({ variant, openValues, disabled, compact, size, nestLevel, headingLevel }),
     [variant, openValues, disabled, compact, size, nestLevel, headingLevel],
   );
+
+  // SAFETY: `type` selects the matching primitive mode; `current` and `handleValueChange` carry the string (single) or string[] (multiple) shape for that mode.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the primitive's props are a union keyed on `type`, not expressible from the merged `current`/handler shapes
+  const primitiveModeProps = (
+    type === 'single'
+      ? { type, value: current, onValueChange: handleValueChange, collapsible }
+      : { type, value: current, onValueChange: handleValueChange }
+  ) as ComponentProps<typeof TamaguiAccordion>;
 
   return (
     <AccordionCtx.Provider value={ctx}>
@@ -358,12 +485,7 @@ const AccordionRoot = forwardRef<TamaguiElement, AccordionProps>(function Accord
         // union-narrowing across single/multiple modes; collapsible only
         // exists on the single-mode primitive — passing it in multiple mode
         // leaks a non-boolean `collapsible` attribute onto the DOM node
-        {...({
-          type,
-          value: current,
-          onValueChange: handleValueChange,
-          ...(type === 'single' ? { collapsible } : {}),
-        } as any)}
+        {...primitiveModeProps}
         disabled={disabled}
         width="100%"
         {...(variant === 'card' ? knobProps.gap : {})}
@@ -372,89 +494,59 @@ const AccordionRoot = forwardRef<TamaguiElement, AccordionProps>(function Accord
         data-density={knobProps.density}
         data-size={knobProps.size}
         {...stackProps}>
-        {variant === 'plain'
-          ? // Flush plain items form ONE stacked group: tell each item its
-            // position so triggers round only the group's outer corners
-            // (Axiom 1 R-OUTER via theme groupGeometry). Card items are
-            // discrete gapped surfaces — each is its own group of one.
-            flattenStackChildren(children).map((child, index, arr) => {
-              if (isValidElement(child) && child.type !== AccordionItem) {
-                devWarn('opaque-stack-group', {
-                  component: 'Accordion',
-                  suggest:
-                    'render Accordion.Item as direct children (arrays/fragments are fine) so first/middle/last corner geometry can resolve',
-                });
-              }
-              return (
-                <GroupPositionContext.Provider
-                  // toArray assigns every child a stable key
-                  key={(child as { key?: string | null }).key ?? index}
-                  value={getGroupPosition(index, arr.length)}>
-                  {child}
-                </GroupPositionContext.Provider>
-              );
-            })
-          : children}
+        {variant === 'plain' ? <PlainItemGroup>{children}</PlainItemGroup> : children}
       </TamaguiAccordion>
     </AccordionCtx.Provider>
   );
 });
 
-// ── Item ──────────────────────────────────────────────────────
-
-const AccordionItem = forwardRef<TamaguiElement, AccordionItemProps>(function AccordionItem(
-  { value, disabled: disabledProp, children, ...props },
-  ref,
-) {
-  const { knobProps } = useAccordionKnobs();
-  const { variant, openValues, disabled: rootDisabled } = useContext(AccordionCtx);
-  // Plain items get their stacked-group position from the root; card items
-  // are discrete surfaces, each its own group of one.
-  const position = useGroupPosition() ?? 'only';
-  const open = openValues.includes(value);
-  const disabled = rootDisabled || disabledProp;
-
-  // Stable ids for aria wiring (React.useId is stable across renders —
-  // the FrappeUI Heading unstable-id failure mode does not apply).
-  const uid = useId();
-  const itemCtx = useMemo<AccordionItemCtxValue>(
-    () => ({
-      open,
-      disabled,
-      triggerId: `mp1-accordion-trigger-${uid}`,
-      contentId: `mp1-accordion-content-${uid}`,
-      position,
-    }),
-    [open, disabled, uid, position],
-  );
-
-  const { elevation: elevationToken, ...elevatedSurfaceRest } = knobProps.elevatedSurface as any;
-  const variantProps =
-    variant === 'card'
-      ? {
-          // card surface honoring radius/elevation/border knobs
-          ...elevatedSurfaceRest,
-          ...getCardElevationProps(elevationToken),
-          overflow: 'hidden' as const,
-        }
-      : {
-          // plain: edge-to-edge divider rows (SP-EDGE); the divider sits
-          // BETWEEN items only — a rule under the last item would put a
-          // straight edge against the group's rounded bottom highlight.
-          borderBottomWidth: position === 'last' || position === 'only' ? 0 : 1,
-          borderColor: componentColors.surface.border,
-        };
-
-  return (
-    <AccordionItemCtx.Provider value={itemCtx}>
-      <TamaguiAccordion.Item ref={ref} value={value} disabled={disabled} {...variantProps} {...props}>
-        {children}
-      </TamaguiAccordion.Item>
-    </AccordionItemCtx.Provider>
-  );
-});
-
 // ── Trigger (header row) ──────────────────────────────────────
+
+type Knobs = ReturnType<typeof useResolvedKnobs>;
+type TriggerFocusEvent = Parameters<NonNullable<AccordionTriggerProps['onFocus']>>[0];
+
+const triggerCornerProps = (
+  item: AccordionItemCtxValue,
+  borderRadius: Knobs['knobProps']['borderRadius']['borderRadius'],
+) =>
+  stackEdgeRadius(borderRadius, {
+    start: item.position === 'first' || item.position === 'only',
+    end: (item.position === 'last' || item.position === 'only') && !item.open,
+  });
+
+const triggerFills = (
+  open: boolean,
+  selectedTint: ReturnType<typeof useAccentTintedSurface>,
+  control: Knobs['control'],
+) => {
+  const selectedFill = {
+    backgroundColor: selectedTint ?? componentColors.interactive.background,
+  };
+  if (open) {
+    return { restFill: selectedFill, hoverFill: selectedFill, pressFill: selectedFill };
+  }
+  return {
+    restFill: { backgroundColor: 'transparent' as const },
+    hoverFill: control.hoverKnobProps ?? { backgroundColor: componentColors.interactive.background },
+    pressFill: control.pressKnobProps ?? { backgroundColor: componentColors.interactive.hover },
+  };
+};
+
+const triggerTitleColor = (
+  item: AccordionItemCtxValue,
+  disabledColor: Knobs['disabledState']['textKnobProps']['color'],
+  onSelectedTint: ReturnType<typeof useReadableTextOn>,
+) => {
+  if (item.disabled) {
+    return disabledColor;
+  }
+  if (item.open && onSelectedTint != null && onSelectedTint !== '') {
+    return onSelectedTint;
+  }
+  return componentColors.text.primary;
+};
+
+const hasRenderableIcon = (icon: ReactNode) => icon != null && icon !== false && icon !== '' && icon !== 0;
 
 const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(function AccordionTrigger(
   { children, description, icon, onFocus, onBlur, type = 'button', ...props },
@@ -472,10 +564,7 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
   // outer corner — first item top, last item bottom, middles square. An
   // OPEN item's trigger abuts its own content below, so its bottom
   // corners go square regardless of position.
-  const cornerProps = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
-    start: item.position === 'first' || item.position === 'only',
-    end: (item.position === 'last' || item.position === 'only') && !item.open,
-  });
+  const cornerProps = triggerCornerProps(item, knobProps.borderRadius.borderRadius);
   // Selected = fill on the trigger (the one control). Accent tint
   // is the catalog selected language; hover/press stay on the control
   // recipe so they inherit the same corner fragment. Disabled
@@ -483,24 +572,27 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
   // a surface wash here collides with the selected fill.
   const selectedTint = useAccentTintedSurface();
   const onSelectedTint = useReadableTextOn(selectedTint);
-  const selectedFill = {
-    backgroundColor: selectedTint ?? componentColors.interactive.background,
-  };
-  const restFill = item.open ? selectedFill : { backgroundColor: 'transparent' as const };
-  const hoverFill = item.open
-    ? selectedFill
-    : (control.hoverKnobProps ?? { backgroundColor: componentColors.interactive.background });
-  const pressFill = item.open
-    ? selectedFill
-    : (control.pressKnobProps ?? { backgroundColor: componentColors.interactive.hover });
-  const titleColor = item.disabled
-    ? disabledState.textKnobProps.color
-    : item.open && onSelectedTint
-      ? onSelectedTint
-      : componentColors.text.primary;
+  const { restFill, hoverFill, pressFill } = triggerFills(item.open, selectedTint, control);
+  const titleColor = triggerTitleColor(item, disabledState.textKnobProps.color, onSelectedTint);
   const openDescriptionInk = useLegibleInkOn(item.open ? selectedTint : undefined, knobProps.textAccentColor);
   const descriptionColor = item.disabled ? disabledState.textKnobProps.color : openDescriptionInk;
   const visualPx = tokenPx(knobProps.sizeToken, MIN_PRESS_TARGET, 'size');
+  const chevronColor =
+    (item.disabled ? disabledState.textKnobProps.color : knobProps.textAccentColor) ?? knobProps.textAccentColor;
+  const focusHandlers = isWeb
+    ? {
+        onFocus: (event: TriggerFocusEvent) => {
+          if (wasKeyboardFocus()) {
+            setKbFocus(true);
+          }
+          onFocus?.(event);
+        },
+        onBlur: (event: TriggerFocusEvent) => {
+          setKbFocus(false);
+          onBlur?.(event);
+        },
+      }
+    : { onFocus, onBlur };
   const chevronPx = tokenPx(knobProps.label.fontSize, Math.round(knobProps.nestedControl.px / 2), 'fontSize');
 
   return (
@@ -509,7 +601,12 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
     // height cascades into the row texts (and an h1 per section is wrong
     // outline semantics anyway). View ignores `tag`, so use explicit
     // role="heading" + aria-level for AT parity with an h3.
-    <View role="heading" aria-level={headingLevel} margin={0} width="100%">
+    <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui View ignores `tag`; role + aria-level is the only way to emit heading semantics without a styled h1 cascade
+      role="heading"
+      aria-level={headingLevel}
+      margin={0}
+      width="100%">
       <TamaguiAccordion.Trigger
         {...(isWeb ? { type } : {})}
         ref={ref}
@@ -521,7 +618,7 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
         justifyContent="flex-start"
         width="100%"
         {...knobProps.gap}
-        minHeight={knobProps.sizeToken as any}
+        minHeight={knobProps.sizeToken}
         hitSlop={pressTargetHitSlop(visualPx)}
         {...knobProps.panelPadding}
         borderWidth={0}
@@ -542,50 +639,49 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
         focusStyle={{ outlineWidth: 0, ...restFill, ...cornerProps }}
         focusVisibleStyle={{ outlineWidth: 0 }}
         {...(kbFocus ? keyboardFocusRingProps : undefined)}
-        {...(isWeb
-          ? {
-              onFocus: (event: any) => {
-                if (wasKeyboardFocus()) {
-                  setKbFocus(true);
-                }
-                onFocus?.(event);
-              },
-              onBlur: (event: any) => {
-                setKbFocus(false);
-                onBlur?.(event);
-              },
-            }
-          : { onFocus, onBlur })}
+        {...focusHandlers}
         {...transitionProps(knobProps.transition)}
         {...props}>
         <Chevron
           open={item.open}
           size={chevronPx}
-          color={
-            (item.disabled ? disabledState.textKnobProps.color : knobProps.textAccentColor) ?? knobProps.textAccentColor
-          }
+          color={chevronColor}
           transition={knobProps.transition}
         />
-        {icon ? (
-          <View alignItems="center" justifyContent="center" flexShrink={0}>
+        {hasRenderableIcon(icon) ? (
+          <View
+            alignItems="center"
+            justifyContent="center"
+            flexShrink={0}>
             {icon}
           </View>
         ) : null}
         <AccordionTriggerFillCtx.Provider value={item.open ? selectedTint : undefined}>
-          <YStack flex={1} minWidth={0} alignItems="flex-start">
+          <YStack
+            flex={1}
+            minWidth={0}
+            alignItems="flex-start">
             {/* TEXT-RIDES-TEXT: wrap ALL bare string/number children
                 (coalesced runs), not just the singleton case. */}
             {/* Label weight rides the fontWeight knob (400 / 700). Never 500
                 or 600 — those are not house label weights (text-node trap).
                 Selected state is fill, not a heavier weight. */}
             {wrapBareTextChildren(children, (label, key) => (
-              <Text key={key} {...knobProps.label} textAlign="left" color={titleColor}>
+              <Text
+                key={key}
+                {...knobProps.label}
+                textAlign="left"
+                color={titleColor}>
                 {label}
               </Text>
             ))}
             {description != null &&
               wrapBareTextChildren(description, (label, key) => (
-                <Text key={key} {...knobProps.label} textAlign="left" color={descriptionColor}>
+                <Text
+                  key={key}
+                  {...knobProps.label}
+                  textAlign="left"
+                  color={descriptionColor}>
                   {label}
                 </Text>
               ))}
@@ -620,15 +716,22 @@ const AccordionContent = forwardRef<TamaguiElement, AccordionContentProps>(funct
     <AnimateHeight
       ref={ref}
       open={item.open}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- AnimateHeight is a tamagui View; role + labelledby carry the region semantics
       role="region"
       id={item.contentId}
       aria-labelledby={item.triggerId}
       {...cornerProps}>
-      <YStack {...knobProps.panelPadding} paddingTop={knobProps.gap.gap} {...props}>
+      <YStack
+        {...knobProps.panelPadding}
+        paddingTop={knobProps.gap.gap}
+        {...props}>
         {/* TEXT-RIDES-TEXT: content is a View slot — bare/array string
               children ride a body Text instead of crashing native. */}
         {wrapBareTextChildren(children, (label, key) => (
-          <Text key={key} {...knobProps.body} color={componentColors.text.primary}>
+          <Text
+            key={key}
+            {...knobProps.body}
+            color={componentColors.text.primary}>
             {label}
           </Text>
         ))}

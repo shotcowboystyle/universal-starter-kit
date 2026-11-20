@@ -1,0 +1,27 @@
+{
+  "extends": "@repo/config/tsconfig/build.json",
+  // Paths are restated here: relative paths in the extended build.json resolve
+  // against packages/config/tsconfig/, and tamagui-build's TypeScript has no
+  // ${configDir}.
+  "compilerOptions": {
+    "baseUrl": "./",
+    "rootDir": "./",
+    "outDir": "dist",
+    "declarationDir": "types",
+    "tsBuildInfoFile": "types/.tsbuildinfo"
+  },
+  "include": ["src/**/*", "@types/**/*"],
+  "exclude": [
+    "tests",
+    "types",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "vitest.config.ts",
+    "vitest.config.mjs"
+  ]
+}

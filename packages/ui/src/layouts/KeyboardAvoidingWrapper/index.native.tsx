@@ -1,8 +1,10 @@
 import type { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { resolveKeyboardAvoidingBehavior, type KeyboardAvoidingBehavior } from './behavior';
+import { resolveKeyboardAvoidingBehavior } from './behavior';
+import type { KeyboardAvoidingBehavior } from './behavior';
 
 export type { KeyboardAvoidingBehavior } from './behavior';
 
@@ -25,18 +27,24 @@ export interface KeyboardAvoidingWrapperProps extends YStackProps {
   enabled?: boolean;
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
 /**
  * KeyboardAvoidingWrapper — native KeyboardAvoidingView.
  *
  * No owned surface — only platform keyboard offset. Consumer `{...stackProps}` last.
  */
-export function KeyboardAvoidingWrapper({
+export const KeyboardAvoidingWrapper = ({
   children,
   behavior,
   keyboardVerticalOffset = 0,
   enabled = true,
   ...stackProps
-}: PropsWithChildren<KeyboardAvoidingWrapperProps>) {
+}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => {
   const effectiveBehavior = resolveKeyboardAvoidingBehavior(Platform.OS, behavior);
 
   return (
@@ -55,10 +63,4 @@ export function KeyboardAvoidingWrapper({
       </YStack>
     </KeyboardAvoidingView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+};

@@ -1,17 +1,27 @@
 import { Spinner } from '@repo/forms';
 import { animationConfig, hairlineWidth, MIN_PRESS_TARGET, radiusClassProps, useResolvedKnobs } from '@repo/theme';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import type { FlashListRef } from '@shopify/flash-list';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { AccessibilityInfo, Animated } from 'react-native';
-import { ListItem, Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import type {
+  GestureResponderEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView as RNScrollView,
+} from 'react-native';
+import { ListItem, Text, View, XStack, YStack } from 'tamagui';
+import type { TamaguiElement, TransitionProp, YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { AsyncBoundary, useAsyncCount } from '../layouts/AsyncBoundary';
 import { EmptyState } from '../layouts/Page';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 import { Card } from '../surfaces';
 
+import { isNonEmpty, isString } from './guards';
 import {
   autoScrollVelocity,
   describeCancel,
@@ -20,14 +30,13 @@ import {
   resolveDrop,
   siblingOffset,
   uniformInsertionIndex,
-  type KanbanBoardColumnSnapshot,
-  type KanbanDropTarget,
-} from './kanbanDnd';
+} from './kanban-dnd';
+import type { KanbanAnnouncement, KanbanBoardColumnSnapshot, KanbanDragPhase, KanbanDropTarget } from './kanban-dnd';
 
 /**
  * A column definition for the Kanban board.
  *
- * @typeParam T - The card item type
+ * @template T - The card item type
  */
 export interface KanbanColumn<T> {
   /** Unique column identifier */
@@ -64,7 +73,7 @@ export interface KanbanHotkeys {
 /**
  * Props for the generic Kanban component.
  *
- * @typeParam T - The card item type
+ * @template T - The card item type
  */
 export interface KanbanProps<T> extends Omit<YStackProps, 'children'> {
   /** Column definitions with their items */
@@ -105,7 +114,7 @@ export interface KanbanProps<T> extends Omit<YStackProps, 'children'> {
   /** Whether data is loading */
   isLoading?: boolean;
   /** Failed board load. Wins over empty; hides count badges. */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Column width in pixels (default: 280) */
@@ -142,10 +151,10 @@ const LIFT_SHADOW = {
   elevation: 8,
 } as const;
 
-interface NativeColumnHandle {
+interface NativeColumnHandle<T> {
   /** List container node for measureInWindow hit testing. */
-  node: any;
-  list: FlashListRef<any> | null;
+  node: TamaguiElement | null;
+  list: FlashListRef<T> | null;
   scrollOffset: number;
   layout: { x: number; y: number; width: number; height: number } | null;
 }
@@ -161,6 +170,341 @@ interface NativeDragSession<T> {
   settling?: boolean;
 }
 
+/** Pass the responder handlers through a JSX spread: Tamagui's View prop type omits them, the host view accepts them. */
+const cardDragSpread = (props: CardDragProps): object => props;
+
+/** Responder-system handlers a draggable card spreads onto its wrapper. */
+interface CardDragProps {
+  onStartShouldSetResponder?: () => boolean;
+  onMoveShouldSetResponder?: () => boolean;
+  onResponderTerminationRequest?: () => boolean;
+  onResponderGrant?: (event: GestureResponderEvent) => void;
+  onResponderMove?: (event: GestureResponderEvent) => void;
+  onResponderRelease?: () => void;
+  onResponderTerminate?: () => void;
+}
+
+type NativeDragPhase = KanbanDragPhase | 'cancel';
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const announcementText = (t: TranslateFn, a: KanbanAnnouncement): string => {
+  if (a.type === 'cancel') {
+    return t('Movement cancelled. {{card}} returned to {{column}}.', a);
+  }
+  if (a.type === 'lift') {
+    return t('Lifted {{card}} in {{column}}, position {{position}} of {{count}}.', a);
+  }
+  if (a.type === 'move') {
+    return t('Moved {{card}} to {{column}}, position {{position}} of {{count}}.', a);
+  }
+  return t('Dropped {{card}} in {{column}}, position {{position}} of {{count}}.', a);
+};
+
+/** Geometry per size-knob step: `$3` compact, `$5` roomy, anything else default. */
+const SIZE_STEPS = {
+  $3: { columnWidth: 240, minColumnHeight: 320, estimateSize: 64 },
+  $5: { columnWidth: 320, minColumnHeight: 480, estimateSize: 96 },
+  default: { columnWidth: 280, minColumnHeight: 400, estimateSize: 80 },
+} as const;
+
+const GHOST_OPACITY = 0.4;
+const COLUMN_HIT_HEADER_PX = 40;
+
+const cardOpacity = (hidden: boolean, ghost: boolean): number => {
+  if (hidden) {
+    return 0;
+  }
+  return ghost ? GHOST_OPACITY : 1;
+};
+
+/** The drag session when its insertion gap is open in a column other than the source's. */
+const openGapDrag = <T,>(
+  drag: NativeDragSession<T> | null,
+  gapIndex: number | null,
+  isSource: boolean,
+): NativeDragSession<T> | null => {
+  if (drag === null || drag.settling === true || gapIndex === null) {
+    return null;
+  }
+  return isSource ? null : drag;
+};
+
+interface HasMeasureInWindow {
+  measureInWindow: (callback: (x: number, y: number, width: number, height: number) => void) => void;
+}
+
+/** Native host nodes expose `measureInWindow`; DOM nodes and null do not. */
+const canMeasureInWindow = (node: unknown): node is HasMeasureInWindow =>
+  node != null && typeof node === 'object' && 'measureInWindow' in node;
+
+type SpringToken = keyof typeof animationConfig;
+
+const isSpringToken = <V,>(value: V): value is V & SpringToken => isString(value) && value in animationConfig;
+
+/** The spring vocabulary entry for a transition knob; `null` when animation is off. */
+const resolveSpringToken = (transition: TransitionProp | undefined) => {
+  if (isSpringToken(transition)) {
+    return transition;
+  }
+  return transition !== undefined && transition !== '' ? ('quick' satisfies SpringToken) : null;
+};
+
+const withTarget = <T,>(prev: NativeDragSession<T> | null, target: KanbanDropTarget): NativeDragSession<T> | null => {
+  if (prev === null || prev.settling === true) {
+    return prev;
+  }
+  const unchanged = prev.target.columnId === target.columnId && prev.target.index === target.index;
+  return unchanged ? prev : { ...prev, target };
+};
+
+/** Whether a window-space point falls in a column (with a small allowance above it for the header). */
+const withinColumnBounds = (layout: { x: number; y: number; width: number; height: number }, x: number, y: number) =>
+  x >= layout.x &&
+  x <= layout.x + layout.width &&
+  y >= layout.y - COLUMN_HIT_HEADER_PX &&
+  y <= layout.y + layout.height;
+
+const KanbanColumnView = <T,>({
+  kanbanId,
+  column,
+  columnIndex,
+  renderCard,
+  columnWidth,
+  minColumnHeight,
+  estimateSize,
+  overscan,
+  emptyColumnMessage,
+  onLoadMore,
+  getItemKey,
+  hasMore,
+  isLoading,
+  onCardSelect,
+  renderColumnActions,
+  getCardDragProps,
+  handle,
+  drag,
+  scrollEnabled,
+}: KanbanColumnViewProps<T>) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  const itemCount = useAsyncCount(column.items.length);
+
+  const isSource = drag?.sourceColumnId === column.id;
+  const gapIndex = drag && !drag.settling && drag.target.columnId === column.id ? drag.target.index : null;
+  const isDropTarget = gapIndex != null;
+  const slotDrag = openGapDrag(drag, gapIndex, isSource);
+
+  // Handle infinite scroll
+  const handleEndReached = useCallback(() => {
+    if (onLoadMore && hasMore && !isLoading) {
+      onLoadMore();
+    }
+  }, [onLoadMore, hasMore, isLoading]);
+
+  const gapY =
+    gapIndex != null && drag
+      ? gapPosition({
+          gapIndex,
+          sourceIndex: isSource ? drag.sourceIndex : null,
+          count: column.items.length,
+          size: drag.size,
+          totalSize: column.items.length * drag.size,
+          getStart: (index) => index * drag.size,
+        })
+      : null;
+
+  return (
+    <YStack
+      width={columnWidth}
+      minHeight={minColumnHeight}
+      flexShrink={0}
+      overflow="hidden"
+      transition={knobProps.transition}
+      {...knobProps.borderRadius}
+      {...knobProps.containerRadius}
+      {...knobProps.panelPadding}
+      backgroundColor={isDropTarget ? componentColors.interactive.background : 'transparent'}
+      data-kanban-column={column.id}>
+      <ListItem
+        title={column.title}
+        icon={
+          isNonEmpty(column.color) ? (
+            <YStack
+              {...radiusClassProps('R-PILL', 'Kanban column dot')}
+              width={8}
+              height={8}
+              borderRadius={4}
+              backgroundColor={column.color}
+              data-kanban-column-dot
+            />
+          ) : undefined
+        }
+        iconAfter={
+          itemCount !== undefined || renderColumnActions ? (
+            <XStack
+              alignItems="center"
+              {...knobProps.gap}>
+              {itemCount !== undefined && (
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}
+                  {...knobProps.textWeight}
+                  data-async-count>
+                  {itemCount}
+                </Text>
+              )}
+              {renderColumnActions?.(column)}
+            </XStack>
+          ) : undefined
+        }
+        size={knobProps.sizeToken}
+        borderBottomWidth={hairlineWidth}
+        borderBottomColor="$borderColor"
+      />
+
+      {/* Cards container — always rendered so empty columns stay drop targets. */}
+      <View
+        style={{ flex: 1, minHeight: minColumnHeight - 60 }}
+        position="relative"
+        ref={(node: TamaguiElement | null) => {
+          // oxlint-disable-next-line react/immutability -- the handle is the board's per-column geometry registry; the ref callback records the mounted node on it
+          handle.node = node;
+        }}>
+        {column.items.length === 0 ? (
+          !isDropTarget && (
+            <EmptyState
+              compact
+              title={emptyColumnMessage}
+              opacity={0.5}
+              flex={1}
+            />
+          )
+        ) : (
+          <FlashList
+            keyboardShouldPersistTaps="handled"
+            ref={(list: FlashListRef<T> | null) => {
+              // oxlint-disable-next-line react/immutability -- the handle is the board's per-column geometry registry; the ref callback records the mounted list on it
+              handle.list = list;
+            }}
+            data={column.items}
+            extraData={drag}
+            drawDistance={estimateSize * overscan}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            scrollEnabled={scrollEnabled}
+            onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+              // oxlint-disable-next-line react/immutability -- the handle is the board's per-column geometry registry; scroll events keep its offset current
+              handle.scrollOffset = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={64}
+            keyExtractor={(item, index) =>
+              getItemKey ? String(getItemKey(item, index)) : `${kanbanId}-col-${columnIndex}-card-${index}`
+            }
+            // oxlint-disable-next-line sonarjs/cognitive-complexity -- one card slot: drag displacement, ghost/hidden states and press routing derive from the same per-card values
+            renderItem={({ item, index }) => {
+              const isDragged = isSource && drag != null && index === drag.sourceIndex;
+              let offset = 0;
+              let ghost = false;
+              let hidden = false;
+              if (drag && !drag.settling) {
+                if (isDragged) {
+                  if (gapIndex != null && gapY != null) {
+                    offset = gapY - index * drag.size;
+                    ghost = true;
+                  } else {
+                    hidden = true;
+                  }
+                } else {
+                  offset = siblingOffset({
+                    index,
+                    sourceIndex: isSource && drag != null ? drag.sourceIndex : null,
+                    gapIndex,
+                    size: drag.size,
+                  });
+                }
+              } else if (drag?.settling && isDragged) {
+                // The ghost overlay is this card's visual while it settles.
+                hidden = true;
+              }
+              const dragProps = getCardDragProps?.(item, column.id, index) ?? {};
+              return (
+                <View
+                  padding="$1"
+                  y={offset}
+                  transition={drag && !drag.settling ? knobProps.transition : undefined}
+                  opacity={cardOpacity(hidden, ghost)}
+                  {...cardDragSpread(dragProps)}>
+                  <Card
+                    id={`${kanbanId}-col-${columnIndex}-card-${index}`}
+                    elevation={knobProps.elevation}
+                    minHeight={MIN_PRESS_TARGET}
+                    {...(ghost
+                      ? {
+                          borderWidth: hairlineWidth,
+                          borderColor: componentColors.interactive.border,
+                          borderStyle: 'dashed' as const,
+                        }
+                      : undefined)}
+                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
+                    pressStyle={{ scale: 0.98 }}
+                    overflow="hidden"
+                    data-kanban-card={String(getItemKey ? getItemKey(item, index) : `${column.id}-${index}`)}
+                    // With drag enabled the responders own the tap (handled on release).
+                    onPress={getCardDragProps ? undefined : () => onCardSelect?.(item, column.id)}>
+                    {renderCard(item)}
+                  </Card>
+                </View>
+              );
+            }}
+            ListFooterComponent={
+              isLoading ? (
+                <YStack
+                  {...knobProps.panelPadding}
+                  alignItems="center">
+                  <Spinner size="small" />
+                </YStack>
+              ) : null
+            }
+          />
+        )}
+
+        {/* Insertion slot outline for cross-column targets and empty columns. */}
+        {slotDrag && (
+          <View
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            y={(gapY ?? 0) - handle.scrollOffset}
+            height={slotDrag.size}
+            padding="$1"
+            pointerEvents="none"
+            transition={knobProps.transition}>
+            <View
+              flex={1}
+              {...knobProps.borderRadius}
+              borderStyle="dashed"
+              borderColor={componentColors.interactive.border}
+              backgroundColor={componentColors.interactive.background}
+              opacity={0.8}
+              alignItems="center"
+              justifyContent="center">
+              {column.items.length === 0 && (
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}>
+                  {t('Drop here')}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+    </YStack>
+  );
+};
+
 /**
  * Generic Kanban board component with column-level virtualization.
  * Native implementation using FlashList plus responder-system drag-and-drop.
@@ -173,9 +517,10 @@ interface NativeDragSession<T> {
  * animation vocabulary. `animation=none` lands everything instantly while
  * 1:1 tracking keeps working (A-GESTURE).
  *
- * @typeParam T - The card item type
+ * @template T - The card item type
  */
-export function Kanban<T>({
+// oxlint-disable-next-line react-doctor/no-giant-component -- one board: layout measurement, responder drag, auto-scroll and settle springs share the column handle registry
+export const Kanban = <T,>({
   columns,
   renderCard,
   onCardMove,
@@ -197,29 +542,32 @@ export function Kanban<T>({
   getItemLabel,
   hotkeys: _hotkeyOverrides,
   ...stackProps
-}: KanbanProps<T>) {
+}: KanbanProps<T>) => {
   const { t } = useTranslation();
   const emptyColumnMessage = emptyColumnMessageProp ?? t('No items');
   const { knobProps } = useResolvedKnobs();
   const sz = knobProps.sizeToken;
-  const columnWidth = columnWidthProp ?? (sz === '$3' ? 240 : sz === '$5' ? 320 : 280);
-  const minColumnHeight = minColumnHeightProp ?? (sz === '$3' ? 320 : sz === '$5' ? 480 : 400);
-  const estimateSize = estimateSizeProp ?? (sz === '$3' ? 64 : sz === '$5' ? 96 : 80);
+  const steps = SIZE_STEPS[sz === '$3' || sz === '$5' ? sz : 'default'];
+  const columnWidth = columnWidthProp ?? steps.columnWidth;
+  const minColumnHeight = minColumnHeightProp ?? steps.minColumnHeight;
+  const estimateSize = estimateSizeProp ?? steps.estimateSize;
   const kanbanId = useId();
-  const boardLoading = !error && isLoading && columns.every((c) => c.items.length === 0);
-  const boardEmpty = !error && columns.length === 0;
+  const hasError = Boolean(error);
+  const boardLoading = !hasError && isLoading && columns.every((c) => c.items.length === 0);
+  const boardEmpty = !hasError && columns.length === 0;
 
-  const canDrag = Boolean(onCardMove || onCardReorder);
+  const canDrag = onCardMove !== undefined || onCardReorder !== undefined;
 
   // ── Drag state ──────────────────────────────────────────────
   const [drag, setDrag] = useState<NativeDragSession<T> | null>(null);
   const dragStateRef = useRef<NativeDragSession<T> | null>(null);
+  // oxlint-disable-next-line react/refs -- latest-value ref: responders must see the committed drag state in the same render pass, never one commit behind
   dragStateRef.current = drag;
 
-  const columnHandles = useRef(new Map<string, NativeColumnHandle>());
-  const containerNodeRef = useRef<any>(null);
+  const columnHandles = useRef(new Map<string, NativeColumnHandle<T>>());
+  const containerNodeRef = useRef<TamaguiElement | null>(null);
   const containerOffsetRef = useRef({ x: 0, y: 0 });
-  const boardScrollRef = useRef<any>(null);
+  const boardScrollRef = useRef<RNScrollView>(null);
   const boardScrollXRef = useRef(0);
   const boardLayoutRef = useRef<{ x: number; y: number; width: number } | null>(null);
   const fingerRef = useRef({ x: 0, y: 0 });
@@ -227,8 +575,10 @@ export function Kanban<T>({
   const autoScrollRafRef = useRef<number | null>(null);
 
   // Ghost transforms (translate/scale/rotate only — native-driver safe).
-  const ghostPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const liftValue = useRef(new Animated.Value(0)).current;
+  // oxlint-disable-next-line react/hook-use-state -- the Animated value is created once and never replaced, so there is deliberately no setter
+  const [ghostPos] = useState(() => new Animated.ValueXY({ x: 0, y: 0 }));
+  // oxlint-disable-next-line react/hook-use-state -- the Animated value is created once and never replaced, so there is deliberately no setter
+  const [liftValue] = useState(() => new Animated.Value(0));
 
   const gestureRef = useRef<{
     item: T;
@@ -245,14 +595,9 @@ export function Kanban<T>({
     [columns],
   );
 
-  const springToken =
-    typeof knobProps.transition === 'string' && knobProps.transition in animationConfig
-      ? (knobProps.transition as keyof typeof animationConfig)
-      : knobProps.transition
-        ? ('quick' as const)
-        : null;
+  const springToken = resolveSpringToken(knobProps.transition);
 
-  const getHandle = useCallback((columnId: string): NativeColumnHandle => {
+  const getHandle = useCallback((columnId: string): NativeColumnHandle<T> => {
     let handle = columnHandles.current.get(columnId);
     if (!handle) {
       handle = { node: null, list: null, scrollOffset: 0, layout: null };
@@ -263,21 +608,13 @@ export function Kanban<T>({
 
   const announce = useCallback(
     (
-      type: 'lift' | 'move' | 'drop' | 'cancel',
+      type: NativeDragPhase,
       session: Pick<NativeDragSession<T>, 'sourceColumnId' | 'sourceIndex' | 'target'>,
       label: string,
     ) => {
       const a =
         type === 'cancel' ? describeCancel(session, board, label) : describeDragState(type, session, board, label);
-      const text =
-        a.type === 'cancel'
-          ? t('Movement cancelled. {{card}} returned to {{column}}.', a)
-          : a.type === 'lift'
-            ? t('Lifted {{card}} in {{column}}, position {{position}} of {{count}}.', a)
-            : a.type === 'move'
-              ? t('Moved {{card}} to {{column}}, position {{position}} of {{count}}.', a)
-              : t('Dropped {{card}} in {{column}}, position {{position}} of {{count}}.', a);
-      AccessibilityInfo.announceForAccessibility?.(text);
+      AccessibilityInfo.announceForAccessibility?.(announcementText(t, a));
     },
     [board, t],
   );
@@ -285,46 +622,43 @@ export function Kanban<T>({
   // ── Geometry ────────────────────────────────────────────────
 
   const measureLayouts = useCallback(() => {
-    containerNodeRef.current?.measureInWindow?.((x: number, y: number) => {
-      containerOffsetRef.current = { x, y };
-    });
-    for (const [, handle] of columnHandles.current) {
-      handle.node?.measureInWindow?.((x: number, y: number, width: number, height: number) => {
-        handle.layout = { x, y, width, height };
+    if (canMeasureInWindow(containerNodeRef.current)) {
+      containerNodeRef.current.measureInWindow((x, y) => {
+        containerOffsetRef.current = { x, y };
       });
     }
-    boardScrollRef.current?.measureInWindow?.((x: number, y: number, width: number) => {
-      boardLayoutRef.current = { x, y, width };
-    });
+    for (const [, handle] of columnHandles.current) {
+      if (canMeasureInWindow(handle.node)) {
+        handle.node.measureInWindow((x, y, width, height) => {
+          handle.layout = { x, y, width, height };
+        });
+      }
+    }
+    if (canMeasureInWindow(boardScrollRef.current)) {
+      boardScrollRef.current.measureInWindow((x, y, width) => {
+        boardLayoutRef.current = { x, y, width };
+      });
+    }
   }, []);
+
+  const columnsById = useMemo(() => new Map(columns.map((c) => [c.id, c])), [columns]);
 
   const hitTest = useCallback(
     (pageX: number, pageY: number, session: NativeDragSession<T>): KanbanDropTarget => {
       for (const [columnId, handle] of columnHandles.current) {
-        const layout = handle.layout;
-        if (!layout) {
-          continue;
+        const { layout } = handle;
+        const column =
+          layout !== null && withinColumnBounds(layout, pageX, pageY) ? columnsById.get(columnId) : undefined;
+        if (layout !== null && column !== undefined) {
+          const localY = pageY - layout.y + handle.scrollOffset;
+          const wdCount = column.items.length - (columnId === session.sourceColumnId ? 1 : 0);
+          const index = uniformInsertionIndex(localY, session.size, Math.max(wdCount, 0));
+          return { columnId, index };
         }
-        if (
-          pageX < layout.x ||
-          pageX > layout.x + layout.width ||
-          pageY < layout.y - 40 ||
-          pageY > layout.y + layout.height
-        ) {
-          continue;
-        }
-        const column = columns.find((c) => c.id === columnId);
-        if (!column) {
-          continue;
-        }
-        const localY = pageY - layout.y + handle.scrollOffset;
-        const wdCount = column.items.length - (columnId === session.sourceColumnId ? 1 : 0);
-        const index = uniformInsertionIndex(localY, session.size, Math.max(wdCount, 0));
-        return { columnId, index };
       }
       return { columnId: session.sourceColumnId, index: session.sourceIndex };
     },
-    [columns],
+    [columnsById],
   );
 
   /** Container-relative position of the gap slot for settle destinations. */
@@ -388,7 +722,7 @@ export function Kanban<T>({
         }
       }
       const boardLayout = boardLayoutRef.current;
-      if (boardLayout && boardScrollRef.current) {
+      if (boardLayout && boardScrollRef.current !== null) {
         const vx = autoScrollVelocity({
           pos: x,
           start: boardLayout.x,
@@ -406,11 +740,7 @@ export function Kanban<T>({
       }
       if (scrolled) {
         const target = hitTest(x, y, session);
-        setDrag((prev) =>
-          prev && !prev.settling && (prev.target.columnId !== target.columnId || prev.target.index !== target.index)
-            ? { ...prev, target }
-            : prev,
-        );
+        setDrag((prev) => withTarget(prev, target));
       }
       autoScrollRafRef.current = requestAnimationFrame(tick);
     };
@@ -547,12 +877,11 @@ export function Kanban<T>({
   ]);
 
   const handleGrant = useCallback(
-    (item: T, columnId: string, index: number, e: any) => {
+    (item: T, columnId: string, index: number, e: GestureResponderEvent) => {
       if (!canDrag) {
         return;
       }
-      const pageX = e.nativeEvent?.pageX ?? 0;
-      const pageY = e.nativeEvent?.pageY ?? 0;
+      const { pageX, pageY } = e.nativeEvent;
       fingerRef.current = { x: pageX, y: pageY };
       gestureRef.current = {
         item,
@@ -568,13 +897,12 @@ export function Kanban<T>({
   );
 
   const handleMove = useCallback(
-    (e: any) => {
+    (e: GestureResponderEvent) => {
       const gesture = gestureRef.current;
       if (!gesture) {
         return;
       }
-      const pageX = e.nativeEvent?.pageX ?? 0;
-      const pageY = e.nativeEvent?.pageY ?? 0;
+      const { pageX, pageY } = e.nativeEvent;
       fingerRef.current = { x: pageX, y: pageY };
       if (!gesture.lifted) {
         // Finger moved before the hold elapsed — this is a scroll, not a drag.
@@ -596,11 +924,7 @@ export function Kanban<T>({
         return;
       }
       const target = hitTest(pageX, pageY, session);
-      setDrag((prev) =>
-        prev && !prev.settling && (prev.target.columnId !== target.columnId || prev.target.index !== target.index)
-          ? { ...prev, target }
-          : prev,
-      );
+      setDrag((prev) => withTarget(prev, target));
     },
     [columnWidth, estimateSize, ghostPos, hitTest],
   );
@@ -646,7 +970,7 @@ export function Kanban<T>({
   }, [finishDrag]);
 
   const getCardDragProps = useCallback(
-    (item: T, columnId: string, index: number) => {
+    (item: T, columnId: string, index: number): CardDragProps => {
       if (!canDrag) {
         return {};
       }
@@ -654,7 +978,7 @@ export function Kanban<T>({
         onStartShouldSetResponder: () => true,
         onMoveShouldSetResponder: () => true,
         onResponderTerminationRequest: () => !gestureRef.current?.lifted,
-        onResponderGrant: (e: any) => {
+        onResponderGrant: (e: GestureResponderEvent) => {
           handleGrant(item, columnId, index, e);
         },
         onResponderMove: handleMove,
@@ -681,7 +1005,7 @@ export function Kanban<T>({
       <View
         flex={1}
         position="relative"
-        ref={(node: any) => {
+        ref={(node: TamaguiElement | null) => {
           containerNodeRef.current = node;
         }}>
         <ScrollView
@@ -689,11 +1013,12 @@ export function Kanban<T>({
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEnabled={!dragActive}
-          onScroll={(e: any) => {
-            boardScrollXRef.current = e.nativeEvent?.contentOffset?.x ?? 0;
+          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            boardScrollXRef.current = e.nativeEvent.contentOffset.x;
           }}
           scrollEventThrottle={64}>
           <XStack {...knobProps.gap}>
+            {/* oxlint-disable-next-line react/refs -- the per-column handle registry is a ref map by design; each column is handed its own geometry record while rendering */}
             {columns.map((column, colIndex) => (
               <KanbanColumnView
                 key={column.id}
@@ -750,7 +1075,9 @@ export function Kanban<T>({
               ],
             }}>
             <View padding="$1">
-              <Card overflow="hidden" {...LIFT_SHADOW}>
+              <Card
+                overflow="hidden"
+                {...LIFT_SHADOW}>
                 {renderCard(drag.item)}
               </Card>
             </View>
@@ -759,7 +1086,7 @@ export function Kanban<T>({
       </View>
     </AsyncBoundary>
   );
-}
+};
 
 interface KanbanColumnViewProps<T> {
   kanbanId: string;
@@ -777,229 +1104,8 @@ interface KanbanColumnViewProps<T> {
   isLoading?: boolean;
   onCardSelect?: (item: T, columnId: string) => void;
   renderColumnActions?: (column: KanbanColumn<T>) => ReactNode;
-  getCardDragProps?: (item: T, columnId: string, index: number) => Record<string, unknown>;
-  handle: NativeColumnHandle;
+  getCardDragProps?: (item: T, columnId: string, index: number) => CardDragProps;
+  handle: NativeColumnHandle<T>;
   drag: NativeDragSession<T> | null;
   scrollEnabled: boolean;
-}
-
-function KanbanColumnView<T>({
-  kanbanId,
-  column,
-  columnIndex,
-  renderCard,
-  columnWidth,
-  minColumnHeight,
-  estimateSize,
-  overscan,
-  emptyColumnMessage,
-  onLoadMore,
-  getItemKey,
-  hasMore,
-  isLoading,
-  onCardSelect,
-  renderColumnActions,
-  getCardDragProps,
-  handle,
-  drag,
-  scrollEnabled,
-}: KanbanColumnViewProps<T>) {
-  const { t } = useTranslation();
-  const { knobProps } = useResolvedKnobs();
-  const itemCount = useAsyncCount(column.items.length);
-
-  const isSource = drag?.sourceColumnId === column.id;
-  const gapIndex = drag && !drag.settling && drag.target.columnId === column.id ? drag.target.index : null;
-  const isDropTarget = gapIndex != null;
-
-  // Handle infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (onLoadMore && hasMore && !isLoading) {
-      onLoadMore();
-    }
-  }, [onLoadMore, hasMore, isLoading]);
-
-  const gapY =
-    gapIndex != null && drag
-      ? gapPosition({
-          gapIndex,
-          sourceIndex: isSource ? drag.sourceIndex : null,
-          count: column.items.length,
-          size: drag.size,
-          totalSize: column.items.length * drag.size,
-          getStart: (index) => index * drag.size,
-        })
-      : null;
-
-  return (
-    <YStack
-      width={columnWidth}
-      minHeight={minColumnHeight}
-      flexShrink={0}
-      overflow="hidden"
-      transition={knobProps.transition}
-      {...knobProps.borderRadius}
-      {...knobProps.containerRadius}
-      {...knobProps.panelPadding}
-      backgroundColor={isDropTarget ? componentColors.interactive.background : 'transparent'}
-      data-kanban-column={column.id}>
-      <ListItem
-        title={column.title}
-        icon={
-          column.color ? (
-            <YStack
-              {...radiusClassProps('R-PILL', 'Kanban column dot')}
-              width={8}
-              height={8}
-              borderRadius={4}
-              backgroundColor={column.color as any}
-              data-kanban-column-dot
-            />
-          ) : undefined
-        }
-        iconAfter={
-          itemCount !== undefined || renderColumnActions ? (
-            <XStack alignItems="center" {...knobProps.gap}>
-              {itemCount !== undefined && (
-                <Text color={knobProps.textAccentColor} {...knobProps.label} {...knobProps.textWeight} data-async-count>
-                  {itemCount}
-                </Text>
-              )}
-              {renderColumnActions?.(column)}
-            </XStack>
-          ) : undefined
-        }
-        size={knobProps.sizeToken}
-        borderBottomWidth={hairlineWidth}
-        borderBottomColor="$borderColor"
-      />
-
-      {/* Cards container — always rendered so empty columns stay drop targets. */}
-      <View
-        style={{ flex: 1, minHeight: minColumnHeight - 60 }}
-        position="relative"
-        ref={(node: any) => {
-          handle.node = node;
-        }}>
-        {column.items.length === 0 ? (
-          !isDropTarget && <EmptyState compact title={emptyColumnMessage} opacity={0.5} flex={1} />
-        ) : (
-          <FlashList
-            keyboardShouldPersistTaps="handled"
-            ref={(list: any) => {
-              handle.list = list;
-            }}
-            data={column.items}
-            extraData={drag}
-            drawDistance={estimateSize * overscan}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            scrollEnabled={scrollEnabled}
-            onScroll={(e: any) => {
-              handle.scrollOffset = e.nativeEvent?.contentOffset?.y ?? 0;
-            }}
-            scrollEventThrottle={64}
-            keyExtractor={(item, index) =>
-              getItemKey ? String(getItemKey(item, index)) : `${kanbanId}-col-${columnIndex}-card-${index}`
-            }
-            renderItem={({ item, index }) => {
-              const isDragged = isSource && drag != null && index === drag.sourceIndex;
-              let offset = 0;
-              let ghost = false;
-              let hidden = false;
-              if (drag && !drag.settling) {
-                if (isDragged) {
-                  if (gapIndex != null && gapY != null) {
-                    offset = gapY - index * drag.size;
-                    ghost = true;
-                  } else {
-                    hidden = true;
-                  }
-                } else {
-                  offset = siblingOffset({
-                    index,
-                    sourceIndex: isSource && drag ? drag.sourceIndex : null,
-                    gapIndex,
-                    size: drag.size,
-                  });
-                }
-              } else if (drag?.settling && isDragged) {
-                // The ghost overlay is this card's visual while it settles.
-                hidden = true;
-              }
-              const dragProps = getCardDragProps?.(item, column.id, index) ?? {};
-              return (
-                <View
-                  padding="$1"
-                  y={offset}
-                  transition={drag && !drag.settling ? knobProps.transition : undefined}
-                  opacity={hidden ? 0 : ghost ? 0.4 : 1}
-                  {...dragProps}>
-                  <Card
-                    id={`${kanbanId}-col-${columnIndex}-card-${index}`}
-                    elevation={knobProps.elevation}
-                    minHeight={MIN_PRESS_TARGET}
-                    {...(ghost
-                      ? {
-                          borderWidth: hairlineWidth,
-                          borderColor: componentColors.interactive.border,
-                          borderStyle: 'dashed' as any,
-                        }
-                      : undefined)}
-                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
-                    pressStyle={{ scale: 0.98 }}
-                    overflow="hidden"
-                    data-kanban-card={String(getItemKey ? getItemKey(item, index) : `${column.id}-${index}`)}
-                    onPress={
-                      getCardDragProps
-                        ? undefined // responders own the tap; handled on release
-                        : () => onCardSelect?.(item, column.id)
-                    }>
-                    {renderCard(item)}
-                  </Card>
-                </View>
-              );
-            }}
-            ListFooterComponent={
-              isLoading ? (
-                <YStack {...knobProps.panelPadding} alignItems="center">
-                  <Spinner size="small" />
-                </YStack>
-              ) : null
-            }
-          />
-        )}
-
-        {/* Insertion slot outline for cross-column targets and empty columns. */}
-        {drag && !drag.settling && gapIndex != null && !isSource && (
-          <View
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            y={(gapY ?? 0) - handle.scrollOffset}
-            height={drag.size}
-            padding="$1"
-            pointerEvents="none"
-            transition={knobProps.transition}>
-            <View
-              flex={1}
-              {...knobProps.borderRadius}
-              borderStyle="dashed"
-              borderColor={componentColors.interactive.border}
-              backgroundColor={componentColors.interactive.background}
-              opacity={0.8}
-              alignItems="center"
-              justifyContent="center">
-              {column.items.length === 0 && (
-                <Text color={knobProps.textAccentColor} {...knobProps.label}>
-                  {t('Drop here')}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
-    </YStack>
-  );
 }

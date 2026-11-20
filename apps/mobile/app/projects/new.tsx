@@ -1,14 +1,44 @@
-import { Text, View, useTheme } from "@tamagui/core";
-import * as Haptics from "expo-haptics";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Alert, Pressable, TextInput, ScrollView } from "react-native";
+import { Text, View, useTheme } from '@tamagui/core';
+import { NotificationFeedbackType, notificationAsync } from 'expo-haptics';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  Pressable,
+  TextInput,
+  ScrollView,
+} from 'react-native';
 
-import { useCreateProject, useUpdateProject, useProjects } from "@/hooks/use-projects";
-import { useAuthStore } from "@/stores/auth";
+import { useCreateProject, useUpdateProject, useProjects } from '@/hooks/use-projects';
+import { useAuthStore } from '@/stores/auth';
 
-export default function ProjectFormScreen() {
+const renderHeaderLeft = (label: string, onCancel: () => void) => (
+  <Pressable onPress={onCancel}>
+    <Text
+      fontWeight="500"
+      color="$primary">
+      {label}
+    </Text>
+  </Pressable>
+);
+
+const renderHeaderRight = (label: string, isPending: boolean, onSave: () => void) => (
+  <Pressable
+    onPress={onSave}
+    disabled={isPending}>
+    <Text
+      fontWeight="600"
+      color={isPending ? '$mutedForeground' : '$primary'}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
+const ProjectFormScreen = () => {
   const { boardId, projectId } = useLocalSearchParams<{ boardId: string; projectId?: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -19,42 +49,43 @@ export default function ProjectFormScreen() {
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
 
-  const isEditMode = !!projectId;
+  const isEditMode = projectId !== undefined && projectId !== '';
   const project = isEditMode ? projects.find((p) => p._id === projectId) : null;
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
-    if (project) {
+    if (project != null) {
+      // oxlint-disable-next-line react/set-state-in-effect -- seeds editable form state from fetched project
       setTitle(project.title);
-      setDescription(project.description || "");
+      setDescription(project.description ?? '');
     }
   }, [project]);
 
   const handleSave = () => {
     if (!title.trim()) {
-      Alert.alert("Error", "Title is required");
+      Alert.alert('Error', 'Title is required');
       return;
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void notificationAsync(NotificationFeedbackType.Success);
 
     if (isEditMode && projectId) {
       updateProjectMutation.mutate(
         {
           id: projectId,
           title,
-          description: description || null
+          description: description || null,
         },
         {
           onSuccess: () => {
             router.back();
           },
           onError: (error) => {
-            Alert.alert(t("common.error") || "Error", error.message);
-          }
-        }
+            Alert.alert(t('common.error') || 'Error', error.message);
+          },
+        },
       );
     } else {
       if (!boardId) {
@@ -65,23 +96,27 @@ export default function ProjectFormScreen() {
           title,
           description: description || null,
           boardId,
-          owner: session?.user._id
+          owner: session?.user._id,
         },
         {
           onSuccess: () => {
             router.back();
           },
           onError: (error) => {
-            Alert.alert(t("common.error") || "Error", error.message);
-          }
-        }
+            Alert.alert(t('common.error') || 'Error', error.message);
+          },
+        },
       );
     }
   };
 
   if (isEditMode && isLoadingProjects) {
     return (
-      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$background">
+      <View
+        flex={1}
+        alignItems="center"
+        justifyContent="center"
+        backgroundColor="$background">
         <ActivityIndicator size="large" />
       </View>
     );
@@ -89,46 +124,26 @@ export default function ProjectFormScreen() {
 
   const isPending = createProjectMutation.isPending || updateProjectMutation.isPending;
 
-  const handleSaveRef = useRef(handleSave);
-  handleSaveRef.current = handleSave;
-
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1 }}>
       <Stack.Screen
         options={{
           title: isEditMode
-            ? t("kanban.project.editProjectTitle") || "Edit Project"
-            : t("kanban.project.addNewProjectTitle") || "New Project",
-          presentation: "formSheet",
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                router.back();
-              }}
-            >
-              <Text fontWeight="500" color="$primary">
-                {t("common.cancel") || "Cancel"}
-              </Text>
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable
-              onPress={() => {
-                handleSaveRef.current();
-              }}
-              disabled={isPending}
-            >
-              <Text
-                fontWeight="600"
-                color={isPending ? "$mutedForeground" : "$primary"}
-              >
-                {isEditMode ? t("common.save") || "Save" : t("common.create") || "Create"}
-              </Text>
-            </Pressable>
-          )
+            ? t('kanban.project.editProjectTitle') || 'Edit Project'
+            : t('kanban.project.addNewProjectTitle') || 'New Project',
+          presentation: 'formSheet',
+          headerLeft: () =>
+            renderHeaderLeft(t('common.cancel') || 'Cancel', () => {
+              router.back();
+            }),
+          headerRight: () =>
+            renderHeaderRight(
+              isEditMode ? t('common.save') || 'Save' : t('common.create') || 'Create',
+              isPending,
+              handleSave,
+            ),
         }}
       />
 
@@ -136,12 +151,14 @@ export default function ProjectFormScreen() {
         style={{ flex: 1, backgroundColor: theme.background.val }}
         contentContainerStyle={{ padding: 16, gap: 24 }}
         contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         {/* Title */}
         <View gap={8}>
-          <Text fontSize={14} fontWeight="500" color="$mutedForeground">
-            {t("kanban.project.titleLabel") || "Title"}
+          <Text
+            fontSize={14}
+            fontWeight="500"
+            color="$mutedForeground">
+            {t('kanban.project.titleLabel') || 'Title'}
           </Text>
           <TextInput
             style={{
@@ -151,19 +168,22 @@ export default function ProjectFormScreen() {
               backgroundColor: theme.input.val,
               padding: 12,
               color: theme.color.val,
-              fontSize: 16
+              fontSize: 16,
             }}
             value={title}
             onChangeText={setTitle}
-            placeholder={t("kanban.project.titlePlaceholder") || "Project title"}
+            placeholder={t('kanban.project.titlePlaceholder') || 'Project title'}
             placeholderTextColor={theme.mutedForeground.val}
           />
         </View>
 
         {/* Description */}
         <View gap={8}>
-          <Text fontSize={14} fontWeight="500" color="$mutedForeground">
-            {t("kanban.project.descriptionLabel") || "Description"}
+          <Text
+            fontSize={14}
+            fontWeight="500"
+            color="$mutedForeground">
+            {t('kanban.project.descriptionLabel') || 'Description'}
           </Text>
           <TextInput
             style={{
@@ -175,11 +195,11 @@ export default function ProjectFormScreen() {
               padding: 12,
               color: theme.color.val,
               fontSize: 16,
-              textAlignVertical: "top"
+              textAlignVertical: 'top',
             }}
             value={description}
             onChangeText={setDescription}
-            placeholder={t("kanban.project.descriptionPlaceholder") || "Add description..."}
+            placeholder={t('kanban.project.descriptionPlaceholder') || 'Add description...'}
             placeholderTextColor={theme.mutedForeground.val}
             multiline
           />
@@ -187,4 +207,6 @@ export default function ProjectFormScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default ProjectFormScreen;

@@ -2,7 +2,8 @@ import { Form, Input, Switch, useFormContext } from '@repo/forms';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 
-import { Wizard, useWizard, type WizardFormLike, type WizardStep } from './index';
+import { Wizard, useWizard } from './index';
+import type { WizardFormLike, WizardStep } from './index';
 
 const steps: WizardStep[] = [
   {
@@ -43,7 +44,9 @@ export default meta;
 
 type Story = StoryObj<typeof Wizard>;
 
-function DeriveToggle() {
+const noop = (): void => undefined;
+
+const DeriveToggle = () => {
   const { setFieldValue } = useWizard();
   const [derived, setDerived] = useState(false);
   return (
@@ -59,15 +62,15 @@ function DeriveToggle() {
       }}
     />
   );
-}
+};
 
-function ReadyWizard({
+const ReadyWizard = ({
   labels = 'visible',
   defaultCurrent = 1,
 }: {
   labels?: 'visible' | 'hidden';
   defaultCurrent?: number;
-}) {
+}) => {
   const form = useFormContext<Record<string, string>>();
   return (
     <Wizard
@@ -76,9 +79,14 @@ function ReadyWizard({
       defaultCurrent={defaultCurrent}
       completeLabel="Restore backup"
       labels={labels}
-      onCancel={() => undefined}>
+      onCancel={noop}>
       <Wizard.Panel>
-        <Input id="source" name="source" label="Source" required />
+        <Input
+          id="source"
+          name="source"
+          label="Source"
+          required
+        />
       </Wizard.Panel>
       <Wizard.Panel>
         <DeriveToggle />
@@ -91,34 +99,41 @@ function ReadyWizard({
             required
           />
         </Wizard.Clearable>
-        <Input id="region" name="region" label="Region" required />
+        <Input
+          id="region"
+          name="region"
+          label="Region"
+          required
+        />
       </Wizard.Panel>
       <Wizard.Panel>
-        <Input id="checksums" name="checksums" label="Checksums" />
+        <Input
+          id="checksums"
+          name="checksums"
+          label="Checksums"
+        />
       </Wizard.Panel>
       <Wizard.Panel>
         <Wizard.Review />
       </Wizard.Panel>
     </Wizard>
   );
-}
+};
 
-function ReadyForm(props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) {
-  return (
-    <Form
-      formOptions={{
-        defaultValues: {
-          source: 'backup-2026-08-27-0300',
-          volume: 'vol-restore-2026-08',
-          region: 'eu-central',
-          checksums: 'After restore',
-        },
-      }}
-      showErrorSummary={false}>
-      <ReadyWizard {...props} />
-    </Form>
-  );
-}
+const ReadyForm = (props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) => (
+  <Form
+    formOptions={{
+      defaultValues: {
+        source: 'backup-2026-08-27-0300',
+        volume: 'vol-restore-2026-08',
+        region: 'eu-central',
+        checksums: 'After restore',
+      },
+    }}
+    showErrorSummary={false}>
+    <ReadyWizard {...props} />
+  </Form>
+);
 
 export const Main: Story = {
   name: 'Ready',
@@ -134,14 +149,28 @@ export const Loading: Story = {
       },
     },
   },
-  render: () => <Wizard steps={steps} completeLabel="Restore backup" status="loading" />,
+  render: () => (
+    <Wizard
+      steps={steps}
+      completeLabel="Restore backup"
+      status="loading"
+    />
+  ),
 };
 
 export const Empty: Story = {
-  render: () => <Wizard steps={steps} completeLabel="Restore backup" status="empty" emptyTitle="No restore steps" />,
+  render: () => (
+    <Wizard
+      steps={steps}
+      completeLabel="Restore backup"
+      status="empty"
+      emptyTitle="No restore steps"
+    />
+  ),
 };
 
-export const Error: Story = {
+export const ErrorState: Story = {
+  name: 'Error',
   render: () => (
     <Wizard
       steps={steps}
@@ -155,7 +184,9 @@ export const Error: Story = {
 
 export const ValidationError: Story = {
   render: () => (
-    <Form formOptions={{ defaultValues: { source: '', volume: '', region: '' } }} showErrorSummary={false}>
+    <Form
+      formOptions={{ defaultValues: { source: '', volume: '', region: '' } }}
+      showErrorSummary={false}>
       <ReadyWizard defaultCurrent={1} />
     </Form>
   ),

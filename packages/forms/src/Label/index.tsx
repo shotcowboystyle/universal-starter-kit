@@ -3,13 +3,9 @@ import { createElement } from 'react';
 import type { FontSizeTokens, LabelProps as TamaguiLabelProps, SizeTokens } from 'tamagui';
 import { isWeb, Label as TamaguiLabel, YStack } from 'tamagui';
 
-import {
-  formatRequiredMarkSuffix,
-  mapHouseRequiredMarking,
-  useRequiredMarking,
-  type RequiredMarkMode,
-} from '../requiredMarking';
-import { formCommonColors } from '../shared/colorRamps';
+import { formatRequiredMarkSuffix, mapHouseRequiredMarking, useRequiredMarking } from '../required-marking';
+import type { RequiredMarkMode } from '../required-marking';
+import { formCommonColors } from '../shared/color-ramps';
 
 export interface LabelProps extends Omit<TamaguiLabelProps, 'size'> {
   /** Type step. Do not pass a control-height `sizeToken`. */
@@ -37,7 +33,7 @@ const visuallyHidden = {
   ...(isWeb ? { whiteSpace: 'nowrap' as const, borderWidth: 0 } : { opacity: 0 }),
 };
 
-export function Label({
+export const Label = ({
   size,
   required,
   requiredMarking: requiredMarkingProp,
@@ -48,14 +44,23 @@ export function Label({
   htmlFor,
   children,
   ...props
-}: LabelProps) {
+}: LabelProps) => {
   const { knobProps, disabledState } = useResolvedKnobs();
   const markingCtx = useRequiredMarking();
   const markMode: RequiredMarkMode =
     requiredMarkingProp ?? markingCtx?.mode ?? mapHouseRequiredMarking(knobProps.requiredMarking);
   const suffix = formatRequiredMarkSuffix(required, markMode);
   const keepLabelReadable = Boolean(disabled) && disabledState.style !== 'dimWhole';
+  // SAFETY: `size` is a type-scale step here (the prop forbids control-height tokens), and the `$n` names SizeTokens and FontSizeTokens share are the ones that reach this point.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
   const typeSize = (size as FontSizeTokens | undefined) ?? knobProps.label.fontSize;
+  const hasTarget = htmlFor !== undefined && htmlFor !== '';
+  let cursor: 'not-allowed' | 'pointer' | 'default' = 'default';
+  if (disabled) {
+    cursor = 'not-allowed';
+  } else if (hasTarget) {
+    cursor = 'pointer';
+  }
   const color = error ? formCommonColors.error : knobProps.textAccentColor;
   const type = asPageHeading
     ? {
@@ -76,7 +81,7 @@ export function Label({
       {...type}
       fontWeight="400"
       color={color}
-      cursor={disabled ? 'not-allowed' : htmlFor ? 'pointer' : 'default'}
+      cursor={cursor}
       display="flex"
       alignItems="flex-start"
       flexWrap="wrap"
@@ -99,10 +104,13 @@ export function Label({
       return createElement('h1', { style: { margin: 0, padding: 0 } }, node);
     }
     return (
-      <YStack accessibilityRole="header" margin={0} padding={0}>
+      <YStack
+        accessibilityRole="header"
+        margin={0}
+        padding={0}>
         {node}
       </YStack>
     );
   }
   return node;
-}
+};

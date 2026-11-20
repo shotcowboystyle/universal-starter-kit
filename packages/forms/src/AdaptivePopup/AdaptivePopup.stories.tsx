@@ -7,6 +7,7 @@ import { Button } from '../Button';
 import { Input } from '../fields/Input';
 
 import { AdaptivePopup } from './index';
+import type { AdaptivePopupSize } from './index';
 
 const meta: Meta<typeof AdaptivePopup> = {
   title: 'Forms/AdaptivePopup',
@@ -38,226 +39,255 @@ const meta: Meta<typeof AdaptivePopup> = {
 export default meta;
 type Story = StoryObj<typeof AdaptivePopup>;
 
+const MainExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title="Edit Profile"
+      description="Make changes to your profile here."
+      trigger={<Button>Open Popup</Button>}
+      footer={
+        <XStack
+          gap="$2"
+          justifyContent="flex-end">
+          <Button
+            chromeless
+            onPress={() => {
+              setOpen(false);
+            }}>
+            Cancel
+          </Button>
+          <Button
+            onPress={() => {
+              setOpen(false);
+            }}>
+            Save
+          </Button>
+        </XStack>
+      }>
+      <YStack gap="$3">
+        <Input
+          label="Name"
+          placeholder="Enter your name"
+        />
+        <Input
+          label="Email"
+          placeholder="Enter your email"
+        />
+      </YStack>
+    </AdaptivePopup>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title="Edit Profile"
-          description="Make changes to your profile here."
-          trigger={<Button>Open Popup</Button>}
-          footer={
-            <XStack gap="$2" justifyContent="flex-end">
-              <Button
-                chromeless
-                onPress={() => {
-                  setOpen(false);
-                }}>
-                Cancel
-              </Button>
-              <Button
-                onPress={() => {
-                  setOpen(false);
-                }}>
-                Save
-              </Button>
-            </XStack>
-          }>
-          <YStack gap="$3">
-            <Input label="Name" placeholder="Enter your name" />
-            <Input label="Email" placeholder="Enter your email" />
-          </YStack>
-        </AdaptivePopup>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <MainExample />,
+};
+
+const DrawerExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      face="drawer"
+      title="Edit record"
+      description="Keep the page in view while you edit."
+      trigger={<Button>Open Drawer</Button>}
+      footer={
+        <XStack
+          gap="$2"
+          justifyContent="flex-end">
+          <Button
+            chromeless
+            onPress={() => {
+              setOpen(false);
+            }}>
+            Cancel
+          </Button>
+          <Button
+            onPress={() => {
+              setOpen(false);
+            }}>
+            Save
+          </Button>
+        </XStack>
+      }>
+      <YStack gap="$3">
+        <Input
+          label="Name"
+          placeholder="Enter your name"
+        />
+        <Input
+          label="Email"
+          placeholder="Enter your email"
+        />
+        <Input
+          label="Title"
+          placeholder="Job title"
+        />
+        <Input
+          label="Team"
+          placeholder="Team"
+        />
+        <Input
+          label="Location"
+          placeholder="Location"
+        />
+        <Input
+          label="Notes"
+          placeholder="Notes"
+        />
+      </YStack>
+    </AdaptivePopup>
+  );
 };
 
 export const Drawer: Story = {
   name: 'Drawer',
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          face="drawer"
-          title="Edit record"
-          description="Keep the page in view while you edit."
-          trigger={<Button>Open Drawer</Button>}
-          footer={
-            <XStack gap="$2" justifyContent="flex-end">
-              <Button
-                chromeless
-                onPress={() => {
-                  setOpen(false);
-                }}>
-                Cancel
-              </Button>
-              <Button
-                onPress={() => {
-                  setOpen(false);
-                }}>
-                Save
-              </Button>
-            </XStack>
-          }>
-          <YStack gap="$3">
-            <Input label="Name" placeholder="Enter your name" />
-            <Input label="Email" placeholder="Enter your email" />
-            <Input label="Title" placeholder="Job title" />
-            <Input label="Team" placeholder="Team" />
-            <Input label="Location" placeholder="Location" />
-            <Input label="Notes" placeholder="Notes" />
-          </YStack>
-        </AdaptivePopup>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <DrawerExample />,
+};
+
+const SizeExample = ({ size }: { size: AdaptivePopupSize }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title={`Size: ${size}`}
+      size={size}
+      trigger={<Button>{size}</Button>}>
+      <Paragraph>
+        This popup uses size=&quot;{size}&quot;. On desktop this controls the max-width. On mobile it always renders as
+        a sheet.
+      </Paragraph>
+    </AdaptivePopup>
+  );
 };
 
 export const Sizes: Story = {
-  render: () => {
-    const SizeExample = ({ size }: { size: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen' }) => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title={`Size: ${size}`}
-          size={size}
-          trigger={<Button>{size}</Button>}>
-          <Paragraph>
-            This popup uses size=&quot;{size}&quot;. On desktop this controls the max-width. On mobile it always renders
-            as a sheet.
-          </Paragraph>
-        </AdaptivePopup>
-      );
-    };
+  render: () => (
+    <XStack
+      gap="$2"
+      flexWrap="wrap">
+      <SizeExample size="sm" />
+      <SizeExample size="md" />
+      <SizeExample size="lg" />
+      <SizeExample size="xl" />
+      <SizeExample size="fullscreen" />
+    </XStack>
+  ),
+};
 
-    return (
-      <XStack gap="$2" flexWrap="wrap">
-        <SizeExample size="sm" />
-        <SizeExample size="md" />
-        <SizeExample size="lg" />
-        <SizeExample size="xl" />
-        <SizeExample size="fullscreen" />
-      </XStack>
-    );
-  },
+const FullscreenExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title="Fullscreen View"
+      size="fullscreen"
+      trigger={<Button>Open Fullscreen</Button>}>
+      <YStack
+        flex={1}
+        backgroundColor="$color3"
+        borderRadius="$2"
+        padding="$4"
+        gap="$2">
+        <Text>This content fills the available space.</Text>
+        <Text color="$color9">Great for maps, image viewers, or any content that benefits from more space.</Text>
+      </YStack>
+    </AdaptivePopup>
+  );
 };
 
 export const Fullscreen: Story = {
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title="Fullscreen View"
-          size="fullscreen"
-          trigger={<Button>Open Fullscreen</Button>}>
-          <YStack flex={1} backgroundColor="$color3" borderRadius="$2" padding="$4" gap="$2">
-            <Text>This content fills the available space.</Text>
-            <Text color="$color9">Great for maps, image viewers, or any content that benefits from more space.</Text>
-          </YStack>
-        </AdaptivePopup>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <FullscreenExample />,
+};
+
+const WithoutTriggerExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <YStack gap="$3">
+      <Text>Control the popup externally without using the trigger prop:</Text>
+      <Button
+        onPress={() => {
+          setOpen(true);
+        }}>
+        Open via external state
+      </Button>
+      <AdaptivePopup
+        open={open}
+        onOpenChange={setOpen}
+        title="Externally Controlled"
+        description="This popup was opened via external state management.">
+        <Paragraph>
+          Useful when you need to open the popup from multiple places or in response to async events.
+        </Paragraph>
+      </AdaptivePopup>
+    </YStack>
+  );
 };
 
 export const WithoutTrigger: Story = {
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <YStack gap="$3">
-          <Text>Control the popup externally without using the trigger prop:</Text>
+  render: () => <WithoutTriggerExample />,
+};
+
+const NoCloseButtonExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title="Confirmation"
+      showCloseButton={false}
+      trigger={<Button>Delete Item</Button>}
+      footer={
+        <XStack
+          gap="$2"
+          justifyContent="flex-end">
           <Button
+            chromeless
             onPress={() => {
-              setOpen(true);
+              setOpen(false);
             }}>
-            Open via external state
+            Cancel
           </Button>
-          <AdaptivePopup
-            open={open}
-            onOpenChange={setOpen}
-            title="Externally Controlled"
-            description="This popup was opened via external state management.">
-            <Paragraph>
-              Useful when you need to open the popup from multiple places or in response to async events.
-            </Paragraph>
-          </AdaptivePopup>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+          <Button
+            backgroundColor="$red9"
+            onPress={() => {
+              action('delete')();
+              setOpen(false);
+            }}>
+            Delete
+          </Button>
+        </XStack>
+      }>
+      <Paragraph>Are you sure you want to delete this item? This action cannot be undone.</Paragraph>
+    </AdaptivePopup>
+  );
 };
 
 export const NoCloseButton: Story = {
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title="Confirmation"
-          showCloseButton={false}
-          trigger={<Button>Delete Item</Button>}
-          footer={
-            <XStack gap="$2" justifyContent="flex-end">
-              <Button
-                chromeless
-                onPress={() => {
-                  setOpen(false);
-                }}>
-                Cancel
-              </Button>
-              <Button
-                backgroundColor="$red9"
-                onPress={() => {
-                  action('delete')();
-                  setOpen(false);
-                }}>
-                Delete
-              </Button>
-            </XStack>
-          }>
-          <Paragraph>Are you sure you want to delete this item? This action cannot be undone.</Paragraph>
-        </AdaptivePopup>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <NoCloseButtonExample />,
+};
+
+const DisabledExample = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title="Disabled"
+      disabled
+      trigger={<Button>Disabled Trigger</Button>}>
+      <Paragraph>You should not see this.</Paragraph>
+    </AdaptivePopup>
+  );
 };
 
 export const Disabled: Story = {
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title="Disabled"
-          disabled
-          trigger={<Button>Disabled Trigger</Button>}>
-          <Paragraph>You should not see this.</Paragraph>
-        </AdaptivePopup>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <DisabledExample />,
 };

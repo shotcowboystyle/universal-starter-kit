@@ -3,6 +3,8 @@ import { YStack } from 'tamagui';
 
 import { SvgUri } from './index';
 
+const REACT_SVG_URL = 'https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/react.svg';
+
 const meta: Meta<typeof SvgUri> = {
   title: 'Components/SvgUri',
   component: SvgUri,
@@ -37,7 +39,7 @@ type Story = StoryObj<typeof SvgUri>;
 export const Basic: Story = {
   name: 'Main',
   args: {
-    uri: 'https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/react.svg',
+    uri: REACT_SVG_URL,
     width: 100,
     height: 100,
   },
@@ -46,7 +48,7 @@ export const Basic: Story = {
 
 export const WidthOnly: Story = {
   args: {
-    uri: 'https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/react.svg',
+    uri: REACT_SVG_URL,
     width: 120,
   },
   render: (args) => <SvgUri {...args} />,
@@ -54,7 +56,7 @@ export const WidthOnly: Story = {
 
 export const HeightOnly: Story = {
   args: {
-    uri: 'https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/react.svg',
+    uri: REACT_SVG_URL,
     height: 120,
   },
   render: (args) => <SvgUri {...args} />,
@@ -103,8 +105,16 @@ export const MultipleSvgs = () => (
 export const InvalidUri: Story = {
   render: () => (
     <YStack gap="$4">
-      <SvgUri uri="not-a-valid-url" width={100} height={100} />
-      <SvgUri uri="" width={100} height={100} />
+      <SvgUri
+        uri="not-a-valid-url"
+        width={100}
+        height={100}
+      />
+      <SvgUri
+        uri=""
+        width={100}
+        height={100}
+      />
     </YStack>
   ),
 };

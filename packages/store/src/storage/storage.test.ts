@@ -17,12 +17,12 @@ import { storage } from './index';
 
 const key = 'mp-storage-spec-key';
 
-function createLocalStorageStub() {
+const createLocalStorageStub = () => {
   const data = new Map<string, string>();
   return {
     getItem: (name: string) => data.get(name) ?? null,
     setItem: (name: string, value: string) => {
-      data.set(name, String(value));
+      data.set(name, value);
     },
     removeItem: (name: string) => {
       data.delete(name);
@@ -35,48 +35,48 @@ function createLocalStorageStub() {
       return data.size;
     },
   };
-}
+};
 
 let previousLocalStorage: unknown;
 
-beforeEach(() => {
-  previousLocalStorage = globalThis.localStorage;
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: createLocalStorageStub(),
-    writable: true,
-    configurable: true,
-  });
-});
-
-afterEach(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: previousLocalStorage,
-    writable: true,
-    configurable: true,
-  });
-});
-
 describe('default storage adapter (web)', () => {
-  it('round-trips a value through localStorage', () => {
-    storage.setItem(key, 'hello');
+  beforeEach(() => {
+    previousLocalStorage = globalThis.localStorage;
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: createLocalStorageStub(),
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'localStorage', {
+      value: previousLocalStorage,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it('round-trips a value through localStorage', async () => {
+    await storage.setItem(key, 'hello');
     expect(globalThis.localStorage.getItem(key)).toBe('hello');
-    expect(storage.getItem(key)).toBe('hello');
+    await expect(Promise.resolve(storage.getItem(key))).resolves.toBe('hello');
   });
 
-  it('returns null for a missing key (rehydrate no-op contract)', () => {
-    expect(storage.getItem('mp-storage-spec-missing')).toBeNull();
+  it('returns null for a missing key (rehydrate no-op contract)', async () => {
+    await expect(Promise.resolve(storage.getItem('mp-storage-spec-missing'))).resolves.toBeNull();
   });
 
-  it('removes a value', () => {
-    storage.setItem(key, 'to-remove');
-    storage.removeItem(key);
-    expect(storage.getItem(key)).toBeNull();
+  it('removes a value', async () => {
+    await storage.setItem(key, 'to-remove');
+    await storage.removeItem(key);
+    await expect(Promise.resolve(storage.getItem(key))).resolves.toBeNull();
     expect(globalThis.localStorage.getItem(key)).toBeNull();
   });
 
-  it('overwrites an existing value on set', () => {
-    storage.setItem(key, 'first');
-    storage.setItem(key, 'second');
-    expect(storage.getItem(key)).toBe('second');
+  it('overwrites an existing value on set', async () => {
+    await storage.setItem(key, 'first');
+    await storage.setItem(key, 'second');
+    await expect(Promise.resolve(storage.getItem(key))).resolves.toBe('second');
   });
 });

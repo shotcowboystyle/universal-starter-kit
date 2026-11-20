@@ -14,13 +14,13 @@
  * step-12 title. Semantic hues are tint-independent; accent rides the tint.
  * Expiry policy lives in ./store (per-intent defaults, error ceiling, sticky
  * opt-out); pause-on-hover/focus, swipe to dismiss, Escape and F8 come from
- * @tamagui/toast. Enter/exit honor the animation knob.
+ * the `@tamagui/toast` package. Enter/exit honor the animation knob.
  *
  * Layering: toasts are transient feedback, not modal chrome. On web the
  * whole viewport is contained in a stacking context at `zIndex.loading`
  * (1000) so modal overlays (sheet 100000 / dropdown 200000, portaled to the
  * root host) always paint — and hit-test — above it. On native the
- * @tamagui/toast wrapper + viewport are `pointerEvents="box-none"` all the
+ * `@tamagui/toast` wrapper + viewport are `pointerEvents="box-none"` all the
  * way down, so ONLY the toast card itself is ever interactive; taps beside
  * a toast reach whatever is underneath.
  */
@@ -29,7 +29,6 @@ import { CheckCircleIcon, InfoIcon, WarningCircleIcon, WarningIcon, XIcon } from
 import { zIndex } from '@repo/forms';
 import {
   Intent,
-  type KnobProps,
   MIN_PRESS_TARGET,
   ensureCompositeFocusRing,
   pressTargetHitSlop,
@@ -38,16 +37,18 @@ import {
   useResolvedKnobs,
   warnBannedErrorWords,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import {
   Toast as TamaguiToast,
   ToastProvider as TamaguiToastProvider,
   ToastViewport as TamaguiToastViewport,
-  type SwipeDirection,
 } from '@tamagui/toast';
+import type { SwipeDirection } from '@tamagui/toast';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { SizableText, View, XStack, YStack, isWeb, styled, useTheme, type ViewProps } from 'tamagui';
+import { SizableText, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
 
@@ -61,26 +62,13 @@ import {
   showToast,
   subscribeToasts,
   subscribeToastViewport,
-  TOAST_ACTION_MIN_MS,
   TOAST_DEFAULT_MS,
-  TOAST_ERROR_MS,
-  TOAST_WARNING_MS,
-  type ToastActionOptions,
-  type ToastEntry,
-  type ToastIntent,
-  type ToastShowOptions,
 } from './store';
+import type { ToastActionOptions, ToastEntry, ToastIntent, ToastShowOptions } from './store';
 
-export type { ToastActionOptions, ToastEntry, ToastIntent, ToastShowOptions };
-export {
-  dismissAllToasts,
-  dismissToast,
-  showToast,
-  TOAST_ACTION_MIN_MS,
-  TOAST_DEFAULT_MS,
-  TOAST_ERROR_MS,
-  TOAST_WARNING_MS,
-};
+export type { ToastActionOptions, ToastEntry, ToastIntent, ToastShowOptions } from './store';
+export { dismissAllToasts, dismissToast, showToast } from './store';
+export { TOAST_ACTION_MIN_MS, TOAST_DEFAULT_MS, TOAST_ERROR_MS, TOAST_WARNING_MS } from './store';
 
 // ── Intent visuals ────────────────────────────────────────────
 
@@ -108,10 +96,10 @@ export interface UseToastResult {
  * Imperative toast hook. Works anywhere — no provider needed beyond a
  * mounted <ToastViewport />.
  */
-export function useToast(): UseToastResult {
+export const useToast = (): UseToastResult => {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
   return useMemo(() => ({ show: showToast, dismiss: dismissToast, dismissAll: dismissAllToasts, toasts }), [toasts]);
-}
+};
 
 // ── Press-floor + nested scale ────────────────────────────────
 //
@@ -131,23 +119,53 @@ const CLOSE_RING_INSET = 2;
 // pitch-limited anatomy as Alert dismiss-beside-action.
 const CLOSE_ADJACENT_OUTSET = 6;
 
-const DESC_FONT_SIZE = {
-  $1: '$1',
-  $2: '$1',
-  $3: '$2',
-  $4: '$3',
-  $5: '$4',
-} as const;
+const ALIGN_START = 'flex-start' as const;
 
-function iconPxForSize(size: string): number {
-  return size === 'small' ? 16 : size === 'large' ? 20 : 18;
-}
+const asText = (node: ReactNode): string | undefined =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode is a wide union; only string children are spoken or screened
+  typeof node === 'string' ? node : undefined;
 
-function closePxForSize(size: string): number {
-  return size === 'small' ? 12 : size === 'large' ? 16 : 14;
-}
+const hasDocument = (): boolean => typeof document !== 'undefined';
 
-function toastClosePressProps(besideAction: boolean, closeVisual: number) {
+const themeColor = (token: { get: () => string } | undefined): string | undefined => token?.get();
+
+// Description steps one token below the label (floored at $1).
+const descFontSizeOf = (label: KnobProps['label']): string | number => {
+  switch (String(label.fontSize)) {
+    case '$1':
+    case '$2': {
+      return '$1';
+    }
+    case '$3': {
+      return '$2';
+    }
+    case '$4': {
+      return '$3';
+    }
+    case '$5': {
+      return '$4';
+    }
+    default: {
+      return label.fontSize;
+    }
+  }
+};
+
+const iconPxForSize = (size: string): number => {
+  if (size === 'small') {
+    return 16;
+  }
+  return size === 'large' ? 20 : 18;
+};
+
+const closePxForSize = (size: string): number => {
+  if (size === 'small') {
+    return 12;
+  }
+  return size === 'large' ? 16 : 14;
+};
+
+const toastClosePressProps = (besideAction: boolean, closeVisual: number) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - closeVisual) / 2));
   return {
     ...pressTargetStyle(),
@@ -156,16 +174,16 @@ function toastClosePressProps(besideAction: boolean, closeVisual: number) {
     marginHorizontal: -(besideAction ? CLOSE_ADJACENT_OUTSET : outset),
     hitSlop: besideAction ? undefined : pressTargetHitSlop(closeVisual),
   };
-}
+};
 
-function toastActionPressProps(visualH: number) {
+const toastActionPressProps = (visualH: number) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - visualH) / 2));
   return {
     ...pressTargetStyle(),
     marginVertical: -outset,
     hitSlop: pressTargetHitSlop(visualH),
   };
-}
+};
 
 // Overlay elevation is one step above the control token.
 // elevatedSurface.elevation is a Tamagui VARIANT — dropped on a
@@ -174,10 +192,19 @@ function toastActionPressProps(visualH: number) {
 // variant) so standalone and viewport paint the SAME overlay shadow.
 // W1-knob-res exposes `overlayElevation` on knobProps; prefer that when
 // present so this local step-up retires itself.
-const OVERLAY_ELEVATION_WEB: Record<string, string> = { $1: '$2', $2: '$3', $4: '$5' };
-const OVERLAY_ELEVATION_NATIVE: Record<number, number> = { 20: 28, 28: 36, 44: 52 };
+const OVERLAY_ELEVATION_WEB = new Map<string, string>([
+  ['$1', '$2'],
+  ['$2', '$3'],
+  ['$4', '$5'],
+]);
+const OVERLAY_ELEVATION_NATIVE = new Map<number, number>([
+  [20, 28],
+  [28, 36],
+  [44, 52],
+]);
 
-function overlayElevationOf(knobProps: KnobProps): string | number | undefined {
+const overlayElevationOf = (knobProps: KnobProps): string | number | undefined => {
+  // SAFETY: overlayElevation is optional on older knob resolvers; `in` below checks presence before the read
   const extra = knobProps as KnobProps & { overlayElevation?: string | number };
   if ('overlayElevation' in extra) {
     return extra.overlayElevation;
@@ -186,11 +213,12 @@ function overlayElevationOf(knobProps: KnobProps): string | number | undefined {
   if (control == null) {
     return undefined;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- elevation is a web token string or a native number
   if (typeof control === 'string') {
-    return OVERLAY_ELEVATION_WEB[control] ?? control;
+    return OVERLAY_ELEVATION_WEB.get(control) ?? control;
   }
-  return OVERLAY_ELEVATION_NATIVE[control] ?? control;
-}
+  return OVERLAY_ELEVATION_NATIVE.get(control) ?? control;
+};
 
 /** 3px logical intent edge — must live in the style attribute after Tamagui writes. */
 const TOAST_INTENT_EDGE_PX = 3;
@@ -198,41 +226,41 @@ const TOAST_FRAME_STYLE_ID = 'mp-toast-intent-edge';
 const toastIntentEdgeCss =
   '.mp-toast{border-inline-start-width:3px!important;border-inline-start-style:solid!important;}';
 
-function ensureToastIntentEdge() {
-  if (typeof document === 'undefined') {
+const ensureToastIntentEdge = () => {
+  if (!hasDocument()) {
     return;
   }
-  if (document.getElementById(TOAST_FRAME_STYLE_ID)) {
+  if (document.querySelector(`#${TOAST_FRAME_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
   tag.id = TOAST_FRAME_STYLE_ID;
   tag.textContent = toastIntentEdgeCss;
-  document.head.appendChild(tag);
-}
+  document.head.append(tag);
+};
 
-function paintToastFrame(
+const paintToastFrame = (
   node: HTMLElement | null,
   attrs: { size: string; density: string; nestedPx: number; edgeColor?: string },
-) {
+) => {
   if (!node) {
     return;
   }
   // Native host refs are not HTMLElements. Native already binds testID /
   // data-* via dataAttrs and the intent edge via borderStartWidth.
-  if (typeof node.setAttribute !== 'function') {
+  if (!('dataset' in node)) {
     return;
   }
-  node.setAttribute('data-testid', 'toast');
-  node.setAttribute('data-size', attrs.size);
-  node.setAttribute('data-density', attrs.density);
-  node.setAttribute('data-nested-px', String(attrs.nestedPx));
+  node.dataset.testid = 'toast';
+  node.dataset.size = attrs.size;
+  node.dataset.density = attrs.density;
+  node.dataset.nestedPx = String(attrs.nestedPx);
   node.style.borderInlineStartWidth = `${TOAST_INTENT_EDGE_PX}px`;
   node.style.borderInlineStartStyle = 'solid';
-  if (attrs.edgeColor) {
+  if (attrs.edgeColor !== undefined && attrs.edgeColor !== '') {
     node.style.borderInlineStartColor = attrs.edgeColor;
   }
-}
+};
 
 /**
  * Spoken confirm. Tamagui's ToastAnnounce portal is web-only
@@ -240,45 +268,47 @@ function paintToastFrame(
  * never heard CopyField's "Copied to clipboard." Put the title on the
  * frame and announce it the same way field errors do.
  */
-function spokenToastText(title: ReactNode, description?: ReactNode): string | undefined {
+const spokenToastText = (title: ReactNode, description?: ReactNode): string | undefined => {
   const chunks: string[] = [];
-  if (typeof title === 'string' && title.trim()) {
-    chunks.push(title.trim());
+  const titleText = asText(title)?.trim();
+  if (titleText !== undefined && titleText !== '') {
+    chunks.push(titleText);
   }
-  if (typeof description === 'string' && description.trim()) {
-    chunks.push(description.trim());
+  const descriptionText = asText(description)?.trim();
+  if (descriptionText !== undefined && descriptionText !== '') {
+    chunks.push(descriptionText);
   }
   return chunks.length ? chunks.join('. ') : undefined;
-}
+};
 
-function useAnnounceToast(text: string | undefined) {
+const useAnnounceToast = (text: string | undefined) => {
   useEffect(() => {
-    if (isWeb || !text) {
+    if (isWeb || text === undefined || text === '') {
       return;
     }
     AccessibilityInfo.announceForAccessibility(text);
   }, [text]);
-}
+};
 
-export function nativeToastA11y(text: string | undefined, hasControls: boolean, web = isWeb) {
+// oxlint-disable-next-line react-doctor/only-export-components -- pure a11y prop helper shared with tests, not a component
+export const nativeToastA11y = (text: string | undefined, hasControls: boolean, web = isWeb) => {
   if (web) {
     return {};
   }
   // ToastImplFrame defaults to tabIndex:0, which Tamagui maps to accessible.
   // Explicit false keeps native controls from disappearing inside that group.
-  if (!text || hasControls) {
+  if (text === undefined || text === '' || hasControls) {
     return { accessible: false as const };
   }
   return {
     accessible: true as const,
     accessibilityLabel: text,
   };
-}
+};
 
 /** Native View controls need accessible as well as their button role and label. */
-export function nativeToastControlA11y(web = isWeb) {
-  return web ? {} : { accessible: true as const };
-}
+// oxlint-disable-next-line react-doctor/only-export-components -- pure a11y prop helper shared with tests, not a component
+export const nativeToastControlA11y = (web = isWeb) => (web ? {} : { accessible: true as const });
 
 // Grown transparent press target. Stays UNPAINTED — the keyboard ring lives on the
 // inner pill via `.mp-chip-dismiss:focus-visible .mp-chip-dismiss-ring`.
@@ -319,7 +349,7 @@ const ToastCloseTarget = styled(View, {
   cursor: 'pointer',
   backgroundColor: 'transparent',
   borderWidth: 0,
-  alignSelf: 'flex-start',
+  alignSelf: ALIGN_START,
   alignItems: 'center',
   justifyContent: 'center',
   flexShrink: 0,
@@ -351,12 +381,13 @@ const ToastCloseRing = styled(View, {
  * on the BASE theme: its $color9/$color11 already ride the active tint, and
  * the "accent" sub-theme is the SOLID ramp — wrong for an overlay surface.
  */
-function IntentWrap({ intent, children }: { intent: ToastIntent; children: ReactNode }) {
+const IntentWrap = ({ intent, children }: { intent: ToastIntent; children: ReactNode }) => {
   if (intent === 'accent') {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- `children` is typed ReactNode (may be a Promise), so it can't be returned bare
     return <>{children}</>;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
 // ── Shared inner anatomy ──────────────────────────────────────
 
@@ -365,9 +396,20 @@ function IntentWrap({ intent, children }: { intent: ToastIntent; children: React
  * viewport items. Must be called INSIDE the <Intent> wrapper so the theme
  * tokens resolve on the intent hue.
  */
-function useToastVisuals(intent: ToastIntent, compact?: boolean) {
+const consumerStyleOf = (style: ToastInnerProps['style']): CSSProperties | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- style is a union of object, array and number ids; only plain objects are spread
+  if (style == null || typeof style !== 'object' || Array.isArray(style)) {
+    return undefined;
+  }
+  // SAFETY: web style is a plain CSS object here (non-array object checked above)
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Tamagui style prop type is wider than CSSProperties
+  return style as CSSProperties;
+};
+
+// oxlint-disable-next-line sonarjs/bool-param-default -- undefined (inherit density knob) differs from false (force comfortable)
+const useToastVisuals = (intent: ToastIntent, compact: boolean | undefined) => {
   const { knobProps } = useResolvedKnobs({ intent, component: 'Toast', compact });
-  if (typeof document !== 'undefined') {
+  if (hasDocument()) {
     ensureCompositeFocusRing();
     ensureToastIntentEdge();
   }
@@ -380,19 +422,19 @@ function useToastVisuals(intent: ToastIntent, compact?: boolean) {
   // page surfaces in both schemes. The action label takes
   // useAccentOnSurface: the most chromatic accent step that still clears AA
   // 4.5:1 on color1/color2.
-  const iconColor = (isAccent ? theme.accentColor?.get() : theme.color11?.get()) as string | undefined;
+  const iconColor = themeColor(isAccent ? theme.accentColor : theme.color11);
   const accentTextColor = isAccent ? accentOnSurface : '$color11';
-  const size = knobProps.size;
+  const { size } = knobProps;
   const iconPx = iconPxForSize(size);
   const closePx = closePxForSize(size);
   const nestedPx = knobProps.nestedControl.px;
-  const labelFontSize = String(knobProps.label.fontSize);
-  const descFontSize = DESC_FONT_SIZE[labelFontSize as keyof typeof DESC_FONT_SIZE] ?? knobProps.label.fontSize;
+  const descFontSize = descFontSizeOf(knobProps.label);
   const closeVisual = closePx + CLOSE_RING_INSET * 2;
   const closeRadius = knobProps.pointy ? 0 : '$12';
-  const { elevation: _controlElevation, ...elevatedChrome } = knobProps.elevatedSurface;
+  // Its `elevation` is overridden by the overlay step in frameProps below.
+  const elevatedChrome = knobProps.elevatedSurface;
   const overlayElevation = overlayElevationOf(knobProps);
-  const edgeColor = (isAccent ? theme.accentBackground?.get() : theme.color9?.get()) as string | undefined;
+  const edgeColor = themeColor(isAccent ? theme.accentBackground : theme.color9);
   // Intent accent edge (solid hue) — decorative, so no AA floor. Logical
   // start so the stripe mirrors in RTL. Tamagui writes resolved styles into
   // the same style attribute and clobbers a style set on elevatedSurface
@@ -404,6 +446,12 @@ function useToastVisuals(intent: ToastIntent, compact?: boolean) {
         borderInlineStartColor: edgeColor,
       }
     : undefined;
+  const nativeEdgeProps = isWeb
+    ? undefined
+    : {
+        borderStartWidth: TOAST_INTENT_EDGE_PX,
+        borderStartColor: isAccent ? '$accentBackground' : '$color9',
+      };
   return {
     knobProps,
     iconColor,
@@ -429,19 +477,14 @@ function useToastVisuals(intent: ToastIntent, compact?: boolean) {
       ...knobProps.panelPadding,
       ...knobProps.gap,
       elevation: overlayElevation,
-      ...(isWeb
-        ? {}
-        : {
-            borderStartWidth: TOAST_INTENT_EDGE_PX,
-            borderStartColor: isAccent ? '$accentBackground' : '$color9',
-          }),
+      ...nativeEdgeProps,
       width: 360,
       maxWidth: '100%',
       flexDirection: 'row' as const,
       alignItems: 'flex-start' as const,
     },
   };
-}
+};
 
 interface ToastBodyProps {
   title: ReactNode;
@@ -449,12 +492,12 @@ interface ToastBodyProps {
   intent: ToastIntent;
   iconColor?: string;
   iconPx: number;
-  descFontSize: string;
+  descFontSize: string | number;
   labelFontProps: KnobProps['label'];
   bodyFontProps: { fontFamily: string; fontWeight: string };
 }
 
-function ToastBody({
+const ToastBody = ({
   title,
   description,
   intent,
@@ -463,13 +506,15 @@ function ToastBody({
   descFontSize,
   labelFontProps,
   bodyFontProps,
-}: ToastBodyProps) {
+}: ToastBodyProps) => {
   const Icon = intentIcons[intent];
-  if (typeof title === 'string') {
-    warnBannedErrorWords(title, { component: 'Toast' });
+  const titleText = asText(title);
+  if (titleText !== undefined) {
+    warnBannedErrorWords(titleText, { component: 'Toast' });
   }
-  if (typeof description === 'string') {
-    warnBannedErrorWords(description, { component: 'Toast' });
+  const descriptionText = asText(description);
+  if (descriptionText !== undefined) {
+    warnBannedErrorWords(descriptionText, { component: 'Toast' });
   }
   return (
     <>
@@ -481,21 +526,38 @@ function ToastBody({
         accessible={false}
         accessibilityElementsHidden
         importantForAccessibility="no">
-        <Icon size={iconPx} weight="fill" color={iconColor} />
+        <Icon
+          size={iconPx}
+          weight="fill"
+          color={iconColor}
+        />
       </View>
-      <YStack flexGrow={1} flexShrink={1} gap="$1" minWidth={0} justifyContent="center">
-        <SizableText {...labelFontProps} fontWeight="600" color="$color12">
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        gap="$1"
+        minWidth={0}
+        justifyContent="center">
+        <SizableText
+          {...labelFontProps}
+          fontWeight="600"
+          color="$color12">
           {title}
         </SizableText>
         {description != null && description !== '' && (
-          <SizableText {...bodyFontProps} fontSize={descFontSize as never} color="$color11">
+          <SizableText
+            {...bodyFontProps}
+            // SAFETY: descFontSize is a Tamagui font-size token ('$1'..'$4') or the label's own fontSize
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token unions can't be derived from a runtime knob
+            fontSize={descFontSize as never}
+            color="$color11">
             {description}
           </SizableText>
         )}
       </YStack>
     </>
   );
-}
+};
 
 interface ToastActionLabelProps {
   label: string;
@@ -503,16 +565,22 @@ interface ToastActionLabelProps {
   labelFontProps: KnobProps['label'];
 }
 
-function ToastActionLabel({ label, color, labelFontProps }: ToastActionLabelProps) {
+const ToastActionLabel = ({ label, color, labelFontProps }: ToastActionLabelProps) => {
   // Action label is weight 400. Never 500, never 600.
   // Measure the TEXT NODE — a wrapping frame's weight is not the label's.
-  const inkStyle = isWeb && typeof color === 'string' && !color.startsWith('$') ? { color } : undefined;
+  const inkStyle = isWeb && !color.startsWith('$') ? { color } : undefined;
   return (
-    <SizableText {...labelFontProps} fontWeight="400" color={color as never} style={inkStyle}>
+    <SizableText
+      {...labelFontProps}
+      fontWeight="400"
+      // SAFETY: color is a Tamagui color token or a resolved color string
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token unions can't be derived from a runtime knob
+      color={color as never}
+      style={inkStyle}>
       {label}
     </SizableText>
   );
-}
+};
 
 // ── Toast (standalone / controlled) ──────────────────────────
 
@@ -541,7 +609,7 @@ interface ToastInnerProps extends ToastProps {
   intent: ToastIntent;
 }
 
-function ToastInner({
+const ToastInner = ({
   title,
   description,
   intent,
@@ -550,7 +618,7 @@ function ToastInner({
   dismissible,
   compact,
   ...props
-}: ToastInnerProps) {
+}: ToastInnerProps) => {
   const { t } = useTranslation();
   const {
     knobProps,
@@ -568,6 +636,7 @@ function ToastInner({
     edgeColor,
   } = useToastVisuals(intent, compact);
   const showClose = dismissible ?? onDismiss != null;
+  const hasDescription = Boolean(description);
   const spoken = spokenToastText(title, description);
   useAnnounceToast(spoken);
   const frameRef = useRef<HTMLElement | null>(null);
@@ -579,10 +648,7 @@ function ToastInner({
       edgeColor,
     });
   });
-  const consumerStyle =
-    props.style && typeof props.style === 'object' && !Array.isArray(props.style)
-      ? (props.style as CSSProperties)
-      : undefined;
+  const consumerStyle = consumerStyleOf(props.style);
   return (
     <XStack
       {...(isWeb
@@ -597,9 +663,11 @@ function ToastInner({
       className="mp-toast"
       transition={knobProps.transition}
       {...frameProps}
-      alignItems={description ? 'flex-start' : 'center'}
+      alignItems={hasDescription ? ALIGN_START : 'center'}
       {...props}
       {...dataAttrs}
+      // SAFETY: web host ref is an HTMLElement; Tamagui's ref type is the cross-platform TamaguiElement
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- RefObject<HTMLElement> isn't assignable to Ref<TamaguiElement>
       ref={frameRef as never}
       style={{ ...consumerStyle, ...intentEdgeStyle }}>
       <ToastBody
@@ -626,7 +694,11 @@ function ToastInner({
             {...knobProps.borderRadiusNested}
             height={nestedPx}
             minHeight={nestedPx}>
-            <ToastActionLabel label={action.label} color={accentTextColor} labelFontProps={knobProps.label} />
+            <ToastActionLabel
+              label={action.label}
+              color={accentTextColor}
+              labelFontProps={knobProps.label}
+            />
           </ToastActionPill>
         </ToastActionTarget>
       )}
@@ -635,30 +707,36 @@ function ToastInner({
           {...nativeToastControlA11y()}
           className="mp-chip-dismiss"
           aria-label={t('Dismiss notification')}
-          alignSelf={description ? 'flex-start' : 'center'}
+          alignSelf={hasDescription ? ALIGN_START : 'center'}
           {...toastClosePressProps(action != null, closeVisual)}
           onPress={() => onDismiss?.()}>
-          <ToastCloseRing className="mp-chip-dismiss-ring" borderRadius={closeRadius}>
-            <XIcon size={closePx} color={iconColor} />
+          <ToastCloseRing
+            className="mp-chip-dismiss-ring"
+            borderRadius={closeRadius}>
+            <XIcon
+              size={closePx}
+              color={iconColor}
+            />
           </ToastCloseRing>
         </ToastCloseTarget>
       )}
     </XStack>
   );
-}
+};
 
 /**
  * Presentational toast surface. Controlled: the parent owns visibility and
  * receives `onDismiss`. For the imperative/uncontrolled flow use
  * `useToast().show(...)` with a mounted <ToastViewport />.
  */
-export function Toast({ intent = 'accent', ...props }: ToastProps) {
-  return (
-    <IntentWrap intent={intent}>
-      <ToastInner intent={intent} {...props} />
-    </IntentWrap>
-  );
-}
+export const Toast = ({ intent = 'accent', ...props }: ToastProps) => (
+  <IntentWrap intent={intent}>
+    <ToastInner
+      intent={intent}
+      {...props}
+    />
+  </IntentWrap>
+);
 
 // ── Viewport item (imperative flow) ──────────────────────────
 
@@ -668,7 +746,7 @@ interface ToastItemProps {
   compact?: boolean;
 }
 
-function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
+const ToastItemInner = ({ entry, isTop, compact }: ToastItemProps) => {
   const { t } = useTranslation();
   const {
     knobProps,
@@ -689,6 +767,7 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
   // Store-resolved policy: 0 = sticky/persistent (never auto-expires).
   const duration = entry.duration === 0 ? Number.POSITIVE_INFINITY : entry.duration;
   const assertive = entry.intent === 'error' || entry.intent === 'warning';
+  const hasDescription = Boolean(entry.description);
   const spoken = spokenToastText(entry.title, entry.description);
   useAnnounceToast(entry.open ? spoken : undefined);
   const frameRef = useRef<HTMLElement | null>(null);
@@ -717,8 +796,10 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
       enterStyle={enterExit}
       exitStyle={enterExit}
       {...frameProps}
-      alignItems={entry.description ? 'flex-start' : 'center'}
+      alignItems={hasDescription ? ALIGN_START : 'center'}
       {...dataAttrs}
+      // SAFETY: web host ref is an HTMLElement; Tamagui's ref type is the cross-platform TamaguiElement
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- RefObject<HTMLElement> isn't assignable to Ref<TamaguiElement>
       ref={frameRef as never}
       style={intentEdgeStyle}>
       <ToastBody
@@ -732,7 +813,9 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
         bodyFontProps={knobProps.body}
       />
       {entry.action && (
-        <TamaguiToast.Action altText={entry.action.altText ?? entry.action.label} asChild>
+        <TamaguiToast.Action
+          altText={entry.action.altText ?? entry.action.label}
+          asChild>
           <ToastActionTarget
             {...nativeToastControlA11y()}
             className="mp-chip-dismiss"
@@ -745,7 +828,11 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
               {...knobProps.borderRadiusNested}
               height={nestedPx}
               minHeight={nestedPx}>
-              <ToastActionLabel label={entry.action.label} color={accentTextColor} labelFontProps={knobProps.label} />
+              <ToastActionLabel
+                label={entry.action.label}
+                color={accentTextColor}
+                labelFontProps={knobProps.label}
+              />
             </ToastActionPill>
           </ToastActionTarget>
         </TamaguiToast.Action>
@@ -757,24 +844,27 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
             className="mp-chip-dismiss"
             aria-label={t('Dismiss notification')}
             {...toastClosePressProps(entry.action != null, closeVisual)}
-            alignSelf={entry.description ? 'flex-start' : 'center'}>
-            <ToastCloseRing className="mp-chip-dismiss-ring" borderRadius={closeRadius}>
-              <XIcon size={closePx} color={iconColor} />
+            alignSelf={hasDescription ? ALIGN_START : 'center'}>
+            <ToastCloseRing
+              className="mp-chip-dismiss-ring"
+              borderRadius={closeRadius}>
+              <XIcon
+                size={closePx}
+                color={iconColor}
+              />
             </ToastCloseRing>
           </ToastCloseTarget>
         </TamaguiToast.Close>
       )}
     </TamaguiToast>
   );
-}
+};
 
-function ToastItem(props: ToastItemProps) {
-  return (
-    <IntentWrap intent={props.entry.intent}>
-      <ToastItemInner {...props} />
-    </IntentWrap>
-  );
-}
+const ToastItem = (props: ToastItemProps) => (
+  <IntentWrap intent={props.entry.intent}>
+    <ToastItemInner {...props} />
+  </IntentWrap>
+);
 
 // ── ToastViewport ────────────────────────────────────────────
 
@@ -808,7 +898,7 @@ const placementStyles: Record<
   'bottom-right': { bottom: 16, right: 16 },
 };
 
-function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
+const placementSwipeDirection = (placement: ToastPlacement): SwipeDirection => {
   if (placement.endsWith('left')) {
     return 'left';
   }
@@ -816,7 +906,7 @@ function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
     return 'right';
   }
   return placement.startsWith('top') ? 'up' : 'down';
-}
+};
 
 /**
  * Toast host: mounts the @tamagui/toast provider + viewport and renders the
@@ -826,13 +916,13 @@ function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
  * Pause-on-hover, focus management and the F8 hotkey come from the
  * underlying viewport.
  */
-export function ToastViewport({
+export const ToastViewport = ({
   placement = isWeb ? 'bottom-right' : 'top',
   duration = TOAST_DEFAULT_MS,
   label: labelProp,
   hotkey,
   compact,
-}: ToastViewportProps) {
+}: ToastViewportProps) => {
   const { t } = useTranslation();
   const label = labelProp ?? t('Notification');
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
@@ -855,9 +945,17 @@ export function ToastViewport({
   }
 
   const content = (
-    <TamaguiToastProvider duration={duration} label={label} swipeDirection={placementSwipeDirection(placement)}>
+    <TamaguiToastProvider
+      duration={duration}
+      label={label}
+      swipeDirection={placementSwipeDirection(placement)}>
       {toasts.map((entry) => (
-        <ToastItem key={entry.id} entry={entry} isTop={isTop} compact={compact} />
+        <ToastItem
+          key={entry.id}
+          entry={entry}
+          isTop={isTop}
+          compact={compact}
+        />
       ))}
       <TamaguiToastViewport
         multipleToasts
@@ -881,8 +979,11 @@ export function ToastViewport({
   // paint and hit-test above every toast. position:fixed geometry inside is
   // unaffected — only paint order is contained.
   return (
-    <View position="absolute" zIndex={zIndex.loading} data-testid="toast-layer">
+    <View
+      position="absolute"
+      zIndex={zIndex.loading}
+      data-testid="toast-layer">
       {content}
     </View>
   );
-}
+};

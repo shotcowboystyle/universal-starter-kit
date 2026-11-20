@@ -16,34 +16,35 @@ import { clearPresets, registerPreset } from '../shared';
 
 import { ThemeDevtoolsPanel } from './ThemeDevtoolsPanel';
 
-function clearThemeCookies() {
+const clearThemeCookies = () => {
   for (const key of [cookiePreset, ...Array.from({ length: 10 }, (_, i) => `${cookieOverridesPrefix}.${i}`)]) {
+    // oxlint-disable-next-line unicorn/no-document-cookie -- the test seeds and clears cookies exactly as the browser delivers them
     document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
-}
+};
 
-function Shell({ scheme }: { scheme: 'light' | 'dark' }) {
-  return (
-    <CookiesProvider>
-      <ThemeDevtoolsPanel key={scheme} devtoolsTheme={scheme} />
-    </CookiesProvider>
-  );
-}
+const Shell = ({ scheme }: { scheme: 'light' | 'dark' }) => (
+  <CookiesProvider>
+    <ThemeDevtoolsPanel
+      key={scheme}
+      devtoolsTheme={scheme}
+    />
+  </CookiesProvider>
+);
 
-function pressed(label: string, title: string) {
-  return within(screen.getByRole('group', { name: label }))
+const pressed = (label: string, title: string) =>
+  within(screen.getByRole('group', { name: label }))
     .getByTitle(title)
     .getAttribute('aria-pressed');
-}
-
-beforeEach(clearThemeCookies);
-afterEach(() => {
-  cleanup();
-  clearThemeCookies();
-  clearPresets();
-});
 
 describe('ThemeDevtoolsPanel set markers survive a remount', () => {
+  beforeEach(clearThemeCookies);
+  afterEach(() => {
+    cleanup();
+    clearThemeCookies();
+    clearPresets();
+  });
+
   it('a reload over mp.ov.0 marks the persisted knob set and leaves the rest unset', () => {
     persistPresetOverrides({ fillStyle: 'outlined' });
     render(<Shell scheme="light" />);
@@ -70,6 +71,7 @@ describe('ThemeDevtoolsPanel set markers survive a remount', () => {
       intents: {},
       tints: [],
     });
+    // oxlint-disable-next-line unicorn/no-document-cookie -- the test seeds and clears cookies exactly as the browser delivers them
     document.cookie = `${cookiePreset}=mpo463; path=/`;
     persistPresetOverrides({ size: 'large' });
     render(<Shell scheme="light" />);
@@ -83,8 +85,9 @@ describe('ThemeDevtoolsPanel set markers survive a remount', () => {
     fireEvent.click(within(screen.getByRole('group', { name: 'Fill' })).getByTitle('outlined'));
 
     shell.rerender(<Shell scheme="dark" />);
-    for (const label of ['Size', 'Space', 'Radius', 'Border', 'Elevation']) {
-      expect(pressed(label, 'unset (inherit)'), label).toBe('true');
-    }
+    const labels = ['Size', 'Space', 'Radius', 'Border', 'Elevation'];
+    expect(labels.map((label) => [label, pressed(label, 'unset (inherit)')])).toStrictEqual(
+      labels.map((label) => [label, 'true']),
+    );
   });
 });

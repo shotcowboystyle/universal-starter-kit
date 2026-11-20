@@ -29,7 +29,7 @@ Requires `react` (and `react-native` / `react-dom` for the target platform) as p
 
 ## What it must not do
 
-- No Frappe or API assumptions — data-aware wrappers are out of scope here
+- No backend or API assumptions — data-aware wrappers are out of scope here
 - No form fields — fields, `Form`, and input parts live in `@repo/forms`
 - No data tables — data tables are out of scope for this package
 
@@ -44,7 +44,10 @@ export function UserCard() {
   return (
     <Card>
       <CardHeader>
-        <Avatar name="Ada Lovelace" src="https://example.com/ada.png" />
+        <Avatar
+          name="Ada Lovelace"
+          src="https://example.com/ada.png"
+        />
       </CardHeader>
       <YStack>
         <Text>Ada Lovelace</Text>
@@ -134,8 +137,15 @@ snapped frame. The grabber, the header and the bottom safe-area spacer stay
 outside the flexible body.
 
 ```tsx
-<SheetModal open={open} onOpenChange={setOpen} fill snapPoint={88} header={<Title />}>
-  <YStack flex={1} minHeight={0}>
+<SheetModal
+  open={open}
+  onOpenChange={setOpen}
+  fill
+  snapPoint={88}
+  header={<Title />}>
+  <YStack
+    flex={1}
+    minHeight={0}>
     <Toolbar />
     <MyVirtualList />
   </YStack>
@@ -162,5 +172,3 @@ through the **knobs system** in `@repo/theme` — wrap screens in a
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

@@ -2,7 +2,7 @@
 
 Shared testing utilities for this monorepo's packages and apps: provider-aware
 rendering for Tamagui/React Native Web components, DOM query helpers, and
-optional mocks for Frappe and Keycloak integrations.
+optional mocks for the Keycloak integration.
 
 ## Usage in this monorepo
 
@@ -14,14 +14,12 @@ Peers: `react`, `react-dom`, `vitest` (pairs with `@testing-library/react`).
 ## What it owns
 
 - **`renderWithProviders(ui, options?)`** — renders inside `TamaguiProvider` +
-  `QueryClientProvider` (both on by default), optional theme / Frappe / Keycloak
+  `QueryClientProvider` (both on by default), optional theme / Keycloak
   wrappers; returns an enhanced result with RNW-aware queries (`getInput`,
   `getButton`, `getCheckbox`, `getSelect`, `getSlider`, `getSwitch`,
   `getLabel`, `getError`, …)
-- **`TestProviders`**, `createFixture`, `findTextInContainer`
-- **`/mocks`** — `createMockFrappeApp`, `mockDocList`, `mockGetDoc`,
-  `mockCreateDoc`, `mockUpdateDoc`, `mockDeleteDoc`,
-  `createMockKeycloakContext`
+- **`TestProviders`**, `findTextInContainer`
+- **`/mocks`** — `createMockKeycloakContext`
 - **`/setup`** — vitest setup entry (jsdom shims) for `setupFiles`
 
 ## What it must not do
@@ -50,5 +48,3 @@ export default defineConfig({
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

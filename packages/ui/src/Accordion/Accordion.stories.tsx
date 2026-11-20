@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { Accordion, type AccordionProps } from './index';
+import { Accordion } from './index';
+import type { AccordionProps } from './index';
 
 const meta: Meta<typeof Accordion> = {
   title: 'Components/Accordion',
@@ -55,7 +56,9 @@ const demoItems = (
         <Text>All major credit cards are supported. Invoices are emailed after every successful charge.</Text>
       </Accordion.Content>
     </Accordion.Item>
-    <Accordion.Item value="returns" disabled>
+    <Accordion.Item
+      value="returns"
+      disabled>
       <Accordion.Trigger description="Disabled section">Returns</Accordion.Trigger>
       <Accordion.Content>
         <Text>Returns are accepted within 30 days.</Text>
@@ -92,7 +95,11 @@ export const Multiple: Story = {
 export const CardVariant: Story = {
   args: { variant: 'card' },
   render: () => (
-    <Accordion variant="card" defaultValue="shipping" onValueChange={action('onValueChange')} maxWidth={520}>
+    <Accordion
+      variant="card"
+      defaultValue="shipping"
+      onValueChange={action('onValueChange')}
+      maxWidth={520}>
       {demoItems}
     </Accordion>
   ),
@@ -107,14 +114,24 @@ export const WithFormContent: Story = {
       onValueChange={action('onValueChange')}
       maxWidth={640}>
       <Accordion.Item value="contact">
-        <Accordion.Trigger description="Frappe Section Break: collapsible section with a form grid">
-          Contact information
-        </Accordion.Trigger>
+        <Accordion.Trigger description="Collapsible section with a form grid">Contact information</Accordion.Trigger>
         <Accordion.Content>
           <FormGrid columns={2}>
-            <Input name="firstName" label="First Name" placeholder="Jane" />
-            <Input name="lastName" label="Last Name" placeholder="Doe" />
-            <Input name="email" label="Email" placeholder="jane@example.com" />
+            <Input
+              name="firstName"
+              label="First Name"
+              placeholder="Jane"
+            />
+            <Input
+              name="lastName"
+              label="Last Name"
+              placeholder="Doe"
+            />
+            <Input
+              name="email"
+              label="Email"
+              placeholder="jane@example.com"
+            />
             <Select
               name="country"
               label="Country"
@@ -136,8 +153,15 @@ export const WithFormContent: Story = {
         <Accordion.Trigger description="A second collapsed section">Notes</Accordion.Trigger>
         <Accordion.Content>
           <YStack gap="$3">
-            <TextArea name="notes" label="Internal Notes" placeholder="Anything worth recording" />
-            <Checkbox name="subscribe" label="Subscribe to updates" />
+            <TextArea
+              name="notes"
+              label="Internal Notes"
+              placeholder="Anything worth recording"
+            />
+            <Checkbox
+              name="subscribe"
+              label="Subscribe to updates"
+            />
           </YStack>
         </Accordion.Content>
       </Accordion.Item>
@@ -161,13 +185,18 @@ export const Compact: Story = {
 
 export const Nested: Story = {
   render: () => (
-    <Accordion defaultValue="outer" onValueChange={action('onValueChange')} maxWidth={520}>
+    <Accordion
+      defaultValue="outer"
+      onValueChange={action('onValueChange')}
+      maxWidth={520}>
       <Accordion.Item value="outer">
         <Accordion.Trigger description="Nested sections inherit a stepped-down density">
           Shipping regions
         </Accordion.Trigger>
         <Accordion.Content>
-          <Accordion type="multiple" defaultValue={['eu']}>
+          <Accordion
+            type="multiple"
+            defaultValue={['eu']}>
             <Accordion.Item value="eu">
               <Accordion.Trigger>Europe</Accordion.Trigger>
               <Accordion.Content>3–5 business days to most EU countries.</Accordion.Content>
@@ -187,47 +216,56 @@ export const Nested: Story = {
   ),
 };
 
-export const Controlled: Story = {
-  render: () => {
-    const [open, setOpen] = useState<string>('billing');
-    return (
-      <YStack gap="$4" maxWidth={520}>
-        <XStack gap="$2" alignItems="center">
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('shipping');
-            }}>
-            Open shipping
-          </Button>
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('billing');
-            }}>
-            Open billing
-          </Button>
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('');
-            }}>
-            Close all
-          </Button>
-          <Text fontSize="$2" color="$color11" data-testid="controlled-value">
-            value: {open || '(none)'}
-          </Text>
-        </XStack>
-        <Accordion
-          type="single"
-          value={open}
-          onValueChange={(next) => {
-            setOpen(next);
-            action('onValueChange')(next);
+const ControlledDemo = () => {
+  const [open, setOpen] = useState<string>('billing');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={520}>
+      <XStack
+        gap="$2"
+        alignItems="center">
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('shipping');
           }}>
-          {demoItems}
-        </Accordion>
-      </YStack>
-    );
-  },
+          Open shipping
+        </Button>
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('billing');
+          }}>
+          Open billing
+        </Button>
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('');
+          }}>
+          Close all
+        </Button>
+        <Text
+          fontSize="$2"
+          color="$color11"
+          data-testid="controlled-value">
+          value: {open || '(none)'}
+        </Text>
+      </XStack>
+      <Accordion
+        type="single"
+        value={open}
+        onValueChange={(next) => {
+          setOpen(next);
+          action('onValueChange')(next);
+        }}>
+        {demoItems}
+      </Accordion>
+    </YStack>
+  );
+};
+
+export const Controlled: Story = {
+  render: () => <ControlledDemo />,
 };

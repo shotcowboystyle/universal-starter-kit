@@ -10,15 +10,16 @@ import { Label } from './index';
  * is the one above it. The `Input` field brings its own label, so it cannot
  * stand here.
  */
-function Control({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) {
-  return (
-    <InputParts>
-      <InputParts.Box disabled={disabled}>
-        <InputParts.Area disabled={disabled} {...area} />
-      </InputParts.Box>
-    </InputParts>
-  );
-}
+const Control = ({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) => (
+  <InputParts>
+    <InputParts.Box disabled={disabled}>
+      <InputParts.Area
+        disabled={disabled}
+        {...area}
+      />
+    </InputParts.Box>
+  </InputParts>
+);
 
 const meta: Meta<typeof Label> = {
   title: 'Forms/Label',
@@ -48,26 +49,40 @@ export const Basic: Story = {
 
 export const WithControl: Story = {
   render: () => (
-    <YStack gap="$1.5" maxWidth={320}>
-      <Label htmlFor="label-story-input" required>
+    <YStack
+      gap="$1.5"
+      maxWidth={320}>
+      <Label
+        htmlFor="label-story-input"
+        required>
         Email address
       </Label>
-      <Control id="label-story-input" placeholder="you@example.com" />
+      <Control
+        id="label-story-input"
+        placeholder="you@example.com"
+      />
     </YStack>
   ),
 };
 
 export const RequiredAndOptional: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={320}>
+    <YStack
+      gap="$4"
+      maxWidth={320}>
       <YStack gap="$1.5">
-        <Label htmlFor="label-required" required>
+        <Label
+          htmlFor="label-required"
+          required>
           Email address
         </Label>
         <Control id="label-required" />
       </YStack>
       <YStack gap="$1.5">
-        <Label htmlFor="label-optional" required={false} requiredMarking="optional">
+        <Label
+          htmlFor="label-optional"
+          required={false}
+          requiredMarking="optional">
           Nickname
         </Label>
         <Control id="label-optional" />
@@ -78,8 +93,13 @@ export const RequiredAndOptional: Story = {
 
 export const ErrorState: Story = {
   render: () => (
-    <YStack gap="$1.5" maxWidth={320}>
-      <Label htmlFor="label-error" required error>
+    <YStack
+      gap="$1.5"
+      maxWidth={320}>
+      <Label
+        htmlFor="label-error"
+        required
+        error>
         Email address
       </Label>
       <Control id="label-error" />
@@ -89,19 +109,30 @@ export const ErrorState: Story = {
 
 export const Disabled: Story = {
   render: () => (
-    <YStack gap="$1.5" maxWidth={320}>
-      <Label htmlFor="label-disabled" disabled>
+    <YStack
+      gap="$1.5"
+      maxWidth={320}>
+      <Label
+        htmlFor="label-disabled"
+        disabled>
         Email address
       </Label>
-      <Control id="label-disabled" disabled />
+      <Control
+        id="label-disabled"
+        disabled
+      />
     </YStack>
   ),
 };
 
 export const AsPageHeading: Story = {
   render: () => (
-    <YStack gap="$2" maxWidth={400}>
-      <Label htmlFor="label-heading" asPageHeading>
+    <YStack
+      gap="$2"
+      maxWidth={400}>
+      <Label
+        htmlFor="label-heading"
+        asPageHeading>
         Event name
       </Label>
       <Control id="label-heading" />
@@ -111,32 +142,50 @@ export const AsPageHeading: Story = {
 
 export const Hidden: Story = {
   render: () => (
-    <YStack gap="$1.5" maxWidth={320}>
-      <Label htmlFor="label-hidden" hidden>
+    <YStack
+      gap="$1.5"
+      maxWidth={320}>
+      <Label
+        htmlFor="label-hidden"
+        hidden>
         Search
       </Label>
-      <Control id="label-hidden" placeholder="Search" />
+      <Control
+        id="label-hidden"
+        placeholder="Search"
+      />
     </YStack>
   ),
 };
 
 export const EdgeCases: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={360}>
+    <YStack
+      gap="$4"
+      maxWidth={360}>
       <YStack gap="$1.5">
         <Label htmlFor="label-empty" />
-        <Control id="label-empty" placeholder="empty label above" />
+        <Control
+          id="label-empty"
+          placeholder="empty label above"
+        />
       </YStack>
       <YStack gap="$1.5">
         <Label htmlFor="label-long">
-          This is an extremely long label that keeps going and going to check wrapping behaviour of label text over
+          This is an extremely long label that keeps going and going to check wrapping behavior of label text over
           multiple lines without breaking the layout of the associated control
         </Label>
-        <Control id="label-long" placeholder="long label above" />
+        <Control
+          id="label-long"
+          placeholder="long label above"
+        />
       </YStack>
       <YStack gap="$1.5">
         <Label htmlFor="label-rtl">تسمية باللغة العربية</Label>
-        <Control id="label-rtl" placeholder="rtl label above" />
+        <Control
+          id="label-rtl"
+          placeholder="rtl label above"
+        />
       </YStack>
     </YStack>
   ),

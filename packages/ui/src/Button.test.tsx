@@ -28,18 +28,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from './Button';
 
-import * as pkg from './index';
+const pkg = await import('./index');
 
-afterEach(cleanup);
-
-function frameRadiusClasses(): string[] {
+const frameRadiusClasses = (): string[] => {
   const frame = screen.getByRole('button');
-  return String(frame.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
-}
+  return frame.className.split(' ').filter((c) => c.startsWith('_btlr-'));
+};
+
+/** Read the rendered button's height back as px (see the size-knob spec). */
+const heightOf = () => {
+  const atom = screen
+    .getByRole('button')
+    .className.split(' ')
+    .find((c) => /^_h-\d+px$/u.test(c));
+  expect(atom).toBeDefined();
+  return Number(atom!.replaceAll(/^_h-|px$/gu, ''));
+};
 
 describe('components Button export identity', () => {
+  afterEach(cleanup);
+
   it('the barrel serves the house shadow, not the raw tamagui primitive', () => {
     expect(pkg.Button).toBe(Button);
     expect(pkg.Button).not.toBe(TamaguiButton);
@@ -53,14 +61,16 @@ describe('components Button export identity', () => {
 });
 
 describe('components Button — borderRadius knob reaches the frame', () => {
+  afterEach(cleanup);
+
   it('default squares at none and follows the scale to full', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
-    expect(screen.getByRole('button').getAttribute('data-radius-class')).toBeNull();
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
+    expect(screen.getByRole('button').dataset.radiusClass).toBeUndefined();
     cleanup();
 
     renderWithProviders(
@@ -68,7 +78,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-12']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('chromeless squares at none (chrome removed, knobs still tracked)', () => {
@@ -77,20 +87,24 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button chromeless>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
   });
 
   it('circular stays the consumer shape eject: round even at none, no inline override', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Button circular icon={<span>x</span>} aria-label="favorite" />
+        <Button
+          circular
+          icon={<span>x</span>}
+          aria-label="Favorite"
+        />
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frameRadiusClasses()).toEqual(['_btlr-100000px']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-100000px']);
     expect(frame.style.borderRadius).toBe('');
-    expect(frame.getAttribute('data-radius-class')).toBe('R-IDENTITY');
-    expect(frame.getAttribute('data-radius-part')).toBe('circular Button');
+    expect(frame.dataset.radiusClass).toBe('R-IDENTITY');
+    expect(frame.dataset.radiusPart).toBe('circular Button');
   });
 
   it('consumer borderRadius prop wins last over the knob fragment', () => {
@@ -99,18 +113,20 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button borderRadius="$6">Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-6']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-6']);
   });
 });
 
 describe('components Button — elevation and size knobs reach the frame', () => {
+  afterEach(cleanup);
+
   it('elevation none renders flat; large casts a shadow', () => {
     renderWithProviders(
       <Preset overrides={{ elevation: 'none' }}>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/u);
     cleanup();
 
     renderWithProviders(
@@ -118,7 +134,7 @@ describe('components Button — elevation and size knobs reach the frame', () =>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).toMatch(/_bxsh-/u);
   });
 
   it('size knob drives the frame height', () => {
@@ -126,15 +142,6 @@ describe('components Button — elevation and size knobs reach the frame', () =>
     // atom, not a `$size` token class — asserting `_h-t-size-N` tested the
     // pre-recipe emission shape, not the knob. Read the height back instead:
     // small/medium/large must be three distinct, ascending heights.
-    const heightOf = () => {
-      const atom = screen
-        .getByRole('button')
-        .className.split(' ')
-        .find((c) => /^_h-\d+px$/.test(c));
-      expect(atom).toBeDefined();
-      return Number(atom!.replace(/^_h-|px$/g, ''));
-    };
-
     const heights: number[] = [];
     for (const size of ['small', 'medium', 'large'] as const) {
       renderWithProviders(
@@ -151,6 +158,8 @@ describe('components Button — elevation and size knobs reach the frame', () =>
 });
 
 describe('components Button — raw-tamagui prop-compat', () => {
+  afterEach(cleanup);
+
   it('variant="outlined" renders the same frame as the house outlined prop', () => {
     renderWithProviders(<Button variant="outlined">Compat</Button>);
     const viaVariant = screen.getByRole('button').className;
@@ -163,7 +172,9 @@ describe('components Button — raw-tamagui prop-compat', () => {
 
   it('an explicit outlined={false} beats variant (explicit house prop wins)', () => {
     renderWithProviders(
-      <Button variant="outlined" outlined={false}>
+      <Button
+        variant="outlined"
+        outlined={false}>
         Compat
       </Button>,
     );
@@ -175,20 +186,22 @@ describe('components Button — raw-tamagui prop-compat', () => {
   });
 
   it('presses fire through the shim', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(<Button onPress={onPress}>Go</Button>);
     fireEvent.click(screen.getByRole('button'));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
   it('testID and aria pass through to the frame', () => {
     renderWithProviders(
-      <Button testID="shadow-btn" aria-label="shadow">
+      <Button
+        testID="shadow-btn"
+        aria-label="Shadow">
         Go
       </Button>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-testid')).toBe('shadow-btn');
-    expect(frame.getAttribute('aria-label')).toBe('shadow');
+    expect(frame.dataset.testid).toBe('shadow-btn');
+    expect(frame.getAttribute('aria-label')).toBe('Shadow');
   });
 });

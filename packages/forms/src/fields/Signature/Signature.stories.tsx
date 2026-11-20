@@ -10,6 +10,59 @@ import { Form } from '../../Form';
 
 import { Signature } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      signature: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={520}>
+      <YStack gap="$4">
+        <Signature
+          label="Your Signature"
+          name="signature"
+          helperText="Required for submission"
+          required
+          clearIcon=<EraserIcon size={16} />
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={520}>
+      <Signature
+        label="Sign Here"
+        helperText={value ? 'Signature captured' : 'Please sign above'}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v ? '[base64 data]' : '');
+        }}
+        clearIcon=<EraserIcon size={16} />
+      />
+      <Signature
+        label="Disabled Signature"
+        disabled
+        clearIcon=<EraserIcon size={16} />
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Signature> = {
   title: 'Forms/Signature',
   component: Signature,
@@ -39,34 +92,7 @@ type Story = StoryObj<typeof Signature>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          signature: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form} maxWidth={520}>
-          <YStack gap="$4">
-            <Signature
-              label="Your Signature"
-              name="signature"
-              helperText="Required for submission"
-              required
-              clearIcon=<EraserIcon size={16} />
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -74,7 +100,12 @@ export const Standalone: Story = {
     label: 'Signature',
     helperText: 'Sign here',
   },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };
 
 export const Basic: Story = {
@@ -83,7 +114,12 @@ export const Basic: Story = {
     helperText: 'Draw your signature above',
     onChange: action('onChange'),
   },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };
 
 export const Disabled: Story = {
@@ -93,7 +129,12 @@ export const Disabled: Story = {
     disabled: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };
 
 export const WithError: Story = {
@@ -104,44 +145,46 @@ export const WithError: Story = {
     error: 'Signature is required',
     onChange: action('onChange'),
   },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={520}>
+    <YStack
+      gap="$4"
+      maxWidth={520}>
       <Text fontWeight="bold">Size $2</Text>
-      <Signature label="Small" size="$2" clearIcon=<EraserIcon size={16} /> onChange={action('onChange')} />
+      <Signature
+        label="Small"
+        size="$2"
+        clearIcon=<EraserIcon size={16} />
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Signature label="Medium" size="$3" clearIcon=<EraserIcon size={16} /> onChange={action('onChange')} />
+      <Signature
+        label="Medium"
+        size="$3"
+        clearIcon=<EraserIcon size={16} />
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Signature label="Large" size="$4" clearIcon=<EraserIcon size={16} /> onChange={action('onChange')} />
+      <Signature
+        label="Large"
+        size="$4"
+        clearIcon=<EraserIcon size={16} />
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack gap="$4" maxWidth={520}>
-          <Signature
-            label="Sign Here"
-            helperText={value ? 'Signature captured' : 'Please sign above'}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v ? '[base64 data]' : '');
-            }}
-            clearIcon=<EraserIcon size={16} />
-          />
-          <Signature label="Disabled Signature" disabled clearIcon=<EraserIcon size={16} /> />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const CustomSize: Story = {
@@ -151,11 +194,21 @@ export const CustomSize: Story = {
     height: 300,
     onChange: action('onChange'),
   },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };
 
 /** Loading placeholder — the skeleton mirrors the canvas anatomy. */
 export const SkeletonState: Story = {
   args: { label: 'Sign Here', skeleton: true },
-  render: (args) => <Signature {...args} clearIcon=<EraserIcon size={16} /> />,
+  render: (args) => (
+    <Signature
+      {...args}
+      clearIcon=<EraserIcon size={16} />
+    />
+  ),
 };

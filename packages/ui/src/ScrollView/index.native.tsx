@@ -1,6 +1,8 @@
 import { forwardRef } from 'react';
-import { ScrollView as RNScrollView, type ScrollViewProps as RNScrollViewProps } from 'react-native';
-import { styled, type ScrollView as TamaguiScrollView } from 'tamagui';
+import { ScrollView as RNScrollView } from 'react-native';
+import type { ScrollViewProps as RNScrollViewProps } from 'react-native';
+import { styled } from 'tamagui';
+import type { ScrollView as TamaguiScrollView } from 'tamagui';
 
 export type { ScrollViewProps } from 'tamagui';
 
@@ -17,7 +19,13 @@ const ScrollHost = forwardRef<RNScrollView, RNScrollViewProps & { scrollHandler?
   { scrollHandler, ...props },
   ref,
 ) {
-  return <RNScrollView ref={ref} {...props} onScroll={scrollHandler} />;
+  return (
+    <RNScrollView
+      ref={ref}
+      {...props}
+      onScroll={scrollHandler}
+    />
+  );
 });
 
 const ScrollFrame = styled(
@@ -42,6 +50,14 @@ const ScrollFrame = styled(
   },
 );
 
+// SAFETY: ScrollFrame wraps RN ScrollView, whose props and ref are what tamagui's ScrollView exposes on native; only the handler name differs internally.
+// oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- the styleable result is structurally the public tamagui ScrollView but not provably assignable (TamaDefer generics)
 export const ScrollView = ScrollFrame.styleable(function ScrollView({ onScroll, ...props }, ref) {
-  return <ScrollFrame ref={ref} {...props} scrollHandler={onScroll} />;
+  return (
+    <ScrollFrame
+      ref={ref}
+      {...props}
+      scrollHandler={onScroll}
+    />
+  );
 }) as unknown as typeof TamaguiScrollView;

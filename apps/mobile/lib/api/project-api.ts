@@ -1,8 +1,8 @@
-import type { Project } from "@repo/store";
+import type { Project } from '@repo/store';
 
-import { API_ROUTES } from "@/constants/routes";
+import { API_ROUTES } from '@/constants/routes';
 
-import { fetchWithAuth } from "./fetch-with-auth";
+import { fetchWithAuth } from './fetch-with-auth';
 
 export interface CreateProjectInput {
   title: string;
@@ -19,24 +19,24 @@ export interface UpdateProjectInput {
 }
 
 export const projectApi = {
-  getProjects: async (boardId: string) =>
-    fetchWithAuth<Project[]>(`${API_ROUTES.PROJECTS}?boardId=${boardId}`),
+  getProjects: async (boardId: string) => await fetchWithAuth<Project[]>(`${API_ROUTES.PROJECTS}?boardId=${boardId}`),
   createProject: async (input: CreateProjectInput) =>
-    fetchWithAuth<Project>(API_ROUTES.PROJECTS, {
-      method: "POST",
-      body: JSON.stringify(input)
+    await fetchWithAuth<Project>(API_ROUTES.PROJECTS, {
+      method: 'POST',
+      body: JSON.stringify(input),
     }),
   updateProject: async (id: string, input: UpdateProjectInput) =>
-    fetchWithAuth<Project>(`${API_ROUTES.PROJECTS}/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(input)
+    await fetchWithAuth<Project>(`${API_ROUTES.PROJECTS}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
     }),
-  deleteProject: async (id: string) =>
-    fetchWithAuth<void>(
+  deleteProject: async (id: string) => {
+    await fetchWithAuth<null>(
       `${API_ROUTES.PROJECTS}/${id}`,
       {
-        method: "DELETE"
+        method: 'DELETE',
       },
-      true
-    )
+      true,
+    );
+  },
 };

@@ -1,7 +1,8 @@
 import { action } from '@repo/storybook';
 import { YStack, Text } from 'tamagui';
 
-import { Attachments, type AttachmentItem } from './Attachments';
+import { Attachments } from './Attachments';
+import type { AttachmentItem } from './Attachments';
 
 export default {
   title: 'Components/Attachments',
@@ -31,14 +32,14 @@ const sampleItems: AttachmentItem[] = [
     id: 'file-001',
     fileName: 'invoice-2026-001.pdf',
     fileUrl: '/files/invoice-2026-001.pdf',
-    fileSize: 125000,
+    fileSize: 125_000,
     fileType: 'application/pdf',
   },
   {
     id: 'file-002',
     fileName: 'product-image.jpg',
     fileUrl: 'https://picsum.photos/800/600',
-    fileSize: 450000,
+    fileSize: 450_000,
     fileType: 'image/jpeg',
     isImage: true,
   },
@@ -46,13 +47,15 @@ const sampleItems: AttachmentItem[] = [
     id: 'file-003',
     fileName: 'contract.docx',
     fileUrl: '/files/contract.docx',
-    fileSize: 85000,
+    fileSize: 85_000,
     fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   },
 ];
 
 export const Default = () => (
-  <YStack width="100%" maxWidth={360}>
+  <YStack
+    width="100%"
+    maxWidth={360}>
     <Attachments
       items={sampleItems}
       label="Attachments"
@@ -75,8 +78,15 @@ Default.parameters = {
 };
 
 export const ReadOnly = () => (
-  <YStack width="100%" maxWidth={360}>
-    <Attachments items={sampleItems} label="Attachments" enableAdd={false} enableRemove={false} />
+  <YStack
+    width="100%"
+    maxWidth={360}>
+    <Attachments
+      items={sampleItems}
+      label="Attachments"
+      enableAdd={false}
+      enableRemove={false}
+    />
   </YStack>
 );
 ReadOnly.parameters = {
@@ -88,7 +98,9 @@ ReadOnly.parameters = {
 };
 
 export const CompactMode = () => (
-  <YStack width="100%" maxWidth={360}>
+  <YStack
+    width="100%"
+    maxWidth={360}>
     <Attachments
       items={sampleItems}
       label="Attachments"
@@ -111,7 +123,9 @@ CompactMode.parameters = {
 };
 
 export const Empty = () => (
-  <YStack width="100%" maxWidth={360}>
+  <YStack
+    width="100%"
+    maxWidth={360}>
     <Attachments
       items={[]}
       label="Attachments"
@@ -129,7 +143,13 @@ Empty.parameters = {
   },
 };
 
-export const Loading = () => <Attachments items={[]} label="Attachments" isLoading />;
+export const Loading = () => (
+  <Attachments
+    items={[]}
+    label="Attachments"
+    isLoading
+  />
+);
 Loading.parameters = {
   docs: {
     description: {
@@ -139,6 +159,7 @@ Loading.parameters = {
   },
 };
 
+// oxlint-disable-next-line sonarjs/no-globals-shadowing, sonarjs/no-built-in-override -- the export name is the Storybook story id ('Error'); renaming would change it
 export const Error = () => (
   <Attachments
     items={[]}
@@ -158,7 +179,9 @@ Error.parameters = {
 };
 
 export const AllStates = () => (
-  <YStack gap="$6" maxWidth={360}>
+  <YStack
+    gap="$6"
+    maxWidth={360}>
     <YStack gap="$2">
       <Text fontWeight="600">With Files</Text>
       <Attachments items={sampleItems} />
@@ -176,12 +199,19 @@ export const AllStates = () => (
 
     <YStack gap="$2">
       <Text fontWeight="600">Read Only</Text>
-      <Attachments items={sampleItems.slice(0, 1)} enableAdd={false} enableRemove={false} />
+      <Attachments
+        items={sampleItems.slice(0, 1)}
+        enableAdd={false}
+        enableRemove={false}
+      />
     </YStack>
 
     <YStack gap="$2">
       <Text fontWeight="600">Compact</Text>
-      <Attachments items={sampleItems.slice(0, 2)} compact />
+      <Attachments
+        items={sampleItems.slice(0, 2)}
+        compact
+      />
     </YStack>
   </YStack>
 );

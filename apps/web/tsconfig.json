@@ -14,13 +14,13 @@
     "types": ["node", "@testing-library/jest-dom", "vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
-      "@repo/*": ["../../packages/*/src"],
+      "@repo/*": ["../../packages/*/src"]
     },
     "plugins": [
       {
-        "name": "next",
-      },
-    ],
+        "name": "next"
+      }
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -30,6 +30,6 @@
     ".next/types/**/*.ts",
     "vitest.setup.ts",
     "vitest.config.ts",
-    "../../packages/ui/src/types/*.d.ts",
-  ],
+    "../../packages/ui/src/types/*.d.ts"
+  ]
 }

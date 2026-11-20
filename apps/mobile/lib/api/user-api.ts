@@ -1,8 +1,8 @@
-import type { User } from "@repo/store";
+import type { User } from '@repo/store';
 
-import { API_ROUTES } from "@/constants/routes";
+import { API_ROUTES } from '@/constants/routes';
 
-import { fetchWithAuth } from "./fetch-with-auth";
+import { fetchWithAuth } from './fetch-with-auth';
 
 interface ApiUser {
   _id: string;
@@ -12,29 +12,27 @@ interface ApiUser {
   updatedAt: string;
 }
 
-function transformUserData(user: ApiUser): User {
-  return {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    createdAt: new Date(user.createdAt),
-    updatedAt: new Date(user.updatedAt)
-  };
-}
+const transformUserData = (user: ApiUser): User => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  createdAt: new Date(user.createdAt),
+  updatedAt: new Date(user.updatedAt),
+});
 
 export const userApi = {
-  searchUsers: async (username = "") => {
+  searchUsers: async (username = '') => {
     const response = await fetchWithAuth<{ users: ApiUser[] }>(
-      `${API_ROUTES.USERS}/search?username=${encodeURIComponent(username)}`
+      `${API_ROUTES.USERS}/search?username=${encodeURIComponent(username)}`,
     );
-    return (response.users || []).map(transformUserData);
+    return (response.users ?? []).map(transformUserData);
   },
   getUserById: async (id: string) => {
     try {
       const response = await fetchWithAuth<{ user: ApiUser }>(`${API_ROUTES.USERS}/${id}`);
-      return response.user ? transformUserData(response.user) : null;
+      return response.user == null ? null : transformUserData(response.user);
     } catch {
       return null;
     }
-  }
+  },
 };

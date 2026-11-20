@@ -18,7 +18,7 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-function ErrorFallback({ onRetry }: { onRetry: () => void }) {
+const ErrorFallback = ({ onRetry }: { onRetry: () => void }) => {
   const { t } = useTranslation();
   // Retry is an inline action label — weight 400 on the TEXT NODE.
   const retryLabel = t('Try again?');
@@ -34,20 +34,24 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
       }
     />
   );
-}
+};
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   static getDerivedStateFromError(_err: Error): ErrorBoundaryState {
     return { hasError: true };
   }
 
-  state: ErrorBoundaryState = { hasError: false };
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
+  // oxlint-disable-next-line eslint/class-methods-use-this -- React lifecycle hook; the signature is fixed by the framework and only reports to the logger
   componentDidCatch(err: Error, errorInfo: ErrorInfo) {
     logger.info({ error: err, errorInfo });
   }
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.noMessage) {
         return null;
@@ -55,6 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <ErrorFallback
           onRetry={() => {
+            // oxlint-disable-next-line react/no-set-state -- error boundaries must be class components; setState is the only way to clear the error and retry
             this.setState({ hasError: false });
           }}
         />

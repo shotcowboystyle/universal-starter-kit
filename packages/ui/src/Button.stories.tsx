@@ -53,12 +53,14 @@ export const Outlined: Story = {
 
 /** Pre-shadow consumers pass tamagui's `variant="outlined"`; the shim maps it to `outlined`. */
 export const VariantCompat: Story = {
-  args: { variant: 'outlined', children: 'variant=\u201coutlined\u201d' },
+  args: { variant: 'outlined', children: 'variant=\u201Coutlined\u201D' },
 };
 
 export const Intents: Story = {
   render: () => (
-    <XStack gap="$3" flexWrap="wrap">
+    <XStack
+      gap="$3"
+      flexWrap="wrap">
       <Button accent>Accent</Button>
       <Button error>Error</Button>
       <Button warning>Warning</Button>
@@ -69,22 +71,40 @@ export const Intents: Story = {
 
 export const IconSlots: Story = {
   render: () => (
-    <XStack gap="$3" alignItems="center" flexWrap="wrap">
+    <XStack
+      gap="$3"
+      alignItems="center"
+      flexWrap="wrap">
       <Button icon=<PlusIcon size={16} />>Leading</Button>
-      <Button iconAfter=<TrashIcon size={16} /> error>
+      <Button
+        iconAfter=<TrashIcon size={16} />
+        error>
         Trailing
       </Button>
-      <Button circular icon=<PlusIcon size={16} /> aria-label="Add" />
-      <Button chromeless icon=<PlusIcon size={16} /> aria-label="Add row" />
+      <Button
+        circular
+        icon=<PlusIcon size={16} />
+        aria-label="Add"
+      />
+      <Button
+        chromeless
+        icon=<PlusIcon size={16} />
+        aria-label="Add row"
+      />
     </XStack>
   ),
 };
 
 export const States: Story = {
   render: () => (
-    <XStack gap="$3" alignItems="center" flexWrap="wrap">
+    <XStack
+      gap="$3"
+      alignItems="center"
+      flexWrap="wrap">
       <Button loading>Loading</Button>
-      <Button disabled disabledReason="Select a row first">
+      <Button
+        disabled
+        disabledReason="Select a row first">
         Delete
       </Button>
       <Button skeleton />

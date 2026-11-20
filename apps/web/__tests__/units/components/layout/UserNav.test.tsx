@@ -3,18 +3,19 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserNav } from '@/components/layout/UserNav';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: vi.fn(),
+vi.mock(import('@/hooks/use-auth'), () => ({
+  useAuth: vi.fn<typeof useAuth>(),
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+vi.mock(import('next-intl'), async () => {
+  const { mockUseTranslations } = await import('../../../helpers/key-translator');
+  return { useTranslations: mockUseTranslations };
+});
 
-describe('UserNav', () => {
-  const mockLogout = vi.fn();
+describe(UserNav, () => {
+  const mockLogout = vi.fn<() => void>();
   const mockAuth: any = {
     user: { _id: 'user-1', email: 'test@example.com', name: 'Test User' },
     isAuthenticated: true,
@@ -34,15 +35,15 @@ describe('UserNav', () => {
   });
 
   it('shows a placeholder while loading', () => {
-    vi.mocked(useAuth).mockReturnValue({ ...mockAuth, user: undefined, isAuthenticated: false, isLoading: true });
+    vi.mocked(useAuth).mockReturnValue({ ...mockAuth, user: null, isAuthenticated: false, isLoading: true });
     renderWithProviders(<UserNav />);
     expect(screen.getByTestId('user-nav-loading')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it.each([
-    ['not authenticated', { user: undefined, isAuthenticated: false }],
-    ['user is missing', { user: undefined, isAuthenticated: true }],
+    ['not authenticated', { user: null, isAuthenticated: false }],
+    ['user is missing', { user: null, isAuthenticated: true }],
   ])('renders nothing when %s', (_label, overrides) => {
     vi.mocked(useAuth).mockReturnValue({ ...mockAuth, ...overrides });
     renderWithProviders(<UserNav />);
@@ -52,9 +53,9 @@ describe('UserNav', () => {
   it('shows user details and logs out from the menu', async () => {
     renderWithProviders(<UserNav />);
     fireEvent.click(screen.getByRole('button', { name: 'test@example.com' }));
-    expect(await screen.findByText('test')).toBeInTheDocument();
+    await expect(screen.findByText('test')).resolves.toBeInTheDocument();
     expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('menuitem', { name: 'logOut' }));
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledOnce();
   });
 });

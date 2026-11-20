@@ -7,10 +7,11 @@
       "name": "packages-words",
       "path": "./cspell-packages.txt",
       "addWords": true,
-      "description": "Domain terms from the packages ported from multiplatform.one"
+      "description": "Domain terms from the packages ported from universal-starter-kit"
     }
   ],
   "dictionaries": ["packages-words"],
+  "ignoreRegExpList": ["/guess_colour/g", "/## Colour-literal escapes/g"],
   "ignorePaths": [
     "node_modules",
     "dist",
@@ -22,7 +23,9 @@
     "packages/i18n/src/locales/de.json",
     "ai_docs/**",
     "skills-lock.json",
-    "**/*.snap"
+    "**/*.snap",
+    "packages/*/types",
+    "**/*.generated.ts"
   ],
   "words": [
     "actionlint",
@@ -115,9 +118,9 @@
     "tsgolint",
     "Turbopack",
     "turborepo",
-    "Turborepo",
     "typedef",
     "typedefs",
+    "ultracite",
     "unrs",
     "viewports",
     "vitest",

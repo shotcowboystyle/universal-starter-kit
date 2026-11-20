@@ -67,66 +67,66 @@ const sampleOptions = [
   { value: 'option3', label: 'Option 3' },
 ];
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      role: '',
+      notifications: 'enabled',
+      theme: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      className="max-w-md">
+      <YStack gap="$4">
+        <RadioGroup
+          label="User Role"
+          name="role"
+          helperText="Select your role in the system"
+          required
+          options={[
+            { value: 'admin', label: 'Admin' },
+            { value: 'user', label: 'User' },
+            { value: 'guest', label: 'Guest' },
+          ]}
+        />
+
+        <RadioGroup
+          label="Email Notifications"
+          name="notifications"
+          helperText="Choose how you want to receive notifications"
+          options={[
+            { value: 'enabled', label: 'Enabled' },
+            { value: 'disabled', label: 'Disabled' },
+          ]}
+        />
+
+        <RadioGroup
+          label="Theme Preference"
+          name="theme"
+          helperText="Select your preferred theme"
+          orientation="horizontal"
+          options={[
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'auto', label: 'Auto' },
+          ]}
+        />
+
+        <Button action="submit">Save Preferences</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          role: '',
-          notifications: 'enabled',
-          theme: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form} className="max-w-md">
-          <YStack gap="$4">
-            <RadioGroup
-              label="User Role"
-              name="role"
-              helperText="Select your role in the system"
-              required
-              options={[
-                { value: 'admin', label: 'Admin' },
-                { value: 'user', label: 'User' },
-                { value: 'guest', label: 'Guest' },
-              ]}
-            />
-
-            <RadioGroup
-              label="Email Notifications"
-              name="notifications"
-              helperText="Choose how you want to receive notifications"
-              options={[
-                { value: 'enabled', label: 'Enabled' },
-                { value: 'disabled', label: 'Disabled' },
-              ]}
-            />
-
-            <RadioGroup
-              label="Theme Preference"
-              name="theme"
-              helperText="Select your preferred theme"
-              orientation="horizontal"
-              options={[
-                { value: 'light', label: 'Light' },
-                { value: 'dark', label: 'Dark' },
-                { value: 'auto', label: 'Auto' },
-              ]}
-            />
-
-            <Button action="submit">Save Preferences</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -206,8 +206,13 @@ export const WithChildren: Story = {
     <RadioGroup {...args}>
       <YStack gap="$2">
         {sampleOptions.map((option) => (
-          <XStack key={option.value} gap="$2" alignItems="center">
-            <RadioGroup.Item value={option.value} id={option.value}>
+          <XStack
+            key={option.value}
+            gap="$2"
+            alignItems="center">
+            <RadioGroup.Item
+              value={option.value}
+              id={option.value}>
               <RadioGroup.Indicator />
             </RadioGroup.Item>
             <Label htmlFor={option.value}>{option.label}</Label>
@@ -225,7 +230,9 @@ export const WithChildren: Story = {
 export const Pointy: Story = {
   name: 'Identity (always round)',
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <RadioGroup
         label="pointy prop (ignored — disc stays round)"
         pointy
@@ -233,7 +240,11 @@ export const Pointy: Story = {
         defaultValue="option1"
       />
       <Preset overrides={{ borderRadius: 'none' }}>
-        <RadioGroup label="borderRadius none (disc stays round)" options={sampleOptions} defaultValue="option1" />
+        <RadioGroup
+          label="borderRadius none (disc stays round)"
+          options={sampleOptions}
+          defaultValue="option1"
+        />
       </Preset>
     </YStack>
   ),
@@ -259,81 +270,122 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <RadioGroup label="Small" size="$2" options={sampleOptions} />
-      <RadioGroup label="Medium (default)" size="$3" options={sampleOptions} />
-      <RadioGroup label="Large" size="$4" options={sampleOptions} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <RadioGroup
+        label="Small"
+        size="$2"
+        options={sampleOptions}
+      />
+      <RadioGroup
+        label="Medium (default)"
+        size="$3"
+        options={sampleOptions}
+      />
+      <RadioGroup
+        label="Large"
+        size="$4"
+        options={sampleOptions}
+      />
     </YStack>
   ),
 };
 
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <RadioGroup
+        label="Select an option"
+        options={sampleOptions}
+        value={value}
+        onChange={setValue}
+      />
+      <Text>Selected: {value || 'None'}</Text>
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack gap="$4" maxWidth={400}>
-          <RadioGroup label="Select an option" options={sampleOptions} value={value} onValueChange={setValue} />
-          <Text>Selected: {value || 'None'}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
+};
+
+const ComparisonExample = () => {
+  const [customVal, setCustomVal] = useState('option1');
+  const [tamaguiVal, setTamaguiVal] = useState('option1');
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom RadioGroup
+        </Paragraph>
+        <RadioGroup
+          options={sampleOptions}
+          value={customVal}
+          onChange={(val) => {
+            setCustomVal(val);
+            action('custom.onValueChange')(val);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui RadioGroup
+        </Paragraph>
+        <TamaguiRadioGroup
+          value={tamaguiVal}
+          onValueChange={(val) => {
+            setTamaguiVal(val);
+            action('tamagui.onValueChange')(val);
+          }}>
+          <YStack gap="$2">
+            {sampleOptions.map((option) => (
+              <XStack
+                key={option.value}
+                gap="$2"
+                alignItems="center">
+                <TamaguiRadioGroup.Item
+                  value={option.value}
+                  id={`t-${option.value}`}>
+                  <TamaguiRadioGroup.Indicator />
+                </TamaguiRadioGroup.Item>
+                <Label htmlFor={`t-${option.value}`}>{option.label}</Label>
+              </XStack>
+            ))}
+          </YStack>
+        </TamaguiRadioGroup>
+      </YStack>
+    </XStack>
+  );
 };
 
 export const Comparison: Story = {
   parameters: { foreignContrastSpecimen: true },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customVal, setCustomVal] = useState('option1');
-      const [tamaguiVal, setTamaguiVal] = useState('option1');
-      return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
-              Custom RadioGroup
-            </Paragraph>
-            <RadioGroup
-              options={sampleOptions}
-              value={customVal}
-              onValueChange={(val) => {
-                setCustomVal(val);
-                action('custom.onValueChange')(val);
-              }}
-            />
-          </YStack>
-
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
-              Tamagui RadioGroup
-            </Paragraph>
-            <TamaguiRadioGroup
-              value={tamaguiVal}
-              onValueChange={(val) => {
-                setTamaguiVal(val);
-                action('tamagui.onValueChange')(val);
-              }}>
-              <YStack gap="$2">
-                {sampleOptions.map((option) => (
-                  <XStack key={option.value} gap="$2" alignItems="center">
-                    <TamaguiRadioGroup.Item value={option.value} id={`t-${option.value}`}>
-                      <TamaguiRadioGroup.Indicator />
-                    </TamaguiRadioGroup.Item>
-                    <Label htmlFor={`t-${option.value}`}>{option.label}</Label>
-                  </XStack>
-                ))}
-              </YStack>
-            </TamaguiRadioGroup>
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors control + label rows. */
 export const SkeletonState: Story = {
-  render: () => <RadioGroup label="Notification Preference" options={sampleOptions} skeleton />,
+  render: () => (
+    <RadioGroup
+      label="Notification Preference"
+      options={sampleOptions}
+      skeleton
+    />
+  ),
 };

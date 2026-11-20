@@ -9,6 +9,64 @@ import { Form } from '../../Form';
 
 import { Duration } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      workTime: 28_800,
+      breakTime: 3600,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Duration
+          label="Work Duration"
+          name="workTime"
+          helperText="How long did you work?"
+        />
+        <Duration
+          label="Break Duration"
+          name="breakTime"
+          helperText="Total break time"
+        />
+        <Button action="submit">Log Time</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState(5400);
+  const h = Math.floor(value / 3600);
+  const m = Math.floor((value % 3600) / 60);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Duration
+        label="Session Length"
+        helperText={`${h}h ${m}m selected`}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+      />
+      <Duration
+        label="Disabled"
+        value={7200}
+        disabled
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Duration> = {
   title: 'Forms/Duration',
   component: Duration,
@@ -42,30 +100,7 @@ type Story = StoryObj<typeof Duration>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          workTime: 28800,
-          breakTime: 3600,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form} maxWidth={400}>
-          <YStack gap="$4">
-            <Duration label="Work Duration" name="workTime" helperText="How long did you work?" />
-            <Duration label="Break Duration" name="breakTime" helperText="Total break time" />
-            <Button action="submit">Log Time</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -110,13 +145,30 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={300}>
+    <YStack
+      gap="$4"
+      maxWidth={300}>
       <Text fontWeight="bold">Size $2</Text>
-      <Duration label="Small" value={3600} size="$2" onChange={action('onChange')} />
+      <Duration
+        label="Small"
+        value={3600}
+        size="$2"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Duration label="Medium" value={3600} size="$3" onChange={action('onChange')} />
+      <Duration
+        label="Medium"
+        value={3600}
+        size="$3"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Duration label="Large" value={3600} size="$4" onChange={action('onChange')} />
+      <Duration
+        label="Large"
+        value={3600}
+        size="$4"
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
@@ -124,7 +176,9 @@ export const Sizes: Story = {
 export const FullWidth: Story = {
   name: 'FullWidth',
   render: () => (
-    <YStack width="100%" gap="$4">
+    <YStack
+      width="100%"
+      gap="$4">
       <Duration
         label="Full width"
         helperText="Clock and segments stay on the left of a stretched box"
@@ -155,8 +209,8 @@ export const WithSeconds: Story = {
 export const WithDays: Story = {
   args: {
     label: 'Resolution Time',
-    helperText: 'Days stay first-class (Frappe hide_days off)',
-    value: 100000,
+    helperText: 'Days stay first-class (hideDays off)',
+    value: 100_000,
     hideDays: false,
     showSeconds: true,
     onChange: action('onChange'),
@@ -164,28 +218,7 @@ export const WithDays: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState(5400);
-      const h = Math.floor(value / 3600);
-      const m = Math.floor((value % 3600) / 60);
-      return (
-        <YStack gap="$4" maxWidth={300}>
-          <Duration
-            label="Session Length"
-            helperText={`${h}h ${m}m selected`}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-          />
-          <Duration label="Disabled" value={7200} disabled />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */

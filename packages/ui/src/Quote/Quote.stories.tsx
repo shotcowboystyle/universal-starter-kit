@@ -41,8 +41,12 @@ export const WithoutCite: Story = {
 
 export const Compact: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={480}>
-      <Quote compact cite="Design guidelines">
+    <YStack
+      gap="$3"
+      maxWidth={480}>
+      <Quote
+        compact
+        cite="Design guidelines">
         Prefer one composition over a dashboard of cards.
       </Quote>
       <Quote compact>Short callout without attribution.</Quote>

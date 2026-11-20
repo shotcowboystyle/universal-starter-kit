@@ -1,4 +1,4 @@
-import type { BaseThemeBuilderDefinition } from '../createThemes';
+import type { BaseThemeBuilderDefinition } from '../create-themes';
 
 export const defaultBaseTheme: BaseThemeBuilderDefinition = {
   // Radix-mauve-shaped neutral ramps with a slight purple tint (hue 270)

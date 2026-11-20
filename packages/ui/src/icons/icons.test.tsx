@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { CheckRegular } from './CheckRegular';
 import { MinusRegular } from './MinusRegular';
 
-function strokeOf(container: HTMLElement, selector: string) {
-  return container.querySelector(selector)?.getAttribute('stroke') ?? '';
-}
+const strokeOf = (container: HTMLElement, selector: string) =>
+  container.querySelector(selector)?.getAttribute('stroke') ?? '';
 
+// oxlint-disable-next-line vitest/prefer-describe-function-title -- MinusRegular is a memo() exotic component, not a function describe() can title
 describe('MinusRegular', () => {
   it('should render correctly', () => {
     const { container } = renderWithProviders(<MinusRegular />);
@@ -22,7 +22,12 @@ describe('MinusRegular', () => {
   });
 
   it('should accept custom color and size', () => {
-    const { container } = renderWithProviders(<MinusRegular color="red" size={48} />);
+    const { container } = renderWithProviders(
+      <MinusRegular
+        color="red"
+        size={48}
+      />,
+    );
     const line = container.querySelector('line');
     const svg = container.querySelector('svg');
     expect(line).toHaveAttribute('stroke', 'red');
@@ -39,7 +44,7 @@ describe('MinusRegular', () => {
     expect(stroke.length).toBeGreaterThan(0);
   });
 
-  it('keeps the stroke centred at supported sizes', () => {
+  it('keeps the stroke centered at supported sizes', () => {
     for (const size of [12, 16, 24, 48]) {
       const { container } = renderWithProviders(<MinusRegular size={size} />);
       const line = container.querySelector('line');
@@ -52,6 +57,7 @@ describe('MinusRegular', () => {
   });
 });
 
+// oxlint-disable-next-line vitest/prefer-describe-function-title -- CheckRegular is a memo() exotic component, not a function describe() can title
 describe('CheckRegular', () => {
   it('should render correctly', () => {
     const { container } = renderWithProviders(<CheckRegular />);

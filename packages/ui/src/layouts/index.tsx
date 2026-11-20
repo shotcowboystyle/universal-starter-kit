@@ -1,16 +1,30 @@
+// oxlint-disable-next-line oxc/no-barrel-file, react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Debug';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './SafeAreaWrapper';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './KeyboardAvoidingWrapper';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Sidebar';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Toolbar';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './ViewSwitcher';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Breadcrumbs';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Attachments';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Tags';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Timeline';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './Page';
-export * from './pageHeadingScope';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
+export * from './PageHeadingScope';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './PageTemplates';
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/no-wildcard-import -- layouts entry re-exports each module's whole public surface; a named list would have to track it
 export * from './PaneScaffold';
 // EmptyState is NAMED here rather than left to reach the barrel through
 // `export * from "./Page"` (page.tsx re-exports it, so it has always been

@@ -1,6 +1,6 @@
+// @vitest-environment happy-dom
+
 /**
- * @vitest-environment happy-dom
- *
  * Theme spec: bodyFont family, size and leading measured on the
  * RENDERED TEXT NODE.
  *
@@ -20,15 +20,15 @@
 
 import { cleanup, render } from '@testing-library/react';
 import { createElement } from 'react';
+import { TamaguiProvider, Text } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../animations/index', () => ({ animations: {} }));
-
-import { TamaguiProvider, Text } from 'tamagui';
-
-import { createDefaultThemeConfig } from '../createDefaultThemeConfig';
+import { createDefaultThemeConfig } from '../create-default-theme-config';
 import { defaultKnobs } from '../knobs';
-import { resolveKnobs } from '../resolveKnobs';
+import { resolveKnobs } from '../resolve-knobs';
+
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- empty animation driver stand-in; the real driver type is not constructible here
+vi.mock('../animations/index', () => ({ animations: {} }));
 
 const themeConfig = createDefaultThemeConfig();
 
@@ -44,10 +44,8 @@ const BODY_STOPS = [
 const LABEL_SIZE_PX = 15;
 const LABEL_LEADING_PX = 23;
 
-afterEach(cleanup);
-
 /** Parent of the text node whose data is `label` — never a wrapping frame. */
-function textNodeHost(root: HTMLElement, label: string): HTMLElement {
+const textNodeHost = (root: HTMLElement, label: string): HTMLElement => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node: Node | null = walker.nextNode();
   while (node) {
@@ -57,9 +55,20 @@ function textNodeHost(root: HTMLElement, label: string): HTMLElement {
     node = walker.nextNode();
   }
   throw new Error(`no text node "${label}"`);
-}
+};
 
-function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'light' | 'dark') {
+/** A computed CSS length ("15px", "-0.2px", unitless "23") as a number; NaN when unreadable. */
+const lengthNumber = (value: string): number => Number(value.replace(/px$/u, ''));
+
+const px = (value: string) => {
+  const n = lengthNumber(value);
+  if (!Number.isFinite(n)) {
+    throw new TypeError(`unreadable length ${JSON.stringify(value)}`);
+  }
+  return n;
+};
+
+const measureLabel = (bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'light' | 'dark') => {
   const label = `Save-${bodyFont}`;
   const knobs = resolveKnobs({ ...defaultKnobs, bodyFont });
   const { container } = render(
@@ -71,74 +80,68 @@ function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'li
   );
   const host = textNodeHost(container, label);
   const cs = getComputedStyle(host);
-  const px = (value: string) => {
-    const n = Number.parseFloat(value);
-    if (!Number.isFinite(n)) {
-      throw new Error(`unreadable length ${JSON.stringify(value)}`);
-    }
-    return n;
-  };
   const family = cs.fontFamily.trim();
-  if (!family) {
+  if (family === '') {
     throw new Error('no computed font-family on the text node');
   }
   return {
     host,
     knobs,
     family,
-    firstFamily: family.split(',')[0]?.replace(/['"]/g, '').trim() ?? '',
+    firstFamily: family.split(',')[0]?.replaceAll(/['"]/gu, '').trim() ?? '',
     fontSize: px(cs.fontSize),
     lineHeight: cs.lineHeight.trim(),
     lineHeightPx: px(cs.lineHeight),
     letterSpacing: cs.letterSpacing.trim(),
   };
-}
+};
 
 describe('bodyFont text-node family, size and leading', () => {
-  for (const scheme of ['light', 'dark'] as const) {
-    describe(scheme, () => {
-      for (const { stop, token, firstFamily } of BODY_STOPS) {
-        it(`${stop}: text node is ${firstFamily} ${LABEL_SIZE_PX}px/${LABEL_LEADING_PX}px`, () => {
-          const m = measureLabel(stop, scheme);
-          expect(m.knobs.knobProps.body.fontFamily).toBe(`$${token}`);
+  afterEach(cleanup);
 
-          // Trap: a wrapping frame stays Inter. We measured the text node.
-          expect([...m.host.childNodes].some((n) => n.nodeType === Node.TEXT_NODE)).toBe(true);
+  describe.each(['light', 'dark'] as const)('%s', (scheme) => {
+    it.each(BODY_STOPS)(
+      `$stop: text node is $firstFamily ${LABEL_SIZE_PX}px/${LABEL_LEADING_PX}px`,
+      ({ stop, token, firstFamily }) => {
+        const m = measureLabel(stop, scheme);
+        expect(m.knobs.knobProps.body.fontFamily).toBe(`$${token}`);
 
-          expect(m.firstFamily.toLowerCase()).toBe(firstFamily.toLowerCase());
-          // The Inter stack legitimately names -apple-system as a fallback;
-          // the defect was it arriving FIRST, which is what the text node reads.
-          expect(m.firstFamily.toLowerCase()).not.toBe('-apple-system');
+        // Trap: a wrapping frame stays Inter. We measured the text node.
+        expect([...m.host.childNodes].some((n) => n.nodeType === Node.TEXT_NODE)).toBe(true);
 
-          expect(m.lineHeight.toLowerCase()).not.toBe('normal');
-          expect(m.lineHeightPx).toBe(LABEL_LEADING_PX);
-          expect(m.fontSize).toBe(LABEL_SIZE_PX);
-          expect(m.lineHeightPx / m.fontSize).toBeGreaterThanOrEqual(1.4);
-        });
-      }
+        expect(m.firstFamily.toLowerCase()).toBe(firstFamily.toLowerCase());
+        // The Inter stack legitimately names -apple-system as a fallback;
+        // the defect was it arriving FIRST, which is what the text node reads.
+        expect(m.firstFamily.toLowerCase()).not.toBe('-apple-system');
 
-      it('the four stops resolve to four distinct family stacks', () => {
-        const families = BODY_STOPS.map((s) => measureLabel(s.stop, scheme).firstFamily);
-        expect(new Set(families).size).toBe(4);
-        expect(families.some((f) => f.toLowerCase() === '-apple-system')).toBe(false);
-      });
+        expect(m.lineHeight.toLowerCase()).not.toBe('normal');
+        expect(m.lineHeightPx).toBe(LABEL_LEADING_PX);
+        expect(m.fontSize).toBe(LABEL_SIZE_PX);
+        expect(m.lineHeightPx / m.fontSize).toBeGreaterThanOrEqual(1.4);
+      },
+    );
 
-      it('flipping the family knob moves the family and nothing else', () => {
-        const measured = BODY_STOPS.map((s) => measureLabel(s.stop, scheme));
-        const sizes = new Set(measured.map((m) => m.fontSize));
-        const leadings = new Set(measured.map((m) => m.lineHeightPx));
-        expect([...sizes]).toEqual([LABEL_SIZE_PX]);
-        expect([...leadings]).toEqual([LABEL_LEADING_PX]);
-      });
-
-      it("does not leak Inter's optical tracking onto the other faces", () => {
-        for (const { stop } of BODY_STOPS.filter((s) => s.stop !== 'sans-serif')) {
-          const m = measureLabel(stop, scheme);
-          expect(Number.parseFloat(m.letterSpacing) || 0, `${stop} tracking`).toBe(0);
-        }
-        // Inter keeps its curve.
-        expect(Number.parseFloat(measureLabel('sans-serif', scheme).letterSpacing)).toBeLessThan(0);
-      });
+    it('the four stops resolve to four distinct family stacks', () => {
+      const families = BODY_STOPS.map((s) => measureLabel(s.stop, scheme).firstFamily);
+      expect(new Set(families).size).toBe(4);
+      expect(families.some((f) => f.toLowerCase() === '-apple-system')).toBe(false);
     });
-  }
+
+    it('flipping the family knob moves the family and nothing else', () => {
+      const measured = BODY_STOPS.map((s) => measureLabel(s.stop, scheme));
+      const sizes = new Set(measured.map((m) => m.fontSize));
+      const leadings = new Set(measured.map((m) => m.lineHeightPx));
+      expect([...sizes]).toStrictEqual([LABEL_SIZE_PX]);
+      expect([...leadings]).toStrictEqual([LABEL_LEADING_PX]);
+    });
+
+    it("does not leak Inter's optical tracking onto the other faces", () => {
+      for (const { stop } of BODY_STOPS.filter((s) => s.stop !== 'sans-serif')) {
+        const m = measureLabel(stop, scheme);
+        expect(lengthNumber(m.letterSpacing) || 0, `${stop} tracking`).toBe(0);
+      }
+      // Inter keeps its curve.
+      expect(lengthNumber(measureLabel('sans-serif', scheme).letterSpacing)).toBeLessThan(0);
+    });
+  });
 });

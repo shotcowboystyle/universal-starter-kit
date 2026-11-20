@@ -32,7 +32,10 @@ export const Default: Story = {
         <Text>
           On native, this shifts content when the keyboard appears. On web, it is a simple passthrough wrapper.
         </Text>
-        <Input label="Test input" placeholder="Focus to test keyboard avoidance" />
+        <Input
+          label="Test input"
+          placeholder="Focus to test keyboard avoidance"
+        />
       </YStack>
     </KeyboardAvoidingWrapper>
   ),
@@ -45,7 +48,10 @@ export const Empty: Story = {
 export const Disabled: Story = {
   render: () => (
     <KeyboardAvoidingWrapper enabled={false}>
-      <Input label="Disabled avoidance" placeholder="Keyboard will cover on native" />
+      <Input
+        label="Disabled avoidance"
+        placeholder="Keyboard will cover on native"
+      />
     </KeyboardAvoidingWrapper>
   ),
 };

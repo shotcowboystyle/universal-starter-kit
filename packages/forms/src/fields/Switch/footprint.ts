@@ -28,7 +28,7 @@ export interface SwitchFootprint {
   travel: number;
 }
 
-export function switchFootprint(sizeToken: string, borderWidth: number): SwitchFootprint {
+export const switchFootprint = (sizeToken: string, borderWidth: number): SwitchFootprint => {
   const platform = isWeb ? webSwitch : nativeSwitch;
   const trackHeight = Math.round(sizeRecipeForToken(sizeToken).height * platform.heightRatio);
   const trackWidth = Math.round(trackHeight * platform.aspect);
@@ -42,4 +42,4 @@ export function switchFootprint(sizeToken: string, borderWidth: number): SwitchF
     thumbSize: thumbSlot - thumbInset * 2,
     travel: trackWidth - borderWidth * 2 - thumbSlot,
   };
-}
+};

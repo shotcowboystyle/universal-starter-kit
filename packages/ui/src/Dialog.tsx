@@ -13,27 +13,26 @@
  * the catalog's localized "Close". An explicit label on the part or on its
  * child still wins. Every other part is the tamagui one.
  */
-import { isValidElement, type ComponentType, type ReactNode } from 'react';
-import {
-  AlertDialog as TamaguiAlertDialog,
-  Dialog as TamaguiDialog,
-  withStaticProperties,
-  type GetProps,
-} from 'tamagui';
+import { isValidElement } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { AlertDialog as TamaguiAlertDialog, Dialog as TamaguiDialog, withStaticProperties } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
 import { useTranslation } from './shared/i18n';
+import { isBareTextChild } from './shared/text-rides-text';
 
-interface Labelled {
+interface Labeled {
   'aria-label'?: unknown;
   'aria-labelledby'?: unknown;
   accessibilityLabel?: unknown;
 }
 
-function hasText(node: ReactNode): boolean {
-  if (typeof node === 'string') {
-    return node.trim().length > 0;
+const hasText = (node: ReactNode): boolean => {
+  if (isBareTextChild(node)) {
+    return String(node).trim().length > 0;
   }
-  if (typeof node === 'number' || typeof node === 'bigint') {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- bigint is a ReactNode text leaf the shared isBareTextChild guard does not cover
+  if (typeof node === 'bigint') {
     return true;
   }
   if (Array.isArray(node)) {
@@ -43,40 +42,50 @@ function hasText(node: ReactNode): boolean {
     return hasText(node.props.children);
   }
   return false;
-}
+};
 
-function isLabelled(props: Labelled): boolean {
-  return props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
-}
+const isLabelled = (props: Labeled): boolean =>
+  props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
 
-function needsCloseName(props: Labelled & { asChild?: unknown; children?: ReactNode }): boolean {
+const needsCloseName = (props: Labeled & { asChild?: unknown; children?: ReactNode }): boolean => {
   if (isLabelled(props)) {
     return false;
   }
   const { asChild, children } = props;
-  if (asChild && isValidElement<Labelled & { children?: ReactNode }>(children)) {
+  if (Boolean(asChild) && isValidElement<Labeled & { children?: ReactNode }>(children)) {
     return !isLabelled(children.props) && !hasText(children.props.children);
   }
   return !hasText(children);
-}
+};
 
-function namedByContent<C extends ComponentType<any>>(Part: C, displayName: string) {
-  const Raw = Part as ComponentType<any>;
+// oxlint-disable-next-line typescript/no-explicit-any -- the bound must admit every tamagui close part, whose prop types all differ
+const namedByContent = <C extends ComponentType<any>>(Part: C, displayName: string) => {
+  const Raw: ComponentType<GetProps<C>> = Part;
 
-  function LocalizedClose(props: GetProps<C>) {
+  const LocalizedClose = (props: GetProps<C>) => {
     const { t } = useTranslation();
-    return <Raw aria-label={t('Close')} {...props} />;
-  }
+    return (
+      <Raw
+        aria-label={t('Close')}
+        {...props}
+      />
+    );
+  };
 
-  function Close(props: GetProps<C>) {
+  const Close = (props: GetProps<C>) => {
     if (needsCloseName(props)) {
       return <LocalizedClose {...props} />;
     }
-    return <Raw aria-label={undefined} {...props} />;
-  }
+    return (
+      <Raw
+        aria-label={undefined}
+        {...props}
+      />
+    );
+  };
   Close.displayName = displayName;
   return Close;
-}
+};
 
 export const Dialog: typeof TamaguiDialog = withStaticProperties(TamaguiDialog, {
   Close: namedByContent(TamaguiDialog.Close, 'DialogClose'),

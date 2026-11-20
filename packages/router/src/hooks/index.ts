@@ -5,4 +5,4 @@ export {
   useTypedSearchParams,
   type SearchParams,
   type SetSearchParamsOptions,
-} from './useUrlState';
+} from './use-url-state';

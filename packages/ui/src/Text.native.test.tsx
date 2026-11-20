@@ -11,49 +11,43 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Paragraph, SizableText, Text } from './Text';
 
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
   isNative: true,
 }));
 
-afterEach(cleanup);
-
 const LABEL = 'Measure the text node';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
-  return (
-    String((el as HTMLElement).className || '')
-      .split(' ')
-      .find((c) => c.startsWith('font_')) ?? ''
-  );
-}
+const fontScopeClass = (el: Element): string =>
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
-function renderTextClasses(node: React.ReactElement, prefixes: string[]): string[] {
+const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(LABEL);
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Text — NATIVE environment (isWeb false)', () => {
+  afterEach(cleanup);
+
   it('really is running with the native platform flags', async () => {
     const platform = await import('@repo/platform');
     expect(platform.isWeb).toBe(false);
     expect(platform.isNative).toBe(true);
   });
 
-  it('changes colour on a textAccent flip', () => {
+  it('changes color on a textAccent flip', () => {
     const high = renderTextClasses(
       <Preset overrides={{ textAccent: 'high' }}>
         <Text>{LABEL}</Text>
@@ -67,7 +61,7 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
       ['_col-'],
     );
     expect(high).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 
   it('changes weight on a fontWeight flip, pinned to the 400/700 label law', () => {
@@ -86,9 +80,9 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
     const explicit700 = renderTextClasses(<Text fontWeight="700">{LABEL}</Text>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('changes family on a bodyFont flip — the props channel, not the CSS rescue', () => {
@@ -128,7 +122,7 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
         ['_col-'],
       );
       expect(high).not.toHaveLength(0);
-      expect(high).not.toEqual(low);
+      expect(high).not.toStrictEqual(low);
     }
   });
 
@@ -140,6 +134,6 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
       ['_fow-'],
     );
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
-    expect(ejected).toEqual(explicit400);
+    expect(ejected).toStrictEqual(explicit400);
   });
 });

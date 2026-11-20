@@ -17,15 +17,44 @@
  *     versions, not the tamagui primitives.
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
-import * as tamagui from 'tamagui';
-import * as tamaguiLinearGradient from 'tamagui/linear-gradient';
 import { describe, expect, it } from 'vitest';
 
-import * as houseTamagui from './tamagui';
+import type {
+  // @ts-expect-error CheckboxProps is intentionally not exported (house: forms)
+  CheckboxProps,
+  // @ts-expect-error SwitchProps is intentionally not exported (house: forms)
+  SwitchProps,
+  // @ts-expect-error InputProps is intentionally not exported (house: forms)
+  InputProps,
+  // @ts-expect-error SelectProps is intentionally not exported (house: forms)
+  SelectProps,
+  // @ts-expect-error SliderProps is intentionally not exported (house: forms)
+  SliderProps,
+  // @ts-expect-error LabelProps is intentionally not exported (house: forms)
+  LabelProps,
+  // @ts-expect-error Adapt is dropped from the house barrel
+  Adapt,
+  ButtonProps,
+  FontSizeTokens,
+  GetProps,
+  SizeTokens,
+  TamaguiElement,
+  TextProps,
+  ThemeName,
+  ViewProps,
+  XStackProps,
+  YStackProps,
+} from './index';
 
-import * as pkg from './index';
+const tamagui = await import('tamagui');
+const tamaguiLinearGradient = await import('tamagui/linear-gradient');
+const houseTamagui = await import('./tamagui');
+const pkg = await import('./index');
+
+const barrel = new Map<string, unknown>(Object.entries(pkg));
+const rawTamagui = new Map<string, unknown>(Object.entries(tamagui));
 
 const EXCLUDED_BARE_NAMES = [
   'Checkbox',
@@ -108,7 +137,7 @@ const ALLOWLIST_VALUE_NAMES = [
   'withStaticProperties',
 ] as const;
 
-const ESCAPE_HATCHES: ReadonlyArray<[prefixed: string, raw: string]> = [
+const ESCAPE_HATCHES: readonly [prefixed: string, raw: string][] = [
   ['TamaguiAnchor', 'Anchor'],
   ['TamaguiButton', 'Button'],
   ['TamaguiCheckbox', 'Checkbox'],
@@ -163,59 +192,79 @@ const HOUSE_SHADOWS = [
   'Tooltip',
 ];
 
+const walkStoryFiles = (dir: string): string[] => {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkStoryFiles(entryPath));
+    } else if (/\.stories\.tsx?$/u.test(entry.name)) {
+      out.push(entryPath);
+    }
+  }
+  return out;
+};
+
+const namedValueImportsFromHouseTamagui = (src: string): string[] => {
+  const re = /import\s+(?<typeKeyword>type\s+)?\{(?<clause>[^}]+)\}\s+from\s+["']\.\/tamagui["']/gu;
+  return [...src.matchAll(re)].flatMap((match) => {
+    const { typeKeyword, clause } = match.groups!;
+    if (typeKeyword !== undefined) {
+      return [];
+    }
+    return clause
+      .split(',')
+      .map((raw) => raw.trim())
+      .filter((part) => part !== '' && !/^type\s/u.test(part))
+      .map((part) => part.split(/\s/u)[0]);
+  });
+};
+
 describe('curated tamagui surface', () => {
   it('does not export bare interactive primitives that have house forms equivalents', () => {
     for (const name of EXCLUDED_BARE_NAMES) {
-      expect((pkg as Record<string, unknown>)[name], `barrel must not export bare "${name}"`).toBeUndefined();
+      expect(barrel.get(name), `barrel must not export bare "${name}"`).toBeUndefined();
     }
   });
 
   it('exports the benign allowlist (layout, text, styling, theme, overlay roots)', () => {
     for (const name of ALLOWLIST_VALUE_NAMES) {
-      expect((pkg as Record<string, unknown>)[name], `barrel must export "${name}"`).toBeDefined();
-      expect((pkg as Record<string, unknown>)[name], `barrel "${name}" must be the tamagui export`).toBe(
-        (tamagui as Record<string, unknown>)[name],
-      );
+      expect(barrel.get(name), `barrel must export "${name}"`).toBeDefined();
+      expect(barrel.get(name), `barrel "${name}" must be the tamagui export`).toBe(rawTamagui.get(name));
     }
   });
 
   it('exposes deliberate raw usage only through Tamagui*-prefixed escape hatches', () => {
     for (const [prefixed, raw] of ESCAPE_HATCHES) {
-      expect((pkg as Record<string, unknown>)[prefixed], `barrel must export escape hatch "${prefixed}"`).toBe(
-        (tamagui as Record<string, unknown>)[raw],
-      );
+      expect(barrel.get(prefixed), `barrel must export escape hatch "${prefixed}"`).toBe(rawTamagui.get(raw));
     }
   });
 
   it('keeps house shadows as the house versions, not the tamagui primitives', () => {
     for (const name of HOUSE_SHADOWS) {
-      const houseExport = (pkg as Record<string, unknown>)[name];
-      expect(houseExport, `barrel must export house "${name}"`).toBeDefined();
-      const rawExport = (tamagui as Record<string, unknown>)[name];
-      if (rawExport !== undefined) {
-        expect(houseExport, `barrel "${name}" must not be the raw tamagui primitive`).not.toBe(rawExport);
-      }
+      expect(barrel.get(name), `barrel must export house "${name}"`).toBeDefined();
+    }
+    for (const name of HOUSE_SHADOWS.filter((n) => rawTamagui.get(n) !== undefined)) {
+      expect(barrel.get(name), `barrel "${name}" must not be the raw tamagui primitive`).not.toBe(rawTamagui.get(name));
     }
   });
 
   it('does not export Adapt', () => {
     expect(
-      (pkg as Record<string, unknown>).Adapt,
+      barrel.get('Adapt'),
       'Adapt is off the house barrel; useViewportGtSm / AdaptivePopup / FloatingPanel',
     ).toBeUndefined();
   });
 
   it('keeps overlay composition roots Sheet, Popover, and Portal', () => {
     for (const name of ['Sheet', 'Popover', 'Portal'] as const) {
-      expect((pkg as Record<string, unknown>)[name], `barrel must keep "${name}"`).toBeDefined();
-      expect((pkg as Record<string, unknown>)[name], `barrel "${name}" must be the tamagui export`).toBe(
-        (tamagui as Record<string, unknown>)[name],
-      );
+      expect(barrel.get(name), `barrel must keep "${name}"`).toBeDefined();
+      expect(barrel.get(name), `barrel "${name}" must be the tamagui export`).toBe(rawTamagui.get(name));
     }
   });
 
   it('exports LinearGradient from tamagui/linear-gradient, not the main tamagui barrel', () => {
-    expect((tamagui as Record<string, unknown>).LinearGradient).toBeUndefined();
+    expect(rawTamagui.get('LinearGradient')).toBeUndefined();
     expect(houseTamagui.LinearGradient).toBe(tamaguiLinearGradient.LinearGradient);
     expect(pkg.LinearGradient).toBe(tamaguiLinearGradient.LinearGradient);
   });
@@ -224,52 +273,15 @@ describe('curated tamagui surface', () => {
     const exported = new Set(Object.keys(houseTamagui));
     const missing: string[] = [];
     for (const file of walkStoryFiles(import.meta.dirname)) {
-      for (const name of namedValueImportsFromHouseTamagui(readFileSync(file, 'utf8'))) {
+      for (const name of namedValueImportsFromHouseTamagui(readFileSync(file, 'utf-8'))) {
         if (!exported.has(name)) {
           missing.push(`${file.slice(import.meta.dirname.length + 1)}:${name}`);
         }
       }
     }
-    expect(missing, `stories import names ./tamagui.ts does not export: ${missing.join(', ')}`).toEqual([]);
+    expect(missing, `stories import names ./tamagui.ts does not export: ${missing.join(', ')}`).toStrictEqual([]);
   });
 });
-
-function walkStoryFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...walkStoryFiles(path));
-    } else if (/\.stories\.tsx?$/.test(entry.name)) {
-      out.push(path);
-    }
-  }
-  return out;
-}
-
-function namedValueImportsFromHouseTamagui(src: string): string[] {
-  const names: string[] = [];
-  const re = /import\s+(type\s+)?\{([^}]+)\}\s+from\s+["']\.\/tamagui["']/g;
-  for (const match of src.matchAll(re)) {
-    const wholeClauseIsType = Boolean(match[1]);
-    for (const raw of match[2].split(',')) {
-      const part = raw.trim();
-      if (!part) {
-        continue;
-      }
-      if (wholeClauseIsType || /^type\s/.test(part)) {
-        continue;
-      }
-      names.push(
-        part
-          .replace(/^type\s+/, '')
-          .split(/\s+as\s+/)[0]
-          .trim(),
-      );
-    }
-  }
-  return names;
-}
 
 // ---------------------------------------------------------------------------
 // Type-level locks (checked by `tsc --noEmit`, not vitest): excluded Props
@@ -277,28 +289,21 @@ function namedValueImportsFromHouseTamagui(src: string): string[] {
 // If an excluded type comes back, the @ts-expect-error goes unused and the
 // package typecheck fails — same lock, opposite direction.
 // ---------------------------------------------------------------------------
-// @ts-expect-error CheckboxProps is intentionally not exported (house: forms)
-type _NoCheckboxProps = import('./index').CheckboxProps;
-// @ts-expect-error SwitchProps is intentionally not exported (house: forms)
-type _NoSwitchProps = import('./index').SwitchProps;
-// @ts-expect-error InputProps is intentionally not exported (house: forms)
-type _NoInputProps = import('./index').InputProps;
-// @ts-expect-error SelectProps is intentionally not exported (house: forms)
-type _NoSelectProps = import('./index').SelectProps;
-// @ts-expect-error SliderProps is intentionally not exported (house: forms)
-type _NoSliderProps = import('./index').SliderProps;
-// @ts-expect-error LabelProps is intentionally not exported (house: forms)
-type _NoLabelProps = import('./index').LabelProps;
-// @ts-expect-error Adapt is dropped from the house barrel
-type _NoAdapt = import('./index').Adapt;
+type _NoCheckboxProps = CheckboxProps;
+type _NoSwitchProps = SwitchProps;
+type _NoInputProps = InputProps;
+type _NoSelectProps = SelectProps;
+type _NoSliderProps = SliderProps;
+type _NoLabelProps = LabelProps;
+type _NoAdapt = Adapt;
 
-type _HasViewProps = import('./index').ViewProps;
-type _HasXStackProps = import('./index').XStackProps;
-type _HasYStackProps = import('./index').YStackProps;
-type _HasTextProps = import('./index').TextProps;
-type _HasButtonProps = import('./index').ButtonProps;
-type _HasSizeTokens = import('./index').SizeTokens;
-type _HasFontSizeTokens = import('./index').FontSizeTokens;
-type _HasThemeName = import('./index').ThemeName;
-type _HasTamaguiElement = import('./index').TamaguiElement;
-type _HasGetProps = import('./index').GetProps<typeof pkg.View>;
+type _HasViewProps = ViewProps;
+type _HasXStackProps = XStackProps;
+type _HasYStackProps = YStackProps;
+type _HasTextProps = TextProps;
+type _HasButtonProps = ButtonProps;
+type _HasSizeTokens = SizeTokens;
+type _HasFontSizeTokens = FontSizeTokens;
+type _HasThemeName = ThemeName;
+type _HasTamaguiElement = TamaguiElement;
+type _HasGetProps = GetProps<typeof pkg.View>;

@@ -11,28 +11,33 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 
 const MemoizedBoard = memo(Board);
 
-export default function BoardPage() {
+const BoardPage = () => {
   const params = useParams();
   const t = useTranslations('kanban');
-  const boardId = params?.boardId as string;
+  const rawBoardId = params?.boardId;
+  const boardId = Array.isArray(rawBoardId) ? rawBoardId[0] : rawBoardId;
   const setCurrentBoardId = useWorkspaceStore((state) => state.setCurrentBoardId);
   const fetchProjects = useWorkspaceStore((state) => state.fetchProjects);
 
   useEffect(() => {
-    if (!boardId) {
+    if (boardId === undefined || boardId === '') {
       return;
     }
     setCurrentBoardId(boardId);
-    fetchProjects(boardId);
+    void fetchProjects(boardId);
   }, [boardId, setCurrentBoardId, fetchProjects]);
 
   return (
     <PageContainer>
-      <YStack render="main" gap="$4">
+      <YStack
+        render="main"
+        gap="$4">
         <Suspense fallback={<Paragraph>{t('loadingBoard')}</Paragraph>}>
           <MemoizedBoard />
         </Suspense>
       </YStack>
     </PageContainer>
   );
-}
+};
+
+export default BoardPage;

@@ -8,23 +8,15 @@
  * for `[data-mp-action-role="primary"]` / accent markers (two-primaries warn).
  */
 
-import {
-  Children,
-  Fragment,
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useId,
-  useRef,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
-import { XStack, type GetProps } from 'tamagui';
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useId, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { XStack, isWeb } from 'tamagui';
+import type { GetProps, TamaguiElement } from 'tamagui';
 
-import { countActionsInTree } from '../shared/actionScan';
+import { countActionsInTree } from '../shared/action-scan';
 import { useIsInDialogRegion } from '../surfaces';
 
-import { actionDevWarn, warnCancelDisabled, warnDialogTooManyActions } from './devWarn';
+import { actionDevWarn, warnCancelDisabled, warnDialogTooManyActions } from './dev-warn';
 
 export type ActionBarAlign = 'start' | 'end' | 'between';
 
@@ -55,18 +47,28 @@ const ALIGN_JUSTIFY: Record<ActionBarAlign, GetProps<typeof XStack>['justifyCont
   between: 'space-between',
 };
 
-function asArray(node: ReactNode | ReactNode[] | undefined): ReactNode[] {
+interface SlotElementProps {
+  'data-mp-action-role'?: string;
+  actionRole?: string;
+  accent?: boolean;
+  disabled?: boolean | null;
+  'aria-disabled'?: boolean | string | null;
+  'data-mp-cancel-disabled-ignored'?: string;
+  children?: ReactNode;
+}
+
+const asArray = (node: ReactNode | ReactNode[] | undefined): ReactNode[] => {
   if (node == null || node === false) {
     return [];
   }
   return Array.isArray(node) ? node : [node];
-}
+};
 
-function elementLooksPrimary(node: ReactNode): boolean {
-  if (!isValidElement(node)) {
+const elementLooksPrimary = (node: ReactNode): boolean => {
+  if (!isValidElement<SlotElementProps>(node)) {
     return false;
   }
-  const props = node.props as Record<string, unknown>;
+  const { props } = node;
   if (props['data-mp-action-role'] === 'primary') {
     return true;
   }
@@ -77,33 +79,34 @@ function elementLooksPrimary(node: ReactNode): boolean {
     return true;
   }
   return false;
-}
+};
 
-function countPrimariesInTree(nodes: ReactNode): number {
+const countPrimariesInTree = (nodes: ReactNode): number => {
   let count = 0;
-  Children.forEach(nodes, (child) => {
+  // oxlint-disable-next-line react/no-react-children -- walking arbitrary slot children for primary actions has no non-Children equivalent
+  for (const child of Children.toArray(nodes)) {
     if (elementLooksPrimary(child)) {
       count += 1;
     }
-    if (isValidElement(child)) {
-      const kids = (child.props as { children?: ReactNode }).children;
+    if (isValidElement<SlotElementProps>(child)) {
+      const kids = child.props.children;
       if (kids != null) {
         count += countPrimariesInTree(kids);
       }
     }
-  });
+  }
   return count;
-}
+};
 
-function nodeRendersDisabled(node: ReactNode): boolean {
-  if (!isValidElement(node)) {
+const nodeRendersDisabled = (node: ReactNode): boolean => {
+  if (!isValidElement<SlotElementProps>(node)) {
     return false;
   }
-  const props = node.props as Record<string, unknown>;
+  const { props } = node;
   return props.disabled === true || props['aria-disabled'] === true || props['aria-disabled'] === 'true';
-}
+};
 
-export function ActionBar({
+export const ActionBar = ({
   primary,
   secondary,
   cancel,
@@ -113,10 +116,10 @@ export function ActionBar({
   id: idProp,
   gap = '$2',
   ...stackProps
-}: ActionBarProps) {
+}: ActionBarProps) => {
   const reactId = useId();
   const regionId = idProp ?? reactId;
-  const rootRef = useRef<HTMLElement | null>(null);
+  const rootRef = useRef<TamaguiElement | null>(null);
   const inDialogRegion = useIsInDialogRegion();
 
   const secondaryItems = asArray(secondary);
@@ -128,19 +131,18 @@ export function ActionBar({
   const cancelItems =
     cancel == null || cancel === false
       ? null
-      : Children.map(cancel, (node) => {
-          if (!nodeRendersDisabled(node)) {
+      : // oxlint-disable-next-line react/no-react-children -- cancel slot may be a single element or array; Children.map handles both with stable keys
+        Children.map(cancel, (node): ReactNode => {
+          if (!isValidElement<SlotElementProps>(node) || !nodeRendersDisabled(node)) {
             return node;
           }
           cancelDisabledStripped = true;
-          return cloneElement(
-            node as ReactElement,
-            {
-              disabled: undefined,
-              'aria-disabled': undefined,
-              'data-mp-cancel-disabled-ignored': 'true',
-            } as never,
-          );
+          // oxlint-disable-next-line react/no-clone-element -- the slot element is caller-provided; stripping its disabled props is the contract
+          return cloneElement(node, {
+            disabled: null,
+            'aria-disabled': null,
+            'data-mp-cancel-disabled-ignored': 'true',
+          });
         });
 
   useEffect(() => {
@@ -169,8 +171,8 @@ export function ActionBar({
     // count by construction; free children are counted heuristically.
     if (inDialogRegion) {
       const actionTotal =
-        (primary != null ? 1 : 0) +
-        secondaryItems.filter((node) => node != null && node !== false).length +
+        (primary == null ? 0 : 1) +
+        asArray(secondary).filter((node) => node != null && node !== false).length +
         (cancel != null && cancel !== false ? 1 : 0) +
         countActionsInTree(children);
       warnDialogTooManyActions({
@@ -183,7 +185,7 @@ export function ActionBar({
 
     // DOM fallback for composed markup that set data attrs without React props.
     const el = rootRef.current;
-    if (el && typeof el.querySelectorAll === 'function') {
+    if (isWeb && el != null && el instanceof HTMLElement) {
       const domCount = el.querySelectorAll('[data-mp-action-role="primary"]').length;
       if (domCount > 1) {
         actionDevWarn('two-primaries', {
@@ -197,7 +199,7 @@ export function ActionBar({
 
   return (
     <XStack
-      ref={rootRef as never}
+      ref={rootRef}
       data-mp-action-bar={regionId}
       gap={gap}
       flexWrap="wrap"
@@ -221,4 +223,4 @@ export function ActionBar({
       {children}
     </XStack>
   );
-}
+};

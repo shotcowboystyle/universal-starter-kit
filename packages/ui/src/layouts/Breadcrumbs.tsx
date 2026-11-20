@@ -22,6 +22,7 @@ import {
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Anchor, Text, XStack, isWeb } from 'tamagui';
+import type { XStackProps } from 'tamagui';
 
 import { withInterp } from '../shared/t';
 
@@ -56,7 +57,28 @@ type CrumbSlot =
   | { kind: 'item'; item: BreadcrumbItem; index: number; isCurrent: boolean }
   | { kind: 'overflow'; hidden: { item: BreadcrumbItem; index: number }[] };
 
-function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, expanded: boolean): CrumbSlot[] {
+const crumbTextSize = (sizeToken: string) => {
+  if (sizeToken === '$3') {
+    return '$2' as const;
+  }
+  return sizeToken === '$5' ? ('$4' as const) : ('$3' as const);
+};
+
+const crumbSeparatorSize = (sizeToken: string) => {
+  if (sizeToken === '$3') {
+    return '$1' as const;
+  }
+  return sizeToken === '$5' ? ('$3' as const) : ('$2' as const);
+};
+
+const crumbTrailGap = (spaceGap: string | number | undefined) => {
+  if (spaceGap === '$2') {
+    return '$1' as const;
+  }
+  return spaceGap === '$5' ? ('$2' as const) : ('$1.5' as const);
+};
+
+const collapseSlots = (items: BreadcrumbItem[], maxVisible: number | undefined, expanded: boolean): CrumbSlot[] => {
   const asItems = (): CrumbSlot[] =>
     items.map((item, index) => ({
       kind: 'item' as const,
@@ -65,7 +87,7 @@ function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, 
       isCurrent: index === items.length - 1,
     }));
 
-  if (!maxVisible || expanded || items.length <= maxVisible) {
+  if (maxVisible === undefined || maxVisible === 0 || expanded || items.length <= maxVisible) {
     return asItems();
   }
 
@@ -86,7 +108,7 @@ function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, 
       })),
     },
   ];
-  for (let i = hiddenEnd; i < items.length; i++) {
+  for (let i = hiddenEnd; i < items.length; i += 1) {
     slots.push({
       kind: 'item',
       item: items[i],
@@ -95,13 +117,13 @@ function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, 
     });
   }
   return slots;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function Breadcrumbs({ items, onNavigate, label, maxVisible }: BreadcrumbsProps) {
+export const Breadcrumbs = ({ items, onNavigate, label, maxVisible }: BreadcrumbsProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Breadcrumbs' });
   // UX-P04 / Axiom 12: crumb links are accent-hued text on the PAGE, so they
@@ -118,15 +140,14 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
   }
 
   const sz = knobProps.sizeToken;
-  const textSize = sz === '$3' ? ('$2' as const) : sz === '$5' ? ('$4' as const) : ('$3' as const);
-  const separatorSize = sz === '$3' ? ('$1' as const) : sz === '$5' ? ('$3' as const) : ('$2' as const);
+  const textSize = crumbTextSize(sz);
+  const separatorSize = crumbSeparatorSize(sz);
   // Tight trail: crumbs hug the "/" separators so the path reads as one unit.
   // The space knob still scales the gap, but from a tight base — not the
   // panel-level knobProps.gap (which is sized for stacked layout sections).
   // Spec: separators are T-HELPER (`textAccentColor`), never the $color8
   // `text.subtle` ramp that fails AA on the page.
-  const spaceGap = knobProps.gap.gap;
-  const trailGap = spaceGap === '$2' ? ('$1' as const) : spaceGap === '$5' ? ('$2' as const) : ('$1.5' as const);
+  const trailGap = crumbTrailGap(knobProps.gap.gap);
   // Vertical pad only (theme-propagation SP-FIXED): grow
   // the clickable box to ≥44 without horizontal padding that would re-spread
   // the trail. No minWidth floor — the ring must hug the link, not a 44px well.
@@ -163,13 +184,81 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
 
   const navigate = (href: string | undefined, event?: { preventDefault?: () => void }) => {
     event?.preventDefault?.();
-    if (href) {
+    if (href !== undefined && href !== '') {
       onNavigate?.(href);
     }
   };
 
+  const renderCrumb = (slot: CrumbSlot) => {
+    if (slot.kind === 'overflow') {
+      return (
+        <XStack
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack with `role`; it also maps to the native accessibilityRole, which an intrinsic tag cannot provide
+          role="button"
+          tabIndex={0}
+          aria-label={withInterp(t('Show {{count}} more pages'), {
+            count: slot.hidden.length,
+          })}
+          // interactiveCrumb is link-text styling (shared with the Anchor
+          // crumb below). Its hoverStyle underline is a text effect; on
+          // web this XStack is a div, so the hover text-decoration reaches
+          // the inner "…" Text via inheritance. The RN-flavored Stack type
+          // rejects the text hoverStyle, so route it through a cast.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: Tamagui forwards these text-style keys on a stack at runtime; only the RN-flavored prop type omits them (the text-only hoverStyle is rejected by the stack prop type but applied at runtime)
+          {...(interactiveCrumb as XStackProps)}
+          backgroundColor="transparent"
+          borderWidth={0}
+          paddingHorizontal={0}
+          onPress={() => {
+            setExpanded(true);
+          }}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setExpanded(true);
+            }
+          }}>
+          <Text
+            color={linkColor}
+            fontSize={textSize}
+            userSelect="none">
+            …
+          </Text>
+        </XStack>
+      );
+    }
+    if (slot.item.href !== undefined && slot.item.href !== '' && !slot.isCurrent) {
+      return (
+        <Anchor
+          {...interactiveCrumb}
+          href={slot.item.href}
+          onPress={(e) => {
+            navigate(slot.item.href, e);
+          }}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === ' ') {
+              navigate(slot.item.href, e);
+            }
+          }}>
+          {slot.item.label}
+        </Anchor>
+      );
+    }
+    return (
+      <Text
+        {...knobProps.body}
+        color={knobProps.textAccentColor}
+        fontSize={textSize}
+        fontWeight="400"
+        {...(slot.isCurrent ? { 'aria-current': 'page' as const } : null)}>
+        {slot.item.label}
+      </Text>
+    );
+  };
+
   const trail = (
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack with `role`; it also maps to the native accessibilityRole, which an intrinsic tag cannot provide
       role="list"
       {...webListReset}
       padding={0}
@@ -183,6 +272,7 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
         return (
           <XStack
             key={slot.kind === 'item' ? `${slot.item.label}-${slot.index}` : 'overflow'}
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack with `role`; it also maps to the native accessibilityRole, which an intrinsic tag cannot provide
             role="listitem"
             {...webListReset}
             padding={0}
@@ -190,63 +280,7 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
             gap={trailGap}
             alignItems="center"
             outlineWidth={0}>
-            {slot.kind === 'overflow' ? (
-              <XStack
-                role="button"
-                tabIndex={0}
-                aria-label={withInterp(t('Show {{count}} more pages'), {
-                  count: slot.hidden.length,
-                })}
-                // interactiveCrumb is link-text styling (shared with the Anchor
-                // crumb below). Its hoverStyle underline is a text effect; on
-                // web this XStack is a div, so the hover text-decoration reaches
-                // the inner "…" Text via inheritance. The RN-flavored Stack type
-                // rejects the text hoverStyle, so route it through the house cast.
-                {...(interactiveCrumb as Record<string, unknown>)}
-                backgroundColor="transparent"
-                borderWidth={0}
-                paddingHorizontal={0}
-                onPress={() => {
-                  setExpanded(true);
-                }}
-                onKeyDown={
-                  ((e: React.KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setExpanded(true);
-                    }
-                  }) as unknown as () => void
-                }>
-                <Text color={linkColor} fontSize={textSize} userSelect="none">
-                  …
-                </Text>
-              </XStack>
-            ) : slot.item.href && !slot.isCurrent ? (
-              <Anchor
-                {...interactiveCrumb}
-                href={slot.item.href}
-                onPress={(e) => {
-                  navigate(slot.item.href, e);
-                }}
-                onKeyDown={
-                  ((e: React.KeyboardEvent) => {
-                    if (e.key === ' ') {
-                      navigate(slot.item.href, e);
-                    }
-                  }) as unknown as () => void
-                }>
-                {slot.item.label}
-              </Anchor>
-            ) : (
-              <Text
-                {...knobProps.body}
-                color={knobProps.textAccentColor}
-                fontSize={textSize}
-                fontWeight="400"
-                {...(slot.isCurrent ? { 'aria-current': 'page' as const } : null)}>
-                {slot.item.label}
-              </Text>
-            )}
+            {renderCrumb(slot)}
             {!isLastSlot && (
               <Text
                 aria-hidden
@@ -267,7 +301,10 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
   // The landmark is not a control — no tabIndex, no focusWithin ring.
   if (isWeb) {
     return (
-      <nav aria-label={landmark} data-testid="breadcrumbs" data-density={knobProps.density}>
+      <nav
+        aria-label={landmark}
+        data-testid="breadcrumbs"
+        data-density={knobProps.density}>
         {trail}
       </nav>
     );
@@ -283,4 +320,4 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
       {trail}
     </XStack>
   );
-}
+};

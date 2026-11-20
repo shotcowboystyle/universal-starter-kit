@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { createDateFormatter, createNumberFormatter, createCurrencyFormatter } from './formatters';
 
-describe('createDateFormatter', () => {
+describe(createDateFormatter, () => {
   const formatter = createDateFormatter('en-US');
 
   it('formats a date with default options', () => {
     const result = formatter.format(new Date('2025-06-15T12:00:00Z'));
-    expect(result).toMatch(/6\/15\/2025|Jun/);
+    expect(result).toMatch(/6\/15\/2025|Jun/u);
   });
 
   it('formats a date with custom options', () => {
@@ -23,7 +23,7 @@ describe('createDateFormatter', () => {
 
   it('formats a timestamp number', () => {
     const result = formatter.format(0);
-    expect(typeof result).toBe('string');
+    expect(result).toBeTypeOf('string');
     expect(result.length).toBeGreaterThan(0);
   });
 
@@ -31,22 +31,22 @@ describe('createDateFormatter', () => {
     it('returns a relative time string', () => {
       const future = Date.now() + 3600 * 1000;
       const result = formatter.relative(future);
-      expect(result).toMatch(/hour|in/i);
+      expect(result).toMatch(/hour|in/iu);
     });
 
     it('handles past dates', () => {
-      const past = Date.now() - 86400 * 1000;
+      const past = Date.now() - 86_400 * 1000;
       const result = formatter.relative(past);
-      expect(result).toMatch(/day|yesterday|ago/i);
+      expect(result).toMatch(/day|yesterday|ago/iu);
     });
   });
 });
 
-describe('createNumberFormatter', () => {
+describe(createNumberFormatter, () => {
   const formatter = createNumberFormatter('en-US');
 
   it('formats a number with default options', () => {
-    expect(formatter.format(1234567.89)).toBe('1,234,567.89');
+    expect(formatter.format(1_234_567.89)).toBe('1,234,567.89');
   });
 
   it('formats with custom options', () => {
@@ -71,11 +71,11 @@ describe('createNumberFormatter with different locale', () => {
 
   it('uses locale-appropriate separators', () => {
     const result = formatter.format(1234.56);
-    expect(result).toMatch(/1\.234,56|1.234,56/);
+    expect(result).toMatch(/1\.234,56|1.234,56/u);
   });
 });
 
-describe('createCurrencyFormatter', () => {
+describe(createCurrencyFormatter, () => {
   const formatter = createCurrencyFormatter('en-US');
 
   it('formats USD currency', () => {
@@ -90,7 +90,7 @@ describe('createCurrencyFormatter', () => {
   });
 
   it('formats large amounts', () => {
-    const result = formatter.format(1000000, 'USD');
+    const result = formatter.format(1_000_000, 'USD');
     expect(result).toContain('1,000,000');
   });
 

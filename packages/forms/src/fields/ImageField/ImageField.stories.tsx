@@ -13,6 +13,73 @@ const ATTACHED = `data:image/svg+xml;utf8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120"><rect width="240" height="120" fill="#4a90d9"/><circle cx="120" cy="60" r="36" fill="#fff"/></svg>',
 )}`;
 
+type ImageValue = string | File | null;
+
+const describeImage = (image: ImageValue): string => {
+  if (image instanceof File) {
+    return `File: ${image.name}`;
+  }
+  return image === null || image === '' ? 'No image selected' : 'URL loaded';
+};
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      avatar: null as ImageValue,
+      logo: ATTACHED as ImageValue,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <ImageField
+          {...({
+            label: 'Profile Avatar',
+            name: 'avatar',
+            helperText: 'Drop or click to attach',
+            imageWidth: 96,
+            imageHeight: 96,
+          } as any)}
+        />
+        <ImageField
+          {...({
+            label: 'Company Logo',
+            name: 'logo',
+            helperText: 'Click to replace · Remove clears the attachment',
+            imageWidth: 160,
+            imageHeight: 72,
+            objectFit: 'contain',
+          } as any)}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [image, setImage] = useState<ImageValue>(null);
+  return (
+    <YStack gap="$4">
+      <ImageField
+        label="Upload Image"
+        value={image}
+        onChange={(val) => {
+          setImage(val);
+          action('onChange')(val);
+        }}
+        imageWidth={96}
+        imageHeight={96}
+        helperText={describeImage(image)}
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof ImageField> = {
   title: 'Forms/ImageField',
   component: ImageField,
@@ -20,7 +87,7 @@ const meta: Meta<typeof ImageField> = {
     docs: {
       description: {
         component:
-          'Frappe Attach Image: a preview frame that attaches, replaces, and accepts drops. Empty shows Add image; Remove is a sibling action (R11: never a status pip on the media). Keyboard focus rings the frame (LC-71), never the hidden file input. Radius on the tile is unclamped.',
+          'Image attachment: a preview frame that attaches, replaces, and accepts drops. Empty shows Add image; Remove is a sibling action (R11: never a status pip on the media). Keyboard focus rings the frame (LC-71), never the hidden file input. Radius on the tile is unclamped.',
       },
     },
   },
@@ -44,47 +111,7 @@ type Story = StoryObj<typeof ImageField>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          avatar: null as string | File | null,
-          logo: ATTACHED as string | File | null,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <ImageField
-              {...({
-                label: 'Profile Avatar',
-                name: 'avatar',
-                helperText: 'Drop or click to attach',
-                imageWidth: 96,
-                imageHeight: 96,
-              } as any)}
-            />
-            <ImageField
-              {...({
-                label: 'Company Logo',
-                name: 'logo',
-                helperText: 'Click to replace · Remove clears the attachment',
-                imageWidth: 160,
-                imageHeight: 72,
-                objectFit: 'contain',
-              } as any)}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -154,11 +181,29 @@ export const WithError: Story = {
 export const Sizes: Story = {
   render: () => (
     <YStack gap="$4">
-      <XStack gap="$4" alignItems="flex-end">
-        <ImageField label="Small (32x32)" imageWidth={32} imageHeight={32} />
-        <ImageField label="Medium (48x48)" imageWidth={48} imageHeight={48} />
-        <ImageField label="Large (64x64)" imageWidth={64} imageHeight={64} />
-        <ImageField label="XL (96x96)" imageWidth={96} imageHeight={96} />
+      <XStack
+        gap="$4"
+        alignItems="flex-end">
+        <ImageField
+          label="Small (32x32)"
+          imageWidth={32}
+          imageHeight={32}
+        />
+        <ImageField
+          label="Medium (48x48)"
+          imageWidth={48}
+          imageHeight={48}
+        />
+        <ImageField
+          label="Large (64x64)"
+          imageWidth={64}
+          imageHeight={64}
+        />
+        <ImageField
+          label="XL (96x96)"
+          imageWidth={96}
+          imageHeight={96}
+        />
       </XStack>
     </YStack>
   ),
@@ -167,37 +212,30 @@ export const Sizes: Story = {
 export const RectangularSizes: Story = {
   render: () => (
     <YStack gap="$4">
-      <ImageField label="Banner (200x80)" imageWidth={200} imageHeight={80} placeholder="Banner" />
-      <ImageField label="Logo (160x40)" imageWidth={160} imageHeight={40} placeholder="Logo" />
-      <ImageField label="Thumbnail (120x90)" imageWidth={120} imageHeight={90} placeholder="Thumb" />
+      <ImageField
+        label="Banner (200x80)"
+        imageWidth={200}
+        imageHeight={80}
+        placeholder="Banner"
+      />
+      <ImageField
+        label="Logo (160x40)"
+        imageWidth={160}
+        imageHeight={40}
+        placeholder="Logo"
+      />
+      <ImageField
+        label="Thumbnail (120x90)"
+        imageWidth={120}
+        imageHeight={90}
+        placeholder="Thumb"
+      />
     </YStack>
   ),
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [image, setImage] = useState<string | File | null>(null);
-      return (
-        <YStack gap="$4">
-          <ImageField
-            label="Upload Image"
-            value={image}
-            onChange={(val) => {
-              setImage(val);
-              action('onChange')(val);
-            }}
-            imageWidth={96}
-            imageHeight={96}
-            helperText={
-              image ? (typeof image === 'string' ? 'URL loaded' : `File: ${image.name}`) : 'No image selected'
-            }
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const NoRemoveButton: Story = {
@@ -218,7 +256,7 @@ export const BrokenImage: Story = {
     value: 'https://invalid.invalid/missing.png',
     imageWidth: 96,
     imageHeight: 96,
-    helperText: 'Failed load keeps the frame and stays labelled',
+    helperText: 'Failed load keeps the frame and stays labeled',
   },
   render: (args) => <ImageField {...args} />,
 };

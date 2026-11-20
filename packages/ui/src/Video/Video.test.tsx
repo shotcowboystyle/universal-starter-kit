@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import React from 'react';
@@ -10,14 +9,15 @@ import { formatPlayerTime } from './PlayerChrome';
 
 import { Video } from './index';
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the stub swaps expo-video's native player and VideoView class for plain test doubles, which the module's real types reject
 vi.mock('expo-video', () => ({
   useVideoPlayer: () => ({
     loop: false,
     muted: false,
-    play: vi.fn(),
-    pause: vi.fn(),
+    play: vi.fn<() => void>(),
+    pause: vi.fn<() => void>(),
   }),
   VideoView: (props: { accessibilityLabel?: string }) =>
     React.createElement('div', {
@@ -26,10 +26,12 @@ vi.mock('expo-video', () => ({
     }),
 }));
 
-describe('Video', () => {
+describe(Video, () => {
   it('renders a figure with video and caption on web', () => {
     const { container } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" title="Demo">
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo">
         Caption text
       </Video>,
     );
@@ -40,7 +42,11 @@ describe('Video', () => {
 
   it('paints house overlay chrome instead of native controls', () => {
     const { container, getByLabelText } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" title="Demo" controls />,
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo"
+        controls
+      />,
     );
     const el = container.querySelector('video');
     expect(el?.hasAttribute('controls')).toBe(false);
@@ -53,7 +59,10 @@ describe('Video', () => {
 
   it('omits overlay chrome when controls are off', () => {
     const { container, queryByTestId } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" controls={false} />,
+      <Video
+        src="https://example.com/clip.mp4"
+        controls={false}
+      />,
     );
     expect(queryByTestId('video-chrome')).toBeNull();
     expect(container.querySelector('video')?.hasAttribute('controls')).toBe(false);
@@ -86,22 +95,28 @@ describe('Video', () => {
 
   it('does not paint a status pip; tile radius stays UNCLAMPED', () => {
     const src = [
-      readFileSync(join(here, 'index.tsx'), 'utf8'),
-      readFileSync(join(here, 'index.native.tsx'), 'utf8'),
-      readFileSync(join(here, 'VideoFrame.tsx'), 'utf8'),
+      readFileSync(path.join(here, 'index.tsx'), 'utf-8'),
+      readFileSync(path.join(here, 'index.native.tsx'), 'utf-8'),
+      readFileSync(path.join(here, 'VideoFrame.tsx'), 'utf-8'),
     ].join('\n');
-    expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/);
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/u);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
     expect(src).toContain('mediaTileFrameProps');
 
-    const { container } = renderWithProviders(<Video src="https://example.com/clip.mp4" title="Demo" controls />);
+    const { container } = renderWithProviders(
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo"
+        controls
+      />,
+    );
     expect(container.querySelector('[data-status-pip]')).toBeNull();
     expect(container.querySelector("[data-media-tile='video']")).toBeTruthy();
     expect(container.querySelector("[data-testid='video-chrome']")).toBeTruthy();
   });
 });
 
-describe('formatPlayerTime', () => {
+describe(formatPlayerTime, () => {
   it('formats seconds and hours without NaN', () => {
     expect(formatPlayerTime(0)).toBe('0:00');
     expect(formatPlayerTime(65)).toBe('1:05');
@@ -127,7 +142,9 @@ describe('Video native module (smoke)', () => {
   it('degrades to the poster surface when the expo-video peer cannot load', async () => {
     const { Video: NativeVideo } = await import('./index.native');
     const { container, queryByTestId } = renderWithProviders(
-      <NativeVideo src="https://example.com/native.mp4" title="Native demo">
+      <NativeVideo
+        src="https://example.com/native.mp4"
+        title="Native demo">
         Native caption
       </NativeVideo>,
     );

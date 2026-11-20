@@ -2,9 +2,6 @@ import { Spinner } from '@repo/forms';
 import {
   getLayoutSizeClass,
   keyboardFocusRingProps,
-  type LayoutSizeClass,
-  type MediaAspect,
-  type TileSizeRung,
   ensureKeyboardModalityTracking,
   resolveMediaAspect,
   tileColumnsForWidth,
@@ -12,18 +9,23 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import type { LayoutSizeClass, MediaAspect, TileSizeRung } from '@repo/theme';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 // useWindowDimensions from tamagui, NOT react-native: importing react-native
 // here pulls react-native-web's CJS inline-style-prefixer into the SSR module
 // graph, which the SSR runner evaluates as ESM ("exports is not defined").
-import { View, XStack, YStack, getTokenValue, useWindowDimensions, type YStackProps } from 'tamagui';
+import { View, XStack, YStack, getTokenValue, useWindowDimensions } from 'tamagui';
+import type { TamaguiElement, YStackProps } from 'tamagui';
 
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 import { AsyncBoundary, resolveAsyncStatus } from '../layouts/AsyncBoundary';
 import { useTranslation } from '../shared/i18n';
 import { Skeleton } from '../Skeleton';
+
+import { isDomElement, useDomRefCallback, webOnlyProps } from './dom-interop';
+import { isNumber } from './guards';
 
 /**
  * Configurable hotkey bindings for the ImageGrid component.
@@ -45,10 +47,27 @@ export interface ImageGridHotkeys {
   last?: RegisterableHotkey;
 }
 
+const DEFAULT_GUTTER_PX = 16;
+const SCROLL_LOAD_THRESHOLD_PX = 50;
+
+const spaceTokenPx = (token: string): number => {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: a non-numeric knob gap is always a `$`-prefixed space token
+  const px: unknown = getTokenValue(token as Parameters<typeof getTokenValue>[0], 'space');
+  return isNumber(px) ? px : DEFAULT_GUTTER_PX;
+};
+
+const COLUMNS_BY_SIZE_CLASS: Record<LayoutSizeClass, number> = {
+  compact: 2,
+  medium: 3,
+  expanded: 4,
+  large: 5,
+  xl: 5,
+};
+
 /**
  * Props for the generic ImageGrid component.
  *
- * @typeParam T - The item type rendered in the grid
+ * @template T - The item type rendered in the grid
  */
 export interface ImageGridProps<T> extends Omit<YStackProps, 'children'> {
   /** Array of items to render */
@@ -67,7 +86,7 @@ export interface ImageGridProps<T> extends Omit<YStackProps, 'children'> {
    * Failed load. Wins over empty — never shows empty chrome.
    * Pass a string, Error, custom node, or `true` for the default error UI.
    */
-  error?: boolean | string | Error | React.ReactNode | null;
+  error?: Error | React.ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Number of columns in the grid (default: responsive to window width, 2-5) */
@@ -111,7 +130,7 @@ const tileTrack = { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 } as c
  * parent's `gap` (never a negative margin): a −half-gutter outset widened the
  * page past the viewport at 390 (FB-390-grid-overflow-x).
  */
-function ImageGridSkeleton({
+const ImageGridSkeleton = ({
   columns,
   gutter,
   aspect,
@@ -122,27 +141,33 @@ function ImageGridSkeleton({
   /** Resolved width/height ratio — the twin must be the media's shape. */
   aspect: number;
   loadingLabel: string;
-}) {
-  return (
-    <YStack
-      gap={gutter}
-      data-async-skeleton="image-grid"
-      data-media-aspect={aspect}
-      aria-busy
-      aria-label={loadingLabel}
-      maxWidth="100%">
-      {Array.from({ length: 2 }, (_, row) => (
-        <XStack key={`skel-row-${row}`} gap={gutter}>
-          {Array.from({ length: columns }, (_, col) => (
-            <View key={`skel-${row}-${col}`} {...tileTrack}>
-              <Skeleton variant="rounded" width="100%" aspectRatio={aspect} />
-            </View>
-          ))}
-        </XStack>
-      ))}
-    </YStack>
-  );
-}
+}) => (
+  <YStack
+    gap={gutter}
+    data-async-skeleton="image-grid"
+    data-media-aspect={aspect}
+    aria-busy
+    aria-label={loadingLabel}
+    maxWidth="100%">
+    {Array.from({ length: 2 }, (_, row) => (
+      <XStack
+        key={`skel-row-${row}`}
+        gap={gutter}>
+        {Array.from({ length: columns }, (_col, col) => (
+          <View
+            key={`skel-${row}-${col}`}
+            {...tileTrack}>
+            <Skeleton
+              variant="rounded"
+              width="100%"
+              aspectRatio={aspect}
+            />
+          </View>
+        ))}
+      </XStack>
+    ))}
+  </YStack>
+);
 
 /**
  * One Photos/Polar tile: the rounded media frame is the perceived control.
@@ -152,7 +177,7 @@ function ImageGridSkeleton({
  * No status pip on the media; radius UNCLAMPED (not CONTAINER-CAP).
  * This module does not wrap Tint — nested hue is opt-in at the caller.
  */
-function ImageGridTile({
+const ImageGridTile = ({
   id,
   isFocused,
   showRing,
@@ -172,16 +197,18 @@ function ImageGridTile({
   radiusFragment: { borderRadius?: string | number; className?: string };
   onPress?: () => void;
   children: React.ReactNode;
-}) {
+}) => {
   const radius = radiusFragment.borderRadius;
   const [hovered, setHovered] = useState(false);
   return (
-    <View {...tileTrack} role="presentation">
+    <View
+      {...tileTrack}
+      role="presentation">
       <View
         id={id}
         // "gridcell" is a valid ARIA role but outside RN's `Role` union;
-        // forwarded to the DOM node on web (house Record cast).
-        {...({ role: 'gridcell' } as Record<string, unknown>)}
+        // forwarded to the DOM node on web.
+        {...webOnlyProps({ role: 'gridcell' })}
         aria-colindex={colIndex}
         aria-rowindex={rowIndex}
         aria-selected={isFocused}
@@ -193,19 +220,21 @@ function ImageGridTile({
         cursor={clickable ? 'pointer' : undefined}
         {...(showRing ? keyboardFocusRingProps : { outlineWidth: 0 })}
         // Tamagui forwards onHoverIn/onHoverOut at runtime; the RN-flavored
-        // View prop type omits them (house Record cast).
-        {...({
+        // View prop type omits them.
+        {...webOnlyProps({
           onHoverIn: () => {
             setHovered(true);
           },
           onHoverOut: () => {
             setHovered(false);
           },
-        } as Record<string, unknown>)}
+        })}
         onPress={onPress}>
         {/* Clip media to the radius; keep overflow off the ring node so
             the ring outline is not severed (same split as Input.Box). */}
-        <View borderRadius={radius} overflow="hidden">
+        <View
+          borderRadius={radius}
+          overflow="hidden">
           {children}
         </View>
         {hovered && !showRing ? (
@@ -221,102 +250,41 @@ function ImageGridTile({
       </View>
     </View>
   );
+};
+
+interface ImageGridKeyboardOptions<T> {
+  items: T[];
+  columns: number;
+  gridId: string;
+  isRTL: boolean;
+  target: React.RefObject<HTMLElement | null>;
+  overrides: ImageGridHotkeys | undefined;
+  onItemClick: ((item: T) => void) | undefined;
 }
 
-/**
- * Generic image grid component with keyboard navigation.
- *
- * Uses a CSS flex-wrap grid for reliable cross-platform rendering and
- * `@tanstack/react-hotkeys` for grid keyboard navigation.
- * Accepts data purely through props — no data fetching logic included.
- *
- * @typeParam T - The item type rendered in the grid
- *
- * @example
- * ```tsx
- * <ImageGrid
- *   items={images}
- *   columns={3}
- *   renderItem={(item) => (
- *     <Image source={{ uri: item.url }} width="100%" height={180} />
- *   )}
- *   onItemClick={(item) => console.log(item)}
- * />
- * ```
- */
-export function ImageGrid<T>({
+/** Roving focus index + keyboard navigation via @tanstack/react-hotkeys. */
+const useImageGridKeyboard = <T,>({
   items,
-  renderItem,
+  columns,
+  gridId,
+  isRTL,
+  target,
+  overrides,
   onItemClick,
-  onLoadMore,
-  hasMore = false,
-  isLoading = false,
-  error = null,
-  onRetry,
-  columns: columnsProp,
-  tileSize,
-  mediaAspect,
-  estimateSize: _estimateSize,
-  overscan: _overscan,
-  height: heightProp,
-  emptyMessage: emptyMessageProp,
-  hotkeys: hotkeyOverrides,
-  ...stackProps
-}: ImageGridProps<T>) {
-  const { t } = useTranslation();
-  const emptyMessage = emptyMessageProp ?? t('No items found');
-  const { knobProps } = useResolvedKnobs({ component: 'ImageGrid' });
-  const isRTL = useDirection() === 'rtl';
-  // Gutters are the rows' flex `gap`, and every tile takes an equal flex
-  // share of its row (web and native, no CSS calc). A short last row is
-  // topped up with empty tracks so its tiles keep the full-row width.
-  // Never a negative half-gutter margin — that widened scrollWidth past
-  // the viewport at 390 (FB-390-grid-overflow-x).
-  const gapToken = knobProps.gap.gap;
-  const gutter =
-    typeof gapToken === 'number'
-      ? gapToken
-      : ((getTokenValue(gapToken as Parameters<typeof getTokenValue>[0], 'space') as number) ?? 16);
-
-  // Responsive default: a fixed count that looks right on desktop renders
-  // skinny slivers on a phone. Explicit `columns` always wins; a `tileSize`
-  // rung derives the count from the theme's generated ladder at the
-  // live gutter. Otherwise column count is a structural layout decision, so
-  // it consumes the canonical layout size classes
-  // instead of a raw pixel ladder.
-  const { width: windowWidth } = useWindowDimensions();
-  const columnsBySizeClass: Record<LayoutSizeClass, number> = {
-    compact: 2,
-    medium: 3,
-    expanded: 4,
-    large: 5,
-    xl: 5,
-  };
-  const columns =
-    columnsProp ??
-    (tileSize
-      ? tileColumnsForWidth(windowWidth, tileSizeLadder[tileSize], gutter)
-      : columnsBySizeClass[getLayoutSizeClass(windowWidth)]);
-  const height = heightProp;
-  const gridId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+}: ImageGridKeyboardOptions<T>) => {
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  if (typeof document !== 'undefined') {
-    ensureKeyboardModalityTracking();
-  }
   const handleContainerFocus = useCallback(() => {
     if (!wasKeyboardFocus()) {
       return;
     }
-    setFocusedIndex((prev) => (prev < 0 ? 0 : prev));
+    setFocusedIndex((prev) => Math.max(prev, 0));
   }, []);
 
   // Scroll to focused item using DOM scrollIntoView
   const scrollToIndex = useCallback(
     (index: number) => {
       if (index >= 0 && index < items.length) {
-        document.getElementById(`${gridId}-item-${index}`)?.scrollIntoView({ block: 'nearest' });
+        document.querySelector(`[id="${gridId}-item-${index}"]`)?.scrollIntoView({ block: 'nearest' });
       }
     },
     [gridId, items.length],
@@ -340,36 +308,33 @@ export function ImageGrid<T>({
     [items.length, scrollToIndex],
   );
 
-  // Keyboard navigation via @tanstack/react-hotkeys.
   // Photos: Left/Right walk reading order (wrap to the next row); Up/Down
   // jump a row. Physical arrows flip on RTL so visual direction holds.
-  const hotkeyOpts = {
-    target: containerRef as React.RefObject<HTMLElement | null>,
-  };
+  const hotkeyOpts = { target };
 
   useHotkey(
-    hotkeyOverrides?.right ?? 'ArrowRight',
+    overrides?.right ?? 'ArrowRight',
     () => {
       moveFocus(isRTL ? -1 : 1);
     },
     hotkeyOpts,
   );
   useHotkey(
-    hotkeyOverrides?.left ?? 'ArrowLeft',
+    overrides?.left ?? 'ArrowLeft',
     () => {
       moveFocus(isRTL ? 1 : -1);
     },
     hotkeyOpts,
   );
   useHotkey(
-    hotkeyOverrides?.down ?? 'ArrowDown',
+    overrides?.down ?? 'ArrowDown',
     () => {
       moveFocus(columns);
     },
     hotkeyOpts,
   );
   useHotkey(
-    hotkeyOverrides?.up ?? 'ArrowUp',
+    overrides?.up ?? 'ArrowUp',
     () => {
       moveFocus(-columns);
     },
@@ -382,12 +347,12 @@ export function ImageGrid<T>({
     }
   }, [focusedIndex, items, onItemClick]);
 
-  useHotkey(hotkeyOverrides?.select ?? 'Enter', activateFocused, hotkeyOpts);
+  useHotkey(overrides?.select ?? 'Enter', activateFocused, hotkeyOpts);
   // Photos opens the focused thumbnail with Space as well as Return.
   useHotkey('Space', activateFocused, hotkeyOpts);
 
   useHotkey(
-    hotkeyOverrides?.first ?? 'Home',
+    overrides?.first ?? 'Home',
     () => {
       if (items.length === 0) {
         return;
@@ -399,7 +364,7 @@ export function ImageGrid<T>({
   );
 
   useHotkey(
-    hotkeyOverrides?.last ?? 'End',
+    overrides?.last ?? 'End',
     () => {
       if (items.length === 0) {
         return;
@@ -411,31 +376,142 @@ export function ImageGrid<T>({
     hotkeyOpts,
   );
 
-  // Page-flow mode (no explicit height): fire infinite loads when the
-  // bottom sentinel enters the viewport. IntersectionObserver is web-only;
-  // native consumers needing infinite scroll pass an explicit `height` so
-  // the grid owns its own scroll container.
+  return { focusedIndex, setFocusedIndex, handleContainerFocus };
+};
+
+interface InfiniteLoadOptions {
+  height: number | undefined;
+  hasMore: boolean;
+  isLoading: boolean;
+  onLoadMore: (() => void) | undefined;
+  containerRef: React.RefObject<HTMLElement | null>;
+}
+
+/**
+ * Infinite loading for both layouts. Page-flow mode (no explicit height)
+ * fires loads when the bottom sentinel enters the viewport; IntersectionObserver
+ * is web-only, so native consumers needing infinite scroll pass an explicit
+ * `height` and the grid owns its own scroll container (`handleScroll`).
+ */
+const useInfiniteLoad = ({ height, hasMore, isLoading, onLoadMore, containerRef }: InfiniteLoadOptions) => {
+  const sentinelRef = useRef<TamaguiElement>(null);
+
   useEffect(() => {
-    if (height !== undefined || !onLoadMore || !hasMore || isLoading) {
-      return;
-    }
-    if (typeof IntersectionObserver === 'undefined') {
-      return;
-    }
     const el = sentinelRef.current;
-    if (!el) {
-      return;
+    const canObserve = height === undefined && hasMore && !isLoading && typeof IntersectionObserver !== 'undefined';
+    let observer: IntersectionObserver | undefined;
+    if (canObserve && onLoadMore && isDomElement(el)) {
+      observer = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          onLoadMore();
+        }
+      });
+      observer.observe(el);
     }
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        onLoadMore();
-      }
-    });
-    observer.observe(el);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
     };
   }, [height, onLoadMore, hasMore, isLoading]);
+
+  const canLoadMore = height !== undefined && hasMore && !isLoading;
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    const nearEnd = el !== null && el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_LOAD_THRESHOLD_PX;
+    if (nearEnd) {
+      onLoadMore?.();
+    }
+  }, [containerRef, onLoadMore]);
+
+  return { sentinelRef, handleScroll: canLoadMore && onLoadMore ? handleScroll : undefined };
+};
+
+/**
+ * Generic image grid component with keyboard navigation.
+ *
+ * Uses a CSS flex-wrap grid for reliable cross-platform rendering and
+ * `@tanstack/react-hotkeys` for grid keyboard navigation.
+ * Accepts data purely through props — no data fetching logic included.
+ *
+ * @template T - The item type rendered in the grid
+ *
+ * @example
+ * ```tsx
+ * <ImageGrid
+ *   items={images}
+ *   columns={3}
+ *   renderItem={(item) => (
+ *     <Image source={{ uri: item.url }} width="100%" height={180} />
+ *   )}
+ *   onItemClick={(item) => console.log(item)}
+ * />
+ * ```
+ */
+export const ImageGrid = <T,>({
+  items,
+  renderItem,
+  onItemClick,
+  onLoadMore,
+  hasMore = false,
+  isLoading = false,
+  error = null,
+  onRetry,
+  columns: columnsProp,
+  tileSize,
+  mediaAspect,
+  estimateSize: _estimateSize,
+  overscan: _overscan,
+  height: heightProp,
+  emptyMessage: emptyMessageProp,
+  hotkeys: hotkeyOverrides,
+  ...stackProps
+}: ImageGridProps<T>) => {
+  const { t } = useTranslation();
+  const emptyMessage = emptyMessageProp ?? t('No items found');
+  const { knobProps } = useResolvedKnobs({ component: 'ImageGrid' });
+  const isRTL = useDirection() === 'rtl';
+  // Gutters are the rows' flex `gap`, and every tile takes an equal flex
+  // share of its row (web and native, no CSS calc). A short last row is
+  // topped up with empty tracks so its tiles keep the full-row width.
+  // Never a negative half-gutter margin — that widened scrollWidth past
+  // the viewport at 390 (FB-390-grid-overflow-x).
+  const gapToken = knobProps.gap.gap;
+  const gutter = isNumber(gapToken) ? gapToken : spaceTokenPx(gapToken);
+
+  // Responsive default: a fixed count that looks right on desktop renders
+  // skinny slivers on a phone. Explicit `columns` always wins; a `tileSize`
+  // rung derives the count from the theme's generated ladder at the
+  // live gutter. Otherwise column count is a structural layout decision, so
+  // it consumes the canonical layout size classes
+  // instead of a raw pixel ladder.
+  const { width: windowWidth } = useWindowDimensions();
+  const columns =
+    columnsProp ??
+    (tileSize
+      ? tileColumnsForWidth(windowWidth, tileSizeLadder[tileSize], gutter)
+      : COLUMNS_BY_SIZE_CLASS[getLayoutSizeClass(windowWidth)]);
+  const height = heightProp;
+  const gridId = useId();
+  const containerRef = useRef<HTMLElement | null>(null);
+  const containerViewRef = useDomRefCallback(containerRef);
+  if (typeof document !== 'undefined') {
+    ensureKeyboardModalityTracking();
+  }
+  const { focusedIndex, setFocusedIndex, handleContainerFocus } = useImageGridKeyboard({
+    items,
+    columns,
+    gridId,
+    isRTL,
+    target: containerRef,
+    overrides: hotkeyOverrides,
+    onItemClick,
+  });
+  const { sentinelRef, handleScroll } = useInfiniteLoad({
+    height,
+    hasMore,
+    isLoading,
+    onLoadMore,
+    containerRef,
+  });
 
   // Error wins over empty; initial load renders the grid twin.
   const hasError = resolveAsyncStatus({ error }) === 'error';
@@ -449,10 +525,13 @@ export function ImageGrid<T>({
   // CONTAINER-CAP to bite on.
   const radiusFragment = knobProps.borderRadius;
 
+  const scrollerProps =
+    height === undefined ? null : webOnlyProps({ style: { height, overflowY: 'auto' }, onScroll: handleScroll });
+
   const gridBody =
     items.length === 0 ? null : (
       <View
-        ref={containerRef as any}
+        ref={containerViewRef}
         role="grid"
         aria-label={t('Image grid')}
         aria-colcount={columns}
@@ -463,26 +542,19 @@ export function ImageGrid<T>({
         focusStyle={{ outlineWidth: 0 }}
         focusVisibleStyle={{ outlineWidth: 0 }}
         onFocus={handleContainerFocus}
-        {...(height !== undefined
-          ? {
-              style: { height, overflowY: 'auto' } as React.CSSProperties,
-              onScroll:
-                onLoadMore && hasMore && !isLoading
-                  ? () => {
-                      const el = containerRef.current;
-                      if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-                        onLoadMore();
-                      }
-                    }
-                  : undefined,
-            }
-          : null)}>
-        <YStack gap={gutter} maxWidth="100%">
+        {...scrollerProps}>
+        <YStack
+          gap={gutter}
+          maxWidth="100%">
           {Array.from({ length: rowCount }, (_, row) => {
             const start = row * columns;
             const rowItems = items.slice(start, start + columns);
             return (
-              <XStack key={`${gridId}-row-${row}`} role="row" gap={gutter}>
+              <XStack
+                key={`${gridId}-row-${row}`}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is the cross-platform primitive (no native <tr> on RN); role supplies the accessibility semantics
+                role="row"
+                gap={gutter}>
                 {rowItems.map((item, col) => {
                   const index = start + col;
                   const isFocused = effectiveFocused === index;
@@ -508,19 +580,28 @@ export function ImageGrid<T>({
                     </ImageGridTile>
                   );
                 })}
-                {Array.from({ length: columns - rowItems.length }, (_, pad) => (
-                  <View key={`${gridId}-pad-${row}-${pad}`} {...tileTrack} aria-hidden />
+                {Array.from({ length: columns - rowItems.length }, (_pad, pad) => (
+                  <View
+                    key={`${gridId}-pad-${row}-${pad}`}
+                    {...tileTrack}
+                    aria-hidden
+                  />
                 ))}
               </XStack>
             );
           })}
         </YStack>
         {isLoading && items.length > 0 && (
-          <YStack padding="$2" alignItems="center">
+          <YStack
+            padding="$2"
+            alignItems="center">
             <Spinner size="small" />
           </YStack>
         )}
-        <View ref={sentinelRef as any} height={1} />
+        <View
+          ref={sentinelRef}
+          height={1}
+        />
       </View>
     );
 
@@ -549,4 +630,4 @@ export function ImageGrid<T>({
       {gridBody}
     </AsyncBoundary>
   );
-}
+};

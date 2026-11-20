@@ -1,6 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
@@ -8,13 +9,15 @@ import { Form } from '../../Form';
 
 import { formatDateDisplay, isSameDay, toWeeks } from './parts';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('react-native', () => ({
   Platform: {
     OS: 'web',
-    select: (options: Record<string, unknown>) => options.web ?? options.default,
+    select: (options: { web?: unknown; default?: unknown }) => options.web ?? options.default,
   },
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('@tamagui/lucide-icons-2', () => ({
   Calendar: () => null,
   ChevronLeft: () => null,
@@ -22,32 +25,55 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
   X: () => null,
 }));
 
-async function loadDatePicker() {
-  return (await import('./index')).DatePicker;
-}
+const loadDatePicker = async () => {
+  const { DatePicker } = await import('./index');
+  return DatePicker;
+};
 
-function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+const getDisplayInput = (container: ParentNode) => container.querySelector('input');
+
+const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
-    const isDay = /^\d{1,2}$/.test(text);
+    const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
-      btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
+      btn.hasAttribute('disabled') ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.dataset.disabled !== undefined;
     return isDay && !disabled;
   });
-}
+};
+
+const ValidatedFormExample = ({ DatePicker }: { DatePicker: Awaited<ReturnType<typeof loadDatePicker>> }) => {
+  const form = useForm({
+    defaultValues: { date: new Date(2024, 0, 15) as Date | null },
+  });
+  return (
+    <Form form={form}>
+      <DatePicker
+        label="Date"
+        name="date"
+        defaultValue={new Date(2024, 0, 15)}
+        validators={{
+          onChange: ({ value }: { value: Date | null }) => (value == null ? 'Date is required' : undefined),
+        }}
+      />
+    </Form>
+  );
+};
 
 describe('DatePicker', () => {
   describe('without form context', () => {
     it('rings the whole trigger box including the calendar icon slot', async () => {
       const DatePicker = await loadDatePicker();
       const result = renderWithProviders(<DatePicker label="Date" />);
-      const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
-      const input = result.container.querySelector('input') as HTMLInputElement;
-      const label = result.container.querySelector('label') as HTMLLabelElement;
+      const trigger = result.container.querySelector<HTMLElement>('[data-testid="date-picker-trigger"]')!;
+      const input = result.container.querySelector('input')!;
+      const label = result.container.querySelector('label')!;
       expect(trigger).toBeTruthy();
       expect(trigger.contains(input)).toBe(true);
-      expect(trigger.className).toMatch(/mp-composite-ring/);
+      expect(trigger.className).toMatch(/mp-composite-ring/u);
       expect(trigger.getAttribute('tabindex')).toBe('0');
       expect(trigger.getAttribute('role')).toBe('combobox');
       expect(input.tabIndex).toBe(-1);
@@ -57,7 +83,13 @@ describe('DatePicker', () => {
 
     it('should handle disabled state', async () => {
       const DatePicker = await loadDatePicker();
-      const result = renderWithProviders(<DatePicker label="Date" name="date" disabled />);
+      const result = renderWithProviders(
+        <DatePicker
+          label="Date"
+          name="date"
+          disabled
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input).toBeTruthy();
       expect(input?.getAttribute('aria-disabled')).toBe('true');
@@ -80,10 +112,16 @@ describe('DatePicker', () => {
 
     it('fires canonical onChange and the deprecated onValueChange alias once when a day is picked', async () => {
       const DatePicker = await loadDatePicker();
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
+      const onValueChange = vi.fn<(value: Date | null) => void>();
       const result = renderWithProviders(
-        <DatePicker label="Date" name="date" onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Date"
+          name="date"
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
       );
 
       const trigger = result.container.querySelector("input,button,[role='button']");
@@ -103,17 +141,17 @@ describe('DatePicker', () => {
         fireEvent.click(dayButtons[0]);
       });
 
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onValueChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(onValueChange).toHaveBeenCalledOnce();
       expect(onChange.mock.calls[0][0]).toBeInstanceOf(Date);
-      expect(onChange.mock.calls[0][0]).toEqual(onValueChange.mock.calls[0][0]);
+      expect(onChange.mock.calls[0][0]).toStrictEqual(onValueChange.mock.calls[0][0]);
     });
   });
 
   describe('with form context', () => {
     it('commits the picked date into form state via field.handleChange', async () => {
       const DatePicker = await loadDatePicker();
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: { date: Date | null }) => void>();
 
       const FormExample = () => {
         const form = useForm({
@@ -124,7 +162,10 @@ describe('DatePicker', () => {
         });
         return (
           <Form form={form}>
-            <DatePicker label="Date" name="date" />
+            <DatePicker
+              label="Date"
+              name="date"
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -156,34 +197,16 @@ describe('DatePicker', () => {
       });
 
       await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(onSubmit).toHaveBeenCalledOnce();
       });
-      const submitted = onSubmit.mock.calls[0][0];
+      const [[submitted]] = onSubmit.mock.calls;
       expect(submitted.date).toBeInstanceOf(Date);
     });
 
     it('clears onChange validation errors after a date is picked', async () => {
       const DatePicker = await loadDatePicker();
 
-      const FormExample = () => {
-        const form = useForm({
-          defaultValues: { date: new Date(2024, 0, 15) as Date | null },
-        });
-        return (
-          <Form form={form}>
-            <DatePicker
-              label="Date"
-              name="date"
-              defaultValue={new Date(2024, 0, 15)}
-              validators={{
-                onChange: ({ value }: { value: Date | null }) => (value == null ? 'Date is required' : undefined),
-              }}
-            />
-          </Form>
-        );
-      };
-
-      const result = renderWithProviders(<FormExample />);
+      const result = renderWithProviders(<ValidatedFormExample DatePicker={DatePicker} />);
 
       // Clear commits null via field.handleChange → onChange validator errors.
       const clearButton = result.container.querySelector('button');
@@ -220,7 +243,7 @@ describe('DatePicker', () => {
 
     it('clears form value when the reset control is pressed', async () => {
       const DatePicker = await loadDatePicker();
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: { date: Date | null }) => void>();
 
       const FormExample = () => {
         const form = useForm({
@@ -231,7 +254,11 @@ describe('DatePicker', () => {
         });
         return (
           <Form form={form}>
-            <DatePicker label="Date" name="date" defaultValue={new Date(2024, 0, 15)} />
+            <DatePicker
+              label="Date"
+              name="date"
+              defaultValue={new Date(2024, 0, 15)}
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -265,21 +292,31 @@ describe('DatePicker', () => {
     // paint — create-mode engine seeding, form.setFieldValue, live server
     // merge — never rendered. Adopting a programmatic value must not emit
     // onChange (a seeded value is not a user edit).
-    const getDisplayInput = (container: ParentNode) => container.querySelector('input');
-
     it('standalone controlled: a value arriving after mount displays, without onChange', async () => {
       const DatePicker = await loadDatePicker();
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
+      const onValueChange = vi.fn<(value: Date | null) => void>();
       const result = renderWithProviders(
-        <DatePicker label="Due Date" value={null} onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Due Date"
+          value={null}
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
       );
       expect(getDisplayInput(result.container)?.value ?? '').toBe('');
 
-      // Late seed: the upstream doc value (frappe wire string) arrives after
+      // Late seed: the upstream doc value (ISO date string) arrives after
       // first paint.
       result.rerender(
-        <DatePicker label="Due Date" value="2026-03-05" onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Due Date"
+          value="2026-03-05"
+          onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+          onValueChange={onValueChange}
+        />,
       );
       await waitFor(() => {
         expect(getDisplayInput(result.container)?.value).toBe('Mar 5, 2026');
@@ -290,14 +327,20 @@ describe('DatePicker', () => {
 
     it('form-integrated: a field value set after mount displays, without onChange', async () => {
       const DatePicker = await loadDatePicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
       let formApi: { setFieldValue: (name: 'date', value: string | null) => void } | undefined;
       const TestComponent = () => {
         const form = useForm({ defaultValues: { date: null as string | null } });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
-            <DatePicker label="Due Date" name="date" onChange={onChange} />
+            <DatePicker
+              label="Due Date"
+              name="date"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -315,14 +358,20 @@ describe('DatePicker', () => {
 
     it('form-integrated: clearing the field value programmatically clears the display', async () => {
       const DatePicker = await loadDatePicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
       let formApi: { setFieldValue: (name: 'date', value: string | null) => void } | undefined;
       const TestComponent = () => {
         const form = useForm({ defaultValues: { date: '2026-03-05' as string | null } });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
-            <DatePicker label="Due Date" name="date" onChange={onChange} />
+            <DatePicker
+              label="Due Date"
+              name="date"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -359,7 +408,7 @@ describe('DatePicker', () => {
       const days = Array.from({ length: 14 }, (_, i) => new Date(2024, 0, i + 1));
       const weeks = toWeeks(days);
 
-      expect(weeks.length).toBe(2);
+      expect(weeks).toHaveLength(2);
       expect(weeks[0]).toHaveLength(7);
       expect(weeks[1]).toHaveLength(7);
       expect(weeks[0]?.[0]?.getDate()).toBe(1);

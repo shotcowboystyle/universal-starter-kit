@@ -7,7 +7,7 @@ import { ChartSurface } from './ChartSurface';
 import { createBandScale, createLinearScale } from './math';
 import { Circle, Line, Rect } from './svg';
 import type { ChartSize } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 const bars = [
   { label: 'Mon', value: 3 },
@@ -22,7 +22,7 @@ const bars = [
  * scales resolve against the measured viewport, so strokes stay 1px and hit
  * targets stay honest at any container width.
  */
-function Marks({ size }: { size: ChartSize }) {
+const Marks = ({ size }: { size: ChartSize }) => {
   const { palette, gridColor } = useChartTheme();
   const x = createBandScale({
     domain: bars.map((bar) => bar.label),
@@ -31,7 +31,14 @@ function Marks({ size }: { size: ChartSize }) {
   const y = createLinearScale({ domain: [0, 10], range: [size.height - 8, 8] });
   return (
     <>
-      <Line x1={8} y1={size.height - 8} x2={size.width - 8} y2={size.height - 8} stroke={gridColor} strokeWidth={1} />
+      <Line
+        x1={8}
+        y1={size.height - 8}
+        x2={size.width - 8}
+        y2={size.height - 8}
+        stroke={gridColor}
+        strokeWidth={1}
+      />
       {bars.map((bar) => (
         <Rect
           key={bar.label}
@@ -44,9 +51,9 @@ function Marks({ size }: { size: ChartSize }) {
       ))}
     </>
   );
-}
+};
 
-function Dots({ size }: { size: ChartSize }) {
+const Dots = ({ size }: { size: ChartSize }) => {
   const { palette } = useChartTheme();
   return (
     <>
@@ -61,7 +68,7 @@ function Dots({ size }: { size: ChartSize }) {
       ))}
     </>
   );
-}
+};
 
 const meta: Meta<typeof ChartSurface> = {
   title: 'Components/ChartSurface',
@@ -71,7 +78,7 @@ const meta: Meta<typeof ChartSurface> = {
     docs: {
       description: {
         component:
-          'The responsive SVG viewport every chart in this package draws into. It measures its own width through `onLayout` (ResizeObserver-backed on web) and hands children a pixel-space `{ width, height }`, so scales land on real device pixels: strokes stay crisp, nothing is stretched by `preserveAspectRatio`, and a 44px touch target really is 44px. `label` is the generated accessible summary and renders as `role="img"`, so the chart is one described image rather than a pile of unlabelled shapes. Pass an explicit `width` to bypass measurement for SSR, tests, and fixed layouts. The draw-in fade drops entirely at `animation="none"` or OS reduced motion.',
+          'The responsive SVG viewport every chart in this package draws into. It measures its own width through `onLayout` (ResizeObserver-backed on web) and hands children a pixel-space `{ width, height }`, so scales land on real device pixels: strokes stay crisp, nothing is stretched by `preserveAspectRatio`, and a 44px touch target really is 44px. `label` is the generated accessible summary and renders as `role="img"`, so the chart is one described image rather than a pile of unlabeled shapes. Pass an explicit `width` to bypass measurement for SSR, tests, and fixed layouts. The draw-in fade drops entirely at `animation="none"` or OS reduced motion.',
       },
     },
   },
@@ -110,10 +117,14 @@ export const Responsive: Story = {
   render: () => (
     <YStack gap="$4">
       {[520, 320, 200].map((width) => (
-        <Card key={width} width={width}>
+        <Card
+          key={width}
+          width={width}>
           <YStack gap="$2">
             <Paragraph size="$2">{`${width}px container`}</Paragraph>
-            <ChartSurface label={`Sessions per weekday at ${width}px`} height={140}>
+            <ChartSurface
+              label={`Sessions per weekday at ${width}px`}
+              height={140}>
               {(size) => <Marks size={size} />}
             </ChartSurface>
           </YStack>
@@ -135,7 +146,10 @@ export const FixedWidth: Story = {
   },
   render: () => (
     <Card alignSelf="flex-start">
-      <ChartSurface label="Five categorical dots" width={360} height={120}>
+      <ChartSurface
+        label="Five categorical dots"
+        width={360}
+        height={120}>
         {(size) => <Dots size={size} />}
       </ChartSurface>
     </Card>

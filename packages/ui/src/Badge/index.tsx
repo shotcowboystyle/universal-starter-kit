@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { ColorTokens, FontSizeTokens, GetProps } from 'tamagui';
 import { Text, View, isWeb, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { useAsyncBoundary } from '../layouts/AsyncBoundary';
 import { bidiIsolate } from '../shared/t';
 
@@ -61,11 +61,22 @@ const colorMap: Record<BadgeColor, { bg: ColorTokens; text: ColorTokens }> = {
 // Capsule stays well below the 44px control floor (ornamental overlay, not a
 // press target — same contract as DotIndicator). Compact/density steps
 // `sizeToken` down via useResolvedKnobs, so this table only ever shrinks.
-const badgeGeometryMap: Record<string, { capsule: number; font: FontSizeTokens; pad: number; dot: number }> = {
-  $3: { capsule: 16, font: '$1', pad: 4, dot: 6 },
-  $4: { capsule: 18, font: '$1', pad: 5, dot: 8 },
-  $5: { capsule: 22, font: '$2', pad: 6, dot: 10 },
-};
+interface BadgeGeometry {
+  capsule: number;
+  font: FontSizeTokens;
+  pad: number;
+  dot: number;
+}
+
+const DEFAULT_GEOMETRY: BadgeGeometry = { capsule: 18, font: '$1', pad: 5, dot: 8 };
+
+const badgeGeometryMap = new Map<string, BadgeGeometry>([
+  ['$3', { capsule: 16, font: '$1', pad: 4, dot: 6 }],
+  ['$4', DEFAULT_GEOMETRY],
+  ['$5', { capsule: 22, font: '$2', pad: 6, dot: 10 }],
+]);
+
+const NO_OFFSET: [number, number] = [0, 0];
 
 /** Primer Counter / Carbon notification: canvas hairline so the fill separates from any host. */
 const CONTRAST_RING = 2;
@@ -107,21 +118,21 @@ const BadgeText = styled(Text, {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function normalizeCount(count: number | undefined): number | undefined {
+const normalizeCount = (count: number | undefined): number | undefined => {
   if (count === undefined || !Number.isFinite(count)) {
     return undefined;
   }
   return Math.max(0, Math.floor(count));
-}
+};
 
-function normalizeMax(max: number): number {
+const normalizeMax = (max: number): number => {
   if (!Number.isFinite(max) || max < 0) {
     return 99;
   }
   return Math.floor(max);
-}
+};
 
-function indicatorPlacement(position: BadgePosition, isRTL: boolean, overlap: number, offset: [number, number]) {
+const indicatorPlacement = (position: BadgePosition, isRTL: boolean, overlap: number, offset: [number, number]) => {
   const atEnd = position.includes('right');
   const atTop = position.includes('top');
   const [ox, oy] = offset;
@@ -134,11 +145,100 @@ function indicatorPlacement(position: BadgePosition, isRTL: boolean, overlap: nu
     [inlineProp]: 0,
     transform: [{ translateX: dirX * (overlap + ox) }, { translateY: dirY * (overlap + oy) }],
   };
+};
+
+interface BadgeState {
+  effectiveCount: number | undefined;
+  /** The exact count when it exceeds the cap, otherwise undefined. */
+  overflowCount: number | undefined;
+  shouldShow: boolean;
 }
+
+const resolveBadgeState = ({
+  count,
+  max,
+  dot,
+  showZero,
+  visible,
+  hideBadges,
+}: {
+  count: number | undefined;
+  max: number;
+  dot: boolean;
+  showZero: boolean;
+  visible: boolean;
+  hideBadges: boolean;
+}): BadgeState => {
+  const effectiveCount = hideBadges ? undefined : normalizeCount(count);
+  const hasCountToShow = effectiveCount !== undefined && (effectiveCount > 0 || showZero);
+  const shouldShow = visible && !hideBadges && (dot || hasCountToShow);
+  const overflowed = effectiveCount !== undefined && effectiveCount > normalizeMax(max);
+  return { effectiveCount, overflowCount: overflowed ? effectiveCount : undefined, shouldShow };
+};
+
+type BadgeKnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
+
+interface BadgeIndicatorNodeProps {
+  colors: { bg: ColorTokens; text: ColorTokens };
+  geometry: BadgeGeometry;
+  knobProps: BadgeKnobProps;
+  dot: boolean;
+  painted: number;
+  a11yLabel: string | undefined;
+  /** Exact count when the visible value is capped, otherwise undefined. */
+  overflowLabel: string | undefined;
+  displayValue: number | string | undefined;
+  placement: ReturnType<typeof indicatorPlacement> | undefined;
+}
+
+const BadgeIndicatorNode = ({
+  colors,
+  geometry,
+  knobProps,
+  dot,
+  painted,
+  a11yLabel,
+  overflowLabel,
+  displayValue,
+  placement,
+}: BadgeIndicatorNodeProps) => {
+  const overflowed = overflowLabel !== undefined;
+  return (
+    <BadgeIndicator
+      backgroundColor={colors.bg}
+      minWidth={painted}
+      height={painted}
+      {...(dot ? { width: painted, paddingHorizontal: 0 } : { paddingHorizontal: geometry.pad })}
+      {...placement}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform View (native has no <output>); role maps to a live region on both
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={a11yLabel}
+      {...(isWeb && overflowed ? { title: overflowLabel } : undefined)}
+      data-badge={dot ? 'dot' : 'count'}
+      data-overflow={overflowed ? 'true' : undefined}>
+      {/* T-BODY family from the body knob; weight re-pinned at 600 so the
+          fontWeight knob cannot leak over the badge-owned weight (SB-M-101).
+          Size token still owns fontSize; the badge palette owns color. */}
+      {!dot && displayValue !== undefined && (
+        <BadgeText
+          fontSize={geometry.font}
+          lineHeight={Math.max(1, painted - CONTRAST_RING * 2)}
+          {...knobProps.body}
+          fontWeight="600"
+          color={colors.text}
+          data-body-font={knobProps.body.fontFamily}>
+          {bidiIsolate(String(displayValue))}
+        </BadgeText>
+      )}
+    </BadgeIndicator>
+  );
+};
 
 // ── Badge Component ───────────────────────────────────────────
 
-export function Badge({
+export const Badge = ({
   children,
   count,
   max = 99,
@@ -146,70 +246,53 @@ export function Badge({
   dot = false,
   color = 'red',
   position = 'top-right',
-  offset = [0, 0],
+  offset = NO_OFFSET,
   visible = true,
   compact,
   accessibilityLabel,
-}: BadgeProps) {
+}: BadgeProps) => {
   const { t } = useTranslation();
   const isRTL = useDirection() === 'rtl';
   const { knobProps } = useResolvedKnobs({ component: 'Badge', compact });
   const colors = colorMap[color];
-  const geometry = badgeGeometryMap[knobProps.sizeToken] ?? badgeGeometryMap.$4;
+  const geometry = badgeGeometryMap.get(knobProps.sizeToken) ?? DEFAULT_GEOMETRY;
   // Degrade — hide counts/badges when a parent AsyncBoundary failed.
   const asyncCtx = useAsyncBoundary();
-  const effectiveVisible = visible && !asyncCtx?.hideBadges;
-  const effectiveCount = asyncCtx?.hideBadges ? undefined : normalizeCount(count);
   const cap = normalizeMax(max);
   const standalone = children == null;
-
-  const shouldShow = effectiveVisible && (dot || (effectiveCount !== undefined && (effectiveCount > 0 || showZero)));
-
-  const overflowed = effectiveCount !== undefined && effectiveCount > cap;
+  const { effectiveCount, overflowCount, shouldShow } = resolveBadgeState({
+    count,
+    max,
+    dot,
+    showZero,
+    visible,
+    hideBadges: asyncCtx?.hideBadges === true,
+  });
+  const overflowed = overflowCount !== undefined;
   const displayValue = overflowed ? `${cap}+` : effectiveCount;
   const painted = dot ? geometry.dot : geometry.capsule;
   // Material/Ant overlay: hang 50% off the corner. Standalone CounterLabel sits in flow.
   const overlap = standalone ? 0 : painted / 2;
 
-  const a11yLabel =
-    accessibilityLabel ??
-    (dot ? t('New activity') : overflowed && effectiveCount !== undefined ? String(effectiveCount) : undefined);
+  const overflowLabel = overflowed ? String(overflowCount) : undefined;
+  const a11yLabel = accessibilityLabel ?? (dot ? t('New activity') : overflowLabel);
 
   if (!shouldShow) {
     return standalone ? null : <BadgeWrapper>{children}</BadgeWrapper>;
   }
 
   const indicator = (
-    <BadgeIndicator
-      backgroundColor={colors.bg}
-      minWidth={painted}
-      height={painted}
-      {...(dot ? { width: painted, paddingHorizontal: 0 } : { paddingHorizontal: geometry.pad })}
-      {...(standalone ? undefined : indicatorPlacement(position, isRTL, overlap, offset))}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      aria-label={a11yLabel}
-      {...(isWeb && overflowed && effectiveCount !== undefined ? { title: String(effectiveCount) } : undefined)}
-      {...({
-        'data-badge': dot ? 'dot' : 'count',
-        ...(overflowed ? { 'data-overflow': 'true' } : {}),
-      } as Record<string, string>)}>
-      {/* T-BODY family from the body knob; weight re-pinned at 600 so the
-          fontWeight knob cannot leak over the badge-owned weight (SB-M-101).
-          Size token still owns fontSize; the badge palette owns color. */}
-      {!dot && effectiveCount !== undefined && (
-        <BadgeText
-          fontSize={geometry.font}
-          lineHeight={Math.max(1, painted - CONTRAST_RING * 2)}
-          {...knobProps.body}
-          fontWeight="600"
-          color={colors.text}
-          {...({ 'data-body-font': knobProps.body.fontFamily } as Record<string, string>)}>
-          {bidiIsolate(String(displayValue))}
-        </BadgeText>
-      )}
-    </BadgeIndicator>
+    <BadgeIndicatorNode
+      colors={colors}
+      geometry={geometry}
+      knobProps={knobProps}
+      dot={dot}
+      painted={painted}
+      a11yLabel={a11yLabel}
+      overflowLabel={overflowLabel}
+      displayValue={displayValue}
+      placement={standalone ? undefined : indicatorPlacement(position, isRTL, overlap, offset)}
+    />
   );
 
   if (standalone) {
@@ -222,7 +305,7 @@ export function Badge({
       {indicator}
     </BadgeWrapper>
   );
-}
+};
 
 export type BadgeWrapperProps = GetProps<typeof BadgeWrapper>;
 export type BadgeIndicatorProps = GetProps<typeof BadgeIndicator>;

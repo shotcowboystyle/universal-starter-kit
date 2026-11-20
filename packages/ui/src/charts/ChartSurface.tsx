@@ -1,11 +1,14 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { useChartDataViewProps } from './ChartDataView';
-import { Svg, chartRootA11yProps, type ChartProofDeclaration } from './svg';
+import { Svg, chartRootA11yProps } from './svg';
+import type { ChartProofDeclaration } from './svg';
 import type { ChartSize } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface ChartSurfaceProps extends Omit<YStackProps, 'children' | 'width' | 'height'> {
   /**
@@ -39,14 +42,14 @@ export interface ChartSurfaceProps extends Omit<YStackProps, 'children' | 'width
  * or OS reduced motion (styles never render
  * without a driver).
  */
-export function ChartSurface({
+export const ChartSurface = ({
   label,
   proof,
   height = 200,
   width: widthProp,
   children,
   ...stackProps
-}: ChartSurfaceProps) {
+}: ChartSurfaceProps) => {
   const dataViewProps = useChartDataViewProps();
   const { transition, animationEnabled } = useChartTheme();
   const [measuredWidth, setMeasuredWidth] = useState(0);
@@ -66,10 +69,14 @@ export function ChartSurface({
       {...(animationEnabled ? { transition, enterStyle: { opacity: 0, y: 6 } } : {})}
       {...stackProps}>
       {width > 0 ? (
-        <Svg width={width} height={height} {...chartRootA11yProps(label, proof)} {...dataViewProps}>
+        <Svg
+          width={width}
+          height={height}
+          {...chartRootA11yProps(label, proof)}
+          {...dataViewProps}>
           {children({ width, height })}
         </Svg>
       ) : null}
     </YStack>
   );
-}
+};

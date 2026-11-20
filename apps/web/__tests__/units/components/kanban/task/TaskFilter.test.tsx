@@ -3,17 +3,20 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskFilter } from '@/components/kanban/task/TaskFilter';
-import { TaskStatus } from '@/types/dbInterface';
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { TaskStatus } from '@/types/db-interface';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useWorkspaceStore is an overloaded zustand hook that vi.fn can't satisfy
 vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(),
+  useWorkspaceStore: vi.fn<typeof useWorkspaceStore>(),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useTranslations stub can't satisfy next-intl's Translator type
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-const mockSetFilter = vi.fn();
+const mockSetFilter = vi.fn<(filter: { status: string | null; search: string }) => void>();
 
 const mockProjects = [
   {
@@ -35,22 +38,21 @@ const mockProjects = [
   },
 ];
 
-async function mockStore(state: { filter?: { status: string | null; search: string }; projects?: unknown }) {
-  const { useWorkspaceStore } = await import('@/stores/workspace-store');
+const mockStore = (state: { filter?: { status: string | null; search: string }; projects?: unknown }) => {
   vi.mocked(useWorkspaceStore).mockReturnValue({
     filter: { status: null, search: '' },
     setFilter: mockSetFilter,
     projects: mockProjects,
     ...state,
   } as any);
-}
+};
 
 const chip = (name: RegExp) => screen.getByRole('button', { name });
 
-describe('TaskFilter', () => {
-  beforeEach(async () => {
+describe(TaskFilter, () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    await mockStore({});
+    mockStore({});
   });
 
   it('renders the search input with placeholder', () => {
@@ -59,7 +61,7 @@ describe('TaskFilter', () => {
   });
 
   it('displays the current search value', async () => {
-    await mockStore({ filter: { status: null, search: 'test query' } });
+    mockStore({ filter: { status: null, search: 'test query' } });
     render(<TaskFilter />);
     expect(screen.getByTestId('search-input')).toHaveValue('test query');
   });
@@ -75,35 +77,35 @@ describe('TaskFilter', () => {
 
   it('renders status chips with per-status counts', () => {
     render(<TaskFilter />);
-    expect(chip(/^total 5$/)).toBeInTheDocument();
-    expect(chip(/^statusTodo 3$/)).toBeInTheDocument();
-    expect(chip(/^statusInProgress 1$/)).toBeInTheDocument();
-    expect(chip(/^statusDone 1$/)).toBeInTheDocument();
+    expect(chip(/^total 5$/u)).toBeInTheDocument();
+    expect(chip(/^statusTodo 3$/u)).toBeInTheDocument();
+    expect(chip(/^statusInProgress 1$/u)).toBeInTheDocument();
+    expect(chip(/^statusDone 1$/u)).toBeInTheDocument();
   });
 
   it('marks the TOTAL chip as selected when no status filter is set', () => {
     render(<TaskFilter />);
-    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'true');
-    expect(chip(/^statusTodo/)).toHaveAttribute('aria-pressed', 'false');
+    expect(chip(/^total/u)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^statusTodo/u)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('marks the active status chip as selected', async () => {
-    await mockStore({ filter: { status: TaskStatus.DONE, search: '' } });
+    mockStore({ filter: { status: TaskStatus.DONE, search: '' } });
     render(<TaskFilter />);
-    expect(chip(/^statusDone/)).toHaveAttribute('aria-pressed', 'true');
-    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'false');
+    expect(chip(/^statusDone/u)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^total/u)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('sets the status filter when a status chip is pressed', () => {
     render(<TaskFilter />);
-    fireEvent.click(chip(/^statusInProgress/));
+    fireEvent.click(chip(/^statusInProgress/u));
     expect(mockSetFilter).toHaveBeenCalledWith({ status: TaskStatus.IN_PROGRESS });
   });
 
   it('clears the status filter when TOTAL is pressed', async () => {
-    await mockStore({ filter: { status: TaskStatus.TODO, search: '' } });
+    mockStore({ filter: { status: TaskStatus.TODO, search: '' } });
     render(<TaskFilter />);
-    fireEvent.click(chip(/^total/));
+    fireEvent.click(chip(/^total/u));
     expect(mockSetFilter).toHaveBeenCalledWith({ status: null });
   });
 
@@ -113,13 +115,13 @@ describe('TaskFilter', () => {
   });
 
   it('shows the clear button for an active search', async () => {
-    await mockStore({ filter: { status: null, search: 'some query' } });
+    mockStore({ filter: { status: null, search: 'some query' } });
     render(<TaskFilter />);
     expect(screen.getByTestId('clear-filter-button')).toBeInTheDocument();
   });
 
   it('resets status and search when clear is pressed', async () => {
-    await mockStore({ filter: { status: TaskStatus.TODO, search: 'test' } });
+    mockStore({ filter: { status: TaskStatus.TODO, search: 'test' } });
     render(<TaskFilter />);
     fireEvent.click(screen.getByTestId('clear-filter-button'));
     expect(mockSetFilter).toHaveBeenCalledWith({ status: null, search: '' });
@@ -129,10 +131,10 @@ describe('TaskFilter', () => {
     ['empty projects', []],
     ['null projects', null],
     ['projects with null tasks', [{ _id: 'p', title: 'P', tasks: null }]],
-    ['tasks without status', [{ _id: 'p', title: 'P', tasks: [{ _id: 't', status: undefined }] }]],
+    ['tasks without status', [{ _id: 'p', title: 'P', tasks: [{ _id: 't' }] }]],
   ])('handles %s with zero status counts', async (_label, projects) => {
-    await mockStore({ projects });
+    mockStore({ projects });
     render(<TaskFilter />);
-    expect(chip(/^statusTodo 0$/)).toBeInTheDocument();
+    expect(chip(/^statusTodo 0$/u)).toBeInTheDocument();
   });
 });

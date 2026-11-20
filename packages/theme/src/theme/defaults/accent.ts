@@ -1,4 +1,4 @@
-import type { ThemeBuilderDefinition } from '../createThemes';
+import type { ThemeBuilderDefinition } from '../create-themes';
 
 export const defaultAccentTheme: ThemeBuilderDefinition = {
   darkPalette: [

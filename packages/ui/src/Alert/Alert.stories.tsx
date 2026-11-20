@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import { Alert, type AlertIntent } from './index';
+import { Alert } from './index';
+import type { AlertIntent } from './index';
 
 const meta: Meta<typeof Alert> = {
   title: 'Components/Alert',
@@ -31,6 +32,8 @@ export default meta;
 
 type Story = StoryObj<typeof Alert>;
 
+const noop = (): void => undefined;
+
 export const Default: Story = {
   name: 'Main',
   args: {
@@ -51,9 +54,14 @@ export const Intents: Story = {
       error: { title: 'Save failed', body: 'The server rejected the document. Try again.' },
     };
     return (
-      <YStack gap="$3" maxWidth={640}>
+      <YStack
+        gap="$3"
+        maxWidth={640}>
         {intents.map((intent) => (
-          <Alert key={intent} intent={intent} title={copy[intent].title}>
+          <Alert
+            key={intent}
+            intent={intent}
+            title={copy[intent].title}>
             {copy[intent].body}
           </Alert>
         ))}
@@ -64,8 +72,15 @@ export const Intents: Story = {
 
 export const WithAction: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
-      <Alert intent="error" title="Connection lost" actionLabel="Retry" onAction={() => {}} dismissible>
+    <YStack
+      gap="$3"
+      maxWidth={640}>
+      <Alert
+        intent="error"
+        title="Connection lost"
+        actionLabel="Retry"
+        onAction={noop}
+        dismissible>
         Changes are no longer syncing to the server.
       </Alert>
       <Alert
@@ -73,11 +88,15 @@ export const WithAction: Story = {
         title="Trial expiring"
         actionLabel="Upgrade"
         secondaryActionLabel="Remind me"
-        onAction={() => {}}
-        onSecondaryAction={() => {}}>
+        onAction={noop}
+        onSecondaryAction={noop}>
         Your trial ends in 3 days.
       </Alert>
-      <Alert intent="success" title="Import finished" actionLabel="View log" onAction={() => {}}>
+      <Alert
+        intent="success"
+        title="Import finished"
+        actionLabel="View log"
+        onAction={noop}>
         1,204 records imported, 0 errors.
       </Alert>
     </YStack>
@@ -86,14 +105,27 @@ export const WithAction: Story = {
 
 export const Compact: Story = {
   render: () => (
-    <YStack gap="$2" maxWidth={640}>
-      <Alert compact intent="info" title="Read-only">
+    <YStack
+      gap="$2"
+      maxWidth={640}>
+      <Alert
+        compact
+        intent="info"
+        title="Read-only">
         You are viewing an archived document.
       </Alert>
-      <Alert compact intent="error" dismissible>
+      <Alert
+        compact
+        intent="error"
+        dismissible>
         Amount must be greater than zero.
       </Alert>
-      <Alert compact intent="success" title="Copied" actionLabel="Undo" onAction={() => {}}>
+      <Alert
+        compact
+        intent="success"
+        title="Copied"
+        actionLabel="Undo"
+        onAction={noop}>
         Copied to clipboard.
       </Alert>
     </YStack>
@@ -102,102 +134,139 @@ export const Compact: Story = {
 
 export const TitleOnlyAndDescriptionOnly: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
-      <Alert intent="warning" title="This record is locked by another user." />
+    <YStack
+      gap="$3"
+      maxWidth={640}>
+      <Alert
+        intent="warning"
+        title="This record is locked by another user."
+      />
       <Alert intent="info">Descriptions can stand alone when a title would be redundant.</Alert>
-      <Alert intent="error" icon={null} title="No icon">
+      <Alert
+        intent="error"
+        icon={null}
+        title="No icon">
         Pass icon={'{null}'} to drop the leading icon.
       </Alert>
     </YStack>
   ),
 };
 
-export const Dismissible: Story = {
-  render: () => {
-    const [visible, setVisible] = useState(true);
-    return (
-      <YStack gap="$3" maxWidth={640}>
-        <Alert intent="info" title="Uncontrolled" dismissible>
-          Dismiss hides this alert via internal state.
-        </Alert>
-        <Alert
-          intent="warning"
-          title="Controlled"
-          dismissible
-          visible={visible}
-          onDismiss={() => {
-            setVisible(false);
+const DismissibleDemo = () => {
+  const [visible, setVisible] = useState(true);
+  return (
+    <YStack
+      gap="$3"
+      maxWidth={640}>
+      <Alert
+        intent="info"
+        title="Uncontrolled"
+        dismissible>
+        Dismiss hides this alert via internal state.
+      </Alert>
+      <Alert
+        intent="warning"
+        title="Controlled"
+        dismissible
+        visible={visible}
+        onDismiss={() => {
+          setVisible(false);
+        }}>
+        Parent owns visibility through visible/onDismiss.
+      </Alert>
+      {!visible && (
+        <Button
+          compact
+          onPress={() => {
+            setVisible(true);
           }}>
-          Parent owns visibility through visible/onDismiss.
+          Restore controlled alert
+        </Button>
+      )}
+    </YStack>
+  );
+};
+
+export const Dismissible: Story = {
+  render: () => <DismissibleDemo />,
+};
+
+const ValidationSummaryDemo = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
+  const [saved, setSaved] = useState(false);
+
+  const submit = () => {
+    const next: string[] = [];
+    if (!name.trim()) {
+      next.push('Full name is required.');
+    }
+    if (!email.includes('@')) {
+      next.push('Email must be a valid address.');
+    }
+    setErrors(next);
+    setSaved(next.length === 0);
+  };
+
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={480}>
+      {errors.length > 0 && (
+        <Alert
+          intent="error"
+          title={`Fix ${errors.length} problem${errors.length > 1 ? 's' : ''} before saving`}>
+          <YStack gap="$1">
+            {errors.map((e) => (
+              <SizableText
+                key={e}
+                color="$color12"
+                fontSize="$3"
+                lineHeight={20}>
+                • {e}
+              </SizableText>
+            ))}
+          </YStack>
         </Alert>
-        {!visible && (
+      )}
+      {saved && (
+        <Alert
+          intent="success"
+          title="Contact saved"
+          dismissible
+          onDismiss={() => {
+            setSaved(false);
+          }}
+        />
+      )}
+      <YStack gap="$3">
+        <Input
+          label="Full name"
+          placeholder="Ada Lovelace"
+          value={name}
+          onChangeText={setName}
+        />
+        <Input
+          label="Email"
+          placeholder="ada@example.com"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <XStack>
           <Button
-            compact
-            onPress={() => {
-              setVisible(true);
-            }}>
-            Restore controlled alert
+            accent
+            onPress={submit}>
+            Save contact
           </Button>
-        )}
+        </XStack>
       </YStack>
-    );
-  },
+    </YStack>
+  );
 };
 
 /** Composability demo: a validation summary Alert sits directly above a real
  * form with zero per-use styling on either side. */
 export const ValidationSummary: Story = {
-  render: () => {
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [errors, setErrors] = useState<string[]>([]);
-    const [saved, setSaved] = useState(false);
-
-    const submit = () => {
-      const next: string[] = [];
-      if (!name.trim()) {
-        next.push('Full name is required.');
-      }
-      if (!email.includes('@')) {
-        next.push('Email must be a valid address.');
-      }
-      setErrors(next);
-      setSaved(next.length === 0);
-    };
-
-    return (
-      <YStack gap="$4" maxWidth={480}>
-        {errors.length > 0 && (
-          <Alert intent="error" title={`Fix ${errors.length} problem${errors.length > 1 ? 's' : ''} before saving`}>
-            <YStack gap="$1">
-              {errors.map((e) => (
-                <SizableText key={e} color="$color12" fontSize="$3" lineHeight={20}>
-                  • {e}
-                </SizableText>
-              ))}
-            </YStack>
-          </Alert>
-        )}
-        {saved && (
-          <Alert
-            intent="success"
-            title="Contact saved"
-            dismissible
-            onDismiss={() => {
-              setSaved(false);
-            }}
-          />
-        )}
-        <YStack gap="$3">
-          <Input label="Full name" placeholder="Ada Lovelace" value={name} onChangeText={setName} />
-          <Input label="Email" placeholder="ada@example.com" value={email} onChangeText={setEmail} />
-          <XStack>
-            <Button accent onPress={submit}>
-              Save contact
-            </Button>
-          </XStack>
-        </YStack>
-      </YStack>
-    );
-  },
+  render: () => <ValidationSummaryDemo />,
 };

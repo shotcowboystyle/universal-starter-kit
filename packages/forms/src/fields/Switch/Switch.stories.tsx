@@ -28,33 +28,44 @@ const meta: Meta<typeof Switch> = {
 export default meta;
 type Story = StoryObj<typeof Switch>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      notifications: true,
+      marketing: false,
+      analytics: true,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <Switch
+          label="Push Notifications"
+          name="notifications"
+          helperText="Receive notifications about updates"
+        />
+        <Switch
+          label="Marketing Emails"
+          name="marketing"
+          helperText="Receive promotional emails"
+        />
+        <Switch
+          label="Analytics Tracking"
+          name="analytics"
+          helperText="Help improve our service"
+        />
+        <Button action="submit">Save Preferences</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          notifications: true,
-          marketing: false,
-          analytics: true,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <Switch label="Push Notifications" name="notifications" helperText="Receive notifications about updates" />
-            <Switch label="Marketing Emails" name="marketing" helperText="Receive promotional emails" />
-            <Switch label="Analytics Tracking" name="analytics" helperText="Help improve our service" />
-            <Button action="submit">Save Preferences</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -93,28 +104,60 @@ export const WithError: Story = {
 
 export const Pointy: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Switch label="Pointy (hard angles)" pointy defaultValue={true} />
-      <Switch label="Regular (default)" pointy={false} defaultValue={true} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Switch
+        label="Pointy (hard angles)"
+        pointy
+        defaultValue={true}
+      />
+      <Switch
+        label="Regular (default)"
+        pointy={false}
+        defaultValue={true}
+      />
     </YStack>
   ),
 };
 
 export const States: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Switch label="Off" defaultValue={false} />
-      <Switch label="On" defaultValue={true} />
-      <Switch label="Disabled off" disabled defaultValue={false} />
-      <Switch label="Disabled on" disabled defaultValue={true} />
-      <Switch label="Read only" readOnly defaultValue={true} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Switch
+        label="Off"
+        defaultValue={false}
+      />
+      <Switch
+        label="On"
+        defaultValue={true}
+      />
+      <Switch
+        label="Disabled off"
+        disabled
+        defaultValue={false}
+      />
+      <Switch
+        label="Disabled on"
+        disabled
+        defaultValue={true}
+      />
+      <Switch
+        label="Read only"
+        readOnly
+        defaultValue={true}
+      />
     </YStack>
   ),
 };
 
 export const WithIcons: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <Switch
         label="Do not disturb"
         helperText="Icons sit in the off/on pockets"
@@ -122,90 +165,121 @@ export const WithIcons: Story = {
         leftIcon=<XIcon />
         rightIcon=<CheckIcon />
       />
-      <Switch label="Do not disturb" defaultValue={true} leftIcon=<XIcon /> rightIcon=<CheckIcon /> />
+      <Switch
+        label="Do not disturb"
+        defaultValue={true}
+        leftIcon=<XIcon />
+        rightIcon=<CheckIcon />
+      />
     </YStack>
   ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Switch label="Small" size="$2" />
-      <Switch label="Medium (default)" size="$3" />
-      <Switch label="Large" size="$4" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Switch
+        label="Small"
+        size="$2"
+      />
+      <Switch
+        label="Medium (default)"
+        size="$3"
+      />
+      <Switch
+        label="Large"
+        size="$4"
+      />
     </YStack>
   ),
 };
 
+const InteractiveExample = () => {
+  const [checked, setChecked] = useState(false);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Paragraph
+        size="$2"
+        color="$placeholderColor">
+        Click to toggle, or press and drag the thumb on/off.
+      </Paragraph>
+      <Switch
+        label="Enable notifications"
+        checked={checked}
+        onCheckedChange={(val) => {
+          setChecked(val);
+          action('onCheckedChange')(val);
+        }}
+      />
+      <Paragraph size="$2">Current value: {checked ? 'ON' : 'OFF'}</Paragraph>
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [checked, setChecked] = useState(false);
-      return (
-        <YStack gap="$4" maxWidth={400}>
-          <Paragraph size="$2" color="$placeholderColor">
-            Click to toggle, or press and drag the thumb on/off.
-          </Paragraph>
-          <Switch
-            label="Enable notifications"
-            checked={checked}
+  render: () => <InteractiveExample />,
+};
+
+const ComparisonExample = () => {
+  const [customChecked, setCustomChecked] = useState(false);
+  const [tamaguiChecked, setTamaguiChecked] = useState(false);
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom Switch
+        </Paragraph>
+        <Switch
+          label="Enable notifications"
+          defaultValue={customChecked}
+          onCheckedChange={(val) => {
+            setCustomChecked(val);
+            action('custom.onCheckedChange')(val);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui Switch
+        </Paragraph>
+        <XStack
+          gap="$2"
+          alignItems="center">
+          <TamaguiSwitch
+            id="tamagui-sw"
+            checked={tamaguiChecked}
             onCheckedChange={(val) => {
-              setChecked(!!val);
-              action('onCheckedChange')(val);
-            }}
-          />
-          <Paragraph size="$2">Current value: {checked ? 'ON' : 'OFF'}</Paragraph>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+              setTamaguiChecked(val);
+              action('tamagui.onCheckedChange')(val);
+            }}>
+            <TamaguiSwitch.Thumb />
+          </TamaguiSwitch>
+          <Label htmlFor="tamagui-sw">Enable notifications</Label>
+        </XStack>
+      </YStack>
+    </XStack>
+  );
 };
 
 export const Comparison: StoryObj = {
   parameters: { foreignContrastSpecimen: true },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customChecked, setCustomChecked] = useState(false);
-      const [tamaguiChecked, setTamaguiChecked] = useState(false);
-      return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
-              Custom Switch
-            </Paragraph>
-            <Switch
-              label="Enable notifications"
-              defaultValue={customChecked}
-              onCheckedChange={(val) => {
-                setCustomChecked(!!val);
-                action('custom.onCheckedChange')(val);
-              }}
-            />
-          </YStack>
-
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
-              Tamagui Switch
-            </Paragraph>
-            <XStack gap="$2" alignItems="center">
-              <TamaguiSwitch
-                id="tamagui-sw"
-                checked={tamaguiChecked}
-                onCheckedChange={(val) => {
-                  setTamaguiChecked(val);
-                  action('tamagui.onCheckedChange')(val);
-                }}>
-                <TamaguiSwitch.Thumb />
-              </TamaguiSwitch>
-              <Label htmlFor="tamagui-sw">Enable notifications</Label>
-            </XStack>
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors track + label anatomy. */

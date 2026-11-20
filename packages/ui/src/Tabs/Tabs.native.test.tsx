@@ -5,8 +5,8 @@ import { Tabs } from './index';
 
 // Exercise the native accessibility branch while retaining the test host renderer.
 // Geometry still requires a native runtime; this test asserts role/name/state only.
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 

@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Config } from './config';
-import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtimeConfig';
+import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtime-config';
 
-function setRuntimePayload(payload: Record<string, string>) {
-  (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey] = payload;
-}
+const setRuntimePayload = (payload: Record<string, string>) => {
+  globalThis[runtimePublicConfigKey] = payload;
+};
 
-function clearRuntimePayload() {
-  delete (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
-}
+const clearRuntimePayload = () => {
+  Reflect.deleteProperty(globalThis, runtimePublicConfigKey);
+};
 
-describe('Config', () => {
+describe(Config, () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     clearRuntimePayload();
@@ -24,7 +24,7 @@ describe('Config', () => {
   describe('constructor', () => {
     it('creates an empty config when no arguments are provided', () => {
       const c = new Config();
-      expect(c.get()).toEqual({});
+      expect(c.get()).toStrictEqual({});
     });
 
     it('creates config from provided key-value pairs', () => {
@@ -34,6 +34,7 @@ describe('Config', () => {
     });
 
     it('filters out undefined values from initial config', () => {
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicitly undefined value is the case under test
       const c = new Config({ PRESENT: 'yes', MISSING: undefined });
       expect(c.get('PRESENT')).toBe('yes');
       expect(c.get('MISSING')).toBeUndefined();
@@ -43,7 +44,7 @@ describe('Config', () => {
   describe('get', () => {
     it('returns the full config object when called without arguments', () => {
       const c = new Config({ A: '1', B: '2' });
-      expect(c.get()).toEqual({ A: '1', B: '2' });
+      expect(c.get()).toStrictEqual({ A: '1', B: '2' });
     });
 
     it('returns a specific value by key', () => {
@@ -106,7 +107,7 @@ describe('Config', () => {
     it('returns the full resolved config', () => {
       const c = new Config({ A: '1' });
       const result = c.add({ B: '2' });
-      expect(result).toEqual({ A: '1', B: '2' });
+      expect(result).toStrictEqual({ A: '1', B: '2' });
     });
   });
 
@@ -156,11 +157,11 @@ describe('Config', () => {
       expect(c.get('MARKETPLACE_API_URL')).toBe('https://api.marketplace.example.org');
     });
 
-    it('resolves FRAPPE_ENABLED from the runtime payload so the frappe provider can mount', () => {
-      // CreateApp.tsx gates FrappeProvider on config.get("FRAPPE_ENABLED") === "1".
-      setRuntimePayload({ FRAPPE_ENABLED: '1' });
+    it('resolves ANALYTICS_ENABLED from the runtime payload so a gated provider can mount', () => {
+      // Providers gate on config.get("<KEY>_ENABLED") === "1" at mount time.
+      setRuntimePayload({ ANALYTICS_ENABLED: '1' });
       const c = new Config();
-      expect(c.get('FRAPPE_ENABLED')).toBe('1');
+      expect(c.get('ANALYTICS_ENABLED')).toBe('1');
     });
 
     // These use MARKETPLACE_API_URL rather than BASE_URL on purpose: vite (and

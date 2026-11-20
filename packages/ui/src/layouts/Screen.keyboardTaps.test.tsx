@@ -8,51 +8,56 @@ import { renderWithProviders } from '@repo/test-utils';
  * Screen must scroll through it.
  */
 import { cleanup } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import type { ScrollViewProps } from '../ScrollView';
 
 import { Screen } from './Page';
 
-const houseScrollViews = vi.hoisted(() => [] as Array<Record<string, unknown>>);
+const houseScrollViews = vi.hoisted((): ScrollViewProps[] => []);
 
-vi.mock('../ScrollView', async (importOriginal) => {
+vi.mock(import('../ScrollView'), async (importOriginal) => {
   const { forwardRef, createElement } = await import('react');
-  const { ScrollView } = await importOriginal<typeof import('../ScrollView')>();
+  const original = await importOriginal();
   return {
-    ScrollView: forwardRef<unknown, Record<string, unknown>>(function HouseScrollProbe(props, ref) {
+    ...original,
+    ScrollView: forwardRef<unknown, ScrollViewProps>(function HouseScrollProbe(props, ref) {
       houseScrollViews.push(props);
-      return createElement(ScrollView as never, { ...props, ref });
-    }),
+      return createElement(original.ScrollView as never, { ...props, ref });
+    }) as never,
   };
 });
 
-afterEach(() => {
-  cleanup();
-  houseScrollViews.length = 0;
-});
+describe('Screen keyboard taps', () => {
+  afterEach(() => {
+    cleanup();
+    houseScrollViews.length = 0;
+  });
 
-it('scrolls through the house ScrollView, which defaults keyboard taps to handled on native', () => {
-  renderWithProviders(
-    <Screen>
-      <span>Page body</span>
-    </Screen>,
-  );
-  expect(houseScrollViews.length).toBeGreaterThan(0);
-});
+  it('scrolls through the house ScrollView, which defaults keyboard taps to handled on native', () => {
+    renderWithProviders(
+      <Screen>
+        <span>Page body</span>
+      </Screen>,
+    );
+    expect(houseScrollViews.length).toBeGreaterThan(0);
+  });
 
-it('still hands scrollViewProps to that ScrollView, so a screen can opt back out', () => {
-  renderWithProviders(
-    <Screen scrollViewProps={{ keyboardShouldPersistTaps: 'never' }}>
-      <span>Page body</span>
-    </Screen>,
-  );
-  expect(houseScrollViews.at(-1)?.keyboardShouldPersistTaps).toBe('never');
-});
+  it('still hands scrollViewProps to that ScrollView, so a screen can opt back out', () => {
+    renderWithProviders(
+      <Screen scrollViewProps={{ keyboardShouldPersistTaps: 'never' }}>
+        <span>Page body</span>
+      </Screen>,
+    );
+    expect(houseScrollViews.at(-1)?.keyboardShouldPersistTaps).toBe('never');
+  });
 
-it('renders no ScrollView when scroll is off', () => {
-  renderWithProviders(
-    <Screen scroll={false}>
-      <span>Page body</span>
-    </Screen>,
-  );
-  expect(houseScrollViews).toEqual([]);
+  it('renders no ScrollView when scroll is off', () => {
+    renderWithProviders(
+      <Screen scroll={false}>
+        <span>Page body</span>
+      </Screen>,
+    );
+    expect(houseScrollViews).toStrictEqual([]);
+  });
 });

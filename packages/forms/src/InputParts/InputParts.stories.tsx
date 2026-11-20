@@ -35,7 +35,11 @@ export const Anatomy: Story = {
         <InputParts.Icon adornment="leading">
           <EnvelopeIcon />
         </InputParts.Icon>
-        <InputParts.Area id="anatomy-email" placeholder="you@example.com" onChangeText={action('onChangeText')} />
+        <InputParts.Area
+          id="anatomy-email"
+          placeholder="you@example.com"
+          onChangeText={action('onChangeText')}
+        />
       </InputParts.Box>
       <InputParts.Meta helperText="We only use this to send receipts." />
     </InputParts>
@@ -49,14 +53,19 @@ export const Anatomy: Story = {
  */
 export const FocusRingOnTheBox: Story = {
   render: () => (
-    <YStack gap="$4" width={320}>
+    <YStack
+      gap="$4"
+      width={320}>
       <Paragraph size="$2">Tab in — the border box rings, the input does not.</Paragraph>
       <InputParts>
         <InputParts.Box>
           <InputParts.Icon adornment="leading">
             <MagnifyingGlassIcon />
           </InputParts.Icon>
-          <InputParts.Area placeholder="Search" onChangeText={action('onChangeText')} />
+          <InputParts.Area
+            placeholder="Search"
+            onChangeText={action('onChangeText')}
+          />
         </InputParts.Box>
       </InputParts>
     </YStack>
@@ -66,7 +75,9 @@ export const FocusRingOnTheBox: Story = {
 /** Leading and trailing slots. The trailing end-cap is square by size recipe. */
 export const Adornments: Story = {
   render: () => (
-    <YStack gap="$4" width={320}>
+    <YStack
+      gap="$4"
+      width={320}>
       <InputParts>
         <InputParts.Box>
           <InputParts.Icon adornment="leading">
@@ -98,43 +109,42 @@ export const Adornments: Story = {
   ),
 };
 
+const TrailingButtonExample = () => {
+  const [secure, setSecure] = useState(true);
+  return (
+    <InputParts width={320}>
+      <InputParts.Label htmlFor="parts-password">Password</InputParts.Label>
+      <InputParts.Box paddingInlineEnd={0}>
+        <InputParts.Area
+          id="parts-password"
+          placeholder="••••••••"
+          secureTextEntry={secure}
+          onChangeText={action('onChangeText')}
+        />
+        <InputParts.Button
+          glyphRing
+          type="button"
+          aria-label={secure ? 'Show password' : 'Hide password'} // gitleaks:allow -- UI label, not a credential
+          onPress={() => {
+            setSecure((prev) => !prev);
+            action('togglePasswordVisibility')(!secure);
+          }}>
+          <InputParts.Icon aria-hidden>
+            <EyeIcon />
+          </InputParts.Icon>
+        </InputParts.Button>
+      </InputParts.Box>
+      <InputParts.Meta helperText={secure ? 'Hidden' : 'Visible'} />
+    </InputParts>
+  );
+};
+
 /**
  * `InputParts.Button` is the pressable end-cap — a reveal toggle, a clear, a
  * copy. It squares off to the control height so the frame stays rectangular.
  */
 export const TrailingButton: Story = {
-  render: () => {
-    const Example = () => {
-      const [secure, setSecure] = useState(true);
-      return (
-        <InputParts width={320}>
-          <InputParts.Label htmlFor="parts-password">Password</InputParts.Label>
-          <InputParts.Box paddingInlineEnd={0}>
-            <InputParts.Area
-              id="parts-password"
-              placeholder="••••••••"
-              secureTextEntry={secure}
-              onChangeText={action('onChangeText')}
-            />
-            <InputParts.Button
-              glyphRing
-              type="button"
-              aria-label={secure ? 'Show password' : 'Hide password'} // gitleaks:allow -- UI label, not a credential
-              onPress={() => {
-                setSecure((prev) => !prev);
-                action('togglePasswordVisibility')(!secure);
-              }}>
-              <InputParts.Icon aria-hidden>
-                <EyeIcon />
-              </InputParts.Icon>
-            </InputParts.Button>
-          </InputParts.Box>
-          <InputParts.Meta helperText={secure ? 'Hidden' : 'Visible'} />
-        </InputParts>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <TrailingButtonExample />,
 };
 
 /**
@@ -143,7 +153,9 @@ export const TrailingButton: Story = {
  */
 export const MetaReservesOneLine: Story = {
   render: () => (
-    <YStack gap="$5" width={320}>
+    <YStack
+      gap="$5"
+      width={320}>
       <InputParts>
         <InputParts.Label>Helper</InputParts.Label>
         <InputParts.Box>
@@ -154,12 +166,20 @@ export const MetaReservesOneLine: Story = {
       <InputParts>
         <InputParts.Label>Error replaces it</InputParts.Label>
         <InputParts.Box>
-          <InputParts.Area placeholder="Invalid" aria-invalid />
-          <InputParts.Icon adornment="trailing" color="$red10">
+          <InputParts.Area
+            placeholder="Invalid"
+            aria-invalid
+          />
+          <InputParts.Icon
+            adornment="trailing"
+            color="$red10">
             <WarningCircleIcon aria-hidden />
           </InputParts.Icon>
         </InputParts.Box>
-        <InputParts.Meta helperText="Two to thirty characters." displayError="Enter at least two characters." />
+        <InputParts.Meta
+          helperText="Two to thirty characters."
+          displayError="Enter at least two characters."
+        />
       </InputParts>
     </YStack>
   ),
@@ -183,7 +203,10 @@ export const MultiLine: Story = {
   render: () => (
     <InputParts width={360}>
       <InputParts.Label htmlFor="parts-notes">Notes</InputParts.Label>
-      <InputParts.Box alignItems="flex-start" height="auto" paddingVertical="$2">
+      <InputParts.Box
+        alignItems="flex-start"
+        height="auto"
+        paddingVertical="$2">
         <InputParts.TextArea
           id="parts-notes"
           rows={4}
@@ -199,7 +222,9 @@ export const MultiLine: Story = {
 /** Disabled chrome lives on the Box, not on the Area. */
 export const DisabledBox: Story = {
   render: () => (
-    <YStack gap="$4" width={320}>
+    <YStack
+      gap="$4"
+      width={320}>
       <InputParts>
         <InputParts.Box>
           <InputParts.Area placeholder="Enabled" />
@@ -210,7 +235,10 @@ export const DisabledBox: Story = {
           <InputParts.Icon adornment="leading">
             <EnvelopeIcon />
           </InputParts.Icon>
-          <InputParts.Area placeholder="Disabled" disabled />
+          <InputParts.Area
+            placeholder="Disabled"
+            disabled
+          />
         </InputParts.Box>
       </InputParts>
     </YStack>

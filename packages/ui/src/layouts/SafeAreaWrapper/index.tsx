@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import type { SafeAreaEdge, SafeAreaMode } from './insets';
 
@@ -26,15 +27,17 @@ export interface SafeAreaWrapperProps extends YStackProps {
  * inset calculation; web has no safe-area insets, so `edges` / `mode` are
  * accepted for API parity and ignored. Consumer `{...stackProps}` last.
  */
-export function SafeAreaWrapper({
+export const SafeAreaWrapper = ({
   children,
   edges: _edges,
   mode: _mode,
   ...stackProps
-}: PropsWithChildren<SafeAreaWrapperProps>) {
-  return (
-    <YStack data-testid="safe-area-wrapper" data-safe-area="web" flex={1} {...stackProps}>
-      {children}
-    </YStack>
-  );
-}
+}: PropsWithChildren<SafeAreaWrapperProps>) => (
+  <YStack
+    data-testid="safe-area-wrapper"
+    data-safe-area="web"
+    flex={1}
+    {...stackProps}>
+    {children}
+  </YStack>
+);

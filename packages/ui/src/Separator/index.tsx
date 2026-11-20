@@ -31,8 +31,8 @@
  *
  * Measured law:
  * - 1 CSS px, never 0.5px. Vertical separators are 1px wide.
- * - Colour `$borderColor` in both schemes.
- * - Quiet variants dim with `opacity: 0.5`, never a lighter colour.
+ * - Color `$borderColor` in both schemes.
+ * - Quiet variants dim with `opacity: 0.5`, never a lighter color.
  *
  * A separator is never leftover space — the painted edge has an
  * explicit, non-flexible size (`flexGrow/flexShrink: 0`), so no equal-
@@ -49,7 +49,7 @@ import { View, isWeb, styled } from 'tamagui';
 
 const SeparatorFrame = styled(View, {
   name: 'Separator',
-  // The painting edge: a filled 1px line in the control-frame colour.
+  // The painting edge: a filled 1px line in the control-frame color.
   height: 1,
   backgroundColor: '$borderColor',
   // Fill the cross axis of the stack that owns the rule.
@@ -66,7 +66,7 @@ const SeparatorFrame = styled(View, {
         width: 1,
       },
     },
-    /** Quiet rule: same colour at half opacity — never a lighter colour. */
+    /** Quiet rule: same color at half opacity — never a lighter color. */
     quiet: {
       true: {
         opacity: 0.5,
@@ -75,17 +75,16 @@ const SeparatorFrame = styled(View, {
   } as const,
 });
 
-export interface SeparatorProps extends GetProps<typeof SeparatorFrame> {}
+export type SeparatorProps = GetProps<typeof SeparatorFrame>;
 
-export function Separator({ vertical, ...props }: SeparatorProps) {
-  return (
-    <SeparatorFrame
-      role="separator"
-      vertical={vertical}
-      // role="separator" is horizontal by default; only vertical must say so.
-      // Web-only: RN has no aria-orientation (boundary discipline).
-      {...(isWeb && vertical ? { 'aria-orientation': 'vertical' as const } : undefined)}
-      {...props}
-    />
-  );
-}
+export const Separator = ({ vertical, ...props }: SeparatorProps) => (
+  <SeparatorFrame
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SeparatorFrame is a tamagui View (also native); <hr> is not available
+    role="separator"
+    vertical={vertical}
+    // role="separator" is horizontal by default; only vertical must say so.
+    // Web-only: RN has no aria-orientation (boundary discipline).
+    {...(isWeb && vertical ? { 'aria-orientation': 'vertical' as const } : undefined)}
+    {...props}
+  />
+);

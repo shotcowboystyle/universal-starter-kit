@@ -59,13 +59,13 @@ export const HeaderOnly: Story = {
 };
 
 export const Empty: Story = {
-  args: { title: undefined, description: undefined },
+  args: { title: '', description: '' },
   render: (args) => <PageSection {...args} />,
 };
 
 export const LongHeading: Story = {
   args: {
-    title: 'A very long section heading that keeps going well past a reasonable length to test wrapping behaviour',
+    title: 'A very long section heading that keeps going well past a reasonable length to test wrapping behavior',
   },
   render: (args) => (
     <YStack maxWidth={360}>
@@ -79,9 +79,13 @@ export const LongHeading: Story = {
 export const Nested: Story = {
   args: { surface: true },
   render: (args) => (
-    <PageSection {...args} title="Outer section">
+    <PageSection
+      {...args}
+      title="Outer section">
       <Paragraph>Outer content.</Paragraph>
-      <PageSection {...args} title="Inner section">
+      <PageSection
+        {...args}
+        title="Inner section">
         <Paragraph>Inner content — check for double borders/padding.</Paragraph>
       </PageSection>
     </PageSection>

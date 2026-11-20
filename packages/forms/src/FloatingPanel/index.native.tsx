@@ -51,7 +51,8 @@
  */
 
 import { OVERLAY_BREAKPOINT, Surface, useResolvedKnobs } from '@repo/theme';
-import { type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -64,16 +65,17 @@ import {
   StyleSheet,
   useWindowDimensions,
   View as RNView,
-  type GestureResponderEvent,
 } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, YStack } from 'tamagui';
 
 import { t } from '../shared/t';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
 
-import { placeAtPoint, type PanelBounds, type PanelPoint } from './pointAnchor';
-import { panelViewportPadding } from './useFloatingPanel';
+import { placeAtPoint } from './point-anchor';
+import type { PanelBounds, PanelPoint } from './point-anchor';
+import { panelViewportPadding } from './use-floating-panel';
 
 import type { FloatingPanelProps } from './index';
 
@@ -86,15 +88,13 @@ export {
   panelGrowDuration,
   panelTransition,
   panelViewportPadding,
-} from './useFloatingPanel';
-export type { UseFloatingPanelOptions, UseFloatingPanelReturn } from './useFloatingPanel';
+} from './use-floating-panel';
+export type { UseFloatingPanelOptions, UseFloatingPanelReturn } from './use-floating-panel';
 export type { FloatingPanelProps } from './index';
-export { floatingPanelActionProps, isNestedPanelAction } from './nestedAction';
+export { floatingPanelActionProps, isNestedPanelAction } from './nested-action';
 
 /** Native never has a >sm web viewport; AdaptivePopup uses this to pick Sheet mode. */
-export function useViewportGtSm() {
-  return false;
-}
+export const useViewportGtSm = () => false;
 
 const sheetMaxHeightRatio = 0.85;
 // Home-indicator / gesture-bar clearance.
@@ -113,7 +113,88 @@ const dismissThreshold = 56;
 // Slide-in, and the delay before a backdrop tap can dismiss.
 const enterDuration = 280;
 
-export function FloatingPanel({
+/**
+ * The menu at the long-press point: measured once per open at its natural
+ * size, then placed by the same rule as the web pointer menu. Later layouts
+ * are its own capped height and must not re-decide the side it opened on.
+ */
+const PointPanel = ({
+  point,
+  bounds,
+  framePadding,
+  frameGap,
+  onBackdropPress,
+  onEscape,
+  children,
+}: {
+  point: PanelPoint;
+  bounds: PanelBounds;
+  framePadding: string;
+  frameGap: string | undefined;
+  onBackdropPress: () => void;
+  onEscape: () => void;
+  children: ReactNode;
+}) => {
+  const { knobProps } = useResolvedKnobs();
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const placement = size
+    ? placeAtPoint({
+        point,
+        width: size.width,
+        height: size.height,
+        bounds,
+        rtl: I18nManager.isRTL,
+      })
+    : null;
+  return (
+    <RNView style={StyleSheet.absoluteFill}>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onBackdropPress}
+        accessibilityRole="button"
+        accessibilityLabel={t('Close')}
+      />
+      <RNView
+        testID="floating-panel-point"
+        onLayout={(e) => {
+          if (size) {
+            return;
+          }
+          const { width, height } = e.nativeEvent.layout;
+          if (width > 0 && height > 0) {
+            setSize({ width, height });
+          }
+        }}
+        style={{
+          position: 'absolute',
+          left: placement?.left ?? bounds.left,
+          top: placement?.top ?? bounds.top,
+          maxWidth: bounds.right - bounds.left,
+          maxHeight: placement?.maxHeight ?? bounds.bottom - bounds.top,
+          opacity: placement ? 1 : 0,
+        }}>
+        <YStack
+          {...knobProps.elevatedSurface}
+          padding={framePadding}
+          gap={frameGap}
+          flexShrink={1}
+          minHeight={0}
+          onAccessibilityEscape={onEscape}>
+          <RNScrollView
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            keyboardShouldPersistTaps="handled">
+            {children}
+          </RNScrollView>
+        </YStack>
+      </RNView>
+    </RNView>
+  );
+};
+
+const isPresent = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one component owns the sheet's shared animation refs; splitting would thread them through props
+export const FloatingPanel = ({
   open,
   onOpenChange,
   onNativeShow,
@@ -129,7 +210,7 @@ export function FloatingPanel({
   triggerA11y,
   sheetFill,
   openOn = 'press',
-}: FloatingPanelProps) {
+}: FloatingPanelProps) => {
   const { knobProps } = useResolvedKnobs();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   // The sheet must end ABOVE the keyboard, not run under it.
@@ -137,7 +218,7 @@ export function FloatingPanel({
   const safeArea = useContext(SafeAreaInsetsContext) ?? initialWindowMetrics?.insets;
   const topInset = safeArea?.top ?? 0;
   const [pressPoint, setPressPoint] = useState<PanelPoint | null>(null);
-  const [backdropArmed, setBackdropArmed] = useState(false);
+  const backdropArmedRef = useRef(false);
   const armTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const close = useCallback(() => {
     onOpenChange(false);
@@ -153,7 +234,7 @@ export function FloatingPanel({
         return;
       }
       const { pageX, pageY } = event?.nativeEvent ?? {};
-      setPressPoint(typeof pageX === 'number' && typeof pageY === 'number' ? { x: pageX, y: pageY } : null);
+      setPressPoint(pageX !== undefined && pageY !== undefined ? { x: pageX, y: pageY } : null);
       onOpenChange(true);
     },
     [disabled, onOpenChange],
@@ -162,10 +243,10 @@ export function FloatingPanel({
   const atPoint = isContextMenu && pressPoint !== null && windowWidth > OVERLAY_BREAKPOINT;
 
   const handleBackdropPress = useCallback(() => {
-    if (backdropArmed) {
+    if (backdropArmedRef.current) {
       close();
     }
-  }, [backdropArmed, close]);
+  }, [close]);
 
   const framePadding = contentPadding === 'none' ? '$0' : knobProps.panelPadding.padding;
   const frameGap = contentPadding === 'none' ? undefined : knobProps.gapLg.gap;
@@ -213,20 +294,23 @@ export function FloatingPanel({
       return [travel];
     }
     const points = [travel, Math.round(travel * mediumDetent)].filter((h) => h >= Math.min(minSheetHeight, travel));
-    return Array.from(new Set(points)).sort((a, b) => b - a);
+    return [...new Set(points)].toSorted((a, b) => b - a);
   }, [isSheet, travel]);
 
   // Start OFF-SCREEN. `0` is "fully expanded", so a 0 default paints the
   // sheet at rest for one frame, then onShow jumps it to `travel` and
   // slides it up — Combobox/Select read as open → closed → open.
-  const translateY = useRef(new Animated.Value(10000)).current;
+  // oxlint-disable-next-line react/hook-use-state -- lazily created once; the Animated.Value is mutated in place and never replaced
+  const [translateY] = useState(() => new Animated.Value(10_000));
   // The translate the sheet is settled at. Kept in a ref because the pan
   // callbacks are created once and must not close over a stale value.
-  const restRef = useRef(10000);
+  const restRef = useRef(10_000);
   const travelRef = useRef(travel);
   const detentsRef = useRef(detents);
-  travelRef.current = travel;
-  detentsRef.current = detents;
+  useLayoutEffect(() => {
+    travelRef.current = travel;
+    detentsRef.current = detents;
+  }, [travel, detents]);
 
   // Async callbacks belong to one committed presentation, never its successor.
   const presentationRef = useRef(0);
@@ -243,7 +327,8 @@ export function FloatingPanel({
    * commit and the top edge does not move. `restHeightRef` is null at full
    * height; a gesture always runs uncapped, in `travel` coordinates.
    */
-  const frameCap = useRef(new Animated.Value(maxHeight)).current;
+  // oxlint-disable-next-line react/hook-use-state -- lazily created once; the Animated.Value is mutated in place and never replaced
+  const [frameCap] = useState(() => new Animated.Value(maxHeight));
   const maxHeightRef = useRef(maxHeight);
   const restHeightRef = useRef<number | null>(null);
   // The last uncapped layout, and whether it filled the max height. A capped
@@ -257,6 +342,7 @@ export function FloatingPanel({
     const rest = restHeightRef.current;
     frameCap.setValue(rest === null ? maxHeight : Math.min(maxHeight, rest));
     if (rest !== null && naturalRef.current > 0) {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- re-derives the measured height when the keyboard moves the max height under a resting sheet
       setMeasuredHeight(filledRef.current ? maxHeight : Math.min(naturalRef.current, maxHeight));
     }
   }, [frameCap, maxHeight]);
@@ -336,6 +422,7 @@ export function FloatingPanel({
 
   const panResponder = useMemo(
     () =>
+      // oxlint-disable-next-line react/refs -- the responder is built once and reads the refs only from its gesture callbacks
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dy) > 2,
@@ -345,7 +432,7 @@ export function FloatingPanel({
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           translateY.stopAnimation((value) => {
-            if (typeof value === 'number' && Number.isFinite(value)) {
+            if (Number.isFinite(value)) {
               restRef.current = value;
             }
           });
@@ -359,20 +446,20 @@ export function FloatingPanel({
         },
         onPanResponderRelease: (_evt, g) => {
           const points = detentsRef.current;
-          const t = travelRef.current;
+          const travelNow = travelRef.current;
           const current = Math.max(0, restRef.current + g.dy);
           // Project where a flick would carry to, the way a scroll view does,
           // so a fast short flick still changes detent.
           const projected = current + g.vy * 120;
-          const smallestRest = t - points[points.length - 1];
+          const smallestRest = travelNow - (points.at(-1) ?? travelNow);
           if (projected > smallestRest + dismissThreshold || g.vy > 1.1) {
             dismiss(g.vy);
             return;
           }
-          let best = points[0];
+          let [best] = points;
           let bestDelta = Number.POSITIVE_INFINITY;
           for (const height of points) {
-            const delta = Math.abs(projected - (t - height));
+            const delta = Math.abs(projected - (travelNow - height));
             if (delta < bestDelta) {
               bestDelta = delta;
               best = height;
@@ -398,14 +485,14 @@ export function FloatingPanel({
     }
     const presentation = presentationRef.current;
     enteredRef.current = true;
-    if (armTimerRef.current) {
+    if (armTimerRef.current !== null) {
       clearTimeout(armTimerRef.current);
     }
     // One frame + small delay so the opening tap cannot dismiss immediately.
     armTimerRef.current = setTimeout(() => {
       if (activeRef.current && presentation === presentationRef.current) {
         armTimerRef.current = null;
-        setBackdropArmed(true);
+        backdropArmedRef.current = true;
       }
     }, enterDuration);
     // The modal itself fades (so the backdrop dims IN PLACE) and only
@@ -434,8 +521,8 @@ export function FloatingPanel({
     if (open) {
       enter();
     } else {
-      setBackdropArmed(false);
-      const parked = travelRef.current || 10000;
+      backdropArmedRef.current = false;
+      const parked = travelRef.current || 10_000;
       translateY.setValue(parked);
       restRef.current = parked;
     }
@@ -444,7 +531,7 @@ export function FloatingPanel({
       activeRef.current = false;
       presentationRef.current += 1;
       enteredRef.current = false;
-      if (armTimerRef.current) {
+      if (armTimerRef.current !== null) {
         clearTimeout(armTimerRef.current);
         armTimerRef.current = null;
       }
@@ -452,13 +539,16 @@ export function FloatingPanel({
     };
   }, [open, enter, frameCap, translateY]);
 
+  const sheetFrameSizing = sheetFill ? { height: maxHeight } : undefined;
+  const sheetBodySizing = sheetFill ? { flex: 1, minHeight: 0 } : undefined;
+
   const content = scrollable ? (
     <RNScrollView
       // sheetFill: the list scrollport fills the fixed-height sheet; default:
       // content-sized (flexGrow 0) so small pickers hug their content.
       style={sheetFill ? { flexGrow: 1, flexShrink: 1 } : { flexGrow: 0 }}
       keyboardShouldPersistTaps="handled"
-      {...(scrollViewProps as any)}>
+      {...scrollViewProps}>
       {children}
     </RNScrollView>
   ) : (
@@ -479,10 +569,10 @@ export function FloatingPanel({
             : { onPress: handleTriggerPress })}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityState={{ disabled: !!disabled, expanded: !!open }}
-          {...(triggerA11y?.label ? { accessibilityLabel: triggerA11y.label } : undefined)}
-          {...(triggerA11y?.value ? { accessibilityValue: { text: triggerA11y.value } } : undefined)}
-          {...(triggerA11y?.hint ? { accessibilityHint: triggerA11y.hint } : undefined)}
+          accessibilityState={{ disabled: !!disabled, expanded: open }}
+          {...(isPresent(triggerA11y?.label) ? { accessibilityLabel: triggerA11y.label } : undefined)}
+          {...(isPresent(triggerA11y?.value) ? { accessibilityValue: { text: triggerA11y.value } } : undefined)}
+          {...(isPresent(triggerA11y?.hint) ? { accessibilityHint: triggerA11y.hint } : undefined)}
           // Whole-field triggers stretch; composite adornments hug their
           // content so sibling inputs retain their editable space.
           style={{
@@ -515,7 +605,7 @@ export function FloatingPanel({
           enter();
           onNativeShow?.();
         }}>
-        {atPoint && pressPoint ? (
+        {atPoint && pressPoint !== null ? (
           <PointPanel
             key={`${pressPoint.x},${pressPoint.y}`}
             point={pressPoint}
@@ -544,7 +634,10 @@ export function FloatingPanel({
               onPress={handleBackdropPress}
               accessibilityRole="button"
               accessibilityLabel={t('Close')}>
-              <View flex={1} backgroundColor="$shadow6" />
+              <View
+                flex={1}
+                backgroundColor="$shadow6"
+              />
             </Pressable>
             {/*
             Sheet sits above the absoluteFill backdrop in z-order (later sibling).
@@ -587,7 +680,7 @@ export function FloatingPanel({
                 minHeight={0}
                 // sheetFill opens at full sheet height (flexShrink keeps the
                 // keyboard from pushing the top of the sheet off-screen).
-                {...(sheetFill ? { height: maxHeight } : undefined)}
+                {...sheetFrameSizing}
                 paddingTop="$2"
                 paddingBottom={sheetBottomPadding}
                 // VoiceOver escape gesture (two-finger Z) dismisses the sheet.
@@ -608,13 +701,18 @@ export function FloatingPanel({
                     paddingTop: 4,
                     paddingBottom: 12,
                   }}>
-                  <View width={40} height={4} borderRadius={2} backgroundColor="$color8" />
+                  <View
+                    width={40}
+                    height={4}
+                    borderRadius={2}
+                    backgroundColor="$color8"
+                  />
                 </RNView>
                 <YStack
                   padding={framePadding}
                   gap={frameGap}
                   flexShrink={1}
-                  {...(sheetFill ? { flex: 1, minHeight: 0 } : undefined)}>
+                  {...sheetBodySizing}>
                   <Surface size="md">
                     {header}
                     {content}
@@ -627,80 +725,4 @@ export function FloatingPanel({
       </Modal>
     </>
   );
-}
-
-/**
- * The menu at the long-press point: measured once per open at its natural
- * size, then placed by the same rule as the web pointer menu. Later layouts
- * are its own capped height and must not re-decide the side it opened on.
- */
-function PointPanel({
-  point,
-  bounds,
-  framePadding,
-  frameGap,
-  onBackdropPress,
-  onEscape,
-  children,
-}: {
-  point: PanelPoint;
-  bounds: PanelBounds;
-  framePadding: string;
-  frameGap: string | undefined;
-  onBackdropPress: () => void;
-  onEscape: () => void;
-  children: ReactNode;
-}) {
-  const { knobProps } = useResolvedKnobs();
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  const placement = size
-    ? placeAtPoint({
-        point,
-        width: size.width,
-        height: size.height,
-        bounds,
-        rtl: I18nManager.isRTL,
-      })
-    : null;
-  return (
-    <RNView style={StyleSheet.absoluteFill}>
-      <Pressable
-        style={StyleSheet.absoluteFill}
-        onPress={onBackdropPress}
-        accessibilityRole="button"
-        accessibilityLabel={t('Close')}
-      />
-      <RNView
-        testID="floating-panel-point"
-        onLayout={(e) => {
-          if (size) {
-            return;
-          }
-          const { width, height } = e.nativeEvent.layout;
-          if (width > 0 && height > 0) {
-            setSize({ width, height });
-          }
-        }}
-        style={{
-          position: 'absolute',
-          left: placement?.left ?? bounds.left,
-          top: placement?.top ?? bounds.top,
-          maxWidth: bounds.right - bounds.left,
-          maxHeight: placement?.maxHeight ?? bounds.bottom - bounds.top,
-          opacity: placement ? 1 : 0,
-        }}>
-        <YStack
-          {...knobProps.elevatedSurface}
-          padding={framePadding}
-          gap={frameGap}
-          flexShrink={1}
-          minHeight={0}
-          onAccessibilityEscape={onEscape}>
-          <RNScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled">
-            {children}
-          </RNScrollView>
-        </YStack>
-      </RNView>
-    </RNView>
-  );
-}
+};

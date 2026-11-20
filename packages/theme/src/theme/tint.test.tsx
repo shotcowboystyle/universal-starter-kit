@@ -1,21 +1,22 @@
-import type React from 'react';
-import { type ReactNode, createElement } from 'react';
+import type { ThemeName } from '@tamagui/web';
+import { createElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-// Mock Tamagui's <Theme> so we can inspect the chosen theme name
-vi.mock('tamagui', () => ({
-  Theme: ({ name, children }: { name: string; children: ReactNode }) =>
-    createElement('div', { 'data-tamagui-theme': name }, children),
-}));
-
-import type { ThemeName } from '@tamagui/web';
-
 import { defaultKnobs } from './knobs';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { Preset } from './preset.types';
-import { PresetContext, type PresetContextValue } from './PresetContext';
 import { defaultPreset } from './presets';
 import { Tint, useTintDepth } from './Tint';
+
+// Mock Tamagui's <Theme> so we can inspect the chosen theme name
+vi.mock(import('tamagui'), () => ({
+  // SAFETY: a plain function component stands in for Tamagui's ForwardRef Theme; the module only needs it callable as a component.
+  Theme: (({ name, children }: { name: string; children: ReactNode }) =>
+    createElement('div', { 'data-tamagui-theme': name }, children)) as never,
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,44 +25,39 @@ import { Tint, useTintDepth } from './Tint';
 /** Decorative nest family — the same four names as `defaultPreset.tints`. */
 const FAMILY: ThemeName[] = ['orange', 'blue', 'purple', 'pink'];
 
-function makePreset(tints: ThemeName[]): Preset {
-  return {
-    theme: 'light' as ThemeName,
-    knobs: defaultKnobs,
-    intents: {},
-    tints,
-  };
-}
+const makePreset = (tints: ThemeName[]): Preset => ({
+  theme: 'light' as ThemeName,
+  knobs: defaultKnobs,
+  intents: {},
+  tints,
+});
 
-function wrapWithPreset(tints: ThemeName[], children: ReactNode): ReactNode {
+const wrapWithPreset = (tints: ThemeName[], children: ReactNode): ReactNode => {
   const ctx: PresetContextValue = { preset: makePreset(tints) };
   return createElement(PresetContext.Provider, { value: ctx }, children);
-}
+};
 
-function renderToHtml(node: ReactNode): string {
-  return renderToString(node as React.ReactElement);
-}
+const renderToHtml = (node: ReactNode): string => renderToString(node as ReactElement);
 
 /** Render a tree and return an array of all `data-tamagui-theme` values. */
-function collectThemes(html: string): string[] {
-  return Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
-}
+const collectThemes = (html: string): string[] =>
+  Array.from(html.matchAll(/data-tamagui-theme="(?<name>[^"]+)"/gu), (m) => m[1]);
 
-function nestTints(count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode {
+const nestTints = (count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode => {
   let node: ReactNode = innermost;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     node = createElement(Tint, null, node);
   }
   return node;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Tint', () => {
+describe(Tint, () => {
   it('defaultPreset.tints is the four-name decorative family', () => {
-    expect(defaultPreset.tints).toEqual(FAMILY);
+    expect(defaultPreset.tints).toStrictEqual(FAMILY);
   });
 
   it('selects tints[0] for a single <Tint> (depth 1)', () => {
@@ -69,7 +65,7 @@ describe('Tint', () => {
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
     // depth = 0 (parent) + 1 = 1 → tints[(1 - 1) % 4] = "orange"
-    expect(themes).toEqual(['orange']);
+    expect(themes).toStrictEqual(['orange']);
   });
 
   it('increments depth correctly with nested <Tint>', () => {
@@ -80,7 +76,7 @@ describe('Tint', () => {
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
     // outer: depth=1 → tints[0]="orange", inner: depth=2 → tints[1]="blue"
-    expect(themes).toEqual(['orange', 'blue']);
+    expect(themes).toStrictEqual(['orange', 'blue']);
   });
 
   it('wraps via modulo when depth exceeds tints.length', () => {
@@ -88,7 +84,7 @@ describe('Tint', () => {
     const tree = wrapWithPreset(FAMILY, nestTints(5, createElement('span', null, 'deep')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['orange', 'blue', 'purple', 'pink', 'orange']);
+    expect(themes).toStrictEqual(['orange', 'blue', 'purple', 'pink', 'orange']);
   });
 
   it('applies alt prop offset', () => {
@@ -96,7 +92,7 @@ describe('Tint', () => {
     const tree = wrapWithPreset(FAMILY, createElement(Tint, { alt: 2 }, createElement('span', null, 'alt')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['purple']);
+    expect(themes).toStrictEqual(['purple']);
   });
 
   it('skips Theme wrapper when disable is true', () => {
@@ -106,7 +102,7 @@ describe('Tint', () => {
     );
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
   });
 
   it('still increments depth when disabled (so children see correct depth)', () => {
@@ -117,14 +113,14 @@ describe('Tint', () => {
     );
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['blue']);
+    expect(themes).toStrictEqual(['blue']);
   });
 
   it('renders children without Theme wrapper when tints array is empty', () => {
     const tree = wrapWithPreset([], createElement(Tint, null, createElement('span', null, 'empty')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
     expect(html).toContain('empty');
   });
 
@@ -133,30 +129,30 @@ describe('Tint', () => {
     const tree = createElement(Tint, null, createElement('span', null, 'no context'));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
     expect(html).toContain('no context');
   });
 });
 
-describe('useTintDepth', () => {
+describe(useTintDepth, () => {
   it('returns 0 outside of any <Tint>', () => {
-    let depth = -1;
+    const depths: number[] = [];
     const Probe = () => {
-      depth = useTintDepth();
+      depths.push(useTintDepth());
       return null;
     };
     renderToString(createElement(Probe));
-    expect(depth).toBe(0);
+    expect(depths).toStrictEqual([0]);
   });
 
   it('returns current depth inside nested <Tint> components', () => {
-    let capturedDepth = -1;
+    const depths: number[] = [];
     const Probe = () => {
-      capturedDepth = useTintDepth();
+      depths.push(useTintDepth());
       return createElement('span', null, 'probe');
     };
     const tree = wrapWithPreset(FAMILY, createElement(Tint, null, createElement(Tint, null, createElement(Probe))));
     renderToHtml(tree);
-    expect(capturedDepth).toBe(2);
+    expect(depths).toStrictEqual([2]);
   });
 });

@@ -12,9 +12,11 @@
  */
 
 import { zIndex } from '@repo/forms';
-import { OVERLAY_ANCHOR_GAP, useResolvedKnobs, warnTooltipOnDisabled } from '@repo/theme';
+import { OVERLAY_ANCHOR_GAP, useResolvedKnobs } from '@repo/theme';
 import React from 'react';
-import { Tooltip as TamaguiTooltip, TooltipGroup as TamaguiTooltipGroup, useTheme, type GetProps } from 'tamagui';
+import type { ReactNode } from 'react';
+import { Tooltip as TamaguiTooltip, TooltipGroup as TamaguiTooltipGroup, useTheme } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
 import {
   TooltipArrow,
@@ -26,12 +28,13 @@ import {
   resolveTooltipPadRecipe,
   resolveTooltipSizeRecipe,
   useTooltipSkipDelay,
+  warnIfTriggerDisabled,
   wrapTooltipContent,
   TOOLTIP_DEFAULT_DELAY_MS,
-  type TooltipProps,
-} from './tooltipShared';
+} from './tooltip-shared';
+import type { TooltipProps, TooltipTriggerProps } from './tooltip-shared';
 
-export type { TooltipProps, TooltipSizeRecipe } from './tooltipShared';
+export type { TooltipProps, TooltipSizeRecipe } from './tooltip-shared';
 export {
   tooltipSizeRecipes,
   tooltipPadRecipes,
@@ -47,11 +50,38 @@ export {
   TooltipContent,
   TooltipArrow,
   TooltipText,
-} from './tooltipShared';
-export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './nativePress';
-export type { NativeTooltipPressHandlers } from './nativePress';
+} from './tooltip-shared';
+export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './native-press';
+export type { NativeTooltipPressHandlers } from './native-press';
 
-export function Tooltip({
+interface WebTriggerProps extends TooltipTriggerProps {
+  onFocus?: (e: React.FocusEvent<HTMLElement>) => void;
+  onBlur?: (e: React.FocusEvent<HTMLElement>) => void;
+}
+
+// Open on keyboard (focus-visible) focus of the trigger, close on blur —
+// attached to the child directly because Trigger asChild does not forward
+// focus handlers to the wrapped element. Keyboard warmup is 0 (Spectrum).
+const withFocusHandlers = (children: ReactNode, setOpen: (open: boolean) => void): ReactNode => {
+  if (!React.isValidElement<WebTriggerProps>(children)) {
+    return children;
+  }
+  // oxlint-disable-next-line react/no-clone-element -- Trigger asChild does not forward focus handlers, so they are layered onto the caller's element while keeping its props, key and ref
+  return React.cloneElement(children, {
+    onFocus: (e: React.FocusEvent<HTMLElement>) => {
+      children.props.onFocus?.(e);
+      if (e.target?.matches?.(':focus-visible') ?? true) {
+        setOpen(true);
+      }
+    },
+    onBlur: (e: React.FocusEvent<HTMLElement>) => {
+      children.props.onBlur?.(e);
+      setOpen(false);
+    },
+  });
+};
+
+export const Tooltip = ({
   children,
   content,
   placement = 'top',
@@ -59,7 +89,7 @@ export function Tooltip({
   disabled = false,
   open: openProp,
   onOpenChange: onOpenChangeProp,
-}: TooltipProps) {
+}: TooltipProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Tooltip' });
   const theme = useTheme();
   const surfaceFill = resolveThemeColor(theme.color1, '$color1');
@@ -84,60 +114,32 @@ export function Tooltip({
   );
 
   // Tooltips on disabled triggers are not keyboard-reachable.
-  if (React.isValidElement(children)) {
-    const childProps = (children as React.ReactElement<Record<string, unknown>>).props;
-    const childDisabled =
-      childProps.disabled === true || childProps['aria-disabled'] === true || childProps['aria-disabled'] === 'true';
-    warnTooltipOnDisabled({
-      component: 'Tooltip',
-      childDisabled,
-    });
-  }
+  warnIfTriggerDisabled(children);
+
+  const closeOnEscape = React.useEffectEvent(() => {
+    setOpen(false);
+  });
 
   React.useEffect(() => {
-    if (!open || typeof document === 'undefined') {
-      return;
-    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') {
         return;
       }
       event.stopPropagation();
-      setOpen(false);
+      closeOnEscape();
     };
-    document.addEventListener('keydown', onKeyDown);
+    if (open) {
+      document.addEventListener('keydown', onKeyDown);
+    }
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, setOpen]);
+  }, [open]);
 
-  // Open on keyboard (focus-visible) focus of the trigger, close on blur —
-  // attached to the child directly because Trigger asChild does not forward
-  // focus handlers to the wrapped element. Keyboard warmup is 0 (Spectrum).
-  const trigger = React.isValidElement(children)
-    ? React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-        onFocus: (e: React.FocusEvent<HTMLElement>) => {
-          (
-            (children as React.ReactElement<Record<string, unknown>>).props.onFocus as
-              | ((e: React.FocusEvent<HTMLElement>) => void)
-              | undefined
-          )?.(e);
-          if (typeof e.target?.matches !== 'function' || e.target.matches(':focus-visible')) {
-            setOpen(true);
-          }
-        },
-        onBlur: (e: React.FocusEvent<HTMLElement>) => {
-          (
-            (children as React.ReactElement<Record<string, unknown>>).props.onBlur as
-              | ((e: React.FocusEvent<HTMLElement>) => void)
-              | undefined
-          )?.(e);
-          setOpen(false);
-        },
-      })
-    : children;
+  const trigger = withFocusHandlers(children, setOpen);
 
   if (disabled) {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- wraps ReactNode children into an element; returning ReactNode directly would type the component as returning a Promise
     return <>{children}</>;
   }
 
@@ -155,8 +157,8 @@ export function Tooltip({
       <TamaguiTooltip.Trigger asChild>{trigger}</TamaguiTooltip.Trigger>
       <TooltipContent
         {...elevated}
-        paddingHorizontal={pad.paddingHorizontal as never}
-        paddingVertical={pad.paddingVertical as never}
+        paddingHorizontal={pad.paddingHorizontal}
+        paddingVertical={pad.paddingVertical}
         maxWidth={sizeRecipe.maxWidth}
         transition={knobProps.transition}
         role="tooltip"
@@ -182,7 +184,7 @@ export function Tooltip({
       </TooltipContent>
     </TamaguiTooltip>
   );
-}
+};
 
 Tooltip.Content = TooltipContent;
 Tooltip.Arrow = TooltipArrow;

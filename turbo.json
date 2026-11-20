@@ -5,12 +5,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [
-        "dist/**",
-        ".next/**",
-        "!.next/cache/**",
-        "storybook-static/**"
-      ]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "storybook-static/**"]
     },
     "storybook": {
       "cache": false,
@@ -25,23 +20,6 @@
     "storybook:test": {
       "cache": false,
       "dependsOn": ["^build"]
-    },
-    "lint": {
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "src/**/*.{ts,tsx,js,jsx}",
-        "app/**/*.{ts,tsx,js,jsx}",
-        "__tests__/**/*.{ts,tsx,js,jsx}"
-      ]
-    },
-    "format": {
-      "cache": false,
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "src/**/*.{ts,tsx,js,jsx,css,scss}",
-        "app/**/*.{ts,tsx,js,jsx,css,scss}",
-        "__tests__/**/*.{ts,tsx,js,jsx,css,scss}"
-      ]
     },
     "dev": {
       "cache": false,

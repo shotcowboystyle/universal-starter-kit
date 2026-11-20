@@ -3,6 +3,11 @@ import type { PlaywrightTestConfig } from '@playwright/test';
 
 export type PlaywrightBrowser = 'chromium' | 'firefox' | 'webkit' | 'mobile-chrome' | 'mobile-safari';
 
+type PlaywrightProject = NonNullable<PlaywrightTestConfig['projects']>[number];
+
+/** The string trace modes Playwright accepts: 'on', 'off', 'on-first-retry', 'retain-on-failure', … */
+type TraceMode = Extract<NonNullable<PlaywrightTestConfig['use']>['trace'], string>;
+
 export interface CreatePlaywrightConfigOptions {
   /**
    * Test directory path. Defaults to "./tests/e2e".
@@ -53,7 +58,7 @@ export interface CreatePlaywrightConfigOptions {
   /**
    * Trace collection strategy. Defaults to "on-first-retry".
    */
-  trace?: 'on' | 'off' | 'on-first-retry' | 'on-all-retries' | 'retain-on-failure' | 'retain-on-first-failure';
+  trace?: TraceMode;
 
   /**
    * Screenshot strategy. Defaults to "only-on-failure".
@@ -105,44 +110,82 @@ export interface CreatePlaywrightConfigOptions {
 
 const chromiumSandboxArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
 
-function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTestConfig['projects']>[number] {
-  switch (browser) {
-    case 'chromium':
-      return {
-        name: 'chromium',
-        use: {
-          ...devices['Desktop Chrome'],
-          launchOptions: { args: chromiumSandboxArgs },
-        },
-      };
-    case 'firefox':
-      return {
-        name: 'firefox',
-        use: {
-          ...devices['Desktop Firefox'],
-          launchOptions: { args: chromiumSandboxArgs },
-        },
-      };
-    case 'webkit':
-      return {
-        name: 'webkit',
-        use: { ...devices['Desktop Safari'] },
-      };
-    case 'mobile-chrome':
-      return {
-        name: 'Mobile Chrome',
-        use: {
-          ...devices['Pixel 5'],
-          launchOptions: { args: chromiumSandboxArgs },
-        },
-      };
-    case 'mobile-safari':
-      return {
-        name: 'Mobile Safari',
-        use: { ...devices['iPhone 12'] },
-      };
-  }
-}
+const browserProjects = {
+  chromium: {
+    name: 'chromium',
+    use: {
+      ...devices['Desktop Chrome'],
+      launchOptions: { args: chromiumSandboxArgs },
+    },
+  },
+  firefox: {
+    name: 'firefox',
+    use: {
+      ...devices['Desktop Firefox'],
+      launchOptions: { args: chromiumSandboxArgs },
+    },
+  },
+  webkit: {
+    name: 'webkit',
+    use: { ...devices['Desktop Safari'] },
+  },
+  'mobile-chrome': {
+    name: 'Mobile Chrome',
+    use: {
+      ...devices['Pixel 5'],
+      launchOptions: { args: chromiumSandboxArgs },
+    },
+  },
+  'mobile-safari': {
+    name: 'Mobile Safari',
+    use: { ...devices['iPhone 12'] },
+  },
+} satisfies Record<PlaywrightBrowser, PlaywrightProject>;
+
+const browserToProject = (browser: PlaywrightBrowser): PlaywrightProject => browserProjects[browser];
+
+/**
+ * `process.env.BASE_URL`, unless it is unset or empty.
+ */
+const envBaseUrl = (): string => {
+  const fromEnv = process.env.BASE_URL;
+  return fromEnv === undefined || fromEnv === '' ? 'http://localhost:8000' : fromEnv;
+};
+
+const withDefaults = (options: CreatePlaywrightConfigOptions, isCI: boolean) => {
+  const {
+    testDir = './tests/e2e',
+    baseURL = envBaseUrl(),
+    browsers = ['chromium', 'firefox', 'webkit', 'mobile-chrome', 'mobile-safari'],
+    retries = isCI ? 2 : 1,
+    workers = 1,
+    timeout = 60_000,
+    fullyParallel = false,
+    reporter = 'html',
+    headless = true,
+    trace = 'on-first-retry',
+    screenshot = 'only-on-failure',
+    navigationTimeout = 30_000,
+    actionTimeout = 10_000,
+    forbidOnly = isCI,
+  } = options;
+  return {
+    testDir,
+    baseURL,
+    browsers,
+    retries,
+    workers,
+    timeout,
+    fullyParallel,
+    reporter,
+    headless,
+    trace,
+    screenshot,
+    navigationTimeout,
+    actionTimeout,
+    forbidOnly,
+  };
+};
 
 /**
  * Creates a shared Playwright configuration for workspace apps.
@@ -175,29 +218,37 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
  * });
  * ```
  */
-export function createPlaywrightConfig(options: CreatePlaywrightConfigOptions = {}): PlaywrightTestConfig {
-  const isCI = !!process.env.CI;
+export const createPlaywrightConfig = (options: CreatePlaywrightConfigOptions = {}): PlaywrightTestConfig => {
+  const isCI = process.env.CI !== undefined && process.env.CI !== '';
   const {
-    testDir = './tests/e2e',
-    baseURL = process.env.BASE_URL || 'http://localhost:8000',
-    browsers = ['chromium', 'firefox', 'webkit', 'mobile-chrome', 'mobile-safari'],
-    retries = isCI ? 2 : 1,
-    workers = 1,
-    timeout = 60000,
-    fullyParallel = false,
-    reporter = 'html',
-    headless = true,
-    trace = 'on-first-retry',
-    screenshot = 'only-on-failure',
-    navigationTimeout = 30000,
-    actionTimeout = 10000,
-    forbidOnly = isCI,
-    webServer,
-    globalSetup,
-    testIgnore,
-    projects,
-    use,
-  } = options;
+    testDir,
+    baseURL,
+    browsers,
+    retries,
+    workers,
+    timeout,
+    fullyParallel,
+    reporter,
+    headless,
+    trace,
+    screenshot,
+    navigationTimeout,
+    actionTimeout,
+    forbidOnly,
+  } = withDefaults(options, isCI);
+  const { webServer, globalSetup, testIgnore, projects, use } = options;
+
+  // Optional top-level keys, present only when the caller set them.
+  const optional: PlaywrightTestConfig = {};
+  if (webServer) {
+    optional.webServer = webServer;
+  }
+  if (globalSetup !== undefined && globalSetup !== '') {
+    optional.globalSetup = globalSetup;
+  }
+  if (testIgnore !== undefined && testIgnore !== '') {
+    optional.testIgnore = testIgnore;
+  }
 
   return defineConfig({
     testDir,
@@ -217,8 +268,6 @@ export function createPlaywrightConfig(options: CreatePlaywrightConfigOptions = 
       ...use,
     },
     projects: projects ?? browsers.map(browserToProject),
-    ...(webServer ? { webServer } : {}),
-    ...(globalSetup ? { globalSetup } : {}),
-    ...(testIgnore ? { testIgnore } : {}),
+    ...optional,
   });
-}
+};

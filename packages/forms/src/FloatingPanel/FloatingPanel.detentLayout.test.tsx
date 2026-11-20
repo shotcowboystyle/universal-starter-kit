@@ -8,90 +8,101 @@
  */
 import { renderWithProviders } from '@repo/test-utils';
 import { act, cleanup } from '@testing-library/react';
-import { Animated, PanResponder, type PanResponderCallbacks } from 'react-native';
+import type { ReactElement } from 'react';
+import { Animated, PanResponder } from 'react-native';
+import type { PanResponderCallbacks } from 'react-native';
 import { Text } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FloatingPanel } from './index.native';
+import { parsePx } from './use-floating-panel';
 
 import type { FloatingPanelProps } from './index';
 
 const keyboard = vi.hoisted(() => ({ inset: 0 }));
 
-vi.mock('react-native-web', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('react-native')>()),
+vi.mock(import('react-native-web'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the module must report no ActionSheetIOS; null would still be a present export
   ActionSheetIOS: undefined,
-  Modal: ({ children }: { children: import('react').ReactNode }) => children,
+  Modal: ({ children }: { children: ReactElement }) => children,
   useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
 }));
-vi.mock('../shared/useKeyboardInset', () => ({ useKeyboardInset: () => keyboard.inset }));
+vi.mock(import('../shared/use-keyboard-inset'), () => ({ useKeyboardInset: () => keyboard.inset }));
 
 let pan: PanResponderCallbacks;
-let springs: Array<{ toValue: number; done?: (result: { finished: boolean }) => void }>;
+let springs: { toValue: number; done?: (result: { finished: boolean }) => void }[];
 
-beforeEach(() => {
-  keyboard.inset = 0;
-  springs = [];
-  vi.spyOn(PanResponder, 'create').mockImplementation((config) => {
-    pan = config;
-    return { panHandlers: {} } as never;
-  });
-  vi.spyOn(Animated, 'spring').mockImplementation((_value, config) => ({
-    start: (done) => {
-      springs.push({ toValue: config.toValue as number, done });
-    },
-    stop: vi.fn(),
-    reset: vi.fn(),
-  }));
-  vi.spyOn(Animated, 'timing').mockImplementation(() => ({
-    start: (done) => done?.({ finished: true }),
-    stop: vi.fn(),
-    reset: vi.fn(),
-  }));
-});
-afterEach(() => {
-  cleanup();
-  vi.restoreAllMocks();
-});
+const px = parsePx;
 
-function px(value: string) {
-  return Number.parseFloat(value);
-}
-
-function open(props: Partial<FloatingPanelProps> = {}) {
+const open = (props: Partial<FloatingPanelProps> = {}) => {
   const view = renderWithProviders(
-    <FloatingPanel open onOpenChange={() => {}} trigger={<Text>Author</Text>} scrollable {...props}>
+    <FloatingPanel
+      open
+      onOpenChange={() => {}}
+      trigger={<Text>Author</Text>}
+      scrollable
+      {...props}>
       <Text>row</Text>
     </FloatingPanel>,
   );
   const sheet = view.getByTestId('floating-panel-sheet');
   const full = px(sheet.style.maxHeight);
   return { view, sheet, full, lower: Math.round(full * 0.55) };
+};
+
+interface LayoutEvent {
+  nativeEvent: { layout: { x: number; y: number; width: number; height: number } };
 }
 
 /** react-native-web keeps the onLayout handler on the node; call it the way a device layout would. */
-function layout(element: HTMLElement, height: number) {
-  const handler = (element as unknown as Record<string, (event: unknown) => void>).__reactLayoutHandler;
+const layout = (element: HTMLElement, height: number) => {
+  const handler = (element as unknown as Record<string, (event: LayoutEvent) => void>).__reactLayoutHandler;
   act(() => {
     handler({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } } });
   });
-}
+};
 
-function drag(dy: number) {
+const drag = (dy: number) => {
   act(() => {
     pan.onPanResponderGrant?.({} as never, {} as never);
     pan.onPanResponderMove?.({} as never, { dy } as never);
     pan.onPanResponderRelease?.({} as never, { dy, vy: 0 } as never);
   });
-}
+};
 
-function settle() {
-  const last = springs[springs.length - 1];
+const settle = () => {
+  const last = springs.at(-1)!;
   act(() => last.done?.({ finished: true }));
   return last;
-}
+};
 
 describe('a native FloatingPanel sheet at rest on a lower detent', () => {
+  beforeEach(() => {
+    keyboard.inset = 0;
+    springs = [];
+    vi.spyOn(PanResponder, 'create').mockImplementation((config) => {
+      pan = config;
+      return { panHandlers: {} } as never;
+    });
+    vi.spyOn(Animated, 'spring').mockImplementation((_value, config) => ({
+      start: (done) => {
+        springs.push({ toValue: config.toValue as number, done });
+      },
+      stop: vi.fn<() => void>(),
+      reset: vi.fn<() => void>(),
+    }));
+    vi.spyOn(Animated, 'timing').mockReturnValue({
+      start: (done) => done?.({ finished: true }),
+      stop: vi.fn<() => void>(),
+      reset: vi.fn<() => void>(),
+    });
+  });
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
   it('is laid out at the detent height, so the end of its list is on screen', () => {
     const { sheet, full, lower } = open();
     drag(full - lower);
@@ -126,7 +137,11 @@ describe('a native FloatingPanel sheet at rest on a lower detent', () => {
     settle();
     keyboard.inset = 300;
     view.rerender(
-      <FloatingPanel open onOpenChange={() => {}} trigger={<Text>Author</Text>} scrollable>
+      <FloatingPanel
+        open
+        onOpenChange={() => {}}
+        trigger={<Text>Author</Text>}
+        scrollable>
         <Text>row</Text>
       </FloatingPanel>,
     );

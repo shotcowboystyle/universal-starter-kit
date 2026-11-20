@@ -33,7 +33,10 @@ export function SearchScreen() {
   const [state, setState] = useUrlState({ q: '' }, { debounceMs: 300 });
   return (
     <>
-      <input value={state.q} onChange={(e) => setState({ q: e.target.value })} />
+      <input
+        value={state.q}
+        onChange={(e) => setState({ q: e.target.value })}
+      />
       <Link href={`/results?q=${encodeURIComponent(state.q)}`}>Search</Link>
     </>
   );
@@ -47,5 +50,3 @@ same API everywhere.
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

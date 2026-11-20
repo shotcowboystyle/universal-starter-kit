@@ -1,0 +1,348 @@
+import {
+  amber,
+  amberDark,
+  blue,
+  blueDark,
+  gray,
+  grayDark,
+  green,
+  greenDark,
+  mauve,
+  mauveDark,
+  orange,
+  orangeDark,
+  pink,
+  pinkDark,
+  red,
+  redDark,
+  teal,
+  tealDark,
+  violet,
+  violetDark,
+  yellow,
+  yellowDark,
+} from '@tamagui/colors';
+import { themes as stockThemes } from '@tamagui/themes';
+import { useMemo } from 'react';
+import { useTheme as useTamaguiTheme, useThemeName } from 'tamagui';
+
+import { contrastRatio, minContrastRatio, normalizeToHex, relativeLuminance } from './color-rules';
+import { tintHueNames } from './create-themes';
+
+/**
+ * Chart palette contract.
+ *
+ * Charts are chrome that renders data, so their DEFAULT colors must come from
+ * the one theme channel (Axiom 5 ONE SOURCE) while explicit user/data colors
+ * pass through untouched (Axiom 11 VALUE IS DATA):
+ *
+ * - `single` — every mark of a single-series chart takes the theme identity:
+ *   the active accent, or the tint solid when a tint sub-theme is active
+ *   (the palette re-anchors under tint exactly like the neutral ramp does).
+ * - `categorical` — identity-led list of sanctioned Radix solids for
+ *   multi-series data. Slot 0 is the theme identity; the fixed hue cycle
+ *   fills the rest, dropping hues indistinguishable from the identity so
+ *   adjacent series stay tellable-apart under every tint.
+ * - `semantic` — error/success/warning series solids from the sanctioned
+ *   semantic ramps ($red/$green/$yellow), tint-independent, scheme-aware.
+ *
+ * Values resolve from the same Radix scales the theme builder splats into the
+ * base themes, so `categorical[1]` under `light` equals `$blue10`, and they
+ * stay resolvable on native and under tint sub-themes (which only carry the
+ * re-ramped neutral family).
+ */
+export interface ChartPalette {
+  /** Scheme the palette resolved for. */
+  scheme: 'light' | 'dark';
+  /** Theme-identity solid: paints every mark of a single-series chart. */
+  single: string;
+  /** Identity-led distinguishable solids for categorical multi-series data. */
+  categorical: string[];
+  /** Semantic series solids (trend/status series), tint-independent. */
+  semantic: { error: string; success: string; warning: string };
+}
+
+export interface ResolveChartPaletteInput {
+  scheme: 'light' | 'dark';
+  /**
+   * Resolved theme-identity solid — `accentBackground` in base themes, the
+   * re-ramped `$color9` under a tint. Tries the ordered candidates, then
+   * falls back to violet when missing, unparseable or below the contrast floor.
+   */
+  identitySolid?: string;
+  /** Ordered alternatives when the identity cannot meet the mark contrast floor. */
+  identityCandidates?: readonly (string | undefined)[];
+}
+
+/**
+ * Fixed categorical hue cycle: Radix solids ordered so neighboring
+ * entries sit far apart on the hue wheel (min adjacent distance ~78°).
+ * Light blue, orange, green, amber and teal deepen within their hue to clear
+ * 3:1 on reference cards. Dark violet deepens for tinted card backgrounds.
+ */
+const categoricalHueCycle = [
+  { family: 'blue', light: blue.blue10, dark: blueDark.blue9 },
+  { family: 'orange', light: orange.orange11, dark: orangeDark.orange9 },
+  { family: 'green', light: green.green10, dark: greenDark.green9 },
+  { family: 'amber', light: amber.amber11, dark: amberDark.amber9 },
+  { family: 'pink', light: pink.pink9, dark: pinkDark.pink9 },
+  { family: 'teal', light: teal.teal10, dark: tealDark.teal9 },
+  { family: 'violet', light: violet.violet9, dark: violetDark.violet10 },
+  { family: 'red', light: red.red9, dark: redDark.red9 },
+] as const;
+
+const configuredTintCardSurfaces = (scheme: 'light' | 'dark'): string[] => {
+  const themes: Record<string, { background?: string } | undefined> = stockThemes;
+  return [...tintHueNames].flatMap((hue) => {
+    const color = themes[`${scheme}_${hue}_Card`]?.background;
+    return color !== undefined && color !== '' ? [color] : [];
+  });
+};
+
+// Use the shipped tinted Card backgrounds, which are deeper than their page
+// colors. Missing theme names are not invented surfaces. The rendered audit
+// still owns actual custom consumer backgrounds and elevation variants.
+const chartReferenceSurfaces = {
+  light: ['#ffffff', gray.gray2, mauve.mauve2, ...configuredTintCardSurfaces('light')],
+  dark: [grayDark.gray2, mauveDark.mauve2, ...configuredTintCardSurfaces('dark')],
+} as const;
+
+const hexOf = (color: string | undefined): string | null =>
+  color === undefined || color === '' ? null : normalizeToHex(color);
+
+const readableIdentity = (color: string | undefined, scheme: 'light' | 'dark'): color is string => {
+  const hex = hexOf(color);
+  if (hex === null) {
+    return false;
+  }
+  const luminance = relativeLuminance(hex);
+  return chartReferenceSurfaces[scheme].every((surface) => {
+    const backdrop = normalizeToHex(surface);
+    return (
+      backdrop !== null && backdrop !== '' && contrastRatio(luminance, relativeLuminance(backdrop)) >= minContrastRatio
+    );
+  });
+};
+
+/**
+ * Semantic series solids. Light success deepens to green10 for the mark floor.
+ * Error and dark success use step 9. Warning uses
+ * the sanctioned $yellow ramp, but yellow9 measures ~1.3:1 against light
+ * card surfaces (invisible marks), so light scheme takes the deep yellow11
+ * step while dark keeps the bright yellow9 (13:1 on dark surfaces).
+ */
+const semanticSeries = {
+  light: {
+    error: red.red9,
+    success: green.green10,
+    warning: yellow.yellow11,
+  },
+  dark: {
+    error: redDark.red9,
+    success: greenDark.green9,
+    warning: yellowDark.yellow9,
+  },
+} as const;
+
+/** Below this HSL saturation the identity is neutral-ish; hue is meaningless. */
+const neutralSaturationFloor = 0.15;
+/** Cycle hues closer than this to the identity hue are dropped as confusable. */
+const hueDedupeThresholdDeg = 30;
+
+interface Hsl {
+  h: number;
+  s: number;
+  l: number;
+}
+
+const colorToHsl = (color: string): Hsl | null => {
+  const hex = normalizeToHex(color);
+  if (hex === null || hex === '') {
+    return null;
+  }
+  const r = Number.parseInt(hex.slice(1, 3), 16) / 255;
+  const g = Number.parseInt(hex.slice(3, 5), 16) / 255;
+  const b = Number.parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) {
+    return { h: 0, s: 0, l };
+  }
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) {
+    h = ((g - b) / d + (g < b ? 6 : 0)) * 60;
+  } else if (max === g) {
+    h = ((b - r) / d + 2) * 60;
+  } else {
+    h = ((r - g) / d + 4) * 60;
+  }
+  return { h, s, l };
+};
+
+const requireHsl = (color: string): Hsl => {
+  const hsl = colorToHsl(color);
+  if (hsl === null) {
+    throw new Error(`unparseable chart color: ${color}`);
+  }
+  return hsl;
+};
+
+const requireHex = (color: string): string => {
+  const hex = normalizeToHex(color);
+  if (hex === null) {
+    throw new Error(`unparseable chart color: ${color}`);
+  }
+  return hex;
+};
+
+const hueDistance = (a: number, b: number): number => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+};
+
+const isHueDistinct = (a: Hsl, b: Hsl): boolean =>
+  a.s >= neutralSaturationFloor && b.s >= neutralSaturationFloor && hueDistance(a.h, b.h) >= hueDedupeThresholdDeg;
+
+/** Keep every solid after dedupe, moving only an invalid adjacent sequence. */
+const orderCategoricalCycle = (identity: string, cycle: string[]): string[] => {
+  const colors = [identity, ...cycle];
+  const hsl = colors.map((color) => requireHsl(color));
+  const luminance = colors.map((color) => relativeLuminance(requireHex(color)));
+  // Any one of hue, saturation or luminance can distinguish a pair.
+  const compatible = hsl.map((a, i) =>
+    hsl.map(
+      (b, j) => isHueDistinct(a, b) || Math.abs(a.s - b.s) >= 0.5 || contrastRatio(luminance[i], luminance[j]) >= 1.5,
+    ),
+  );
+  const indices = cycle.map((_, i) => i + 1);
+  if (indices.every((i) => compatible[i - 1][i]) && compatible[colors.length - 1][0]) {
+    return cycle;
+  }
+
+  // The fixed cycle has at most eight entries. Original-order traversal
+  // preserves valid prefixes and the identity remains first, including wrap.
+  const arrange = (previous: number, remaining: number[]): number[] | undefined => {
+    if (!remaining.length) {
+      return compatible[previous][0] ? [] : undefined;
+    }
+    for (const next of remaining) {
+      if (!compatible[previous][next]) {
+        continue;
+      }
+      const tail = arrange(
+        next,
+        remaining.filter((index) => index !== next),
+      );
+      if (tail) {
+        return [next, ...tail];
+      }
+    }
+    return undefined;
+  };
+  const ordered = arrange(0, indices);
+  // Preserve the supplied series if no permutation can satisfy the rule.
+  // The actual chart audit must still report that unsatisfied distinction.
+  return ordered ? ordered.map((index) => colors[index]) : cycle;
+};
+
+/**
+ * Pure palette resolution — see {@link ChartPalette} for the contract.
+ * Exported separately from the hook so tests and non-React callers can
+ * resolve palettes for any scheme/identity combination.
+ */
+export const resolveChartPalette = (input: ResolveChartPaletteInput): ChartPalette => {
+  const { scheme } = input;
+  const fallbackIdentity = scheme === 'dark' ? violetDark.violet10 : violet.violet9;
+  const single =
+    [input.identitySolid, ...(input.identityCandidates ?? [])].find((candidate) =>
+      readableIdentity(candidate, scheme),
+    ) ?? fallbackIdentity;
+  const identityHsl = requireHsl(single);
+
+  const cycle = categoricalHueCycle.map((entry) => (scheme === 'dark' ? entry.dark : entry.light));
+  const deduped =
+    identityHsl.s < neutralSaturationFloor
+      ? cycle
+      : cycle.filter((value) => {
+          const hsl = colorToHsl(value);
+          if (!hsl) {
+            return true;
+          }
+          return hueDistance(hsl.h, identityHsl.h) >= hueDedupeThresholdDeg;
+        });
+
+  return {
+    scheme,
+    single,
+    categorical: [single, ...orderCategoricalCycle(single, deduped)],
+    semantic: semanticSeries[scheme],
+  };
+};
+
+/**
+ * The accent solids ordered nearest-first in luminance to `identity`, so a
+ * chart identity that misses the 3:1 mark floor on the reference cards falls
+ * to the next accent step before a neutral one. `$accentBackground` is held
+ * to the text floor, which in dark lands it one step deeper than
+ * the marks need; the chart keeps the accent channel on the step beside it.
+ */
+export const accentIdentityCandidates = (
+  identity: string | undefined,
+  solids: readonly (string | undefined)[],
+): string[] => {
+  const identityHex = hexOf(identity);
+  if (identityHex === null) {
+    return [];
+  }
+  const identityLum = relativeLuminance(identityHex);
+  return solids
+    .flatMap((solid) => {
+      const hex = hexOf(solid);
+      return solid !== undefined && hex !== null
+        ? [{ solid, distance: Math.abs(relativeLuminance(hex) - identityLum) }]
+        : [];
+    })
+    .toSorted((a, b) => a.distance - b.distance)
+    .map(({ solid }) => solid);
+};
+
+/**
+ * Canonical chart palette for the active Tamagui theme.
+ *
+ * Reads scheme and tint from the resolved theme name and the identity solid
+ * from the active theme (`$color9` under a tint — the re-ramped neutral
+ * solid — otherwise `$accentBackground`). Chart chrome MUST take its default
+ * series colors from this hook; explicit `color`/`colors` props on chart
+ * data are user values and pass through untouched.
+ */
+export const useChartPalette = (): ChartPalette => {
+  const themeName: string | undefined = useThemeName();
+  const theme: Record<string, { val?: string } | undefined> = useTamaguiTheme();
+  const scheme: 'light' | 'dark' = themeName?.startsWith('dark') ? 'dark' : 'light';
+  const nameParts = (themeName ?? '').split('_');
+  const isTint = nameParts.length > 1 && tintHueNames.has(nameParts[1]);
+  const color9 = theme.color9?.val;
+  const accent = theme.accentBackground?.val;
+  const identitySolid = isTint ? (color9 ?? accent) : (accent ?? color9);
+  const color10 = theme.color10?.val;
+  const color11 = theme.color11?.val;
+  const accentSolids = Array.from({ length: 10 }, (_, index) => theme[`accent${index + 1}`]?.val);
+  const accentKey = accentSolids.join('|');
+  return useMemo(
+    () =>
+      resolveChartPalette({
+        scheme,
+        identitySolid,
+        identityCandidates: [
+          ...(isTint ? [] : accentIdentityCandidates(identitySolid, accentSolids)),
+          color10,
+          color11,
+        ],
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scheme, identitySolid, isTint, accentKey, color10, color11],
+  );
+};

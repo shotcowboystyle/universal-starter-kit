@@ -1,11 +1,12 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import type { Document } from 'mongoose';
+import { Types } from 'mongoose';
 
 export enum ProjectStatus {
-  TODO = "TODO",
-  IN_PROGRESS = "IN_PROGRESS",
-  DONE = "DONE",
-  ARCHIVED = "ARCHIVED"
+  TODO = 'TODO',
+  IN_PROGRESS = 'IN_PROGRESS',
+  DONE = 'DONE',
+  ARCHIVED = 'ARCHIVED',
 }
 
 export type ProjectDocument = Project & Document;
@@ -16,15 +17,15 @@ export class Project {
   title: string;
 
   @Prop({ type: String })
-  description?: string;
+  description?: string | null;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   owner: Types.ObjectId;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: "User" }], default: [] })
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   members: Types.ObjectId[];
 
-  @Prop({ type: Types.ObjectId, ref: "Board", required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Board', required: true })
   board: Types.ObjectId;
 
   @Prop({ type: Number, default: 0 })
@@ -33,15 +34,15 @@ export class Project {
   @Prop({
     type: String,
     enum: Object.values(ProjectStatus),
-    default: ProjectStatus.TODO
+    default: ProjectStatus.TODO,
   })
   status: ProjectStatus;
 
   @Prop({ type: Date })
   dueDate?: Date;
 
-  @Prop({ type: Types.ObjectId, ref: "User" })
-  assignee?: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  assignee?: Types.ObjectId | null;
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project);

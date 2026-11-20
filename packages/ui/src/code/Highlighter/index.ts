@@ -7,17 +7,20 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import type { BundledLanguage, BundledTheme, ThemedToken } from 'shiki';
 
-import { houseSyntaxTheme } from './houseSyntaxTheme';
+import { houseSyntaxTheme } from './house-syntax-theme';
 
-export * from './houseSyntaxTheme';
+export { houseSyntaxTheme } from './house-syntax-theme';
+export type { HouseSyntaxTheme, HouseSyntaxThemeSetting } from './house-syntax-theme';
 
 /** A single highlighted token with inline color */
 export interface HighlightToken {
   content: string;
   /** A theme token such as `$syntaxBlue` under the house theme, or a named theme's hex */
   color?: string;
-  fontStyle?: number; // 0=normal, 1=italic, 2=bold, 3=bold+italic
+  /** 0=normal, 1=italic, 2=bold, 3=bold+italic */
+  fontStyle?: number;
 }
 
 /** A line of highlighted tokens */
@@ -30,97 +33,101 @@ export interface ShikiContextValue {
 
 export const ShikiContext = createContext<ShikiContextValue>({});
 
-/**
- * Hook that tokenizes code using shiki.
- * Returns null while loading, then an array of lines (each line is an array of tokens).
- * Falls back to plain text if shiki is not installed.
- */
-export function useShikiTokens(code: string, language: string, theme?: string): HighlightLine[] | null {
-  const ctx = useContext(ShikiContext);
-  const resolvedTheme = theme || ctx.theme || houseSyntaxTheme.name;
-  const [tokens, setTokens] = useState<HighlightLine[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    highlightCode(code, language, resolvedTheme)
-      .then((result) => {
-        if (!cancelled) {
-          setTokens(result);
-        }
-      })
-      .catch(() => {
-        // If shiki fails (not installed, unsupported language, etc.),
-        // fall back to plain text tokens
-        if (!cancelled) {
-          setTokens(code.split('\n').map((line) => [{ content: line }]));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, language, resolvedTheme]);
-
-  return tokens;
-}
-
-/** Plain text fallback when shiki is unavailable */
-function plainTextTokens(code: string): HighlightLine[] {
-  return code.split('\n').map((line) => [{ content: line }]);
-}
-
 // One shared highlighter for the whole app (this replaced a second
 // highlighter stack the markdown package used to ship).
 // Uses shiki's pure-JavaScript regex engine so highlighting works on web,
 // Expo Go, and native without WASM; languages/themes load on demand instead
 // of an eager preload.
-let highlighterPromise: Promise<any> | null = null;
-
-function getHighlighter(): Promise<any> {
-  if (!highlighterPromise) {
-    highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(([shiki, jsEngine]) =>
-      shiki.createHighlighter({
-        themes: [],
-        langs: [],
-        engine: jsEngine.createJavaScriptRegexEngine(),
-      }),
-    );
-  }
-  return highlighterPromise;
+// The slice of shiki's highlighter used here, typed over plain strings:
+// language/theme ids are runtime input, validated by shiki itself.
+interface Highlighter {
+  loadTheme: (theme: string) => Promise<void>;
+  loadLanguage: (language: string) => Promise<void>;
+  getLoadedLanguages: () => string[];
+  codeToTokens: (code: string, options: { lang: string; theme: string }) => { tokens: ThemedToken[][] };
 }
+
+let highlighterPromise: Promise<Highlighter> | undefined;
+
+const createShikiHighlighter = async (): Promise<Highlighter> => {
+  const [shiki, jsEngine] = await Promise.all([import('shiki'), import('shiki/engine/javascript')]);
+  const highlighter = await shiki.createHighlighter({
+    themes: [],
+    langs: [],
+    engine: jsEngine.createJavaScriptRegexEngine(),
+  });
+  const isBundledLanguage = (id: string): id is BundledLanguage => Object.hasOwn(shiki.bundledLanguages, id);
+  const isBundledTheme = (id: string): id is BundledTheme => Object.hasOwn(shiki.bundledThemes, id);
+  return {
+    loadTheme: async (theme) => {
+      if (theme === houseSyntaxTheme.name) {
+        await highlighter.loadTheme(houseSyntaxTheme);
+        return;
+      }
+      if (!isBundledTheme(theme)) {
+        throw new Error(`Unknown shiki theme: ${theme}`);
+      }
+      await highlighter.loadTheme(theme);
+    },
+    loadLanguage: async (language) => {
+      if (!isBundledLanguage(language)) {
+        throw new Error(`Unknown shiki language: ${language}`);
+      }
+      await highlighter.loadLanguage(language);
+    },
+    getLoadedLanguages: () => highlighter.getLoadedLanguages(),
+    codeToTokens: (code, { lang, theme }) =>
+      highlighter.codeToTokens(code, { lang: isBundledLanguage(lang) ? lang : 'text', theme }),
+  };
+};
+
+const getHighlighter = async (): Promise<Highlighter> => {
+  highlighterPromise ??= createShikiHighlighter();
+  return await highlighterPromise;
+};
+
+// Unknown languages fall back to plain text in `highlightCode`; theme failures
+// reject into its catch (matching the old shorthand behavior).
+const loadLanguageOrIgnore = async (highlighter: Highlighter, language: string): Promise<void> => {
+  try {
+    await highlighter.loadLanguage(language);
+  } catch {
+    // Safe to continue: an unloadable language is rendered as plain text.
+  }
+};
+
+const rejectAfter = async (ms: number): Promise<never> =>
+  // oxlint-disable-next-line promise/avoid-new -- timeout needs a promise that settles from a timer callback
+  await new Promise<never>((_resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error('shiki import timeout'));
+    }, ms);
+  });
+
+const nonEmpty = (value?: string): string | undefined => (value === '' ? undefined : value);
+
+/** Plain text fallback when shiki is unavailable */
+const plainTextTokens = (code: string): HighlightLine[] => code.split('\n').map((line) => [{ content: line }]);
 
 /**
  * Highlight code using shiki and return structured tokens.
  * Dynamically imports shiki so it's only loaded when actually used.
  * Falls back to plain text if shiki is not installed or fails.
  */
-export async function highlightCode(
+export const highlightCode = async (
   code: string,
   language: string,
   theme = houseSyntaxTheme.name,
-): Promise<HighlightLine[]> {
+): Promise<HighlightLine[]> => {
   try {
-    const highlighter = await Promise.race([
-      getHighlighter(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => {
-          reject(new Error('shiki import timeout'));
-        }, 5000),
-      ),
-    ]);
-    await Promise.all([
-      highlighter.loadTheme((theme === houseSyntaxTheme.name ? houseSyntaxTheme : theme) as any),
-      // Unknown languages fall back to plain text below; theme failures
-      // reject into the catch (matching the old shorthand behavior).
-      highlighter.loadLanguage(language as any).catch(() => {}),
-    ]);
+    const highlighter = await Promise.race([getHighlighter(), rejectAfter(5000)]);
+    await Promise.all([highlighter.loadTheme(theme), loadLanguageOrIgnore(highlighter, language)]);
     const lang = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
     const result = highlighter.codeToTokens(code, {
-      lang: lang as any,
-      theme: theme as any,
+      lang,
+      theme,
     });
-    return result.tokens.map((line: any[]) =>
+    return result.tokens.map((line) =>
       line.map((token) => ({
         content: token.content,
         color: token.color,
@@ -131,4 +138,41 @@ export async function highlightCode(
     // Fallback: return plain text if shiki is unavailable or times out
     return plainTextTokens(code);
   }
-}
+};
+
+/**
+ * Hook that tokenizes code using shiki.
+ * Returns null while loading, then an array of lines (each line is an array of tokens).
+ * Falls back to plain text if shiki is not installed.
+ */
+export const useShikiTokens = (code: string, language: string, theme?: string): HighlightLine[] | null => {
+  const ctx = useContext(ShikiContext);
+  const resolvedTheme = nonEmpty(theme) ?? nonEmpty(ctx.theme) ?? houseSyntaxTheme.name;
+  const [tokens, setTokens] = useState<HighlightLine[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const result = await highlightCode(code, language, resolvedTheme);
+        if (!cancelled) {
+          setTokens(result);
+        }
+      } catch {
+        // If shiki fails (not installed, unsupported language, etc.),
+        // fall back to plain text tokens
+        if (!cancelled) {
+          setTokens(plainTextTokens(code));
+        }
+      }
+    };
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, language, resolvedTheme]);
+
+  return tokens;
+};

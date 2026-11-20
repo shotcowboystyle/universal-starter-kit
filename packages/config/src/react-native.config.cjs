@@ -1,6 +1,10 @@
 'use strict';
 
-const path = require('path');
+const path = require('node:path');
+
+/** @type {(id: string) => unknown[]} */
+const requireList = require;
+const commands = requireList('vxrn/react-native-commands');
 
 module.exports = {
   // Pin react-native to its real, resolved location. This monorepo uses
@@ -10,5 +14,5 @@ module.exports = {
   // which is empty here and breaks CocoaPods ("Couldn't find react-native
   // package.json"). Resolving it explicitly points the Podfile at the hoisted copy.
   reactNativePath: path.dirname(require.resolve('react-native/package.json')),
-  commands: [...require('vxrn/react-native-commands')],
+  commands: [...commands],
 };

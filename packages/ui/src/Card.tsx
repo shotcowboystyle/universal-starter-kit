@@ -1,9 +1,12 @@
 import { Preset, borderRadiusMap, useResolvedKnobs } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type { ReactNode } from 'react';
-import { Card as TamaguiCard, type CardProps as TamaguiCardProps, withStaticProperties } from 'tamagui';
+import { Card as TamaguiCard, withStaticProperties } from 'tamagui';
+import type { CardProps as TamaguiCardProps } from 'tamagui';
 
 import { CardFooter } from './CardFooter';
 import { CardHeader } from './CardHeader';
+import { hostData } from './host-data';
 
 /**
  * Knob-aware Card (+ Header / Footer).
@@ -30,51 +33,41 @@ export interface CardProps extends TamaguiCardProps {
 export type { CardFooterProps } from './CardFooter';
 export type { CardHeaderProps } from './CardHeader';
 
-function NestedScale({ density, children }: { density: string; children: ReactNode }) {
+const NestedScale = ({ density, children }: { density: string; children: ReactNode }): ReactNode => {
   if (density === 'compact') {
     return children;
   }
   return <Preset overrides={{ density: 'compact' }}>{children}</Preset>;
-}
+};
 
-/**
- * Tamagui styled hosts drop JSX `data-*` on native (Toast gallery hole), so
- * native needs the RN `dataSet` map. On web, spreading `dataSet` onto a DOM
- * host is a React invalid-prop warning (`dataSet` → `dataset`) and is what
- * the knob-fuzz harness recorded as a probe/console failure on every Card
- * consumer. jsdom and Storybook both keep kebab `data-*`, so web writes
- * those only.
- */
-function hostData(attrs: Record<string, string>): Record<string, unknown> {
-  if (process.env.TAMAGUI_TARGET !== 'native') {
-    return attrs;
+const tierSurface = (knobProps: KnobProps, tier: SurfaceTier) => {
+  if (tier === 'elevated') {
+    return { ...knobProps.elevatedSurface, ...knobProps.containerRadius };
   }
-  const dataSet: Record<string, string> = {};
-  for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-    dataSet[camel] = value;
-  }
-  return { dataSet };
-}
+  return tier === 'feature' ? knobProps.featureSurface : knobProps.cardSurface;
+};
 
-function CardRoot({ children, tier = 'content', ...props }: CardProps) {
+const CardRoot = ({ children, tier = 'content', ...props }: CardProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Card' });
   // Axiom 1 child-clip cap: the padded container's radius may not exceed its
   // own inset. cardSurface carries the cap already; the elevated tier layers
   // containerRadius over elevatedSurface. The feature tier follows the knobs
   // through its own uncapped table (featureSurface), so the cap does not apply.
-  const tierProps =
-    tier === 'elevated'
-      ? { ...knobProps.elevatedSurface, ...knobProps.containerRadius }
-      : tier === 'feature'
-        ? knobProps.featureSurface
-        : knobProps.cardSurface;
+  const tierProps = tierSurface(knobProps, tier);
   const nested = knobProps.density === 'compact';
   // Decode the uncapped token through the canonical map. This preserves the
   // effective nested knob without asserting anything about the painted cap.
   const radiusKnob = Object.entries(borderRadiusMap).find(
     ([, token]) => token === knobProps.borderRadius.borderRadius,
   )?.[0];
+  const constraintAttrs =
+    tier !== 'feature' && radiusKnob !== undefined && radiusKnob !== ''
+      ? {
+          'data-constraint-container': 'Card',
+          'data-radius-knob': radiusKnob,
+          'data-space-knob': knobProps.space,
+        }
+      : undefined;
   // panelPadding first so tier recipes may override (feature uses a larger
   // inset); elevatedSurface carries no padding of its own.
   return (
@@ -87,19 +80,13 @@ function CardRoot({ children, tier = 'content', ...props }: CardProps) {
         'data-density': knobProps.density,
         'data-nested-scale': nested ? 'nested' : 'root',
         'data-nested-px': String(knobProps.nestedControl.px),
-        ...(tier !== 'feature' && radiusKnob
-          ? {
-              'data-constraint-container': 'Card',
-              'data-radius-knob': radiusKnob,
-              'data-space-knob': knobProps.space,
-            }
-          : {}),
+        ...constraintAttrs,
       })}
       {...props}>
       <NestedScale density={knobProps.density}>{children}</NestedScale>
     </TamaguiCard>
   );
-}
+};
 
 // Header and Footer are NOT defined here. They live in ./CardHeader and
 // ./CardFooter, where a bare title/caption string is wrapped so T-HEADING /
@@ -110,8 +97,10 @@ function CardRoot({ children, tier = 'content', ...props }: CardProps) {
 // copy reintroduced by a later change and they silently un-did the fix.
 // Re-exported here so ./index.ts and ./surfaces.tsx keep importing
 // every Card part from one module.
-export { CardFooter, CardHeader };
+export { CardFooter } from './CardFooter';
+export { CardHeader } from './CardHeader';
 
+// oxlint-disable-next-line react-doctor/only-export-components -- Card is a compound component built with withStaticProperties, which the rule does not recognize as a component
 export const Card = withStaticProperties(CardRoot, {
   Header: CardHeader,
   Footer: CardFooter,

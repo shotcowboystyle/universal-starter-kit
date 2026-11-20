@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * Outlined error/warning/success labels
  * re-anchor to `$color11` on the LABEL TEXT NODE. The harness passed this
  * defect for months by reading the frame (`color` inherits) while
@@ -29,8 +29,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
 
-afterEach(cleanup);
-
 const houseConfig = createDefaultThemeConfig();
 const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
 
@@ -46,37 +44,43 @@ const SCHEMES = ['light', 'dark'] as const;
  */
 const WHITE_PAGE_SURFACES = ['background', 'color1'] as const;
 
-function houseRender(ui: React.ReactElement, theme: 'light' | 'dark' = 'light') {
-  return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={theme} disableInjectCSS>
+const houseRender = (ui: React.ReactElement, theme: 'light' | 'dark' = 'light') =>
+  render(
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={theme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
-}
 
-function labelNode(text: string): HTMLElement {
-  return screen.getByText(text);
-}
+const labelNode = (text: string): HTMLElement => screen.getByText(text);
 
 /**
  * Use the canonical unrounded measurement so a below-floor pair cannot
  * pass through display rounding.
  */
-function pageRatio(ink: string, ground: string, label: string): number {
-  return measureContrast({ foreground: ink, background: ground, label }).ratio;
-}
+const pageRatio = (ink: string, ground: string, label: string): number =>
+  measureContrast({ foreground: ink, background: ground, label }).ratio;
 
 describe('Button outlined intent label ink', () => {
+  afterEach(cleanup);
+
   it.each(SCHEMES)('%s: outlined intent labels emit $color11 on the TEXT NODE, never the on-fill $color', (scheme) => {
     houseRender(
       <>
         {INTENTS.map((intent) => (
-          <Button key={`o-${intent}`} outlined {...{ [intent]: true }}>
+          <Button
+            key={`o-${intent}`}
+            outlined
+            {...{ [intent]: true }}>
             {`Outlined-${intent}`}
           </Button>
         ))}
         {INTENTS.map((intent) => (
-          <Button key={`s-${intent}`} {...{ [intent]: true }}>
+          <Button
+            key={`s-${intent}`}
+            {...{ [intent]: true }}>
             {`Solid-${intent}`}
           </Button>
         ))}
@@ -90,10 +94,10 @@ describe('Button outlined intent label ink', () => {
       // TEXT NODE — not the frame. The frame already carried $color11
       // and hid this defect.
       expect(outlined.tagName).not.toBe('BUTTON');
-      expect(outlined.className).toMatch(/_col-color11\b/);
-      expect(outlined.className).not.toMatch(/_col-color\b/);
-      expect(solid.className).toMatch(/_col-color\b/);
-      expect(solid.className).not.toMatch(/_col-color11\b/);
+      expect(outlined.className).toMatch(/_col-color11\b/u);
+      expect(outlined.className).not.toMatch(/_col-color\b/u);
+      expect(solid.className).toMatch(/_col-color\b/u);
+      expect(solid.className).not.toMatch(/_col-color11\b/u);
     }
   });
 
@@ -102,7 +106,9 @@ describe('Button outlined intent label ink', () => {
       <>
         <Button>Filled-label</Button>
         <Button outlined>Outlined-label</Button>
-        <Button outlined error>
+        <Button
+          outlined
+          error>
           Outlined-error-label
         </Button>
         <Button error>Solid-error-label</Button>
@@ -112,9 +118,9 @@ describe('Button outlined intent label ink', () => {
 
     for (const text of ['Filled-label', 'Outlined-label', 'Outlined-error-label', 'Solid-error-label']) {
       const node = labelNode(text);
-      expect(node.className).toMatch(/_fow-400\b/);
-      expect(node.className).not.toMatch(/_fow-500\b/);
-      expect(node.className).not.toMatch(/_fow-600\b/);
+      expect(node.className).toMatch(/_fow-400\b/u);
+      expect(node.className).not.toMatch(/_fow-500\b/u);
+      expect(node.className).not.toMatch(/_fow-600\b/u);
     }
   });
 
@@ -156,7 +162,7 @@ describe('Button outlined intent label ink', () => {
   // row. This block used to assert the miss, and said in as many words that
   // stepping the palette should break it rather than be re-baselined away.
   //
-  // The palette stepped: `intentInkFloor` in theme/createThemes.ts darkens
+  // The palette stepped: `intentInkFloor` in theme/create-themes.ts darkens
   // light yellow-11 (#9e6c00 -> #996900) and green-11 (#218358 -> #1c8257)
   // by the smallest hue-holding amount that clears the floor here. So the
   // assertion is inverted rather than deleted — the ground and the exact
@@ -173,7 +179,7 @@ describe('Button outlined intent label ink', () => {
     const displayed = Object.fromEntries(
       Object.entries(measured).map(([intent, ratio]) => [intent, Math.round(ratio * 100) / 100]),
     );
-    expect(displayed, `light.color2 is ${ground}`).toEqual({
+    expect(displayed, `light.color2 is ${ground}`).toStrictEqual({
       error: 4.95,
       warning: 4.56,
       success: 4.55,

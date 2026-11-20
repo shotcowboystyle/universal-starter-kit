@@ -1,22 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { createPersistStore, type Storage } from './persist';
+import { createPersistStore } from './persist';
+import type { Storage } from './persist';
 
-function createMockStorage(): Storage & { data: Map<string, string> } {
+const createMockStorage = (): Storage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,
-    getItem: vi.fn((key: string) => data.get(key) ?? null),
-    setItem: vi.fn((key: string, value: string) => {
+    getItem: vi.fn<Storage['getItem']>((key) => data.get(key) ?? null),
+    setItem: vi.fn<Storage['setItem']>((key, value) => {
       data.set(key, value);
     }),
-    removeItem: vi.fn((key: string) => {
+    removeItem: vi.fn<Storage['removeItem']>((key) => {
       data.delete(key);
     }),
   };
-}
+};
 
-describe('createPersistStore', () => {
+describe(createPersistStore, () => {
   let storage: ReturnType<typeof createMockStorage>;
 
   beforeEach(() => {
@@ -25,14 +26,14 @@ describe('createPersistStore', () => {
 
   it('creates a store with the initial state', () => {
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
-    expect(store.state).toEqual({ count: 0 });
+    expect(store.state).toStrictEqual({ count: 0 });
   });
 
   it('attempts to rehydrate on creation', async () => {
     storage.data.set('test', JSON.stringify({ count: 42 }));
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ count: 42 });
+    expect(store.state).toStrictEqual({ count: 42 });
   });
 
   it('persists state changes after hydration', async () => {
@@ -46,7 +47,7 @@ describe('createPersistStore', () => {
   });
 
   it('does not persist before hydration completes', () => {
-    storage.getItem = vi.fn(() => new Promise<string | null>(() => {}));
+    vi.mocked(storage.getItem).mockReturnValue(Promise.withResolvers<string | null>().promise);
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     store.setState(() => ({ count: 99 }));
     expect(storage.setItem).not.toHaveBeenCalled();
@@ -64,13 +65,13 @@ describe('createPersistStore', () => {
     storage.data.set('mykey', JSON.stringify({ name: 'Alice' }));
     const store = createPersistStore({ name: '' }, { key: 'mykey', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ name: 'Alice' });
+    expect(store.state).toStrictEqual({ name: 'Alice' });
   });
 
   it('uses initial state when nothing is persisted', async () => {
     const store = createPersistStore({ value: 'default' }, { key: 'empty', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ value: 'default' });
+    expect(store.state).toStrictEqual({ value: 'default' });
   });
 
   it('supports custom serialize/deserialize', async () => {
@@ -80,7 +81,7 @@ describe('createPersistStore', () => {
         key: 'custom',
         storage,
         serialize: (state) => `n=${state.n}`,
-        deserialize: (raw) => ({ n: Number.parseInt(raw.split('=')[1]) }),
+        deserialize: (raw) => ({ n: Number(raw.split('=')[1]) }),
       },
     );
     await store.rehydrate();
@@ -98,10 +99,10 @@ describe('createPersistStore', () => {
         key: 'custom',
         storage,
         serialize: (state) => `n=${state.n}`,
-        deserialize: (raw) => ({ n: Number.parseInt(raw.split('=')[1]) }),
+        deserialize: (raw) => ({ n: Number(raw.split('=')[1]) }),
       },
     );
     await store.rehydrate();
-    expect(store.state).toEqual({ n: 42 });
+    expect(store.state).toStrictEqual({ n: 42 });
   });
 });

@@ -3,13 +3,13 @@
 import { Button, ConfirmDialog, Dialog, DialogContent, DialogOverlay, DropdownMenu, XStack } from '@repo/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as React from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { useDeleteProject, useUpdateProject } from '@/lib/api/projects/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { projectSchema } from '@/types/projectForm';
+import type { projectSchema } from '@/types/project-form';
 
 import { ProjectForm } from './ProjectForm';
 
@@ -17,17 +17,18 @@ interface ProjectActionsProps {
   id: string;
   title: string;
   description?: string;
-  ownerId: string; // Add ownerId to check permissions
+  // Add ownerId to check permissions
+  ownerId: string;
 }
 
 type ProjectFormData = z.infer<typeof projectSchema>;
 
-export function ProjectActions({ id, title, description, ownerId }: ProjectActionsProps) {
+export const ProjectActions = ({ id, title, description, ownerId }: ProjectActionsProps) => {
   // Check if current user is the project owner
   const { userId } = useWorkspaceStore();
   const isOwner = userId === ownerId;
-  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const [editEnable, setEditEnable] = React.useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editEnable, setEditEnable] = useState(false);
   const updateProject = useWorkspaceStore((state) => state.updateProject);
   const removeProject = useWorkspaceStore((state) => state.removeProject);
   const deleteProjectMutation = useDeleteProject();
@@ -36,8 +37,8 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
   const t = useTranslations('kanban.project');
   const tKanban = useTranslations('kanban');
 
-  async function onSubmit(values: ProjectFormData) {
-    if (!userId) {
+  const onSubmit = async (values: ProjectFormData) => {
+    if (userId == null || userId === '') {
       toast.error(t('userNotAuthenticated'));
       return;
     }
@@ -46,47 +47,64 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
       await updateProject(
         id,
         values.title,
-        values.description ?? undefined, // Convert null to undefined
-        async (id, data) => {
+        // Convert null to undefined
+        values.description ?? undefined,
+        async (projectId, data) => {
           const updateData = {
-            id,
+            id: projectId,
             title: data.title,
-            description: data.description || null,
+            description: data.description == null || data.description === '' ? null : data.description,
             owner: userId,
           };
 
-          return updateProjectMutation.mutateAsync(updateData);
+          return await updateProjectMutation.mutateAsync(updateData);
         },
       );
       toast.success(t('updateSuccess'));
       setEditEnable(false);
     } catch (error) {
-      toast.error(t('updateFailed', { error: (error as Error).message }));
+      toast.error(t('updateFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
-  }
+  };
 
-  async function onConfirmDelete() {
+  const onConfirmDelete = async () => {
     try {
-      await removeProject(id, async (projectId) => deleteProjectMutation.mutateAsync(projectId));
+      await removeProject(id, async (projectId) => {
+        await deleteProjectMutation.mutateAsync(projectId);
+      });
       toast.success(t('deleteSuccess', { title }));
     } catch (error) {
-      toast.error(t('deleteFailed', { error: (error as Error).message }));
+      toast.error(t('deleteFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
-  }
+  };
 
   return (
     <>
-      <Dialog modal open={editEnable} onOpenChange={setEditEnable}>
+      <Dialog
+        modal
+        open={editEnable}
+        onOpenChange={setEditEnable}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" maxWidth={480} width="90%" testID="edit-project-dialog">
+          <DialogContent
+            key="content"
+            maxWidth={480}
+            width="90%"
+            testID="edit-project-dialog">
             <Dialog.Title size="$7">{t('editProjectTitle')}</Dialog.Title>
-            <ProjectForm onSubmit={onSubmit} defaultValues={{ title, description }}>
-              <XStack justifyContent="flex-end" gap="$2">
+            <ProjectForm
+              onSubmit={onSubmit}
+              defaultValues={{ title, description }}>
+              <XStack
+                justifyContent="flex-end"
+                gap="$2">
                 <Dialog.Close asChild>
                   <Button outlined>{t('cancel')}</Button>
                 </Dialog.Close>
-                <Button accent action="submit" testID="save-project-button">
+                <Button
+                  accent
+                  action="submit"
+                  testID="save-project-button">
                   {t('save')}
                 </Button>
               </XStack>
@@ -137,8 +155,10 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
         body={t('confirmDeleteDescription')}
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
-        onConfirm={onConfirmDelete}
+        onConfirm={() => {
+          void onConfirmDelete();
+        }}
       />
     </>
   );
-}
+};

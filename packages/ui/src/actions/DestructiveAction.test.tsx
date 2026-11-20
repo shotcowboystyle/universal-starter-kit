@@ -1,30 +1,25 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DestructiveAction, type DestructiveConfirmContext } from './DestructiveAction';
-import { __resetActionDevWarnSeen } from './devWarn';
+import { DestructiveAction } from './DestructiveAction';
+import type { DestructiveConfirmContext } from './DestructiveAction';
+import { __resetActionDevWarnSeen } from './dev-warn';
 import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
 
 /** Dialog portals into document.body — query there, not the RTL container. */
-function root(): HTMLElement {
-  return document.body;
-}
+const root = (): HTMLElement => document.body;
 
-function alertdialog(): Element | null {
-  return root().querySelector('[role="alertdialog"]');
-}
+const alertdialog = (): HTMLElement | null => root().querySelector<HTMLElement>('[role="alertdialog"]');
 
-function dialogButtonByLabel(label: string): Element {
+const dialogButtonByLabel = (label: string): HTMLElement => {
   const scope = alertdialog() ?? root();
-  const buttons = Array.from(scope.querySelectorAll('[role="button"]'));
+  const buttons = [...scope.querySelectorAll<HTMLElement>('[role="button"]')];
   const exact = buttons.find((b) => b.textContent?.trim() === label);
   if (exact) {
     return exact;
@@ -34,9 +29,9 @@ function dialogButtonByLabel(label: string): Element {
     throw new Error(`No dialog button with label "${label}"`);
   }
   return match;
-}
+};
 
-describe('resolveDestructiveSeverity', () => {
+describe(resolveDestructiveSeverity, () => {
   it('defaults to medium when no hints', () => {
     expect(resolveDestructiveSeverity()).toBe('medium');
   });
@@ -58,7 +53,7 @@ describe('resolveDestructiveSeverity', () => {
   });
 });
 
-describe('DestructiveAction', () => {
+describe(DestructiveAction, () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -73,20 +68,31 @@ describe('DestructiveAction', () => {
 
   it('renders verb+noun label and danger tone by default (medium)', () => {
     renderWithProviders(
-      <DestructiveAction verb="Delete" noun="pipeline" confirm={async () => false} onAction={() => {}} />,
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        confirm={async () => false}
+        onAction={() => {}}
+      />,
     );
     expect(screen.getByText('Delete pipeline')).toBeInTheDocument();
   });
 
   it('default path opens ConfirmDialog; cancel does not call onAction', async () => {
-    const onAction = vi.fn();
-    renderWithProviders(<DestructiveAction verb="Delete" noun="pipeline" onAction={onAction} />);
+    const onAction = vi.fn<() => void>();
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete pipeline'));
     await waitFor(() => {
       expect(alertdialog()).toBeTruthy();
     });
     expect(root().textContent).toContain('Delete pipeline?');
-    expect(alertdialog()?.getAttribute('data-tone')).toBe('destructive');
+    expect(alertdialog()?.dataset.tone).toBe('destructive');
     expect(dialogButtonByLabel('Delete')).toBeTruthy();
     fireEvent.click(dialogButtonByLabel('Cancel'));
     await waitFor(() => {
@@ -97,9 +103,14 @@ describe('DestructiveAction', () => {
   });
 
   it('default ConfirmDialog confirm runs onAction', async () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     renderWithProviders(
-      <DestructiveAction verb="Delete" noun="pipeline" consequence="This cannot be undone." onAction={onAction} />,
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        consequence="This cannot be undone."
+        onAction={onAction}
+      />,
     );
     fireEvent.click(screen.getByText('Delete pipeline'));
     await waitFor(() => {
@@ -108,7 +119,7 @@ describe('DestructiveAction', () => {
     expect(root().textContent).toContain('This cannot be undone.');
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     await waitFor(() => {
       expect(alertdialog()).toBeNull();
@@ -116,24 +127,37 @@ describe('DestructiveAction', () => {
   });
 
   it('calls onAction only after confirm returns true', async () => {
-    const onAction = vi.fn();
-    const confirm = vi.fn(async (_ctx: DestructiveConfirmContext) => true);
-    renderWithProviders(<DestructiveAction verb="Delete" noun="row" confirm={confirm} onAction={onAction} />);
+    const onAction = vi.fn<() => void>();
+    const confirm = vi.fn<(ctx: DestructiveConfirmContext) => Promise<boolean>>(async () => true);
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        noun="row"
+        confirm={confirm}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete row'));
     await waitFor(() => {
-      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(confirm).toHaveBeenCalledOnce();
     });
     expect(confirm.mock.calls[0][0].confirmLabel).toBe('Delete');
     expect(confirm.mock.calls[0][0].actionLabel).toBe('Delete row');
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     expect(alertdialog()).toBeNull();
   });
 
   it('does not call onAction when confirm returns false', async () => {
-    const onAction = vi.fn();
-    renderWithProviders(<DestructiveAction verb="Delete" confirm={async () => false} onAction={onAction} />);
+    const onAction = vi.fn<() => void>();
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        confirm={async () => false}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete'));
     await waitFor(() => {
       expect(onAction).not.toHaveBeenCalled();
@@ -141,12 +165,19 @@ describe('DestructiveAction', () => {
   });
 
   it('low severity skips confirm and danger tone', async () => {
-    const onAction = vi.fn();
-    const confirm = vi.fn(async () => true);
-    renderWithProviders(<DestructiveAction severity="low" verb="Remove" confirm={confirm} onAction={onAction} />);
+    const onAction = vi.fn<() => void>();
+    const confirm = vi.fn<() => Promise<boolean>>(async () => true);
+    renderWithProviders(
+      <DestructiveAction
+        severity="low"
+        verb="Remove"
+        confirm={confirm}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Remove'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     expect(confirm).not.toHaveBeenCalled();
     expect(alertdialog()).toBeNull();
@@ -154,7 +185,7 @@ describe('DestructiveAction', () => {
   });
 
   it('high severity passes expectedText into confirm context', async () => {
-    const confirm = vi.fn(async (_ctx: DestructiveConfirmContext) => false);
+    const confirm = vi.fn<(ctx: DestructiveConfirmContext) => Promise<boolean>>(async () => false);
     renderWithProviders(
       <DestructiveAction
         severity="high"
@@ -167,14 +198,14 @@ describe('DestructiveAction', () => {
     );
     fireEvent.click(screen.getByText('Delete acme'));
     await waitFor(() => {
-      expect(confirm).toHaveBeenCalled();
+      expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ expectedText: 'acme', severity: 'high' }));
     });
     expect(confirm.mock.calls[0][0].expectedText).toBe('acme');
     expect(confirm.mock.calls[0][0].severity).toBe('high');
   });
 
   it('high default path requires typed expectedText before confirm', async () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     renderWithProviders(
       <DestructiveAction
         severity="high"
@@ -190,7 +221,7 @@ describe('DestructiveAction', () => {
       expect(alertdialog()).toBeTruthy();
     });
     expect(root().textContent).toContain('Type "my-project" to confirm.');
-    expect(dialogButtonByLabel('Delete').getAttribute('data-mp-confirm-disabled')).toBe('true');
+    expect(dialogButtonByLabel('Delete').dataset.mpConfirmDisabled).toBe('true');
     fireEvent.click(dialogButtonByLabel('Delete'));
     expect(onAction).not.toHaveBeenCalled();
 
@@ -201,16 +232,16 @@ describe('DestructiveAction', () => {
     fireEvent.change(input!, { target: { value: 'my-project' } });
 
     await waitFor(() => {
-      expect(dialogButtonByLabel('Delete').getAttribute('data-mp-confirm-disabled')).not.toBe('true');
+      expect(dialogButtonByLabel('Delete').dataset.mpConfirmDisabled).not.toBe('true');
     });
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
   });
 
   it('disabledReason blocks action and sets aria-disabled', () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     renderWithProviders(
       <DestructiveAction
         verb="Delete"
@@ -230,7 +261,7 @@ describe('DestructiveAction', () => {
   });
 
   it('typed-confirm gate explains the disabled confirm', async () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     renderWithProviders(
       <DestructiveAction
         severity="high"
@@ -260,7 +291,7 @@ describe('DestructiveAction', () => {
     });
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
   });
 
@@ -271,7 +302,7 @@ describe('DestructiveAction', () => {
         verb="Delete"
         noun="project"
         confirmationText="my-project"
-        onAction={() => undefined}
+        onAction={() => {}}
       />,
     );
     fireEvent.click(screen.getByText('Delete project'));
@@ -283,15 +314,15 @@ describe('DestructiveAction', () => {
     const input =
       marked instanceof HTMLInputElement ? marked : (marked?.querySelector('input') as HTMLInputElement | null);
     expect(input).toBeTruthy();
-    expect(input!.getAttribute('style') ?? input!.style.cssText).not.toMatch(/#ccc/i);
+    expect(input!.getAttribute('style') ?? input!.style.cssText).not.toMatch(/#ccc/iu);
     expect(alertdialog()?.querySelector('[data-mp-confirm-prompt]')?.textContent).toContain(
       'Type "my-project" to confirm.',
     );
   });
 
   it('typed-confirm TSX has no HTML span/input hosts', () => {
-    const src = readFileSync(resolve(process.cwd(), 'src/actions/DestructiveAction.tsx'), 'utf8');
-    expect(src).not.toMatch(/<span[\s>]/);
-    expect(src).not.toMatch(/<input[\s>]/);
+    const src = readFileSync(path.resolve(process.cwd(), 'src/actions/DestructiveAction.tsx'), 'utf-8');
+    expect(src).not.toMatch(/<span[\s>]/u);
+    expect(src).not.toMatch(/<input[\s>]/u);
   });
 });

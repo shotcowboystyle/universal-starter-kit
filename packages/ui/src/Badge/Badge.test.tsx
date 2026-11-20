@@ -5,25 +5,24 @@ import { Text } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Badge } from './index';
-import * as BadgeModule from './index';
 
-function atoms(el: Element | null, prefixes: string[]): string[] {
+const atoms = (el: HTMLElement | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
-  return String((el as HTMLElement).className || '')
+  return el.className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
+};
 
-function countText(container: HTMLElement): HTMLElement {
-  const pill = container.querySelector('[data-badge="count"]');
+const countText = (container: HTMLElement): HTMLElement => {
+  const pill = container.querySelector<HTMLElement>('[data-badge="count"]');
   const node = pill?.querySelector('span, div') ?? pill?.firstElementChild;
   return (node ?? pill) as HTMLElement;
-}
+};
 
-describe('Badge', () => {
+describe(Badge, () => {
   it('hides when count is 0 and shows with showZero', () => {
     const hidden = renderWithProviders(
       <Badge count={0}>
@@ -34,21 +33,25 @@ describe('Badge', () => {
     expect(hidden.container.textContent).toContain('Bell');
 
     const shown = renderWithProviders(
-      <Badge count={0} showZero>
+      <Badge
+        count={0}
+        showZero>
         <Text>Bell</Text>
       </Badge>,
     );
-    expect(shown.container.querySelector('[data-badge="count"]')?.textContent).toContain('0');
+    expect(shown.container.querySelector<HTMLElement>('[data-badge="count"]')?.textContent).toContain('0');
   });
 
   it('renders max+ visually and exposes the exact count to AT (Carbon)', () => {
     const { container } = renderWithProviders(
-      <Badge count={150} max={99}>
+      <Badge
+        count={150}
+        max={99}>
         <Text>Bell</Text>
       </Badge>,
     );
-    const pill = container.querySelector('[data-badge="count"]');
-    expect(pill?.getAttribute('data-overflow')).toBe('true');
+    const pill = container.querySelector<HTMLElement>('[data-badge="count"]');
+    expect(pill?.dataset.overflow).toBe('true');
     expect(pill?.textContent).toContain('99+');
     expect(pill?.getAttribute('aria-label')).toBe('150');
     expect(pill?.getAttribute('title')).toBe('150');
@@ -72,7 +75,7 @@ describe('Badge', () => {
 
   it('renders a standalone CounterLabel without a host', () => {
     const { container } = renderWithProviders(<Badge count={12} />);
-    const pill = container.querySelector('[data-badge="count"]');
+    const pill = container.querySelector<HTMLElement>('[data-badge="count"]');
     expect(pill).toBeTruthy();
     expect(pill?.textContent).toContain('12');
     expect(container.querySelector('[data-badge]')).toBe(pill);
@@ -96,14 +99,16 @@ describe('Badge', () => {
         <Text>Bell</Text>
       </Badge>,
     );
-    const el = container.querySelector('[data-radius-class]');
-    expect(el?.getAttribute('data-radius-class')).toBe('R-PILL');
-    expect(el?.getAttribute('data-radius-part')).toBe('Badge count/dot');
+    const el = container.querySelector<HTMLElement>('[data-radius-class]');
+    expect(el?.dataset.radiusClass).toBe('R-PILL');
+    expect(el?.dataset.radiusPart).toBe('Badge count/dot');
   });
 
   it('hides the indicator when visible is false', () => {
     const { container } = renderWithProviders(
-      <Badge count={5} visible={false}>
+      <Badge
+        count={5}
+        visible={false}>
         <Text>Bell</Text>
       </Badge>,
     );
@@ -112,17 +117,23 @@ describe('Badge', () => {
   });
 
   it('renders 0+ when max is 0 and count is positive', () => {
-    const { container } = renderWithProviders(<Badge count={1} max={0} />);
-    const pill = container.querySelector('[data-badge="count"]');
-    expect(pill?.getAttribute('data-overflow')).toBe('true');
+    const { container } = renderWithProviders(
+      <Badge
+        count={1}
+        max={0}
+      />,
+    );
+    const pill = container.querySelector<HTMLElement>('[data-badge="count"]');
+    expect(pill?.dataset.overflow).toBe('true');
     expect(pill?.textContent).toContain('0+');
     expect(pill?.getAttribute('aria-label')).toBe('1');
   });
 });
 
 describe('Badge named exports', () => {
-  it('exports Badge as a named export and has no default', () => {
-    expect(typeof BadgeModule.Badge).toBe('function');
+  it('exports Badge as a named export and has no default', async () => {
+    const BadgeModule = await import('./index');
+    expect(BadgeModule.Badge).toBeTypeOf('function');
     expect('default' in BadgeModule).toBe(false);
   });
 });
@@ -134,7 +145,7 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
     const { container } = renderWithProviders(<Badge count={5} />);
     const weight = atoms(countText(container), ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).toMatch(/600|weight-6|fow-6/u);
   });
 
   it('ignores the fontWeight knob so count text stays at 600 (SB-M-101)', () => {
@@ -152,9 +163,9 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
       </Preset>,
     );
     const boldWeight = atoms(countText(bold.container), ['_fow-']).join(' ');
-    expect(regularWeight).toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).toEqual(regularWeight);
+    expect(regularWeight).toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).toStrictEqual(regularWeight);
   });
 
   it('lets the bodyFont knob restyle the count text node', () => {
@@ -164,7 +175,7 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
       </Preset>,
     );
     const sansFamily = atoms(countText(sans.container), ['_ff-']);
-    const sansBodyFont = countText(sans.container).getAttribute('data-body-font');
+    const sansBodyFont = countText(sans.container).dataset.bodyFont;
     cleanup();
 
     const mono = renderWithProviders(
@@ -172,7 +183,7 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
         <Badge count={5} />
       </Preset>,
     );
-    const monoBodyFont = countText(mono.container).getAttribute('data-body-font');
+    const monoBodyFont = countText(mono.container).dataset.bodyFont;
     expect(sansFamily.length).toBeGreaterThan(0);
     expect(sansBodyFont).not.toBe(monoBodyFont);
     expect(monoBodyFont).toBe('$mono');
@@ -188,7 +199,7 @@ describe('Badge design-law — size geometry and R-PILL', () => {
         <Badge count={5} />
       </Preset>,
     );
-    const smallHeight = atoms(small.container.querySelector('[data-badge]'), ['_h-']);
+    const smallHeight = atoms(small.container.querySelector<HTMLElement>('[data-badge]'), ['_h-']);
     cleanup();
 
     const large = renderWithProviders(
@@ -197,7 +208,7 @@ describe('Badge design-law — size geometry and R-PILL', () => {
       </Preset>,
     );
     expect(smallHeight.length).toBeGreaterThan(0);
-    expect(atoms(large.container.querySelector('[data-badge]'), ['_h-'])).not.toEqual(smallHeight);
+    expect(atoms(large.container.querySelector<HTMLElement>('[data-badge]'), ['_h-'])).not.toStrictEqual(smallHeight);
   });
 
   it('stays a pill at borderRadius none (R-PILL, Axiom 3 does not square it)', () => {
@@ -206,9 +217,9 @@ describe('Badge design-law — size geometry and R-PILL', () => {
         <Badge count={1} />
       </Preset>,
     );
-    const pill = container.querySelector('[data-badge]') as HTMLElement;
-    expect(pill.getAttribute('data-radius-class')).toBe('R-PILL');
+    const pill = container.querySelector<HTMLElement>('[data-badge]');
+    expect(pill?.dataset.radiusClass).toBe('R-PILL');
     const radius = atoms(pill, ['_br-', '_btlr-']);
-    expect(radius.join(' ')).not.toMatch(/radius-0\b|_br-0(?:px)?\b|_btlr-t-radius-0/);
+    expect(radius.join(' ')).not.toMatch(/radius-0\b|_br-0(?:px)?\b|_btlr-t-radius-0/u);
   });
 });

@@ -1,14 +1,15 @@
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
-import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Text, View, XStack, YStack } from 'tamagui';
 
 import { Button } from '../../Button';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import type { BarcodeScannerProps, CameraPreflightResult } from './scannerTypes';
-import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scannerTypes';
+import type { BarcodeScannerProps, CameraPreflightResult } from './scanner-types';
+import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scanner-types';
 
 /**
  * Camera capability pre-flight, native mirror.
@@ -18,7 +19,8 @@ import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scannerTypes
  * `denied but canAskAgain` state passes — the system prompt happens over the
  * stable scanner surface, never as a present-fail-dismiss flash.
  */
-export async function preflightCamera(): Promise<CameraPreflightResult> {
+// oxlint-disable-next-line react-doctor/only-export-components -- the pre-flight is part of the scanner's public contract; the web module exports the same name
+export const preflightCamera = async (): Promise<CameraPreflightResult> => {
   try {
     const status = await Camera.getCameraPermissionsAsync();
     if (!status.granted && !status.canAskAgain) {
@@ -31,7 +33,12 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
     // Permission module unavailable — the surface reports the failure inline.
   }
   return { ok: true };
-}
+};
+
+/** Nothing to tear down when the effect has no work to do. */
+const noopCleanup = () => {
+  // Intentionally empty: the effect only registers cleanup once a request is in flight.
+};
 
 /**
  * Native barcode scanner — `expo-camera`'s `CameraView` with built-in barcode
@@ -46,40 +53,134 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
  * Note: the iOS simulator has no camera, so live scanning can only be verified
  * on a physical device; in the simulator the camera surface renders empty.
  */
-export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, formats, compact }: BarcodeScannerProps) {
+export const BarcodeScanner = ({
+  active,
+  onScan,
+  onError,
+  onClose,
+  knobProps,
+  formats,
+  compact,
+}: BarcodeScannerProps) => {
   const barcodeTypes = resolveNativeBarcodeTypes(formats);
   const viewportPx = scannerViewportHeight(compact);
   const [permission, requestPermission] = useCameraPermissions();
   const handledRef = useRef(false);
   const [denied, setDenied] = useState(false);
+  const hasPermissionInfo = permission !== null;
+  const granted = permission?.granted;
+  // Effects restart only on `active` / permission changes; the latest callbacks are read through this ref.
+  const latestRef = useRef({ onError, requestPermission });
+  useLayoutEffect(() => {
+    latestRef.current = { onError, requestPermission };
+  });
 
+  // oxlint-disable-next-line react-doctor/no-reset-all-state-on-prop-change -- the scanner stays mounted across sessions, so each activation must reset its handled/denied state
   useEffect(() => {
     if (!active) {
       return;
     }
     handledRef.current = false;
+    // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change -- resets per-session state when the scanner is switched on
     setDenied(false);
-    onError(null);
+    latestRef.current.onError(null);
   }, [active]);
 
   useEffect(() => {
-    if (!active || !permission || permission.granted) {
-      return;
+    if (!active || !hasPermissionInfo || granted) {
+      return noopCleanup;
     }
     let stale = false;
-    requestPermission().then((res) => {
+    const askForPermission = async () => {
+      const res = await latestRef.current.requestPermission();
       // Surface stays OPEN on denial: error renders inside with Retry + Close.
       if (!stale && !res.granted) {
         setDenied(true);
       }
-    });
+    };
+    void askForPermission();
     return () => {
       stale = true;
     };
-  }, [active, permission?.granted]);
+  }, [active, hasPermissionInfo, granted]);
+
+  const retryPermission = async () => {
+    setDenied(false);
+    const res = await requestPermission();
+    if (!res.granted) {
+      setDenied(true);
+    }
+  };
 
   if (!active) {
     return null;
+  }
+
+  let body: ReactNode;
+  if (denied) {
+    body = (
+      <YStack
+        padding="$4"
+        gap="$3"
+        alignItems="center"
+        minHeight={120}
+        justifyContent="center">
+        <Text
+          {...knobProps.body}
+          color={formCommonColors.error}
+          textAlign="center">
+          {t('Camera permission denied. Please allow camera access.')}
+        </Text>
+        <XStack gap="$2">
+          <Button
+            size={knobProps.sizeToken}
+            onPress={() => {
+              void retryPermission();
+            }}
+            aria-label={t('Retry camera')}>
+            {t('Retry')}
+          </Button>
+          <Button
+            size={knobProps.sizeToken}
+            onPress={onClose}
+            aria-label={t('Close scanner')}>
+            {t('Close')}
+          </Button>
+        </XStack>
+      </YStack>
+    );
+  } else if (granted) {
+    body = (
+      <View
+        width="100%"
+        height={viewportPx}
+        maxHeight={320}
+        overflow="hidden">
+        <CameraView
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          barcodeScannerSettings={{ barcodeTypes: [...barcodeTypes] }}
+          onBarcodeScanned={({ data }) => {
+            if (handledRef.current) {
+              return;
+            }
+            handledRef.current = true;
+            onScan(data);
+            onClose();
+          }}
+        />
+      </View>
+    );
+  } else {
+    body = (
+      <Text
+        {...knobProps.body}
+        padding="$3"
+        textAlign="center"
+        opacity={0.7}>
+        {t('Requesting camera…')}
+      </Text>
+    );
   }
 
   return (
@@ -89,51 +190,7 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       {...knobProps.inputSurface}
       borderColor={formInputColors.border.base}
       overflow="hidden">
-      {denied ? (
-        <YStack padding="$4" gap="$3" alignItems="center" minHeight={120} justifyContent="center">
-          <Text {...knobProps.body} color={formCommonColors.error} textAlign="center">
-            {t('Camera permission denied. Please allow camera access.')}
-          </Text>
-          <XStack gap="$2">
-            <Button
-              size={knobProps.sizeToken}
-              onPress={() => {
-                setDenied(false);
-                requestPermission().then((res) => {
-                  if (!res.granted) {
-                    setDenied(true);
-                  }
-                });
-              }}
-              aria-label={t('Retry camera')}>
-              {t('Retry')}
-            </Button>
-            <Button size={knobProps.sizeToken} onPress={onClose} aria-label={t('Close scanner')}>
-              {t('Close')}
-            </Button>
-          </XStack>
-        </YStack>
-      ) : !permission?.granted ? (
-        <Text {...knobProps.body} padding="$3" textAlign="center" opacity={0.7}>
-          {t('Requesting camera…')}
-        </Text>
-      ) : (
-        <View width="100%" height={viewportPx} maxHeight={320} overflow="hidden">
-          <CameraView
-            style={StyleSheet.absoluteFill}
-            facing="back"
-            barcodeScannerSettings={{ barcodeTypes: [...barcodeTypes] }}
-            onBarcodeScanned={({ data }) => {
-              if (handledRef.current) {
-                return;
-              }
-              handledRef.current = true;
-              onScan(data);
-              onClose();
-            }}
-          />
-        </View>
-      )}
+      {body}
     </YStack>
   );
-}
+};

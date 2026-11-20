@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TimeWheels } from './TimeColumn';
 
-describe('TimeWheels', () => {
+describe(TimeWheels, () => {
   it('renders hour, minute, and AM/PM columns in 12h mode', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(hour24: number, minute: number, second: number) => void>();
     const result = renderWithProviders(
       <TimeWheels
         hour24={13}
@@ -18,7 +18,7 @@ describe('TimeWheels', () => {
       />,
     );
     expect(result.container.querySelector('[data-testid="time-picker-wheels"]')).toBeTruthy();
-    expect(result.container.querySelectorAll('[data-testid="wheel"]').length).toBe(3);
+    expect(result.container.querySelectorAll('[data-testid="wheel"]')).toHaveLength(3);
     expect(result.container.querySelector('[aria-label="AM/PM"]')).toBeTruthy();
   });
 
@@ -34,7 +34,7 @@ describe('TimeWheels', () => {
         onChange={() => {}}
       />,
     );
-    expect(document.querySelectorAll('[data-testid="wheel"]').length).toBe(2);
+    expect(document.querySelectorAll('[data-testid="wheel"]')).toHaveLength(2);
     expect(document.querySelector('[aria-label="AM/PM"]')).toBeNull();
   });
 });

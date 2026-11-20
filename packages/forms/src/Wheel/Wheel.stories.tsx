@@ -24,7 +24,7 @@ const meta: Meta<typeof Wheel> = {
     docs: {
       description: {
         component:
-          'iOS UIPickerView / Flutter CupertinoPicker cylinder. Drag, flick or arrow-key to bring an item through the centre band. TimePicker and DatePicker paint columns of these; `highlightEdges` joins adjacent columns into one selection band.',
+          'iOS UIPickerView / Flutter CupertinoPicker cylinder. Drag, flick or arrow-key to bring an item through the center band. TimePicker and DatePicker paint columns of these; `highlightEdges` joins adjacent columns into one selection band.',
       },
     },
   },
@@ -55,7 +55,9 @@ export const Basic: Story = {
     const Example = () => {
       const [value, setValue] = useState<number>((args.value as number) ?? 9);
       return (
-        <YStack gap="$3" alignItems="flex-start">
+        <YStack
+          gap="$3"
+          alignItems="flex-start">
           <Wheel
             {...args}
             value={value}
@@ -88,15 +90,25 @@ export const PlainValues: Story = {
 
 /**
  * `visibleItems` is the cylinder depth. 3 is a compact inline row, 7 the full
- * iOS sheet; the value must stay odd so an item sits dead centre.
+ * iOS sheet; the value must stay odd so an item sits dead center.
  */
 export const VisibleItems: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
       {([3, 5, 7] as const).map((count) => (
-        <YStack key={count} gap="$2" alignItems="center">
+        <YStack
+          key={count}
+          gap="$2"
+          alignItems="center">
           <Paragraph size="$2">visibleItems={count}</Paragraph>
-          <Wheel items={hours} value={9} visibleItems={count} aria-label={`Hour ${count}`} />
+          <Wheel
+            items={hours}
+            value={9}
+            visibleItems={count}
+            aria-label={`Hour ${count}`}
+          />
         </YStack>
       ))}
     </XStack>
@@ -110,14 +122,33 @@ export const VisibleItems: Story = {
  */
 export const LoopingAndBounded: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
-      <YStack gap="$2" alignItems="center">
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">loop</Paragraph>
-        <Wheel items={minutes} value={30} loop onChange={action('onChange')} aria-label="Minute" />
+        <Wheel
+          items={minutes}
+          value={30}
+          loop
+          onChange={action('onChange')}
+          aria-label="Minute"
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">bounded</Paragraph>
-        <Wheel items={periods} value="AM" loop={false} width={72} onChange={action('onChange')} aria-label="AM/PM" />
+        <Wheel
+          items={periods}
+          value="AM"
+          loop={false}
+          width={72}
+          onChange={action('onChange')}
+          aria-label="AM/PM"
+        />
       </YStack>
     </XStack>
   ),
@@ -131,23 +162,58 @@ export const LoopingAndBounded: Story = {
 export const JoinedColumns: Story = {
   render: () => (
     <XStack width={320}>
-      <Wheel items={hours} value={9} loop flex={1} highlightEdges="start" aria-label="Hour" />
-      <Wheel items={minutes} value={30} loop flex={1} highlightEdges="none" aria-label="Minute" />
-      <Wheel items={periods} value="AM" flex={1} highlightEdges="end" aria-label="AM/PM" />
+      <Wheel
+        items={hours}
+        value={9}
+        loop
+        flex={1}
+        highlightEdges="start"
+        aria-label="Hour"
+      />
+      <Wheel
+        items={minutes}
+        value={30}
+        loop
+        flex={1}
+        highlightEdges="none"
+        aria-label="Minute"
+      />
+      <Wheel
+        items={periods}
+        value="AM"
+        flex={1}
+        highlightEdges="end"
+        aria-label="AM/PM"
+      />
     </XStack>
   ),
 };
 
 export const Disabled: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
-      <YStack gap="$2" alignItems="center">
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">enabled</Paragraph>
-        <Wheel items={hours} value={9} aria-label="Hour enabled" />
+        <Wheel
+          items={hours}
+          value={9}
+          aria-label="Hour enabled"
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">disabled</Paragraph>
-        <Wheel items={hours} value={9} disabled aria-label="Hour disabled" />
+        <Wheel
+          items={hours}
+          value={9}
+          disabled
+          aria-label="Hour disabled"
+        />
       </YStack>
     </XStack>
   ),
@@ -167,7 +233,9 @@ export const CustomRenderItem: Story = {
       onChange={action('onChange')}
       aria-label="Currency"
       renderItem={(item, _index, isSelected) => (
-        <Paragraph size="$5" fontWeight={isSelected ? '700' : '400'}>
+        <Paragraph
+          size="$5"
+          fontWeight={isSelected ? '700' : '400'}>
           {currencyNames[item as keyof typeof currencyNames]}
         </Paragraph>
       )}
@@ -178,16 +246,32 @@ export const CustomRenderItem: Story = {
 /** Edge cases the geometry has to survive: empty, single item, very long labels. */
 export const EdgeCases: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start" flexWrap="wrap">
-      <YStack gap="$2" alignItems="center">
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      flexWrap="wrap">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">empty</Paragraph>
-        <Wheel items={[]} aria-label="Empty" />
+        <Wheel
+          items={[]}
+          aria-label="Empty"
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">single item</Paragraph>
-        <Wheel items={[{ value: 'only', label: 'Only' }]} value="only" aria-label="Single" />
+        <Wheel
+          items={[{ value: 'only', label: 'Only' }]}
+          value="only"
+          aria-label="Single"
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">long labels</Paragraph>
         <Wheel
           items={[
@@ -210,15 +294,31 @@ export const EdgeCases: Story = {
  */
 export const MotionOff: Story = {
   render: () => (
-    <XStack gap="$6" alignItems="flex-start">
-      <YStack gap="$2" alignItems="center">
+    <XStack
+      gap="$6"
+      alignItems="flex-start">
+      <YStack
+        gap="$2"
+        alignItems="center">
         <Paragraph size="$2">animation: medium</Paragraph>
-        <Wheel items={hours} value={9} loop aria-label="Hour animated" />
+        <Wheel
+          items={hours}
+          value={9}
+          loop
+          aria-label="Hour animated"
+        />
       </YStack>
       <Preset overrides={{ animation: 'none' }}>
-        <YStack gap="$2" alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Paragraph size="$2">animation: none</Paragraph>
-          <Wheel items={hours} value={9} loop aria-label="Hour static" />
+          <Wheel
+            items={hours}
+            value={9}
+            loop
+            aria-label="Hour static"
+          />
         </YStack>
       </Preset>
     </XStack>

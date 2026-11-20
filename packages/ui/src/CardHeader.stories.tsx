@@ -38,7 +38,11 @@ export const WithActions: Story = {
   render: () => (
     <Card maxWidth={420}>
       <Card.Header>
-        <XStack justifyContent="space-between" alignItems="center" gap="$2" flexWrap="wrap">
+        <XStack
+          justifyContent="space-between"
+          alignItems="center"
+          gap="$2"
+          flexWrap="wrap">
           <SizableText fontWeight="700">Header with actions</SizableText>
           <Button size="$2">Edit</Button>
         </XStack>
@@ -52,8 +56,14 @@ export const LongTitleNarrow: Story = {
     <YStack maxWidth={260}>
       <Card>
         <Card.Header>
-          <XStack justifyContent="space-between" alignItems="center" gap="$2" flexWrap="wrap">
-            <SizableText fontWeight="700" flexShrink={1}>
+          <XStack
+            justifyContent="space-between"
+            alignItems="center"
+            gap="$2"
+            flexWrap="wrap">
+            <SizableText
+              fontWeight="700"
+              flexShrink={1}>
               A very long header title that must wrap inside a narrow card without clipping
             </SizableText>
             <Button size="$2">Act</Button>

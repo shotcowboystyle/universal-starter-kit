@@ -5,18 +5,21 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
-import { Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import { useCallback, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, View, XStack, YStack } from 'tamagui';
+import type { TamaguiElement, YStackProps } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
-import { LIFT_SCALE } from '../views/kanbanDnd';
+import { LIFT_SCALE } from '../views/kanban-dnd';
 
 import { SortableHandle, SortableHandleWell } from './SortableHandle';
-import { useSortableRows } from './useSortableRows';
+import { useSortableRows } from './use-sortable-rows';
+import type { SortableSession } from './use-sortable-rows';
 
 export { SortableHandle, SortableHandleWell } from './SortableHandle';
-export { SortableSessionProvider, useSortableRows } from './useSortableRows';
-export type { SortableSession, UseSortableRowsOptions } from './useSortableRows';
+export { SortableSessionProvider, useSortableRows } from './use-sortable-rows';
+export type { SortableSession, UseSortableRowsOptions } from './use-sortable-rows';
 
 export type SortableDisabledStyle = 'keepLabel' | 'dimWhole';
 
@@ -43,7 +46,53 @@ const LIFT_SHADOW = {
   shadowRadius: 20,
 } as const;
 
-export function SortableList<T>({
+const rowOpacity = (pointerLifted: boolean, dimWhole: boolean): number => {
+  if (pointerLifted) {
+    return 0.4;
+  }
+  return dimWhole ? 0.5 : 1;
+};
+
+const SortableFlyRow = ({
+  session,
+  knobProps,
+}: {
+  session: SortableSession;
+  knobProps: ReturnType<typeof useResolvedKnobs>['knobProps'];
+}) => (
+  <View
+    position="absolute"
+    left={0}
+    right={0}
+    y={session.targetIndex * (session.size || MIN_PRESS_TARGET)}
+    minHeight={MIN_PRESS_TARGET}
+    alignItems="center"
+    paddingLeft="$2"
+    paddingRight="$3"
+    backgroundColor="$color2"
+    {...knobProps.borderRadius}
+    borderWidth={1}
+    borderColor="$borderColor"
+    scale={LIFT_SCALE}
+    {...LIFT_SHADOW}
+    pointerEvents="none"
+    zIndex={5}
+    {...{ 'data-sortable-fly': session.id }}>
+    <XStack
+      alignItems="center"
+      gap="$2"
+      minHeight={MIN_PRESS_TARGET}>
+      <SortableHandle
+        label={session.label}
+        itemId={session.id}
+        dragging
+      />
+      <Text {...knobProps.body}>{session.label}</Text>
+    </XStack>
+  </View>
+);
+
+export const SortableList = <T,>({
   items,
   getId,
   getLabel,
@@ -57,12 +106,16 @@ export function SortableList<T>({
   emptyMessage: emptyMessageProp,
   'aria-label': ariaLabel,
   ...stackProps
-}: SortableListProps<T>) {
+}: SortableListProps<T>) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No rows yet');
   const { knobProps } = useResolvedKnobs({ compact });
   const listId = useId();
   const containerRef = useRef<HTMLElement | null>(null);
+  const setContainer = useCallback((node: TamaguiElement | null) => {
+    // HTMLElement is undefined on native, where there is no DOM container to measure.
+    containerRef.current = typeof HTMLElement !== 'undefined' && node instanceof HTMLElement ? node : null;
+  }, []);
   const enabled = !disabled && !readOnly && !!onChange;
   const [rowKb, setRowKb] = useState<string | null>(null);
   if (typeof document !== 'undefined') {
@@ -91,17 +144,24 @@ export function SortableList<T>({
 
   return (
     <YStack
-      ref={containerRef as never}
+      ref={setContainer}
       {...knobProps.surface}
       {...knobProps.borderRadius}
       overflow="hidden"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui YStack is not an <ul>; role carries the list semantics on web and native
       role="list"
       aria-label={ariaLabel}
       id={listId}
       {...stackProps}>
       {items.length === 0 ? (
-        <YStack minHeight={88} alignItems="center" justifyContent="center" opacity={0.5}>
-          <Text {...knobProps.body} color="$color11">
+        <YStack
+          minHeight={88}
+          alignItems="center"
+          justifyContent="center"
+          opacity={0.5}>
+          <Text
+            {...knobProps.body}
+            color="$color11">
             {emptyMessage}
           </Text>
         </YStack>
@@ -114,9 +174,49 @@ export function SortableList<T>({
           const isKbFocus = rowKb === id && !sortable.session;
           const y = sortable.translateForIndex(index);
           const dimWhole = !canDrag && disabledStyle === 'dimWhole';
+          const pointerLifted = isSource && sortable.session?.mode === 'pointer';
+          const rowHostProps = {
+            ...(isKbFocus ? keyboardFocusRingProps : { outlineWidth: 0 }),
+            'data-sortable-row': id,
+            'aria-disabled': canDrag ? undefined : true,
+            onKeyDown: (e: { key: string; preventDefault: () => void }) => {
+              sortable.onRowKeyDown(index, e);
+            },
+            onFocus: () => {
+              onRowFocus(id, index);
+            },
+            onBlur: () => {
+              setRowKb((cur) => (cur === id ? null : cur));
+            },
+          };
+          let leading: ReactNode = null;
+          if (canDrag) {
+            leading = (
+              <SortableHandle
+                label={label}
+                itemId={id}
+                compact={compact}
+                dragging={isSource}
+                onPointerDown={(e) => {
+                  sortable.onHandlePointerDown(index, e);
+                }}
+                onKeyDown={(e) => {
+                  sortable.onHandleKeyDown(index, e);
+                }}
+              />
+            );
+          } else if (enabled) {
+            leading = (
+              <SortableHandleWell
+                itemId={id}
+                compact={compact}
+              />
+            );
+          }
           return (
             <XStack
               key={id}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is not an <li>; role carries the listitem semantics on web and native
               role="listitem"
               tabIndex={canDrag || !enabled ? 0 : -1}
               minHeight={MIN_PRESS_TARGET}
@@ -124,48 +224,28 @@ export function SortableList<T>({
               gap="$2"
               paddingLeft="$2"
               paddingRight="$3"
-              opacity={isSource && sortable.session?.mode === 'pointer' ? 0.4 : dimWhole ? 0.5 : 1}
-              backgroundColor={isSource && sortable.session?.mode === 'pointer' ? '$color1' : 'transparent'}
-              borderWidth={isSource && sortable.session?.mode === 'pointer' ? 1 : 0}
-              borderStyle={isSource && sortable.session?.mode === 'pointer' ? 'dashed' : 'solid'}
+              opacity={rowOpacity(pointerLifted, dimWhole)}
+              backgroundColor={pointerLifted ? '$color1' : 'transparent'}
+              borderWidth={pointerLifted ? 1 : 0}
+              borderStyle={pointerLifted ? 'dashed' : 'solid'}
               borderColor="$color7"
               y={y}
               hoverStyle={{ backgroundColor: '$color3' }}
-              {...({
-                ...(isKbFocus ? keyboardFocusRingProps : { outlineWidth: 0 }),
-                'data-sortable-row': id,
-                'aria-disabled': canDrag ? undefined : true,
-                onKeyDown: (e: { key: string; preventDefault: () => void }) => {
-                  sortable.onRowKeyDown(index, e);
-                },
-                onFocus: () => {
-                  onRowFocus(id, index);
-                },
-                onBlur: () => {
-                  setRowKb((cur) => (cur === id ? null : cur));
-                },
-              } as Record<string, unknown>)}>
-              {canDrag ? (
-                <SortableHandle
-                  label={label}
-                  itemId={id}
-                  compact={compact}
-                  dragging={isSource}
-                  onPointerDown={(e) => {
-                    sortable.onHandlePointerDown(index, e);
-                  }}
-                  onKeyDown={(e) => {
-                    sortable.onHandleKeyDown(index, e);
-                  }}
-                />
-              ) : enabled ? (
-                <SortableHandleWell itemId={id} compact={compact} />
-              ) : null}
-              <XStack flex={1} minWidth={0} alignItems="center" opacity={dimWhole ? 1 : undefined}>
+              {...rowHostProps}>
+              {leading}
+              <XStack
+                flex={1}
+                minWidth={0}
+                alignItems="center"
+                opacity={dimWhole ? 1 : undefined}>
                 {renderItem ? (
                   renderItem(item, index)
                 ) : (
-                  <Text {...knobProps.body} color="$color12" numberOfLines={1} flex={1}>
+                  <Text
+                    {...knobProps.body}
+                    color="$color12"
+                    numberOfLines={1}
+                    flex={1}>
                     {label}
                   </Text>
                 )}
@@ -176,29 +256,10 @@ export function SortableList<T>({
       )}
 
       {sortable.session?.mode === 'keyboard' ? (
-        <View
-          position="absolute"
-          left={0}
-          right={0}
-          y={sortable.session.targetIndex * (sortable.session.size || MIN_PRESS_TARGET)}
-          minHeight={MIN_PRESS_TARGET}
-          alignItems="center"
-          paddingLeft="$2"
-          paddingRight="$3"
-          backgroundColor="$color2"
-          {...knobProps.borderRadius}
-          borderWidth={1}
-          borderColor="$borderColor"
-          scale={LIFT_SCALE}
-          {...LIFT_SHADOW}
-          pointerEvents="none"
-          zIndex={5}
-          {...({ 'data-sortable-fly': sortable.session.id } as Record<string, unknown>)}>
-          <XStack alignItems="center" gap="$2" minHeight={MIN_PRESS_TARGET}>
-            <SortableHandle label={sortable.session.label} itemId={sortable.session.id} dragging />
-            <Text {...knobProps.body}>{sortable.session.label}</Text>
-          </XStack>
-        </View>
+        <SortableFlyRow
+          session={sortable.session}
+          knobProps={knobProps}
+        />
       ) : null}
 
       {enabled ? (
@@ -215,4 +276,4 @@ export function SortableList<T>({
       ) : null}
     </YStack>
   );
-}
+};

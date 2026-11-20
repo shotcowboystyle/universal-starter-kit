@@ -4,30 +4,40 @@ import { OVERLAY_ANCHOR_GAP, useResolvedKnobs } from '@repo/theme';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Paragraph, Popover, SizableText, YStack } from 'tamagui';
+import type { PopoverProps } from 'tamagui';
 
 import { PopoverContent } from './surfaces';
 
-function PopoverHarness({
+const PopoverHarness = ({
   placement = 'bottom' as const,
   startOpen = true,
 }: {
-  placement?: 'bottom' | 'top' | 'right' | 'left';
+  placement?: PopoverProps['placement'];
   startOpen?: boolean;
-}) {
+}) => {
   // PopoverContent's contract leaves the inset to the caller (flush menus
   // pass none); the demo caller pad rides the space knob.
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(startOpen);
   return (
-    <YStack minHeight={320} alignItems="center" justifyContent="center">
+    <YStack
+      minHeight={320}
+      alignItems="center"
+      justifyContent="center">
       {/* OVERLAY_ANCHOR_GAP rule: popovers keep the shared anchored-overlay
           gap between trigger edge and content (offset lives on the root). */}
-      <Popover open={open} onOpenChange={setOpen} placement={placement} offset={OVERLAY_ANCHOR_GAP}>
+      <Popover
+        open={open}
+        onOpenChange={setOpen}
+        placement={placement}
+        offset={OVERLAY_ANCHOR_GAP}>
         <Popover.Trigger asChild>
           <Button>Toggle popover</Button>
         </Popover.Trigger>
         <PopoverContent maxWidth={300}>
-          <YStack {...knobProps.gap} {...knobProps.panelPadding}>
+          <YStack
+            {...knobProps.gap}
+            {...knobProps.panelPadding}>
             <SizableText fontWeight="400">Popover title</SizableText>
             <Paragraph>Elevated overlay surface driven by the elevatedSurface knob recipe.</Paragraph>
           </YStack>
@@ -35,7 +45,7 @@ function PopoverHarness({
       </Popover>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof PopoverContent> = {
   title: 'Components/PopoverContent',

@@ -1,0 +1,32 @@
+## Keycloak auth (`mpo init --keycloak`)
+
+`apps/__NAME__/src/app.ts` wires `createApp({ keycloak: … })`: the
+`KeycloakProvider` mounts when `KEYCLOAK_ENABLED=1` and reads
+`KEYCLOAK_BASE_URL` / `KEYCLOAK_REALM` / `KEYCLOAK_CLIENT_ID` /
+`KEYCLOAK_PUBLIC_CLIENT_ID` (all `public` env keys in
+`packages/config/config.json`, loaded from `.env` — start from
+`.env.example`).
+
+Run a dev auth server with docker:
+
+```bash
+docker compose -f docker/compose.keycloak.yaml up -d
+```
+
+First boot imports `docker/keycloak/realm.json`: realm `__NAME__` with the
+two clients above and a `dev` / `dev` user. The admin console lives at
+http://localhost:8080/auth (admin / admin) — manage users, clients, and
+flows there, or edit the realm import stub and recreate the volume.
+
+Port 8080 is the most contested port on a dev machine. If something
+already owns it, move the host mapping and keep `.env` in step:
+
+```bash
+KEYCLOAK_HTTP_PORT=8081 docker compose -f docker/compose.keycloak.yaml up -d
+# then set KEYCLOAK_BASE_URL=http://localhost:8081/auth in .env
+```
+
+Do not reach for a yaml `!override` on `ports` in a second compose file
+instead: compose versions without that tag drop the whole ports list
+silently, and the container comes up healthy, realm imported, and
+unreachable from the host.

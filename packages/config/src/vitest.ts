@@ -1,16 +1,52 @@
 import fs from 'node:fs';
 import Module from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { tamaguiPlugin } from '@tamagui/vite-plugin';
 import react from '@vitejs/plugin-react';
-import type { UserConfig } from 'vite';
+import type { Plugin, PluginOption, UserConfig } from 'vite';
 
-import { phosphorTokenColorPlugin } from './phosphorTokenColor.ts';
-import { ensureTamaguiWorkspacePaths } from './tamaguiWorkspacePaths.ts';
+import { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
+import { ensureTamaguiWorkspacePaths } from './tamagui-workspace-paths.ts';
 
-const pinReactRequireSetup = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../pinReactRequire.cjs');
+const pinReactRequireSetup = path.resolve(import.meta.dirname, '../pin-react-require.cjs');
+
+type ResolveFilename = (
+  request: string,
+  parent: Module | undefined,
+  isMain: boolean,
+  options?: { paths?: string[] },
+) => string;
+
+interface ResolverHooks {
+  _resolveFilename: ResolveFilename;
+  _mpoOneReact?: boolean;
+}
+
+interface ReactDirs {
+  react: string;
+  reactDom: string;
+  scheduler: string;
+}
+
+/**
+ * Where a CJS request for react / react-dom / scheduler is pinned to, if anywhere.
+ */
+const pinnedReactTarget = (request: string, dirs: ReactDirs): string | null => {
+  if (request === 'react') {
+    return dirs.react;
+  }
+  if (request.startsWith('react/')) {
+    return path.join(dirs.react, request.slice('react/'.length));
+  }
+  if (request === 'react-dom') {
+    return dirs.reactDom;
+  }
+  if (request.startsWith('react-dom/')) {
+    return path.join(dirs.reactDom, request.slice('react-dom/'.length));
+  }
+  return request === 'scheduler' ? dirs.scheduler : null;
+};
 
 /**
  * CJS `require('react')` does not go through Vite aliases. `use-sync-external-store`
@@ -20,30 +56,18 @@ const pinReactRequireSetup = path.resolve(path.dirname(fileURLToPath(import.meta
  * process (config eval + workers that re-load this factory) makes that
  * require land on the same physical copy as the aliases.
  */
-function pinNodeReactRequire(reactDir: string, reactDomDir: string, schedulerDir: string): void {
-  const ctor = Module as typeof Module & {
-    _resolveFilename: (request: string, parent: unknown, isMain: boolean, options?: unknown) => string;
-    _mpoOneReact?: boolean;
-  };
+const pinNodeReactRequire = (dirs: ReactDirs): void => {
+  // SAFETY: Module._resolveFilename and Module._mpoOneReact are not in @types/node, but Node's CJS loader defines the former on every supported version and the latter is only ever written here.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- private Node loader hook that @types/node does not declare
+  const ctor = Module as typeof Module & ResolverHooks;
   if (ctor._mpoOneReact) {
     return;
   }
   ctor._mpoOneReact = true;
   const orig = ctor._resolveFilename;
-  ctor._resolveFilename = function pinned(request, parent, isMain, options) {
-    const next =
-      request === 'react'
-        ? reactDir
-        : request.startsWith('react/')
-          ? path.join(reactDir, request.slice('react/'.length))
-          : request === 'react-dom'
-            ? reactDomDir
-            : request.startsWith('react-dom/')
-              ? path.join(reactDomDir, request.slice('react-dom/'.length))
-              : request === 'scheduler'
-                ? schedulerDir
-                : null;
-    if (next) {
+  ctor._resolveFilename = function _resolveFilename(request, parent, isMain, options) {
+    const next = pinnedReactTarget(request, dirs);
+    if (next !== null) {
       try {
         return orig.call(this, next, parent, isMain, options);
       } catch {
@@ -52,7 +76,7 @@ function pinNodeReactRequire(reactDir: string, reactDomDir: string, schedulerDir
     }
     return orig.call(this, request, parent, isMain, options);
   };
-}
+};
 
 export interface CreateVitestConfigOptions {
   /**
@@ -139,6 +163,134 @@ export interface CreateVitestConfigOptions {
 }
 
 /**
+ * Rewrites `react-native` imports in app source to `react-native-web`.
+ */
+const replaceReactNativePlugin = (): Plugin => ({
+  name: 'replace-react-native',
+  transform(code: string, id: string): { code: string; map: null } | undefined {
+    if (id.includes('node_modules')) {
+      return undefined;
+    }
+    return {
+      code: code.replaceAll(/from ['"]react-native['"]/gu, 'from "react-native-web"'),
+      map: null,
+    };
+  },
+});
+
+interface OptionalTestConfig {
+  include?: string[];
+  exclude?: string[];
+  passWithNoTests?: boolean;
+}
+
+const vitestPlugins = (replaceReactNative: boolean, tamaguiConfig: string | false): PluginOption[] => {
+  const plugins: PluginOption[] = [
+    react({
+      jsxRuntime: 'automatic',
+    }),
+    phosphorTokenColorPlugin(),
+  ];
+
+  // Replace react-native imports with react-native-web
+  if (replaceReactNative) {
+    plugins.push(replaceReactNativePlugin());
+  }
+
+  // Tamagui plugin for test environment
+  if (tamaguiConfig !== false) {
+    plugins.push(
+      tamaguiPlugin({
+        components: ['tamagui'],
+        config: tamaguiConfig,
+      }),
+    );
+  }
+  return plugins;
+};
+
+/**
+ * Aliases that resolve react, react-dom and scheduler to ONE physical copy each, and the matching
+ * `MPO_VITEST_*` env that pin-react-require.cjs reads in the workers.
+ *
+ * `.npmrc` sets `node-linker=hoisted`, so the workspace ROOT gets
+ * a real `node_modules/react` directory while each package's own
+ * `node_modules/react` is a symlink into `.pnpm/react@<v>/...`. Those are
+ * two PHYSICALLY distinct copies of the same version, and Vite resolves
+ * symlinks to their real path — so aliasing at the root while a dependency
+ * (say @tanstack/react-query, whose source Vite transforms) resolves
+ * through the package symlink puts two Reacts in one module graph.
+ *
+ * react-dom then installs its dispatcher into one copy while the component
+ * tree reads the other, and every render dies on
+ * `Cannot read properties of null (reading 'useEffect')` — the whole
+ * components render suite, and the render half of forms.
+ *
+ * So resolve each package to ONE physical copy, preferring the one the
+ * package under test actually resolves. react and react-dom live in
+ * DIFFERENT `.pnpm` directories (`react@19.2.5` and
+ * `react-dom@19.2.5_react@19.2.5`), so this is per-package: a shared
+ * parent directory does not exist and assuming one loses react-dom.
+ */
+const dedupeReactAliases = (rootNodeModules: string) => {
+  const onePhysicalCopy = (pkg: string): string => {
+    for (const base of [path.resolve(process.cwd(), 'node_modules'), rootNodeModules]) {
+      try {
+        return fs.realpathSync(path.resolve(base, pkg));
+      } catch {
+        // not installed at this level — fall through to the next base
+      }
+    }
+    return path.resolve(rootNodeModules, pkg);
+  };
+  const reactDir = onePhysicalCopy('react');
+  const reactDomDir = onePhysicalCopy('react-dom');
+  const schedulerDir = onePhysicalCopy('scheduler');
+  process.env.MPO_VITEST_REACT = reactDir;
+  process.env.MPO_VITEST_REACT_DOM = reactDomDir;
+  process.env.MPO_VITEST_SCHEDULER = schedulerDir;
+  pinNodeReactRequire({ react: reactDir, reactDom: reactDomDir, scheduler: schedulerDir });
+  return {
+    react: reactDir,
+    'react-dom': reactDomDir,
+    'react-dom/client': path.join(reactDomDir, 'client'),
+    'react-dom/server': path.join(reactDomDir, 'server'),
+    'react/jsx-runtime': path.join(reactDir, 'jsx-runtime'),
+    'react/jsx-dev-runtime': path.join(reactDir, 'jsx-dev-runtime'),
+    scheduler: schedulerDir,
+  };
+};
+
+const vitestResolveAliases = (replaceReactNative: boolean, dedupeReact: boolean, rootNodeModules: string) => {
+  const resolveAliases: Record<string, string> = {};
+  if (replaceReactNative) {
+    resolveAliases['react-native'] = 'react-native-web';
+    // Replace react-native-svg with tamagui's web-safe SVG shim.
+    // react-native-svg's CJS build calls require("react-native"), and in Node.js 24
+    // that triggers importSyncForRequire which tries to parse react-native/index.js
+    // as ESM. That file contains Flow syntax (`import typeof`) which is invalid ESM,
+    // so Node.js 24 throws SyntaxError: Unexpected token 'typeof'.
+    resolveAliases['react-native-svg'] = '@tamagui/react-native-svg';
+  }
+  if (dedupeReact) {
+    Object.assign(resolveAliases, dedupeReactAliases(rootNodeModules));
+  }
+  return resolveAliases;
+};
+
+/**
+ * The `MPO_VITEST_*` paths, kept on the `process` stub vite substitutes into transformed modules.
+ */
+const pinnedReactEnv = (dedupeReact: boolean) =>
+  dedupeReact
+    ? {
+        MPO_VITEST_REACT: process.env.MPO_VITEST_REACT,
+        MPO_VITEST_REACT_DOM: process.env.MPO_VITEST_REACT_DOM,
+        MPO_VITEST_SCHEDULER: process.env.MPO_VITEST_SCHEDULER,
+      }
+    : {};
+
+/**
  * Creates a shared Vitest configuration for workspace packages.
  *
  * This eliminates the ~100 lines of duplicated vitest config across 13+ packages,
@@ -156,7 +308,7 @@ export interface CreateVitestConfigOptions {
  * });
  * ```
  */
-export function createVitestConfig(options: CreateVitestConfigOptions = {}): UserConfig {
+export const createVitestConfig = (options: CreateVitestConfigOptions = {}): UserConfig => {
   // The tsconfig chain below extends a generated file that a skipped
   // root `prepare` never wrote; regenerate it before vite loads any tsconfig.
   ensureTamaguiWorkspacePaths();
@@ -164,7 +316,7 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
     tamaguiConfig = './tests/tamagui.config.ts',
     environment = 'jsdom',
     setupFiles = [],
-    testTimeout = 30000,
+    testTimeout = 30_000,
     inlineDeps = [],
     externalDeps = [],
     aliases = {},
@@ -178,98 +330,15 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
     passWithNoTests,
   } = options;
 
-  const rootNodeModules = _rootNodeModules || path.resolve(process.cwd(), '../../node_modules');
+  const rootNodeModules =
+    _rootNodeModules === undefined || _rootNodeModules === ''
+      ? path.resolve(process.cwd(), '../../node_modules')
+      : _rootNodeModules;
 
-  const plugins: any[] = [
-    react({
-      jsxRuntime: 'automatic',
-    }),
-    phosphorTokenColorPlugin(),
-  ];
+  const plugins = vitestPlugins(replaceReactNative, tamaguiConfig);
+  const resolveAliases = vitestResolveAliases(replaceReactNative, dedupeReact, rootNodeModules);
 
-  // Replace react-native imports with react-native-web
-  if (replaceReactNative) {
-    plugins.push({
-      name: 'replace-react-native',
-      transform(code: string, id: string) {
-        if (id.includes('node_modules')) {
-          return;
-        }
-        return {
-          code: code.replace(/from ['"]react-native['"]/g, 'from "react-native-web"'),
-          map: null,
-        };
-      },
-    });
-  }
-
-  // Tamagui plugin for test environment
-  if (tamaguiConfig !== false) {
-    plugins.push(
-      tamaguiPlugin({
-        components: ['tamagui'],
-        config: tamaguiConfig,
-      } as any),
-    );
-  }
-
-  // Build resolve aliases
-  const resolveAliases: Record<string, string> = {};
-  if (replaceReactNative) {
-    resolveAliases['react-native'] = 'react-native-web';
-    // Replace react-native-svg with tamagui's web-safe SVG shim.
-    // react-native-svg's CJS build calls require("react-native"), and in Node.js 24
-    // that triggers importSyncForRequire which tries to parse react-native/index.js
-    // as ESM. That file contains Flow syntax (`import typeof`) which is invalid ESM,
-    // so Node.js 24 throws SyntaxError: Unexpected token 'typeof'.
-    resolveAliases['react-native-svg'] = '@tamagui/react-native-svg';
-  }
-  if (dedupeReact) {
-    // `.npmrc` sets `node-linker=hoisted`, so the workspace ROOT gets
-    // a real `node_modules/react` directory while each package's own
-    // `node_modules/react` is a symlink into `.pnpm/react@<v>/...`. Those are
-    // two PHYSICALLY distinct copies of the same version, and Vite resolves
-    // symlinks to their real path — so aliasing at the root while a dependency
-    // (say @tanstack/react-query, whose source Vite transforms) resolves
-    // through the package symlink puts two Reacts in one module graph.
-    //
-    // react-dom then installs its dispatcher into one copy while the component
-    // tree reads the other, and every render dies on
-    // `Cannot read properties of null (reading 'useEffect')` — the whole
-    // components render suite, and the render half of forms.
-    //
-    // So resolve each package to ONE physical copy, preferring the one the
-    // package under test actually resolves. react and react-dom live in
-    // DIFFERENT `.pnpm` directories (`react@19.2.5` and
-    // `react-dom@19.2.5_react@19.2.5`), so this is per-package: a shared
-    // parent directory does not exist and assuming one loses react-dom.
-    const onePhysicalCopy = (pkg: string): string => {
-      for (const base of [path.resolve(process.cwd(), 'node_modules'), rootNodeModules]) {
-        try {
-          return fs.realpathSync(path.resolve(base, pkg));
-        } catch {
-          // not installed at this level — fall through to the next base
-        }
-      }
-      return path.resolve(rootNodeModules, pkg);
-    };
-    const reactDir = onePhysicalCopy('react');
-    const reactDomDir = onePhysicalCopy('react-dom');
-    resolveAliases.react = reactDir;
-    resolveAliases['react-dom'] = reactDomDir;
-    resolveAliases['react-dom/client'] = path.join(reactDomDir, 'client');
-    resolveAliases['react-dom/server'] = path.join(reactDomDir, 'server');
-    resolveAliases['react/jsx-runtime'] = path.join(reactDir, 'jsx-runtime');
-    resolveAliases['react/jsx-dev-runtime'] = path.join(reactDir, 'jsx-dev-runtime');
-    const schedulerDir = onePhysicalCopy('scheduler');
-    resolveAliases.scheduler = schedulerDir;
-    process.env.MPO_VITEST_REACT = reactDir;
-    process.env.MPO_VITEST_REACT_DOM = reactDomDir;
-    process.env.MPO_VITEST_SCHEDULER = schedulerDir;
-    pinNodeReactRequire(reactDir, reactDomDir, schedulerDir);
-  }
-
-  const testConfig: Record<string, unknown> = {
+  const testConfig = {
     environment,
     globals: true,
     setupFiles: dedupeReact ? [pinReactRequireSetup, ...setupFiles] : setupFiles,
@@ -287,7 +356,7 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
         '**/*.stories.*',
         '**/*.spec.*',
         '**/*.test.*',
-        ...(coverage?.exclude || []),
+        ...(coverage?.exclude ?? []),
       ],
     },
     server: {
@@ -302,9 +371,9 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
         inline: [
           'react-native-web',
           'one',
-          /@tamagui\//,
+          /@tamagui\//u,
           'tamagui',
-          /@tanstack\//,
+          /@tanstack\//u,
           'use-sync-external-store',
           // Native ESM bypasses both the Vite React alias and the CJS require
           // pin. Transform react-i18next so useTranslation shares the renderer.
@@ -315,26 +384,26 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
           '@phosphor-icons/react',
           ...inlineDeps,
         ],
-        ...(externalDeps.length > 0
-          ? { external: [pinReactRequireSetup, ...externalDeps] }
-          : { external: [pinReactRequireSetup] }),
+        external: [pinReactRequireSetup, ...externalDeps],
         interopDefault: true,
       },
     },
   };
-  if (include) {
-    testConfig.include = include;
+  const optionalTestConfig: OptionalTestConfig = {};
+  if (include !== undefined) {
+    optionalTestConfig.include = include;
   }
-  if (exclude) {
-    testConfig.exclude = exclude;
+  if (exclude !== undefined) {
+    optionalTestConfig.exclude = exclude;
   }
   if (passWithNoTests) {
-    testConfig.passWithNoTests = true;
+    optionalTestConfig.passWithNoTests = true;
   }
 
+  // SAFETY: vite's UserConfig has no `test` key until vitest augments it; the object below is the shape vitest's own defineConfig accepts.
   return {
     plugins,
-    test: testConfig,
+    test: { ...testConfig, ...optionalTestConfig },
     resolve: {
       // Never list .test.* here. Vite tries these suffixes in order for an
       // extensionless specifier, so a leading ".test.ts" makes `import "./foo"`
@@ -360,19 +429,13 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
       __DEV__: true,
       global: 'globalThis',
       // This replaces the `process` identifier in transformed modules. Keep the
-      // MPO_VITEST_* paths on that stub so pinReactRequire.cjs still sees
+      // MPO_VITEST_* paths on that stub so pin-react-require.cjs still sees
       // them if Vite ever transforms the setup file.
       process: JSON.stringify({
         env: {
           NODE_ENV: 'test',
           NODE_DEBUG: false,
-          ...(dedupeReact
-            ? {
-                MPO_VITEST_REACT: process.env.MPO_VITEST_REACT,
-                MPO_VITEST_REACT_DOM: process.env.MPO_VITEST_REACT_DOM,
-                MPO_VITEST_SCHEDULER: process.env.MPO_VITEST_SCHEDULER,
-              }
-            : {}),
+          ...pinnedReactEnv(dedupeReact),
         },
         platform: process.platform,
         version: process.version,
@@ -381,4 +444,4 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
       'Buffer.isBuffer': "((obj) => obj?.constructor?.name === 'Buffer')",
     },
   } as UserConfig;
-}
+};

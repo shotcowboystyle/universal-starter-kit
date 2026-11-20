@@ -11,55 +11,59 @@ import { Preset } from '@repo/theme';
 // jsdom's getComputedStyle cannot cascade Tamagui's class-based CSS, so this
 // asserts on the atomic classes (same approach as Timeline.radius.test.tsx).
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Tags } from './Tags';
-
-afterEach(cleanup);
+import type { TagItem } from './Tags';
 
 const tags = [{ id: 'tag-1', label: 'urgent' }];
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
-  return String(el.className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  el.className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
-}
+    .toSorted();
 
 /** Walk up from the chip label to the ChipFrame (first ancestor with padding classes). */
-function chipFrameOf(label: HTMLElement): HTMLElement {
+const chipFrameOf = (label: HTMLElement): HTMLElement => {
   let el: HTMLElement | null = label.parentElement;
-  for (let i = 0; i < 8 && el; i++) {
+  for (let i = 0; i < 8 && el; i += 1) {
     if (classesByPrefix(el, ['_pt-', '_pl-']).length > 0) {
       return el;
     }
     el = el.parentElement;
   }
   throw new Error('chip frame not found');
-}
+};
 
-function renderTags() {
-  return renderWithProviders(<Tags tags={tags} onAdd={vi.fn()} onRemove={vi.fn()} />);
-}
+const renderTags = () =>
+  renderWithProviders(
+    <Tags
+      tags={tags}
+      onAdd={vi.fn<(tagName: string) => void>()}
+      onRemove={vi.fn<(tag: TagItem) => void>()}
+    />,
+  );
 
 /** The chip-scale visual pill nested inside the wrapper trigger. */
-function triggerPillOf(trigger: HTMLElement): HTMLElement {
+const triggerPillOf = (trigger: HTMLElement): HTMLElement => {
   const pill = chipFrameOf(screen.getByText('Add Tag'));
   if (!trigger.contains(pill)) {
     throw new Error('trigger pill not inside trigger');
   }
   return pill;
-}
+};
 
 describe('Tags Add Tag trigger (chip-scale)', () => {
+  afterEach(cleanup);
+
   it('trigger pill padding classes match the chip pill exactly', () => {
     renderTags();
     const chip = chipFrameOf(screen.getByText('urgent'));
     const trigger = screen.getByLabelText('Add Tag');
     const pill = triggerPillOf(trigger);
     const paddingPrefixes = ['_pt-', '_pb-', '_pl-', '_pr-'];
-    expect(classesByPrefix(pill, paddingPrefixes)).toEqual(classesByPrefix(chip, paddingPrefixes));
+    expect(classesByPrefix(pill, paddingPrefixes)).toStrictEqual(classesByPrefix(chip, paddingPrefixes));
   });
 
   it('trigger pill height matches the chip pill (size recipe)', () => {
@@ -72,9 +76,9 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     // border: the trigger is outlined and the tag chips are not, and while
     // the border width lived on the `outline` variant alone the trigger
     // rendered 2px taller than the chips beside it in the same row.
-    expect(classesByPrefix(pill, ['_h-'])).toEqual(classesByPrefix(chip, ['_h-']));
+    expect(classesByPrefix(pill, ['_h-'])).toStrictEqual(classesByPrefix(chip, ['_h-']));
     const borderPrefixes = ['_btw-', '_bbw-', '_blw-', '_brw-', '_bw-'];
-    expect(classesByPrefix(pill, borderPrefixes)).toEqual(classesByPrefix(chip, borderPrefixes));
+    expect(classesByPrefix(pill, borderPrefixes)).toStrictEqual(classesByPrefix(chip, borderPrefixes));
     expect(classesByPrefix(pill, borderPrefixes).length).toBeGreaterThan(0);
   });
 
@@ -93,17 +97,21 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
   ] as const)('outlined borderWidth %s resolves to %s, floored only by the resolver', (borderWidth, px) => {
     renderWithProviders(
       <Preset overrides={{ borderWidth, fillStyle: 'outlined' }}>
-        <Tags tags={tags} onAdd={vi.fn()} onRemove={vi.fn()} />
+        <Tags
+          tags={tags}
+          onAdd={vi.fn<(tagName: string) => void>()}
+          onRemove={vi.fn<(tag: TagItem) => void>()}
+        />
       </Preset>,
     );
     const pill = triggerPillOf(screen.getByLabelText('Add Tag'));
     const chip = chipFrameOf(screen.getByText('urgent'));
     const edges = ['_btw-', '_bbw-', '_blw-', '_brw-'];
-    const expected = edges.map((edge) => `${edge}${px}`).sort();
-    expect(classesByPrefix(pill, edges)).toEqual(expected);
+    const expected = edges.map((edge) => `${edge}${px}`).toSorted();
+    expect(classesByPrefix(pill, edges)).toStrictEqual(expected);
     // The trigger and the chips it sits beside share one box at every stop;
     // a floor on only one of them is what pulled their heights apart.
-    expect(classesByPrefix(chip, edges)).toEqual(expected);
+    expect(classesByPrefix(chip, edges)).toStrictEqual(expected);
   });
 
   it('trigger wrapper carries the 44px press-floor (minHeight class)', () => {
@@ -116,7 +124,7 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     renderTags();
     const chipLabel = screen.getByText('urgent');
     const triggerLabel = screen.getByText('Add Tag');
-    expect(classesByPrefix(triggerLabel, ['_fos-'])).toEqual(classesByPrefix(chipLabel, ['_fos-']));
+    expect(classesByPrefix(triggerLabel, ['_fos-'])).toStrictEqual(classesByPrefix(chipLabel, ['_fos-']));
   });
 
   it('clicking the trigger opens the add-tag panel', async () => {

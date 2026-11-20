@@ -112,7 +112,7 @@ describe('Theme Preset System', () => {
     it('registers a preset and retrieves it by name', () => {
       registerPreset('minimal', minimalPreset);
       const result = getPreset('minimal');
-      expect(result).toEqual(minimalPreset);
+      expect(result).toStrictEqual(minimalPreset);
     });
 
     it('returns undefined for an unregistered preset name', () => {
@@ -124,7 +124,7 @@ describe('Theme Preset System', () => {
       registerPreset('bold', boldPreset);
       registerPreset('rounded', roundedPreset);
       const names = getPresetNames();
-      expect(names).toEqual(expect.arrayContaining(['minimal', 'bold', 'rounded']));
+      expect(names).toStrictEqual(expect.arrayContaining(['minimal', 'bold', 'rounded']));
       expect(names).toHaveLength(3);
     });
 
@@ -189,9 +189,12 @@ describe('Theme Preset System', () => {
       // Switch to bold — overrides should be empty (caller responsibility)
       // When switching presets, the caller clears overrides
       const resolved2 = resolveThemeFromPreset('bold', {});
-      expect(resolved2.knobs.elevation).toBe('medium'); // bold preset's value
-      expect(resolved2.knobs.borderRadius).toBe('full'); // bold preset's value
-      expect(resolved2.knobs.space).toBe('large'); // bold preset's value
+      // bold preset's value
+      expect(resolved2.knobs.elevation).toBe('medium');
+      // bold preset's value
+      expect(resolved2.knobs.borderRadius).toBe('full');
+      // bold preset's value
+      expect(resolved2.knobs.space).toBe('large');
     });
   });
 
@@ -210,15 +213,18 @@ describe('Theme Preset System', () => {
       const overrides = JSON.parse(overridesJson);
       const resolved = resolveThemeFromPreset(presetName, overrides);
 
-      expect(resolved.knobs.borderRadius).toBe('large'); // from preset
-      expect(resolved.knobs.borderWidth).toBe('large'); // from override
-      expect(resolved.theme).toBe('purple'); // from preset
+      // from preset
+      expect(resolved.knobs.borderRadius).toBe('large');
+      // from override
+      expect(resolved.knobs.borderWidth).toBe('large');
+      // from preset
+      expect(resolved.theme).toBe('purple');
     });
 
     it('handles empty overrides cookie gracefully', () => {
       registerPreset('minimal', minimalPreset);
       const resolved = resolveThemeFromPreset('minimal', {});
-      expect(resolved.knobs).toEqual(minimalPreset.knobs);
+      expect(resolved.knobs).toStrictEqual(minimalPreset.knobs);
     });
   });
 

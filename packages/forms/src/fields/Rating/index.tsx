@@ -11,43 +11,44 @@ import {
   wasKeyboardFocus,
 } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import type { ComponentType, KeyboardEvent, ReactNode } from 'react';
+import type { ComponentProps, ComponentType, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 // Named import (not default) — same interop hazard as fields/Signature.
 import { Path, Svg } from 'react-native-svg';
-import type { LabelProps, SizeTokens, TransitionProp } from 'tamagui';
+import type { LabelProps, SizeTokens, TamaguiElement, TransitionProp } from 'tamagui';
 import { getVariable, getVariableValue, isWeb, SizableText, styled, useTheme, View, XStack } from 'tamagui';
 
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
+import type { FieldLayoutProps } from '../../FieldLayout';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-import { filledCount } from './ratingMath';
+import { filledCount } from './rating-math';
 import { StarInk } from './StarInk';
 
-export { filledCount } from './ratingMath';
+export { filledCount } from './rating-math';
 
 /** Visual glyph follows the size token (Material small/medium/large). Floor 16. */
-function starGlyphSize(sizeToken: SizeTokens | string | undefined): number {
-  const token = (sizeToken ?? '$4') as SizeTokens;
-  const control = Number(getVariableValue(getSize(token)));
+const starGlyphSize = (sizeToken: SizeTokens | undefined): number => {
+  const control = Number(getVariableValue(getSize(sizeToken ?? '$4')));
   if (!Number.isFinite(control) || control <= 0) {
     return 24;
   }
   return Math.max(16, Math.round(control * 0.55));
-}
+};
 
-function starPath(size: number, innerRatio = 0.382): string {
+const starPath = (size: number, innerRatio = 0.382): string => {
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 1;
   const innerR = outerR * innerRatio;
   const parts: string[] = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 5; i += 1) {
     const outerA = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
     const innerA = outerA + Math.PI / 5;
     parts.push(
@@ -56,16 +57,19 @@ function starPath(size: number, innerRatio = 0.382): string {
     );
   }
   return `M${parts.join('L')}Z`;
-}
+};
 
-function PointyStar({ size, weight, color }: { size: number; weight: 'fill' | 'regular'; color: string }) {
+const PointyStar = ({ size, weight, color }: { size: number; weight: 'fill' | 'regular'; color: string }) => {
   const d = starPath(size);
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}>
       <Path
         d={d}
         // `transparent` rather than `none`: an empty->filled star has to
-        // interpolate its fill, and `none` is not a colour so it can
+        // interpolate its fill, and `none` is not a color so it can
         // only jump. Paints identically.
         fill={weight === 'fill' ? color : 'transparent'}
         stroke={color}
@@ -75,10 +79,10 @@ function PointyStar({ size, weight, color }: { size: number; weight: 'fill' | 'r
       />
     </Svg>
   );
-}
+};
 
 // CSS timing strings for web transitions (mirrors theme animation config)
-const cssTimings: Record<string, string> = {
+const cssTimings = {
   bouncy: 'ease-in 200ms',
   lazy: 'ease-in 600ms',
   slow: 'ease-in 500ms',
@@ -87,18 +91,22 @@ const cssTimings: Record<string, string> = {
   tooltip: 'ease-in 400ms',
   snappy: 'ease-out 80ms',
   gentle: 'ease-in-out 450ms',
-};
+} as const satisfies Record<string, string>;
+
+/** Unknown or non-token transitions fall back to the `quick` timing. */
+const inkTokenFor = (transition: TransitionProp): string =>
+  Object.keys(cssTimings).find((name) => name === transition) ?? 'quick';
+
+const timingFor = (transition: TransitionProp): string =>
+  Object.entries(cssTimings).find(([name]) => name === transition)?.[1] ?? cssTimings.quick;
 
 /** Discrete fill jumps tween; omit when animation knob is none or scrubbing. */
-function getTransitionStyle(transition: TransitionProp | undefined, live: boolean) {
-  if (!isWeb || live || !transition) {
-    return undefined;
-  }
-  const timing = cssTimings[transition as string] ?? cssTimings.quick;
-  return {
-    transition: [`transform ${timing}`, `opacity ${timing}`, `color ${timing}`].join(', '),
-  };
-}
+const getTransitionStyle = (transition: TransitionProp | undefined, live: boolean) => {
+  const timing = isWeb && !live && transition != null ? timingFor(transition) : undefined;
+  return timing === undefined
+    ? undefined
+    : { transition: [`transform ${timing}`, `opacity ${timing}`, `color ${timing}`].join(', ') };
+};
 
 // Star ink: the visible change is the SVG `fill`/`stroke` of the glyph
 // CHILD, and `transition` does not inherit — a declaration on the wrapper can
@@ -112,11 +120,11 @@ function getTransitionStyle(transition: TransitionProp | undefined, live: boolea
 // layer stack it owns — see `StarInk.native.tsx`.
 const INK_STYLE_ID = 'mp1-rating-ink';
 const inkClassName = (token: string) => `mp1-rating-ink-${token}`;
-function ensureRatingInkStyles() {
+const ensureRatingInkStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(INK_STYLE_ID)) {
+  if (document.querySelector(`#${INK_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -128,8 +136,8 @@ function ensureRatingInkStyles() {
   style.textContent = Object.entries(cssTimings)
     .map(([token, timing]) => `.${inkClassName(token)} svg * { transition: fill ${timing}, stroke ${timing}; }`)
     .join('\n');
-  document.head.appendChild(style);
-}
+  document.head.append(style);
+};
 
 const StarWrapper = styled(View, {
   alignItems: 'center',
@@ -147,7 +155,317 @@ const StarWrapper = styled(View, {
   } as const,
 });
 
-function StarRow({
+const isActivationKey = (event: Pick<KeyboardEvent, 'key' | 'code'>): boolean =>
+  event.key === 'Enter' || event.key === ' ' || event.code === 'Space';
+
+/** Roving-radio target star for a navigation key, or undefined for any other key. */
+const starKeyTarget = (key: string, starNumber: number, maxStars: number): number | undefined => {
+  switch (key) {
+    case 'ArrowRight':
+    case 'ArrowUp': {
+      return Math.min(starNumber + 1, maxStars);
+    }
+    case 'ArrowLeft':
+    case 'ArrowDown': {
+      return Math.max(starNumber - 1, 1);
+    }
+    case 'Home': {
+      return 1;
+    }
+    case 'End': {
+      return maxStars;
+    }
+    default: {
+      return undefined;
+    }
+  }
+};
+
+/** Star (1-based) under a pointer x-position along the row, or null off the row. */
+const starFromPointer = (clientX: number, row: HTMLElement, maxStars: number): number | null => {
+  const stars = [...row.querySelectorAll('[data-rating-star]')];
+  const first = stars.at(0)?.getBoundingClientRect();
+  const last = stars.at(-1)?.getBoundingClientRect();
+  if (first === undefined || last === undefined) {
+    return null;
+  }
+  const width = last.right - first.left;
+  if (width <= 0) {
+    return null;
+  }
+  const ratio = Math.min(1, Math.max(0, (clientX - first.left) / width));
+  return Math.max(1, Math.ceil(ratio * maxStars));
+};
+
+const starNumbersFor = (count: number): number[] => Array.from({ length: count }, (_, i) => i + 1);
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+type ThemeColorLookup = Record<string, { get: (platform: 'web') => string | undefined } | undefined>;
+
+const resolveThemeColor = (theme: ThemeColorLookup, token: string): string =>
+  String(
+    getVariable(theme[token]?.get('web') ?? theme.color10?.get('web') ?? theme.color?.get('web')) ?? 'currentColor',
+  );
+
+const ReadOnlyStar = ({
+  starNumber,
+  starSize,
+  isFilled,
+  children,
+}: {
+  starNumber: number;
+  starSize: number;
+  isFilled: boolean;
+  children: ReactNode;
+}) => (
+  <View
+    width={starSize}
+    height={starSize}
+    data-rating-star={isFilled ? 'filled' : 'empty'}
+    data-rating-index={starNumber}>
+    {children}
+  </View>
+);
+
+interface InteractiveStarProps {
+  starNumber: number;
+  maxStars: number;
+  filledStars: number;
+  displayFilled: number;
+  scrubbing: boolean;
+  allowMotion: boolean;
+  focusedStar: number | null;
+  kbFocusStar: number | null;
+  tabStopStar: number;
+  disabled: boolean;
+  disabledChrome: ReturnType<typeof useResolvedKnobs>['disabledState']['chromeKnobProps'] | undefined;
+  itemRadius: number;
+  growPressTarget: boolean;
+  starOutset: number;
+  starSize: number;
+  motionTransition: TransitionProp | undefined;
+  inkToken: string | undefined;
+  glyph: ReactNode;
+  registerStar: (starNumber: number, node: TamaguiElement | null) => void;
+  onPress: (starNumber: number) => void;
+  onStarFocus: (starNumber: number) => void;
+  onStarBlur: (starNumber: number) => void;
+  onStarKeyDown: (event: KeyboardEvent, starNumber: number) => void;
+}
+
+const InteractiveStar = ({
+  starNumber,
+  maxStars,
+  filledStars,
+  displayFilled,
+  scrubbing,
+  allowMotion,
+  focusedStar,
+  kbFocusStar,
+  tabStopStar,
+  disabled,
+  disabledChrome,
+  itemRadius,
+  growPressTarget,
+  starOutset,
+  starSize,
+  motionTransition,
+  inkToken,
+  glyph,
+  registerStar,
+  onPress,
+  onStarFocus,
+  onStarBlur,
+  onStarKeyDown,
+}: InteractiveStarProps) => {
+  const isFilled = starNumber <= displayFilled;
+  const isChecked = filledStars > 0 && starNumber === filledStars;
+  const isActive = allowMotion && (scrubbing ? starNumber === displayFilled : starNumber === focusedStar);
+  const showRing = kbFocusStar === starNumber;
+  return (
+    <StarWrapper
+      ref={(node) => {
+        registerStar(starNumber, node);
+      }}
+      onPress={() => {
+        onPress(starNumber);
+      }}
+      cursor={disabled ? 'default' : 'pointer'}
+      // Stars are text-free chrome — dim via the
+      // recipe (read-only stays full-contrast, only pointer changes).
+      {...(disabled ? disabledChrome : undefined)}
+      active={isActive}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- StarWrapper is a styled View with press/ring chrome; the radiogroup wiring is aria-based by design
+      role="radio"
+      aria-label={t('{{star}} of {{max}} stars', { star: starNumber, max: maxStars })}
+      aria-disabled={disabled || undefined}
+      aria-checked={isChecked}
+      borderRadius={itemRadius}
+      {...(growPressTarget
+        ? {
+            ...pressTargetStyle(),
+            marginHorizontal: -starOutset,
+            marginVertical: -starOutset,
+            'data-rating-grow': 'true' as const,
+          }
+        : {})}
+      hitSlop={pressTargetHitSlop(starSize)}
+      // Keyboard: roving tabindex + Enter/Space + arrows select (native
+      // radio). Disabled drops out of the tab order.
+      {...(isWeb && !disabled
+        ? {
+            tabIndex: starNumber === tabStopStar ? 0 : -1,
+            onFocus: () => {
+              onStarFocus(starNumber);
+            },
+            onBlur: () => {
+              onStarBlur(starNumber);
+            },
+            onKeyDown: (e: KeyboardEvent) => {
+              onStarKeyDown(e, starNumber);
+            },
+          }
+        : {})}
+      // RN only exposes plain Views to the a11y tree when `accessible` is set
+      {...(isWeb ? {} : { accessible: true })}
+      data-rating-star={isFilled ? 'filled' : 'empty'}
+      data-rating-index={starNumber}
+      {...(!isWeb && !scrubbing ? { transition: motionTransition } : {})}
+      {...(inkToken === undefined ? undefined : { className: inkClassName(inkToken) })}
+      style={getTransitionStyle(scrubbing ? undefined : motionTransition, scrubbing)}>
+      <View
+        borderRadius={itemRadius}
+        // Halo: circular thumb (star glyph). The inset the
+        // composite ring carries would paint over the star's own points;
+        // the halo clears it.
+        {...(showRing
+          ? {
+              ...keyboardFocusRingProps,
+              outlineOffset: FOCUS_RING_HALO_OFFSET,
+              'data-rating-ring': 'true',
+            }
+          : {})}>
+        {glyph}
+      </View>
+    </StarWrapper>
+  );
+};
+
+/** Roving radio-group focus: one tab stop, arrows move AND select. */
+const useRovingStars = ({
+  maxStars,
+  readOnly,
+  onStarPress,
+}: {
+  maxStars: number;
+  readOnly: boolean | undefined;
+  onStarPress: (starIndex: number) => void;
+}) => {
+  const starRefs = useRef<(TamaguiElement | null)[]>([]);
+  const [focusedStar, setFocusedStar] = useState<number | null>(null);
+  const [kbFocusStar, setKbFocusStar] = useState<number | null>(null);
+  const registerStar = (starNumber: number, node: TamaguiElement | null) => {
+    starRefs.current[starNumber - 1] = node;
+  };
+  const focusStar = (starNumber: number) => {
+    starRefs.current[starNumber - 1]?.focus?.();
+  };
+  const commitStar = (starNumber: number) => {
+    if (!readOnly) {
+      onStarPress(starNumber);
+    }
+  };
+  const handleStarFocus = (starNumber: number) => {
+    setFocusedStar(starNumber);
+    if (wasKeyboardFocus()) {
+      setKbFocusStar(starNumber);
+    }
+  };
+  const handleStarBlur = (starNumber: number) => {
+    setFocusedStar((prev) => (prev === starNumber ? null : prev));
+    setKbFocusStar((prev) => (prev === starNumber ? null : prev));
+  };
+  const handleStarKeyDown = (event: KeyboardEvent, starNumber: number) => {
+    if (isActivationKey(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      commitStar(starNumber);
+      return;
+    }
+    const next = starKeyTarget(event.key, starNumber, maxStars);
+    if (next !== undefined) {
+      event.preventDefault();
+      focusStar(next);
+      commitStar(next);
+    }
+  };
+  return { focusedStar, kbFocusStar, registerStar, handleStarFocus, handleStarBlur, handleStarKeyDown };
+};
+
+type RowProps = ComponentProps<typeof XStack> & Record<string, string | number | boolean | undefined>;
+
+interface RowSemanticsInput {
+  readOnly: boolean | undefined;
+  required: boolean | undefined;
+  hasError: boolean | undefined;
+  disabled: boolean;
+  valueLabel: string;
+  describedBy: string | undefined;
+  nativeLabel: string | undefined;
+  nativeHint: string | undefined;
+}
+
+/** Radiogroup (or read-only image) semantics of the row, plus native accessibility labels. */
+const rowSemanticProps = ({
+  readOnly,
+  required,
+  hasError,
+  disabled,
+  valueLabel,
+  describedBy,
+  nativeLabel,
+  nativeHint,
+}: RowSemanticsInput): RowProps => {
+  const props: RowProps = {
+    role: readOnly ? 'img' : 'radiogroup',
+    'aria-label': readOnly ? valueLabel : undefined,
+    'aria-required': !readOnly && required ? true : undefined,
+    'aria-invalid': !readOnly && hasError ? true : undefined,
+    'aria-disabled': disabled || undefined,
+    'aria-readonly': readOnly ? true : undefined,
+    'aria-describedby': describedBy,
+  };
+  if (!isWeb) {
+    props.accessible = true;
+    props.accessibilityLabel = nativeLabel ?? valueLabel;
+    props.accessibilityHint = nativeHint;
+  }
+  return props;
+};
+
+/** Pointer scrub preview (web only): the fill follows the pointer until it leaves the row. */
+const useStarScrub = ({ maxStars, enabled }: { maxStars: number; enabled: boolean }) => {
+  const [scrubFilled, setScrubFilled] = useState<number | null>(null);
+  const scrubHandlers = enabled
+    ? {
+        onPointerMove: (e: PointerEvent<HTMLElement>) => {
+          const next = starFromPointer(e.clientX, e.currentTarget, maxStars);
+          if (next === null) {
+            return;
+          }
+          setScrubFilled(next);
+        },
+        onPointerLeave: () => {
+          setScrubFilled(null);
+        },
+      }
+    : {};
+  return { scrubFilled, scrubHandlers };
+};
+
+const StarRow = ({
   id,
   filledStars,
   maxStars,
@@ -179,11 +497,11 @@ function StarRow({
   starSize: number;
   pointy: boolean;
   inTableCell?: boolean;
-}) {
+}) => {
   const { disabledState } = useResolvedKnobs();
   const describedBy = useFieldDescribedBy();
   const fieldA11y = useFieldA11y();
-  const [scrubFilled, setScrubFilled] = useState<number | null>(null);
+  const { scrubFilled, scrubHandlers } = useStarScrub({ maxStars, enabled: isWeb && !disabled && !readOnly });
   const scrubbing = scrubFilled != null;
   const displayFilled = scrubFilled ?? filledStars;
   // Discrete star jumps tween via knob transition. During pointer
@@ -197,78 +515,22 @@ function StarRow({
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
-  const inkToken =
-    isWeb && !live && motionTransition
-      ? (motionTransition as string) in cssTimings
-        ? (motionTransition as string)
-        : 'quick'
-      : undefined;
+  const inkToken = isWeb && !live && motionTransition != null ? inkTokenFor(motionTransition) : undefined;
 
   // Material radio group: one tab stop, arrows move AND select. The stop
   // follows the committed value star, or the focused star while inside.
-  const starRefs = useRef<Array<HTMLElement | null>>([]);
-  const [focusedStar, setFocusedStar] = useState<number | null>(null);
-  const [kbFocusStar, setKbFocusStar] = useState<number | null>(null);
+  const { focusedStar, kbFocusStar, registerStar, handleStarFocus, handleStarBlur, handleStarKeyDown } = useRovingStars(
+    {
+      maxStars,
+      readOnly,
+      onStarPress,
+    },
+  );
   const tabStopStar = focusedStar ?? Math.min(Math.max(filledStars, 1), Math.max(maxStars, 1));
   const starOutset = Math.max(0, (MIN_PRESS_TARGET - starSize) / 2);
   const itemRadius = pointy ? 0 : 1000;
   const growPressTarget = !inTableCell;
   const valueLabel = t('{{star}} of {{max}} stars', { star: displayFilled, max: maxStars });
-  const focusStar = (starNumber: number) => {
-    starRefs.current[starNumber - 1]?.focus?.();
-  };
-  const commitStar = (starNumber: number) => {
-    if (!readOnly) {
-      onStarPress(starNumber);
-    }
-  };
-  const handleStarKeyDown = (event: KeyboardEvent, starNumber: number) => {
-    const key = event.key;
-    if (key === 'Enter' || key === ' ' || event.code === 'Space') {
-      event.preventDefault();
-      event.stopPropagation();
-      commitStar(starNumber);
-    } else if (key === 'ArrowRight' || key === 'ArrowUp') {
-      event.preventDefault();
-      const next = Math.min(starNumber + 1, maxStars);
-      focusStar(next);
-      commitStar(next);
-    } else if (key === 'ArrowLeft' || key === 'ArrowDown') {
-      event.preventDefault();
-      const next = Math.max(starNumber - 1, 1);
-      focusStar(next);
-      commitStar(next);
-    } else if (key === 'Home') {
-      event.preventDefault();
-      focusStar(1);
-      commitStar(1);
-    } else if (key === 'End') {
-      event.preventDefault();
-      focusStar(maxStars);
-      commitStar(maxStars);
-    }
-  };
-
-  const starFromPointer = (clientX: number, row: HTMLElement | null) => {
-    if (!row) {
-      return null;
-    }
-    const stars = row.querySelectorAll('[data-rating-star]');
-    if (stars.length === 0) {
-      return null;
-    }
-    const first = stars[0]?.getBoundingClientRect();
-    const last = stars[stars.length - 1]?.getBoundingClientRect();
-    if (!first || !last) {
-      return null;
-    }
-    const width = last.right - first.left;
-    if (width <= 0) {
-      return null;
-    }
-    const ratio = Math.min(1, Math.max(0, (clientX - first.left) / width));
-    return Math.max(1, Math.ceil(ratio * maxStars));
-  };
 
   const glyph = (isFilled: boolean) => (
     <StarInk
@@ -288,145 +550,81 @@ function StarRow({
       id={id}
       {...knobProps.gap}
       alignItems="center"
-      role={readOnly ? 'img' : 'radiogroup'}
-      aria-label={readOnly ? valueLabel : undefined}
-      aria-required={!readOnly && required ? true : undefined}
-      aria-invalid={!readOnly && hasError ? true : undefined}
-      aria-disabled={disabled || undefined}
-      aria-readonly={readOnly || undefined}
-      aria-describedby={describedBy}
-      {...(!isWeb
-        ? {
-            accessible: true,
-            accessibilityLabel: fieldA11y?.label ?? valueLabel,
-            accessibilityHint: fieldA11y?.description,
-          }
-        : {})}
+      {...rowSemanticProps({
+        readOnly,
+        required,
+        hasError,
+        disabled,
+        valueLabel,
+        describedBy,
+        nativeLabel: fieldA11y?.label,
+        nativeHint: fieldA11y?.description,
+      })}
       data-rating-row
       data-rating-live={live ? 'true' : undefined}
       data-rating-glyph={starSize}
       data-rating-cell={inTableCell ? 'true' : undefined}
       data-rating-pointy={pointy ? 'true' : undefined}
-      {...(isWeb && !disabled && !readOnly
-        ? {
-            onPointerMove: ((e: any) => {
-              const row = e.currentTarget as HTMLElement;
-              const next = starFromPointer(e.clientX, row);
-              if (next == null) {
-                return;
-              }
-              setScrubFilled(next);
-            }) as any,
-            onPointerLeave: (() => {
-              setScrubFilled(null);
-            }) as any,
-          }
-        : {})}>
-      {Array.from({ length: Math.max(0, maxStars) }, (_, i) => {
-        const starNumber = i + 1;
-        const isFilled = starNumber <= displayFilled;
-        const isChecked = filledStars > 0 && starNumber === filledStars;
-        const isActive = allowMotion && (scrubbing ? starNumber === displayFilled : starNumber === focusedStar);
-        const showRing = kbFocusStar === starNumber;
-
+      {...scrubHandlers}>
+      {starNumbersFor(maxStars).map((starNumber) => {
+        const glyphNode = glyph(starNumber <= displayFilled);
         if (readOnly) {
           return (
-            <View
+            <ReadOnlyStar
               key={starNumber}
-              width={starSize}
-              height={starSize}
-              data-rating-star={isFilled ? 'filled' : 'empty'}
-              data-rating-index={starNumber}>
-              {glyph(isFilled)}
-            </View>
+              starNumber={starNumber}
+              starSize={starSize}
+              isFilled={starNumber <= displayFilled}>
+              {glyphNode}
+            </ReadOnlyStar>
           );
         }
-
         return (
-          <StarWrapper
+          <InteractiveStar
             key={starNumber}
-            ref={(node: any) => {
-              starRefs.current[i] = node;
-            }}
-            onPress={() => {
-              onStarPress(starNumber);
-            }}
-            cursor={disabled ? 'default' : 'pointer'}
-            // Stars are text-free chrome — dim via the
-            // recipe (read-only stays full-contrast, only pointer changes).
-            {...(disabled ? disabledState.chromeKnobProps : undefined)}
-            active={isActive}
-            role="radio"
-            aria-label={t('{{star}} of {{max}} stars', { star: starNumber, max: maxStars })}
-            aria-disabled={disabled || undefined}
-            aria-checked={isChecked}
-            borderRadius={itemRadius}
-            {...(growPressTarget
-              ? {
-                  ...pressTargetStyle(),
-                  marginHorizontal: -starOutset,
-                  marginVertical: -starOutset,
-                  'data-rating-grow': 'true' as const,
-                }
-              : {})}
-            hitSlop={pressTargetHitSlop(starSize)}
-            // Keyboard: roving tabindex + Enter/Space + arrows select (native
-            // radio). Disabled drops out of the tab order.
-            {...(isWeb && !disabled
-              ? {
-                  tabIndex: starNumber === tabStopStar ? 0 : -1,
-                  onFocus: () => {
-                    setFocusedStar(starNumber);
-                    if (wasKeyboardFocus()) {
-                      setKbFocusStar(starNumber);
-                    }
-                  },
-                  onBlur: () => {
-                    setFocusedStar((prev) => (prev === starNumber ? null : prev));
-                    setKbFocusStar((prev) => (prev === starNumber ? null : prev));
-                  },
-                  onKeyDown: ((e: KeyboardEvent) => {
-                    handleStarKeyDown(e, starNumber);
-                  }) as unknown as () => void,
-                }
-              : {})}
-            // RN only exposes plain Views to the a11y tree when `accessible` is set
-            {...(!isWeb ? { accessible: true } : {})}
-            data-rating-star={isFilled ? 'filled' : 'empty'}
-            data-rating-index={starNumber}
-            {...(!isWeb && !live ? { transition: motionTransition } : {})}
-            {...(inkToken ? { className: inkClassName(inkToken) } : undefined)}
-            style={getTransitionStyle(live ? undefined : motionTransition, live)}>
-            <View
-              borderRadius={itemRadius}
-              // Halo: circular thumb (star glyph). The inset the
-              // composite ring carries would paint over the star's own points;
-              // the halo clears it.
-              {...(showRing
-                ? {
-                    ...keyboardFocusRingProps,
-                    outlineOffset: FOCUS_RING_HALO_OFFSET,
-                    'data-rating-ring': 'true',
-                  }
-                : {})}>
-              {glyph(isFilled)}
-            </View>
-          </StarWrapper>
+            starNumber={starNumber}
+            maxStars={maxStars}
+            filledStars={filledStars}
+            displayFilled={displayFilled}
+            scrubbing={scrubbing}
+            allowMotion={allowMotion}
+            focusedStar={focusedStar}
+            kbFocusStar={kbFocusStar}
+            tabStopStar={tabStopStar}
+            disabled={disabled}
+            disabledChrome={disabledState.chromeKnobProps}
+            itemRadius={itemRadius}
+            growPressTarget={growPressTarget}
+            starOutset={starOutset}
+            starSize={starSize}
+            motionTransition={motionTransition}
+            inkToken={inkToken}
+            glyph={glyphNode}
+            registerStar={registerStar}
+            onPress={onStarPress}
+            onStarFocus={handleStarFocus}
+            onStarBlur={handleStarBlur}
+            onStarKeyDown={handleStarKeyDown}
+          />
         );
       })}
       {!inTableCell && maxStars > 0 ? (
-        <SizableText {...knobProps.body} aria-hidden userSelect="none" data-rating-value>
+        <SizableText
+          {...knobProps.body}
+          aria-hidden
+          userSelect="none"
+          data-rating-value>
           {valueLabel}
         </SizableText>
       ) : null}
     </XStack>
   );
-}
+};
 
 export interface RatingProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -437,7 +635,7 @@ export interface RatingProps {
   value?: number;
   defaultValue?: number;
   onChange?: (value: number) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: FieldLayoutProps['onBlur'];
   disabled?: boolean;
   readOnly?: boolean;
   maxStars?: number;
@@ -456,7 +654,7 @@ export interface RatingProps {
   compact?: boolean;
 }
 
-export function Rating({
+export const Rating = ({
   name,
   form: formProp,
   validators,
@@ -478,7 +676,7 @@ export function Rating({
   pointy,
   skeleton,
   compact,
-}: RatingProps) {
+}: RatingProps) => {
   const { resolvedForm, knobProps, id } = useFormField({ form: formProp, id: idProp, compact });
   const inTableCell = useIsInTableCell();
   const resolvedPointy = pointy ?? knobProps.pointy;
@@ -498,14 +696,12 @@ export function Rating({
   const theme = useTheme();
   const markToken = formSelectedColors.mark.slice(1);
   const emptyToken = formControlColors.boundary.slice(1);
-  const filledColor = getVariable(
-    (theme as any)[markToken]?.get('web') ?? theme.color10?.get('web') ?? theme.color?.get('web'),
-  );
+  // SAFETY: useTheme() is a proxy keyed by theme token name whose values are Tamagui Variables exposing get().
+  const themeColors = theme as ThemeColorLookup;
+  const filledColor = resolveThemeColor(themeColors, markToken);
   // WCAG 1.4.11: empty stars are graphical objects. $color7 is below
   // the 3:1 boundary floor; Radio's empty ring uses the same boundary token.
-  const emptyColor = getVariable(
-    (theme as any)[emptyToken]?.get('web') ?? theme.color10?.get('web') ?? theme.color?.get('web'),
-  );
+  const emptyColor = resolveThemeColor(themeColors, emptyToken);
 
   const handleStarPress = (starIndex: number, currentFilled: number, onValueChange?: (v: number) => void) => {
     if (disabled || readOnly) {
@@ -518,11 +714,17 @@ export function Rating({
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={inTableCell ? undefined : label} size={size} knobProps={knobProps}>
-        <XStack {...knobProps.gap} alignItems="center">
-          {Array.from({ length: maxStars }, (_, i) => (
+      <FieldLayout
+        id={id}
+        label={inTableCell ? undefined : label}
+        size={size}
+        knobProps={knobProps}>
+        <XStack
+          {...knobProps.gap}
+          alignItems="center">
+          {starNumbersFor(maxStars).map((starNumber) => (
             <Skeleton
-              key={i}
+              key={starNumber}
               variant={resolvedPointy ? 'rounded' : 'circular'}
               width={starSize}
               height={starSize}
@@ -534,7 +736,7 @@ export function Rating({
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm === undefined || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -563,9 +765,9 @@ export function Rating({
           filledColor={filledColor}
           emptyColor={emptyColor}
           required={required}
-          hasError={!!error}
+          hasError={hasErrorValue(error)}
           starSize={starSize}
-          pointy={!!resolvedPointy}
+          pointy={resolvedPointy}
           inTableCell={inTableCell}
         />
       </FieldLayout>
@@ -573,7 +775,11 @@ export function Rating({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = field.state.value ?? 0;
@@ -600,7 +806,7 @@ export function Rating({
               readOnly={readOnly}
               onStarPress={(i) => {
                 handleStarPress(i, fieldFilledStars, (v) => {
-                  field.handleChange(v as any);
+                  field.handleChange(v);
                   onChange?.(v);
                 });
               }}
@@ -608,9 +814,9 @@ export function Rating({
               filledColor={filledColor}
               emptyColor={emptyColor}
               required={required}
-              hasError={!!resolvedError}
+              hasError={hasErrorValue(resolvedError)}
               starSize={starSize}
-              pointy={!!resolvedPointy}
+              pointy={resolvedPointy}
               inTableCell={inTableCell}
             />
           </FieldLayout>
@@ -618,4 +824,4 @@ export function Rating({
       }}
     </Field>
   );
-}
+};

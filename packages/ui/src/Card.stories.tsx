@@ -33,7 +33,9 @@ type Story = StoryObj<typeof Card>;
 export const Default: Story = {
   name: 'Main',
   render: (args) => (
-    <Card {...args} maxWidth={420}>
+    <Card
+      {...args}
+      maxWidth={420}>
       <SizableText fontWeight="700">Card content</SizableText>
       <Paragraph>Body copy inside the knob-aware card surface.</Paragraph>
     </Card>
@@ -42,9 +44,14 @@ export const Default: Story = {
 
 export const Tiers: Story = {
   render: () => (
-    <XStack gap="$4" flexWrap="wrap">
+    <XStack
+      gap="$4"
+      flexWrap="wrap">
       {(['content', 'elevated', 'feature'] as const).map((tier) => (
-        <Card key={tier} tier={tier} width={220}>
+        <Card
+          key={tier}
+          tier={tier}
+          width={220}>
           <SizableText fontWeight="700">{tier}</SizableText>
           <Paragraph>Tier surface.</Paragraph>
         </Card>
@@ -55,7 +62,9 @@ export const Tiers: Story = {
 
 export const WithHeaderFooter: Story = {
   render: (args) => (
-    <Card {...args} maxWidth={420}>
+    <Card
+      {...args}
+      maxWidth={420}>
       <Card.Header>
         <SizableText fontWeight="700">Header title</SizableText>
       </Card.Header>
@@ -71,12 +80,20 @@ export const WithHeaderFooter: Story = {
 };
 
 export const Empty: Story = {
-  render: (args) => <Card {...args} width={220} height={80} />,
+  render: (args) => (
+    <Card
+      {...args}
+      width={220}
+      height={80}
+    />
+  ),
 };
 
 export const Nested: Story = {
   render: (args) => (
-    <Card {...args} maxWidth={480}>
+    <Card
+      {...args}
+      maxWidth={480}>
       <SizableText fontWeight="700">Outer card</SizableText>
       <Card {...args}>
         <Paragraph>Inner nested card — NestedScale steps density; hue does not auto-tint.</Paragraph>
@@ -88,7 +105,9 @@ export const Nested: Story = {
 export const CompactDensity: Story = {
   render: (args) => (
     <Preset overrides={{ density: 'compact' }}>
-      <Card {...args} maxWidth={420}>
+      <Card
+        {...args}
+        maxWidth={420}>
         <Card.Header>
           <SizableText fontWeight="700">Compact density</SizableText>
         </Card.Header>
@@ -100,7 +119,9 @@ export const CompactDensity: Story = {
 
 export const LongContent: Story = {
   render: (args) => (
-    <Card {...args} maxWidth={420}>
+    <Card
+      {...args}
+      maxWidth={420}>
       <YStack gap="$2">
         {Array.from({ length: 12 }).map((_, i) => (
           <Paragraph key={i}>Long content line {i + 1} to stretch the card vertically.</Paragraph>

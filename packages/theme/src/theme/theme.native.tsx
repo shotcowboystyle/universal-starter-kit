@@ -1,13 +1,15 @@
 import { ToastProvider } from '@tamagui/toast';
 import { useContext, useMemo } from 'react';
 import type { PropsWithChildren } from 'react';
-import { type CreateTamaguiProps, TamaguiProvider, type TamaguiProviderProps } from 'tamagui';
+import { TamaguiProvider } from 'tamagui';
+import type { CreateTamaguiProps, TamaguiProviderProps, createTamagui } from 'tamagui';
 
-import { CornerSmoothingStyles } from './cornerSmoothing';
+import { CornerSmoothingStyles } from './corner-smoothing';
 import { FontKnobStyles } from './FontKnobStyles';
-import { PresetContext, type PresetContextValue } from './PresetContext';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import { defaultPreset } from './presets';
-import { useTheme } from './useTheme';
+import { useTheme } from './use-theme';
 
 // ---------------------------------------------------------------------------
 // ThemeProviderProps (simplified — knob-based theming)
@@ -17,40 +19,18 @@ export interface ThemeProviderProps<T extends CreateTamaguiProps = CreateTamagui
   Omit<TamaguiProviderProps, 'config' | 'defaultTheme'>
 > {
   config?: {
-    tamagui: ReturnType<typeof import('tamagui').createTamagui<T>>;
+    tamagui: ReturnType<typeof createTamagui<T>>;
   };
   systemTheme?: 'light' | 'dark';
 }
 
-// ---------------------------------------------------------------------------
-// ThemeProvider (simplified — TamaguiProvider + scheme + ToastProvider)
-// ---------------------------------------------------------------------------
-
-export function ThemeProvider<T extends CreateTamaguiProps>({
-  children,
-  config,
-  systemTheme = 'light',
-  ...tamaguiProps
-}: ThemeProviderProps<T>) {
-  const activeTheme = systemTheme;
-
-  return (
-    <TamaguiProvider {...tamaguiProps} config={config?.tamagui} defaultTheme={activeTheme} disableInjectCSS={false}>
-      <ToastProvider>
-        <KnobBridge>{children}</KnobBridge>
-      </ToastProvider>
-    </TamaguiProvider>
-  );
-}
-
-function KnobBridge({ children }: PropsWithChildren) {
+const KnobBridge = ({ children }: PropsWithChildren) => {
   const existingCtx = useContext(PresetContext);
   const [knobs] = useTheme();
 
   const presetCtxValue = useMemo<PresetContextValue>(
     () => ({
       preset: { ...defaultPreset, knobs },
-      overrides: undefined,
     }),
     [knobs],
   );
@@ -68,4 +48,29 @@ function KnobBridge({ children }: PropsWithChildren) {
   }
 
   return <PresetContext.Provider value={presetCtxValue}>{tree}</PresetContext.Provider>;
-}
+};
+
+// ---------------------------------------------------------------------------
+// ThemeProvider (simplified — TamaguiProvider + scheme + ToastProvider)
+// ---------------------------------------------------------------------------
+
+export const ThemeProvider = <T extends CreateTamaguiProps>({
+  children,
+  config,
+  systemTheme = 'light',
+  ...tamaguiProps
+}: ThemeProviderProps<T>) => {
+  const activeTheme = systemTheme;
+
+  return (
+    <TamaguiProvider
+      {...tamaguiProps}
+      config={config?.tamagui}
+      defaultTheme={activeTheme}
+      disableInjectCSS={false}>
+      <ToastProvider>
+        <KnobBridge>{children}</KnobBridge>
+      </ToastProvider>
+    </TamaguiProvider>
+  );
+};

@@ -25,34 +25,34 @@ import {
   warnDialogTooManyActions,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { Dialog, Paragraph, XStack, YStack, isWeb, type TamaguiElement } from 'tamagui';
+import { useCallback, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { Dialog, Paragraph, XStack, YStack, isWeb } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
-import { countActionsInTree } from '../shared/actionScan';
+import { countActionsInTree } from '../shared/action-scan';
 import { useTranslation } from '../shared/i18n';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
-import { useReturnFocusOnClose } from '../shared/useReturnFocusOnClose';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
+import { useReturnFocusOnClose } from '../shared/use-return-focus-on-close';
 import { DialogContent, DialogOverlay } from '../surfaces';
 
 const TAB_STOPS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
-function asHtml(node: unknown): HTMLElement | null {
-  return node instanceof HTMLElement ? node : null;
-}
+const asHtml = (node: TamaguiElement | null): HTMLElement | null => (node instanceof HTMLElement ? node : null);
 
-function panelNode(ref: unknown): HTMLElement | null {
+const panelNode = (ref: TamaguiElement | null): HTMLElement | null => {
   const fromRef = asHtml(ref);
   if (fromRef) {
     return fromRef;
   }
-  if (typeof document === 'undefined') {
+  if (!('document' in globalThis)) {
     return null;
   }
   return document.querySelector<HTMLElement>('[data-mp-confirm-dialog]');
-}
+};
 
-function isTextEntry(el: HTMLElement): boolean {
+const isTextEntry = (el: HTMLElement): boolean => {
   const tag = el.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
     return true;
@@ -65,35 +65,42 @@ function isTextEntry(el: HTMLElement): boolean {
     return true;
   }
   return Boolean(el.querySelector("input, textarea, [contenteditable='true']"));
-}
+};
 
-function firstTabStop(root: HTMLElement): HTMLElement | null {
+const firstTabStop = (root: HTMLElement): HTMLElement | null => {
   const nodes = root.querySelectorAll<HTMLElement>(TAB_STOPS);
   for (const el of nodes) {
-    if (el === root) {
-      continue;
+    const skipped = el === root || el.getAttribute('aria-hidden') === 'true' || el.closest('[data-focus-skip]') != null;
+    if (!skipped) {
+      return el;
     }
-    if (el.getAttribute('aria-hidden') === 'true') {
-      continue;
-    }
-    if (typeof el.closest === 'function' && el.closest('[data-focus-skip]')) {
-      continue;
-    }
-    return el;
   }
   return null;
-}
+};
 
-function applyOpenFocus(panel: HTMLElement) {
+const applyOpenFocus = (panel: HTMLElement) => {
   const keyboard = wasKeyboardFocus();
   const first = firstTabStop(panel);
   const toControl = Boolean(first && (keyboard || isTextEntry(first)));
   const target = toControl && first ? first : panel;
-  target.focus({
+  // `focusVisible` is not yet in lib.dom's FocusOptions.
+  const options: FocusOptions & { focusVisible: boolean } = {
     preventScroll: true,
     focusVisible: keyboard && toControl,
-  } as FocusOptions);
-}
+  };
+  target.focus(options);
+};
+
+// Radix Dialog.Description gets a Paragraph for plain text and a YStack for richer bodies.
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode has no domain discriminant; string/number is exactly the plain-text case
+const isPlainText = (node: ReactNode): boolean => typeof node === 'string' || typeof node === 'number';
+
+const confirmTone = (destructive: boolean, warning: boolean): 'destructive' | 'warning' | 'default' => {
+  if (destructive) {
+    return 'destructive';
+  }
+  return warning ? 'warning' : 'default';
+};
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -143,7 +150,7 @@ export interface ConfirmDialogProps {
   allowManyActions?: boolean;
 }
 
-export function ConfirmDialog({
+export const ConfirmDialog = ({
   open,
   onOpenChange,
   title,
@@ -159,7 +166,7 @@ export function ConfirmDialog({
   confirmDisabledReason,
   cancelDisabled = false,
   allowManyActions = false,
-}: ConfirmDialogProps) {
+}: ConfirmDialogProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const confirmLabel = confirmLabelProp ?? t('Confirm');
@@ -220,9 +227,6 @@ export function ConfirmDialog({
   // frame where the portal ref is not ready in the auto-focus callback.
   useEffect(() => {
     // RN 0.83 also exposes HTMLElement, but native refs have no DOM query API.
-    if (!open || !isWeb) {
-      return;
-    }
     let cancelled = false;
     let frames = 0;
     const run = () => {
@@ -231,21 +235,27 @@ export function ConfirmDialog({
       }
       const panel = panelNode(contentRef.current);
       if (!panel) {
-        if (frames++ < 8) {
+        if (frames < 8) {
           requestAnimationFrame(run);
         }
+        frames += 1;
         return;
       }
       applyOpenFocus(panel);
     };
-    run();
+    if (open && isWeb) {
+      run();
+    }
     return () => {
       cancelled = true;
     };
   }, [open]);
 
   return (
-    <Dialog modal open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={handleOpenChange}>
       <Dialog.Portal paddingBottom={keyboardInset || undefined}>
         <DialogOverlay key="overlay" />
         <DialogContent
@@ -262,7 +272,7 @@ export function ConfirmDialog({
           focusStyle={{ outlineWidth: 0 }}
           focusVisibleStyle={{ outlineWidth: 0 }}
           // Test / automation hook for confirm tone (theme class names vary by runtime).
-          data-tone={destructive ? 'destructive' : warning ? 'warning' : 'default'}
+          data-tone={confirmTone(destructive, warning)}
           data-mp-confirm-dialog=""
           data-density={knobProps.density}
           data-size={knobProps.size}
@@ -275,21 +285,31 @@ export function ConfirmDialog({
             e.preventDefault();
           }}
           onOpenAutoFocus={handleOpenAutoFocus}>
-          <Dialog.Title {...knobProps.label} {...knobProps.heading} color="$color12">
+          <Dialog.Title
+            {...knobProps.label}
+            {...knobProps.heading}
+            color="$color12">
             {title}
           </Dialog.Title>
-          {description != null ? (
+          {description == null ? null : (
             <Dialog.Description asChild>
-              {typeof description === 'string' || typeof description === 'number' ? (
-                <Paragraph {...knobProps.body} {...knobProps.label} color="$color12">
+              {isPlainText(description) ? (
+                <Paragraph
+                  {...knobProps.body}
+                  {...knobProps.label}
+                  color="$color12">
                   {description}
                 </Paragraph>
               ) : (
                 <YStack {...knobProps.gap}>{description}</YStack>
               )}
             </Dialog.Description>
-          ) : null}
-          <XStack {...knobProps.gap} justifyContent="flex-end" alignItems="flex-start" flexWrap="wrap">
+          )}
+          <XStack
+            {...knobProps.gap}
+            justifyContent="flex-end"
+            alignItems="flex-start"
+            flexWrap="wrap">
             <Button
               chromeless
               compact
@@ -328,4 +348,4 @@ export function ConfirmDialog({
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

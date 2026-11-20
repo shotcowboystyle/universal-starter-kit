@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DomStackAdapter } from './DomNavigationHost';
 import { hrefToString, stackNavigator } from './navigator';
+import type { RouteLoader } from './navigator';
 
 const ROUTES = [
   { pattern: '/', tag: 'home', title: 'Home' },
@@ -9,22 +10,22 @@ const ROUTES = [
   { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Pokemon detail' },
 ];
 
-function attachDomHost(): DomStackAdapter {
+const attachDomHost = (): DomStackAdapter => {
   const adapter = new DomStackAdapter('home', () => {
     stackNavigator.syncFromHost();
   });
   stackNavigator.attach(adapter);
   return adapter;
-}
+};
 
-async function flush(): Promise<void> {
+const flush = async (): Promise<void> => {
   // Loader navigations resolve over microtasks; two ticks cover
   // loader → navSeq check → host action.
   await Promise.resolve();
   await Promise.resolve();
-}
+};
 
-describe('hrefToString', () => {
+describe(hrefToString, () => {
   it('substitutes [param] tokens and appends leftovers as query', () => {
     expect(hrefToString({ pathname: '/pokemon/[id]', params: { id: 'mew' } })).toBe('/pokemon/mew');
     expect(hrefToString({ pathname: '/todos', params: { filter: 'open' } })).toBe('/todos?filter=open');
@@ -43,7 +44,7 @@ describe('StackNavigator', () => {
     expect(stackNavigator.match('/todos')?.route.tag).toBe('todos');
     const detail = stackNavigator.match('/pokemon/bulbasaur?shiny=1');
     expect(detail?.route.tag).toBe('pokemon-detail');
-    expect(detail?.params).toEqual({ shiny: '1', id: 'bulbasaur' });
+    expect(detail?.params).toStrictEqual({ shiny: '1', id: 'bulbasaur' });
     expect(stackNavigator.match('/nope')).toBeNull();
   });
 
@@ -70,7 +71,7 @@ describe('StackNavigator', () => {
 
     stackNavigator.push('/pokemon/mew');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', depth: 3 });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew' });
 
     // Tag already in the stack → interpreted as "navigate back to it".
     stackNavigator.push('/todos');
@@ -84,8 +85,7 @@ describe('StackNavigator', () => {
   // above the manifest root there is nothing to discard, so replace lands the
   // target ABOVE the root like a push — cold deep links / initialHref restores
   // keep a working back affordance (react-navigation/expo-router synthesize
-  // the anchor route for deep links the same way; Adw.NavigationView's
-  // replace on an empty view is a push).
+  // the anchor route for deep links the same way).
   it('replace on a fresh stack layers above the root so back still works', () => {
     attachDomHost();
     stackNavigator.replace('/pokemon/mew');
@@ -99,20 +99,17 @@ describe('StackNavigator', () => {
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'home', depth: 1 });
   });
 
-  it('replace lays the root down even when the host stack is empty (GTK cold start)', () => {
-    // An Adw.NavigationView is empty until the first push; the mirror still
+  it('replace lays the root down even when the host stack is empty (cold start)', () => {
+    // A host stack can be empty until the first push; the mirror still
     // carries the configure()-seeded root. Replace must materialize BOTH the
     // root and the target on the host, not strand the target alone.
     const adapter = new DomStackAdapter('', () => {
       stackNavigator.syncFromHost();
     });
     stackNavigator.attach(adapter);
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(0);
+    expect(adapter.getStackTags()).toHaveLength(0);
     stackNavigator.replace('/pokemon/mew');
-    const model = adapter.get_navigation_stack();
-    expect(model.get_n_items()).toBe(2);
-    expect(model.get_item(0)?.get_tag()).toBe('home');
-    expect(model.get_item(1)?.get_tag()).toBe('pokemon-detail');
+    expect(adapter.getStackTags()).toStrictEqual(['home', 'pokemon-detail']);
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', canGoBack: true });
   });
 
@@ -135,22 +132,19 @@ describe('StackNavigator', () => {
     stackNavigator.push('/pokemon/mew');
     stackNavigator.replace('/pokemon/ditto');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', depth: 2 });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'ditto' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'ditto' });
   });
 
   it('replace dedupes a target that already sits in the back stack', () => {
-    // Every tag appears at most once in the host stack (Adw treats a
-    // duplicate page as a programming error) — replacing to a page that's
+    // Every tag appears at most once in the host stack — replacing to a page that's
     // already beneath pops the stack to a single occurrence of it.
     const adapter = attachDomHost();
-    stackNavigator.push('/todos');
-    stackNavigator.push('/pokemon/mew');
+    for (const href of ['/todos', '/pokemon/mew']) {
+      stackNavigator.push(href);
+    }
     stackNavigator.replace('/todos');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'todos', depth: 2 });
-    const model = adapter.get_navigation_stack();
-    expect(model.get_n_items()).toBe(2);
-    expect(model.get_item(0)?.get_tag()).toBe('home');
-    expect(model.get_item(1)?.get_tag()).toBe('todos');
+    expect(adapter.getStackTags()).toStrictEqual(['home', 'todos']);
   });
 
   it('ignores navigation to routes outside the manifest', () => {
@@ -178,7 +172,7 @@ describe('StackNavigator', () => {
       depth: 2,
       canGoBack: true,
     });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew' });
     log.mockRestore();
   });
 
@@ -197,13 +191,13 @@ describe('StackNavigator', () => {
 
   it("resolves a queued navigation's loader at apply time, not enqueue time", async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const loader = vi.fn(() => Promise.resolve('fresh'));
+    const loader = vi.fn<RouteLoader>(async () => await Promise.resolve('fresh'));
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     stackNavigator.push('/todos');
     // Queued — the loader must not run until a host can apply the result.
     expect(loader).not.toHaveBeenCalled();
     attachDomHost();
-    expect(loader).toHaveBeenCalledTimes(1);
+    expect(loader).toHaveBeenCalledOnce();
     await flush();
     expect(stackNavigator.getSnapshot().tag).toBe('todos');
     expect(stackNavigator.loaderSnapshot('todos')).toBe('fresh');
@@ -234,8 +228,8 @@ describe('StackNavigator', () => {
   });
 
   it('resolves loaders before the host action (loader bridge)', async () => {
-    let resolveLoader: (value: string) => void = () => {};
-    const loader = vi.fn(() => new Promise<string>((resolvePromise) => (resolveLoader = resolvePromise)));
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const loader = vi.fn<RouteLoader>(async () => await promise);
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     attachDomHost();
 
@@ -245,46 +239,47 @@ describe('StackNavigator', () => {
     expect(stackNavigator.getSnapshot().tag).toBe('home');
     expect(stackNavigator.loaderSnapshot('todos')).toBeUndefined();
 
-    resolveLoader('loaded');
+    resolve('loaded');
     await flush();
     expect(stackNavigator.getSnapshot().tag).toBe('todos');
     expect(stackNavigator.loaderSnapshot('todos')).toBe('loaded');
   });
 
   it('drops a loader navigation superseded by back()', async () => {
-    let resolveLoader: (value: string) => void = () => {};
-    const loader = () => new Promise<string>((resolvePromise) => (resolveLoader = resolvePromise));
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const loader: RouteLoader = async () => await promise;
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     attachDomHost();
 
     stackNavigator.push('/todos');
-    stackNavigator.back(); // supersedes the in-flight loader navigation
-    resolveLoader('late');
+    // supersedes the in-flight loader navigation
+    stackNavigator.back();
+    resolve('late');
     await flush();
     expect(stackNavigator.getSnapshot().tag).toBe('home');
     expect(stackNavigator.loaderSnapshot('todos')).toBeUndefined();
   });
 
   it('re-runs the loader on param-only navigation to the top route', async () => {
-    const loader = vi.fn(({ params }: { params: Record<string, unknown> }) => Promise.resolve(`doc:${params.id}`));
+    const loader = vi.fn<RouteLoader>(async ({ params }) => await Promise.resolve(`doc:${String(params.id)}`));
     stackNavigator.configure([ROUTES[0], { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Detail', loader }]);
     const adapter = attachDomHost();
 
     stackNavigator.push('/pokemon/mew');
     await flush();
     expect(stackNavigator.loaderSnapshot('pokemon-detail')).toBe('doc:mew');
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(2);
+    expect(adapter.getStackTags()).toHaveLength(2);
 
     stackNavigator.push('/pokemon/ditto');
     await flush();
     // Host stack unchanged (param-only), loader data + params updated.
-    expect(adapter.get_navigation_stack().get_n_items()).toBe(2);
+    expect(adapter.getStackTags()).toHaveLength(2);
     expect(stackNavigator.loaderSnapshot('pokemon-detail')).toBe('doc:ditto');
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'ditto' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'ditto' });
   });
 
   it('preload resolves the loader without navigating', async () => {
-    const loader = vi.fn(() => Promise.resolve('preloaded'));
+    const loader = vi.fn<RouteLoader>(async () => await Promise.resolve('preloaded'));
     stackNavigator.configure([{ pattern: '/', tag: 'home', title: 'Home', loader }, ROUTES[1]]);
     await stackNavigator.preload('/');
     expect(stackNavigator.loaderSnapshot('home')).toBe('preloaded');
@@ -293,8 +288,8 @@ describe('StackNavigator', () => {
 
   it('mirrors host-initiated stack changes through syncFromHost', () => {
     const adapter = attachDomHost();
-    // Host-side push (e.g. GTK header interaction) — not through the seam.
-    adapter.push_by_tag('todos');
+    // Host-side push (e.g. host chrome interaction) — not through the seam.
+    adapter.pushByTag('todos');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'todos', depth: 2 });
     expect(stackNavigator.isVisited('todos')).toBe(true);
     adapter.pop();
@@ -305,6 +300,6 @@ describe('StackNavigator', () => {
     attachDomHost();
     stackNavigator.push('/pokemon/mew');
     stackNavigator.setParams({ tab: 'stats' });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew', tab: 'stats' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew', tab: 'stats' });
   });
 });

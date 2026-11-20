@@ -5,25 +5,33 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardContainer, BoardProject } from '@/components/kanban/project/Project';
-import { TaskStatus, type Project, type Task } from '@/types/dbInterface';
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { TaskStatus } from '@/types/db-interface';
+import type { Project, Task } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
 
 // Mock dependencies
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useWorkspaceStore is an overloaded zustand hook that vi.fn can't satisfy
 vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(() => ({
-    filter: { status: null, search: '' },
-    fetchTasksByProject: vi.fn(),
-  })),
+  useWorkspaceStore: vi.fn<typeof useWorkspaceStore>(
+    // SAFETY: BoardProject only reads filter and fetchTasksByProject from the store.
+    (() => ({
+      filter: { status: null, search: '' },
+      fetchTasksByProject: vi.fn<() => void>(),
+    })) as unknown as typeof useWorkspaceStore,
+  ),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useTranslations stub can't satisfy next-intl's Translator type
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-const mockDragPointerDown = vi.fn();
-const mockSetNodeRef = vi.fn();
+const mockDragPointerDown = vi.fn<(event: React.PointerEvent) => void>();
+const mockSetNodeRef = vi.fn<(node: HTMLElement | null) => void>();
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useSortable stub returns only the fields Project reads, not the full UseSortable result
 vi.mock('@dnd-kit/sortable', () => ({
   SortableContext: ({ children }: any) => <div>{children}</div>,
   useSortable: () => ({
@@ -31,32 +39,29 @@ vi.mock('@dnd-kit/sortable', () => ({
     attributes: { role: 'button', tabIndex: 0, 'aria-roledescription': 'sortable' },
     listeners: { onPointerDown: mockDragPointerDown },
     transform: null,
-    transition: undefined,
+    transition: null,
     isDragging: false,
   }),
 }));
 
-vi.mock('@dnd-kit/utilities', () => ({
-  CSS: {
-    Translate: {
-      toString: () => '',
-    },
-  },
-}));
+vi.mock(import('@dnd-kit/utilities'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, CSS: { ...actual.CSS, Translate: { toString: () => '' } } };
+});
 
-vi.mock('@/components/kanban/task/NewTaskDialog', () => ({
+vi.mock(import('@/components/kanban/task/NewTaskDialog'), () => ({
   default: ({ projectId }: any) => <div data-testid={`new-task-dialog-${projectId}`}>New Task</div>,
 }));
 
-vi.mock('@/components/kanban/task/TaskCard', () => ({
+vi.mock(import('@/components/kanban/task/TaskCard'), () => ({
   TaskCard: ({ task }: any) => <div data-testid={`task-${task._id}`}>{task.title}</div>,
 }));
 
-vi.mock('@/components/kanban/project/ProjectAction', () => ({
+vi.mock(import('@/components/kanban/project/ProjectAction'), () => ({
   ProjectActions: ({ title }: any) => <div data-testid="project-actions">{title} Actions</div>,
 }));
 
-describe('BoardProject', () => {
+describe(BoardProject, () => {
   const mockUserInfo: any = { _id: 'user-1', name: 'John Doe', email: 'john@example.com' };
   const mockProject: Project = {
     _id: 'project-1',
@@ -123,7 +128,13 @@ describe('BoardProject', () => {
 
   it('should render project with title', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText('Test Project')).toBeInTheDocument();
@@ -131,26 +142,44 @@ describe('BoardProject', () => {
 
   it('should render project description', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
-    expect(screen.getByText(/Test Description/)).toBeInTheDocument();
+    expect(screen.getByText(/Test Description/u)).toBeInTheDocument();
   });
 
   it('should render project owner', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
-    expect(screen.getByText(/John Doe/)).toBeInTheDocument();
+    expect(screen.getByText(/John Doe/u)).toBeInTheDocument();
   });
 
   it('should render project members', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
-    expect(screen.getByText(/Jane Smith, Bob Johnson/)).toBeInTheDocument();
+    expect(screen.getByText(/Jane Smith, Bob Johnson/u)).toBeInTheDocument();
   });
 
   it('should render all non-deleted tasks', () => {
@@ -166,12 +195,18 @@ describe('BoardProject', () => {
 
     expect(screen.getByTestId('task-task-1')).toBeInTheDocument();
     expect(screen.getByTestId('task-task-2')).toBeInTheDocument();
-    expect(screen.queryByTestId('task-task-3')).not.toBeInTheDocument(); // Deleted task should not render
+    expect(screen.queryByTestId('task-task-3')).not.toBeInTheDocument();
   });
 
   it('should render new task dialog', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByTestId('new-task-dialog-project-1')).toBeInTheDocument();
@@ -179,7 +214,13 @@ describe('BoardProject', () => {
 
   it('should render project actions', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByTestId('project-actions')).toBeInTheDocument();
@@ -197,7 +238,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/noDescription/)).toBeInTheDocument();
+    expect(screen.getByText(/noDescription/u)).toBeInTheDocument();
   });
 
   it('should render with string owner ID', () => {
@@ -212,7 +253,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/user-1/)).toBeInTheDocument();
+    expect(screen.getByText(/user-1/u)).toBeInTheDocument();
   });
 
   it('should not render members badge when project has no members', () => {
@@ -228,15 +269,14 @@ describe('BoardProject', () => {
     );
 
     // Members badge should not be rendered
-    const membersBadges = screen.queryByText(/members:/);
+    const membersBadges = screen.queryByText(/members:/u);
     expect(membersBadges).not.toBeInTheDocument();
   });
 
   it('should filter tasks by status', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     vi.mocked(useWorkspaceStore).mockReturnValue({
       filter: { status: TaskStatus.TODO, search: '' },
-      fetchTasksByProject: vi.fn(),
+      fetchTasksByProject: vi.fn<() => void>(),
     } as any);
 
     render(
@@ -250,12 +290,11 @@ describe('BoardProject', () => {
     );
 
     expect(screen.getByTestId('task-task-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('task-task-2')).not.toBeInTheDocument(); // Different status
+    expect(screen.queryByTestId('task-task-2')).not.toBeInTheDocument();
   });
 
   it('should fetch tasks on mount', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
-    const mockFetchTasksByProject = vi.fn().mockResolvedValue(mockTasks);
+    const mockFetchTasksByProject = vi.fn<(projectId: string) => Promise<Task[]>>().mockResolvedValue(mockTasks);
 
     vi.mocked(useWorkspaceStore).mockReturnValue({
       filter: { status: null, search: '' },
@@ -263,7 +302,13 @@ describe('BoardProject', () => {
     } as any);
 
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     await waitFor(() => {
@@ -272,9 +317,10 @@ describe('BoardProject', () => {
   });
 
   it('should handle fetch tasks error', async () => {
-    const { useWorkspaceStore } = await import('@/stores/workspace-store');
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const mockFetchTasksByProject = vi.fn().mockRejectedValue(new Error('Fetch error'));
+    const mockFetchTasksByProject = vi
+      .fn<(projectId: string) => Promise<Task[]>>()
+      .mockRejectedValue(new Error('Fetch error'));
 
     vi.mocked(useWorkspaceStore).mockReturnValue({
       filter: { status: null, search: '' },
@@ -282,7 +328,13 @@ describe('BoardProject', () => {
     } as any);
 
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     await waitFor(() => {
@@ -294,7 +346,13 @@ describe('BoardProject', () => {
 
   it('should render with empty tasks array', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText('Test Project')).toBeInTheDocument();
@@ -316,12 +374,18 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/john@example.com/)).toBeInTheDocument();
+    expect(screen.getByText(/john@example.com/u)).toBeInTheDocument();
   });
 
   it('should render the sortable project container', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     const projectContainer = screen.getByTestId('project-container');
@@ -346,11 +410,11 @@ describe('BoardProject', () => {
     expect(handle).toHaveAttribute('aria-roledescription', 'sortable');
     expect(screen.getByTestId('project-container')).toHaveAttribute('data-draggable', 'false');
     fireEvent.pointerDown(handle);
-    expect(mockDragPointerDown).toHaveBeenCalled();
+    expect(mockDragPointerDown).toHaveBeenCalledWith(expect.objectContaining({ type: 'pointerdown' }));
   });
 });
 
-describe('BoardContainer', () => {
+describe(BoardContainer, () => {
   it('should render children', () => {
     render(
       <BoardContainer>

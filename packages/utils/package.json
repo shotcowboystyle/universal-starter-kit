@@ -21,13 +21,10 @@
   },
   "scripts": {
     "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/utils",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run"
   },
   "dependencies": {
     "axios": "^1.15.2",
-    "mysql2": "^3.15.3",
     "pg": "^8.20.0",
     "yaml": "^2.8.3"
   },

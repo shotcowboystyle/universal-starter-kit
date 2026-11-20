@@ -2,6 +2,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 import { PlayerChrome } from './PlayerChrome';
 import type { VideoProps } from './types';
@@ -11,56 +12,195 @@ export type { VideoProps } from './types';
 
 const HIDE_MS = 2500;
 
-function asVideoElement(node: unknown): HTMLVideoElement | null {
-  if (!node || typeof HTMLVideoElement === 'undefined') {
+type VideoHost = Element | TamaguiElement;
+
+const asVideoElement = (node: VideoHost | null): HTMLVideoElement | null => {
+  if (node === null || typeof HTMLVideoElement === 'undefined') {
     return null;
   }
   if (node instanceof HTMLVideoElement) {
     return node;
   }
   if (node instanceof Element) {
-    if (node.tagName === 'VIDEO') {
-      return node as HTMLVideoElement;
-    }
     return node.querySelector('video');
   }
-  const host = (node as { host?: unknown }).host;
-  return host ? asVideoElement(host) : null;
-}
+  const host: unknown = 'host' in node ? node.host : null;
+  return host instanceof Element ? asVideoElement(host) : null;
+};
 
-function isStageFullscreen(stage: HTMLElement | null): boolean {
+const isStageFullscreen = (stage: HTMLElement | null): boolean => {
   if (!stage || typeof document === 'undefined') {
     return false;
   }
+  // SAFETY: `webkitFullscreenElement` is an optional vendor member absent from lib.dom; the intersection only adds it as optional.
   const doc = document as Document & { webkitFullscreenElement?: Element | null };
   return document.fullscreenElement === stage || doc.webkitFullscreenElement === stage;
-}
+};
 
-async function toggleStageFullscreen(stage: HTMLElement | null) {
+const toggleStageFullscreen = async (stage: HTMLElement | null) => {
   if (!stage || typeof document === 'undefined') {
     return;
   }
+  // SAFETY: the webkit-prefixed members are optional vendor extensions absent from lib.dom.
   const doc = document as Document & {
     webkitExitFullscreen?: () => Promise<void> | void;
     webkitFullscreenElement?: Element | null;
   };
+  // SAFETY: `webkitRequestFullscreen` is an optional vendor extension absent from lib.dom.
   const el = stage as HTMLElement & {
     webkitRequestFullscreen?: () => Promise<void> | void;
   };
   if (isStageFullscreen(stage)) {
-    if (document.exitFullscreen) {
-      await document.exitFullscreen();
-    } else {
-      doc.webkitExitFullscreen?.();
-    }
+    await ('exitFullscreen' in document ? document.exitFullscreen() : doc.webkitExitFullscreen?.());
     return;
   }
-  if (el.requestFullscreen) {
-    await el.requestFullscreen();
-  } else {
-    el.webkitRequestFullscreen?.();
+  await ('requestFullscreen' in stage ? stage.requestFullscreen() : el.webkitRequestFullscreen?.());
+};
+
+/** Autoplay-policy and interrupted-play rejections are expected; playback state follows the media events. */
+const ignoreRejection = async (pending: Promise<void> | undefined) => {
+  try {
+    await pending;
+  } catch {
+    // Safe to continue: a refused play()/fullscreen request leaves the UI in its current valid state.
   }
+};
+
+type KeyCommand =
+  | 'togglePlay'
+  | 'seekBack'
+  | 'seekForward'
+  | 'toggleMuted'
+  | 'toggleFullscreen'
+  | 'seekStart'
+  | 'seekEnd';
+
+const SEEK_STEP_SECONDS = 5;
+
+const keyCommandFor = (key: string): KeyCommand | undefined => {
+  switch (key) {
+    case ' ':
+    case 'k':
+    case 'K': {
+      return 'togglePlay';
+    }
+    case 'ArrowLeft': {
+      return 'seekBack';
+    }
+    case 'ArrowRight': {
+      return 'seekForward';
+    }
+    case 'm':
+    case 'M': {
+      return 'toggleMuted';
+    }
+    case 'f':
+    case 'F': {
+      return 'toggleFullscreen';
+    }
+    case 'Home': {
+      return 'seekStart';
+    }
+    case 'End': {
+      return 'seekEnd';
+    }
+    default: {
+      return undefined;
+    }
+  }
+};
+
+interface MediaSetters {
+  setPlaying: (playing: boolean) => void;
+  setCurrentTime: (time: number) => void;
+  setDuration: (duration: number) => void;
+  setMuted: (muted: boolean) => void;
 }
+
+/** Mirror the media element's state into React state; returns the unbind function. */
+const bindMediaListeners = (
+  el: HTMLVideoElement,
+  { setPlaying, setCurrentTime, setDuration, setMuted }: MediaSetters,
+) => {
+  const onPlay = () => {
+    setPlaying(true);
+  };
+  const onPause = () => {
+    setPlaying(false);
+  };
+  const onTime = () => {
+    setCurrentTime(el.currentTime || 0);
+  };
+  const onMeta = () => {
+    setDuration(Number.isFinite(el.duration) ? el.duration : 0);
+  };
+  const onVolume = () => {
+    setMuted(el.muted);
+  };
+  el.addEventListener('play', onPlay);
+  el.addEventListener('pause', onPause);
+  el.addEventListener('timeupdate', onTime);
+  el.addEventListener('loadedmetadata', onMeta);
+  el.addEventListener('durationchange', onMeta);
+  el.addEventListener('volumechange', onVolume);
+  setPlaying(!el.paused);
+  onTime();
+  onMeta();
+  return () => {
+    el.removeEventListener('play', onPlay);
+    el.removeEventListener('pause', onPause);
+    el.removeEventListener('timeupdate', onTime);
+    el.removeEventListener('loadedmetadata', onMeta);
+    el.removeEventListener('durationchange', onMeta);
+    el.removeEventListener('volumechange', onVolume);
+  };
+};
+
+/** Chrome stays held visible for HIDE_MS after each interaction while playing. */
+const useAutoHideChrome = (controls: boolean, playing: boolean) => {
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [held, setHeld] = useState(true);
+
+  const clearHide = useCallback(() => {
+    if (hideTimer.current !== null) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  }, []);
+
+  const armHide = useCallback(() => {
+    clearHide();
+    hideTimer.current = setTimeout(() => {
+      setHeld(false);
+    }, HIDE_MS);
+  }, [clearHide]);
+
+  const bumpChrome = useCallback(() => {
+    setHeld(true);
+    armHide();
+  }, [armHide]);
+
+  // Paused chrome is always visible, so `held` needs no reset there: it is re-held when playback (with controls) starts.
+  const active = controls && playing;
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (active) {
+      setHeld(true);
+    }
+  }
+
+  useEffect(() => {
+    if (active) {
+      armHide();
+    } else {
+      clearHide();
+    }
+    return clearHide;
+  }, [active, armHide, clearHide]);
+
+  return { held, bumpChrome };
+};
 
 /**
  * General-purpose video surface for desk / docs (gallery Video).
@@ -68,7 +208,7 @@ async function toggleStageFullscreen(stage: HTMLElement | null) {
  * Chrome / AVKit transport). Native playback lives in `index.native.tsx`
  * behind an optional `expo-video` peer so web-only consumers stay light.
  */
-export function Video({
+export const Video = ({
   src,
   children,
   muted: mutedProp = false,
@@ -79,12 +219,11 @@ export function Video({
   title,
   compact,
   ...props
-}: VideoProps) {
+}: VideoProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Video', compact });
-  const stageRef = useRef<unknown>(null);
+  const stageRef = useRef<TamaguiElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [playing, setPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
@@ -94,94 +233,31 @@ export function Video({
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
   const [seeking, setSeeking] = useState(false);
-  const [held, setHeld] = useState(true);
 
-  const chromeVisible = Boolean(controls && (!playing || hovering || focused || seeking || held));
+  const { held, bumpChrome } = useAutoHideChrome(controls, playing);
+  const interacting = hovering || focused || seeking;
+  const chromeActive = !playing || interacting || held;
+  const chromeVisible = controls && chromeActive;
 
-  const clearHide = useCallback(() => {
-    if (hideTimer.current) {
-      clearTimeout(hideTimer.current);
-      hideTimer.current = null;
-    }
-  }, []);
-
-  const bumpChrome = useCallback(() => {
-    setHeld(true);
-    clearHide();
-    hideTimer.current = setTimeout(() => {
-      setHeld(false);
-    }, HIDE_MS);
-  }, [clearHide]);
-
-  useEffect(() => {
-    if (!controls) {
-      return;
-    }
-    if (!playing) {
-      clearHide();
-      setHeld(true);
-      return;
-    }
-    bumpChrome();
-    return clearHide;
-  }, [bumpChrome, clearHide, controls, playing]);
-
-  useEffect(() => {
+  const [seenMutedProp, setSeenMutedProp] = useState(mutedProp);
+  if (seenMutedProp !== mutedProp) {
+    setSeenMutedProp(mutedProp);
     setMuted(mutedProp);
-  }, [mutedProp]);
+  }
 
   useEffect(() => {
-    const stage = stageRef.current as { querySelector?: (s: string) => Element | null } | null;
-    const el = videoRef.current ?? asVideoElement(stage) ?? asVideoElement(stage?.querySelector?.('video'));
+    const el = src === '' ? null : (videoRef.current ?? asVideoElement(stageRef.current));
     videoRef.current = el;
-    if (!el) {
-      return;
+    if (el) {
+      el.muted = muted;
+      el.loop = loop;
     }
-
-    el.muted = muted;
-    el.loop = loop;
-    const sync = () => {
-      setPlaying(!el.paused);
-      setCurrentTime(el.currentTime || 0);
-      setDuration(Number.isFinite(el.duration) ? el.duration : 0);
-    };
-    const onPlay = () => {
-      setPlaying(true);
-    };
-    const onPause = () => {
-      setPlaying(false);
-    };
-    const onTime = () => {
-      setCurrentTime(el.currentTime || 0);
-    };
-    const onMeta = () => {
-      setDuration(Number.isFinite(el.duration) ? el.duration : 0);
-    };
-    const onVolume = () => {
-      setMuted(el.muted);
-    };
-    el.addEventListener('play', onPlay);
-    el.addEventListener('pause', onPause);
-    el.addEventListener('timeupdate', onTime);
-    el.addEventListener('loadedmetadata', onMeta);
-    el.addEventListener('durationchange', onMeta);
-    el.addEventListener('volumechange', onVolume);
-    sync();
-    return () => {
-      el.removeEventListener('play', onPlay);
-      el.removeEventListener('pause', onPause);
-      el.removeEventListener('timeupdate', onTime);
-      el.removeEventListener('loadedmetadata', onMeta);
-      el.removeEventListener('durationchange', onMeta);
-      el.removeEventListener('volumechange', onVolume);
-    };
+    return el ? bindMediaListeners(el, { setPlaying, setCurrentTime, setDuration, setMuted }) : undefined;
   }, [src, loop, muted]);
 
   useEffect(() => {
-    const stage = asVideoElement(stageRef.current) ? (stageRef.current as HTMLElement) : null;
-    const host =
-      (stageRef.current as { querySelector?: (s: string) => Element | null } | null)?.querySelector?.('video')
-        ?.parentElement ?? stage;
+    const stage = src !== '' && stageRef.current instanceof HTMLElement ? stageRef.current : null;
+    const host = stage?.querySelector('video')?.parentElement ?? stage;
     const onFs = () => {
       setFullscreen(isStageFullscreen(host));
     };
@@ -200,7 +276,7 @@ export function Video({
     }
     bumpChrome();
     if (el.paused) {
-      void el.play()?.catch(() => {});
+      void ignoreRejection(el.play());
     } else {
       el.pause();
     }
@@ -225,11 +301,9 @@ export function Video({
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    const stage =
-      (typeof HTMLElement !== 'undefined' && stageRef.current instanceof HTMLElement
-        ? stageRef.current
-        : asVideoElement(stageRef.current)?.parentElement) ?? null;
-    void toggleStageFullscreen(stage)?.catch(() => {});
+    const node = stageRef.current;
+    const stage = node instanceof HTMLElement ? node : (asVideoElement(node)?.parentElement ?? null);
+    void ignoreRejection(toggleStageFullscreen(stage));
   }, []);
 
   const onStageKeyDown = useCallback(
@@ -242,36 +316,52 @@ export function Video({
       if (!controls) {
         return;
       }
-      const target = e.target as HTMLElement | null;
-      if (target && target !== e.currentTarget && target.closest?.("[role='slider'], [role='button'], button")) {
+      const target = e.target instanceof Element ? e.target : null;
+      if (target && target !== e.currentTarget && target.closest("[role='slider'], [role='button'], button")) {
         return;
       }
       const el = videoRef.current;
       if (!el) {
         return;
       }
-      const key = e.key ?? '';
-      if (key === ' ' || key === 'k' || key === 'K') {
-        e.preventDefault?.();
-        togglePlay();
-      } else if (key === 'ArrowLeft') {
-        e.preventDefault?.();
-        onSeek(Math.max(0, (el.currentTime || 0) - 5));
-      } else if (key === 'ArrowRight') {
-        e.preventDefault?.();
-        onSeek(Math.min(el.duration || 0, (el.currentTime || 0) + 5));
-      } else if (key === 'm' || key === 'M') {
-        e.preventDefault?.();
-        toggleMuted();
-      } else if (key === 'f' || key === 'F') {
-        e.preventDefault?.();
-        toggleFullscreen();
-      } else if (key === 'Home') {
-        e.preventDefault?.();
-        onSeek(0);
-      } else if (key === 'End') {
-        e.preventDefault?.();
-        onSeek(el.duration || 0);
+      const command = keyCommandFor(e.key ?? '');
+      if (command === undefined) {
+        return;
+      }
+      e.preventDefault?.();
+      const position = el.currentTime || 0;
+      switch (command) {
+        case 'togglePlay': {
+          togglePlay();
+          break;
+        }
+        case 'seekBack': {
+          onSeek(Math.max(0, position - SEEK_STEP_SECONDS));
+          break;
+        }
+        case 'seekForward': {
+          onSeek(Math.min(el.duration || 0, position + SEEK_STEP_SECONDS));
+          break;
+        }
+        case 'toggleMuted': {
+          toggleMuted();
+          break;
+        }
+        case 'toggleFullscreen': {
+          toggleFullscreen();
+          break;
+        }
+        case 'seekStart': {
+          onSeek(0);
+          break;
+        }
+        case 'seekEnd': {
+          onSeek(el.duration || 0);
+          break;
+        }
+        default: {
+          break;
+        }
       }
     },
     [controls, onSeek, toggleFullscreen, toggleMuted, togglePlay],
@@ -279,7 +369,7 @@ export function Video({
 
   const mediaStage = src ? (
     <YStack
-      ref={stageRef as never}
+      ref={stageRef}
       position="relative"
       overflow="hidden"
       width="100%"
@@ -289,14 +379,14 @@ export function Video({
       role={controls ? 'region' : undefined}
       aria-label={title ?? t('Video player')}
       tabIndex={controls ? 0 : undefined}
-      {...({
+      {...{
         onKeyDown: onStageKeyDown,
         onPointerMove: controls ? bumpChrome : undefined,
-      } as Record<string, unknown>)}
+      }}
       onPress={controls ? togglePlay : undefined}>
       <YStack
         render="video"
-        ref={(node: unknown) => {
+        ref={(node: TamaguiElement | null) => {
           videoRef.current = asVideoElement(node);
         }}
         // @ts-expect-error HTML video attributes via render prop
@@ -347,9 +437,14 @@ export function Video({
   );
 
   return (
-    <VideoFrame render="figure" marginHorizontal={0} marginVertical={knobProps.gapLg.gap} {...knobProps.gap} {...props}>
+    <VideoFrame
+      render="figure"
+      marginHorizontal={0}
+      marginVertical={knobProps.gapLg.gap}
+      {...knobProps.gap}
+      {...props}>
       {mediaStage}
-      {children != null ? <VideoCaption>{children}</VideoCaption> : null}
+      {children == null ? null : <VideoCaption>{children}</VideoCaption>}
     </VideoFrame>
   );
-}
+};

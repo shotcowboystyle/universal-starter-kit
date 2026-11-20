@@ -10,11 +10,14 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import React, { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView as RNScrollView } from 'react-native';
-import { Text, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Text, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { ViewSwitcher } from '../layouts/ViewSwitcher';
 import { ScrollView } from '../ScrollView';
@@ -22,7 +25,8 @@ import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 import { Skeleton } from '../Skeleton';
 
-import { formatRangeLabel } from './ganttMath';
+import { formatRangeLabel } from './gantt-math';
+import { isNonEmpty } from './guards';
 import {
   alignMatrixRange,
   matrixCellIntensity,
@@ -31,17 +35,24 @@ import {
   generateBuckets,
   matrixMaxValue,
   summarizeMatrixCells,
-  type MatrixBucket,
-  type MatrixBucketRule,
-  type MatrixCell,
-  type MatrixCellSummary,
-  type MatrixIntent,
-  type MatrixRange,
-} from './matrixMath';
+} from './matrix-math';
+import type {
+  MatrixBucket,
+  MatrixBucketRule,
+  MatrixCell,
+  MatrixCellSummary,
+  MatrixIntent,
+  MatrixRange,
+} from './matrix-math';
+
+// Manual mirroring is not implemented here; force the scrollers LTR so the
+// follower offsets stay 0-at-content-start on web.
+const SCROLLER_DIRECTION = { direction: 'ltr' } as const;
 
 // Same split as the Gantt: the grid canvas needs real scroll events to drive
 // the pinned axis follower, and Tamagui's styled ScrollView does not deliver
 // onScroll on native.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: RNScrollView accepts every prop CanvasScroller receives below (horizontal, onScroll, style)
 const CanvasScroller = (isWeb ? ScrollView : RNScrollView) as typeof ScrollView;
 
 /**
@@ -52,10 +63,17 @@ const CanvasScroller = (isWeb ? ScrollView : RNScrollView) as typeof ScrollView;
 const hairlineEnd = isWeb
   ? {
       borderInlineEndWidth: hairlineWidth,
-      borderInlineEndStyle: 'solid' as any,
+      borderInlineEndStyle: 'solid' as const,
       className: 'mp-hairline-ie',
     }
   : { borderEndWidth: hairlineWidth };
+
+/** Grid geometry per size-knob step: `$3` compact, `$5` roomy, anything else default. */
+const SIZE_STEPS = {
+  $3: { height: 400, rowHeight: 44, columnWidth: 56, axisHeight: 40 },
+  $5: { height: 560, rowHeight: 56, columnWidth: 72, axisHeight: 52 },
+  default: { height: 480, rowHeight: 48, columnWidth: 64, axisHeight: 46 },
+} as const;
 
 /** Lowest paint strength a present cell takes, so a zero stays visible. */
 const FILL_FLOOR = 0.14;
@@ -70,6 +88,7 @@ export interface MatrixRow {
   /** Row header text and the subject half of every cell's accessible name. */
   label: string;
   /** Any additional data */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported row shape: consumers attach their own fields, which only the consumer's renderers read
   [key: string]: unknown;
 }
 
@@ -110,7 +129,7 @@ export interface MatrixViewProps extends Omit<YStackProps, 'children'> {
   /** Whether data is loading (skeleton shows only while there are no rows) */
   isLoading?: boolean;
   /** Failed load. Wins over the empty state. */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Title for the default empty state */
@@ -140,20 +159,27 @@ export interface MatrixViewProps extends Omit<YStackProps, 'children'> {
  * the default identity stays on `$accentBackground`. Explicit
  * colors pass through untouched (Axiom 11).
  */
-function CellIntentWrap({ intent, children }: { intent?: MatrixIntent; children: ReactNode }) {
+const CellIntentWrap = ({ intent, children }: { intent?: MatrixIntent; children: ReactNode }): ReactNode => {
   if (!intent || intent === 'accent') {
-    return <>{children}</>;
+    return children;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
-function resolveFill(color: string | undefined, intent: MatrixIntent | undefined): string {
-  return color ?? (intent && intent !== 'accent' ? '$color9' : '$accentBackground');
-}
+const resolveFill = (color: string | undefined, intent: MatrixIntent | undefined): string =>
+  color ?? (intent && intent !== 'accent' ? '$color9' : '$accentBackground');
 
-function fillOpacity(intensity: number): number {
-  return FILL_FLOOR + (1 - FILL_FLOOR) * intensity;
-}
+const isBucketRule = (value: string): value is MatrixBucketRule =>
+  value === 'day' || value === 'week' || value === 'month';
+
+const cellState = (summary: MatrixCellSummary | undefined): 'empty' | 'zero' | 'value' => {
+  if (summary === undefined) {
+    return 'empty';
+  }
+  return summary.value === 0 ? 'zero' : 'value';
+};
+
+const fillOpacity = (intensity: number): number => FILL_FLOOR + (1 - FILL_FLOOR) * intensity;
 
 // ── Cell ──────────────────────────────────────────────────────
 
@@ -171,7 +197,39 @@ interface MatrixCellBoxProps {
   onPress?: () => void;
 }
 
-function MatrixCellBox({
+/** Button semantics, hover/press feedback and the keyboard-only focus ring of a pressable cell. */
+const useCellPressProps = (onPress: (() => void) | undefined) => {
+  const [keyboardRing, setKeyboardRing] = useState(false);
+  // One ring on the cell (the perceived control), keyboard-only.
+  const ringProps = keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 };
+  const pressProps =
+    onPress === undefined
+      ? null
+      : {
+          cursor: 'pointer' as const,
+          hoverStyle: { backgroundColor: componentColors.interactive.hover },
+          pressStyle: { opacity: 0.8 },
+          role: 'button' as const,
+          tabIndex: 0,
+          onFocus: () => {
+            setKeyboardRing(wasKeyboardFocus());
+          },
+          onBlur: () => {
+            setKeyboardRing(false);
+          },
+          onPress,
+          onKeyDown: (event: React.KeyboardEvent) => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+              return;
+            }
+            event.preventDefault?.();
+            onPress();
+          },
+        };
+  return { ringProps, pressProps };
+};
+
+const MatrixCellBox = ({
   row,
   bucket,
   summary,
@@ -183,14 +241,13 @@ function MatrixCellBox({
   height,
   lastColumn,
   onPress,
-}: MatrixCellBoxProps) {
+}: MatrixCellBoxProps) => {
   const { knobProps } = useResolvedKnobs();
   const readable = useReadableTextOn(fill);
-  const [keyboardRing, setKeyboardRing] = useState(false);
+  const { ringProps, pressProps } = useCellPressProps(onPress);
   const empty = summary === undefined;
-  const state = summary === undefined ? 'empty' : summary.value === 0 ? 'zero' : 'value';
-  const ink = !empty && intensity >= ON_FILL_INK_FROM && readable ? readable : '$color';
-  const pressable = onPress !== undefined;
+  const state = cellState(summary);
+  const ink = !empty && intensity >= ON_FILL_INK_FROM && isNonEmpty(readable) ? readable : '$color';
   return (
     <YStack
       width={width}
@@ -201,40 +258,9 @@ function MatrixCellBox({
       overflow="hidden"
       {...(lastColumn ? null : hairlineEnd)}
       borderColor={componentColors.divider}
-      cursor={pressable ? 'pointer' : undefined}
-      hoverStyle={pressable ? { backgroundColor: componentColors.interactive.hover } : undefined}
-      pressStyle={pressable ? { opacity: 0.8 } : undefined}
-      role={pressable ? 'button' : undefined}
-      tabIndex={pressable ? 0 : undefined}
       aria-label={name}
-      // One ring on the cell (the perceived control), keyboard-only.
-      {...(keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 })}
-      onFocus={
-        pressable
-          ? () => {
-              setKeyboardRing(wasKeyboardFocus());
-            }
-          : undefined
-      }
-      onBlur={
-        pressable
-          ? () => {
-              setKeyboardRing(false);
-            }
-          : undefined
-      }
-      onPress={onPress}
-      onKeyDown={
-        pressable
-          ? (((ke: any) => {
-              if (ke.key !== 'Enter' && ke.key !== ' ') {
-                return;
-              }
-              ke.preventDefault?.();
-              onPress();
-            }) as any)
-          : undefined
-      }
+      {...ringProps}
+      {...pressProps}
       {...{
         'data-matrix-cell': `${row.id}:${bucket.key}`,
         'data-matrix-cell-state': state,
@@ -247,7 +273,7 @@ function MatrixCellBox({
           left={0}
           right={0}
           bottom={0}
-          backgroundColor={fill as any}
+          backgroundColor={fill}
           opacity={fillOpacity(intensity)}
           pointerEvents="none"
           {...{ 'data-matrix-fill': String(intensity) }}
@@ -264,11 +290,11 @@ function MatrixCellBox({
       </Text>
     </YStack>
   );
-}
+};
 
 // ── Legend ────────────────────────────────────────────────────
 
-function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: string; empty?: boolean }) {
+const LegendSwatch = ({ intensity, fill, empty }: { intensity?: number; fill?: string; empty?: boolean }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -283,7 +309,11 @@ function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: s
       borderColor={componentColors.surface.border}
       {...{ 'data-matrix-legend-swatch': empty ? 'empty' : String(intensity ?? 1) }}>
       {empty ? (
-        <Text fontSize={10} lineHeight={10} color={componentColors.text.subtle} aria-hidden>
+        <Text
+          fontSize={10}
+          lineHeight={10}
+          color={componentColors.text.subtle}
+          aria-hidden>
           ·
         </Text>
       ) : (
@@ -293,19 +323,20 @@ function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: s
           left={0}
           right={0}
           bottom={0}
-          backgroundColor={(fill ?? '$accentBackground') as any}
+          backgroundColor={fill ?? '$accentBackground'}
           opacity={fillOpacity(intensity ?? 1)}
         />
       )}
     </YStack>
   );
-}
+};
 
 // ── Loading skeleton (mirrors the real anatomy) ────────
 
 const SKELETON_ROWS = [96, 72, 112, 64, 88] as const;
+const SKELETON_COLUMNS = [0, 1, 2, 3, 4, 5] as const;
 
-function MatrixSkeleton({
+const MatrixSkeleton = ({
   labelWidth,
   columnWidth,
   rowHeight,
@@ -313,39 +344,61 @@ function MatrixSkeleton({
   labelWidth: number;
   columnWidth: number;
   rowHeight: number;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const edgePad = knobProps.panelPadding.padding;
-  const columns = [0, 1, 2, 3, 4, 5];
   return (
     <YStack
       width="100%"
       aria-busy
       aria-label={t('Loading')}
       {...{ 'data-matrix-skeleton': 'true', 'data-async-skeleton': 'matrix' }}>
-      <XStack height={rowHeight} alignItems="center" {...hairline.bottom} borderColor="$borderColor">
-        <XStack width={labelWidth} paddingHorizontal={edgePad}>
-          <Skeleton width={64} height={12} />
+      <XStack
+        height={rowHeight}
+        alignItems="center"
+        {...hairline.bottom}
+        borderColor="$borderColor">
+        <XStack
+          width={labelWidth}
+          paddingHorizontal={edgePad}>
+          <Skeleton
+            width={64}
+            height={12}
+          />
         </XStack>
-        {columns.map((column) => (
-          <XStack key={column} width={columnWidth} justifyContent="center">
-            <Skeleton width={Math.max(24, columnWidth - 24)} height={12} />
+        {SKELETON_COLUMNS.map((column) => (
+          <XStack
+            key={column}
+            width={columnWidth}
+            justifyContent="center">
+            <Skeleton
+              width={Math.max(24, columnWidth - 24)}
+              height={12}
+            />
           </XStack>
         ))}
       </XStack>
       {SKELETON_ROWS.map((labelSkeletonWidth, index) => (
         <XStack
-          key={index}
+          key={labelSkeletonWidth}
           height={rowHeight}
           alignItems="center"
           {...(index < SKELETON_ROWS.length - 1 ? hairline.bottom : null)}
           borderColor={componentColors.divider}>
-          <XStack width={labelWidth} paddingHorizontal={edgePad}>
-            <Skeleton width={labelSkeletonWidth} height={12} />
+          <XStack
+            width={labelWidth}
+            paddingHorizontal={edgePad}>
+            <Skeleton
+              width={labelSkeletonWidth}
+              height={12}
+            />
           </XStack>
-          {columns.map((column) => (
-            <XStack key={column} width={columnWidth} justifyContent="center">
+          {SKELETON_COLUMNS.map((column) => (
+            <XStack
+              key={column}
+              width={columnWidth}
+              justifyContent="center">
               {(column + index) % 3 === 0 ? null : (
                 <Skeleton
                   variant="rounded"
@@ -359,7 +412,323 @@ function MatrixSkeleton({
       ))}
     </YStack>
   );
+};
+
+// ── MatrixView parts ──────────────────────────────────────────
+
+interface MatrixHeaderProps {
+  rangeLabel: string;
+  rule: MatrixBucketRule;
+  showRuleSwitcher: boolean;
+  onRuleChange: (rule: MatrixBucketRule) => void;
 }
+
+const MatrixHeader = ({ rangeLabel, rule, showRuleSwitcher, onRuleChange }: MatrixHeaderProps) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <XStack
+      {...knobProps.panelPadding}
+      alignItems="center"
+      justifyContent="space-between"
+      {...knobProps.gap}
+      {...hairline.bottom}
+      borderColor="$borderColor">
+      <Text
+        {...knobProps.heading}
+        {...sectionHeading}
+        numberOfLines={1}>
+        {rangeLabel}
+      </Text>
+      {showRuleSwitcher && (
+        <ViewSwitcher
+          views={[
+            { type: 'day', label: t('Day') },
+            { type: 'week', label: t('Week') },
+            { type: 'month', label: t('Month') },
+          ]}
+          currentView={rule}
+          onViewChange={(val) => {
+            if (isBucketRule(val)) {
+              onRuleChange(val);
+            }
+          }}
+        />
+      )}
+    </XStack>
+  );
+};
+
+interface MatrixAxisRowProps {
+  labelWidth: number;
+  axisHeight: number;
+  columnWidth: number;
+  gridWidth: number;
+  buckets: MatrixBucket[];
+  rule: MatrixBucketRule;
+  subjectLabel: string | undefined;
+  axisScrollRef: React.RefObject<RNScrollView | null>;
+}
+
+// Pinned axis row: the subject header cell + the bucket header strip stay put
+// while rows scroll vertically. The strip follows the grid scroller, so
+// headers and cells can never drift apart.
+const MatrixAxisRow = ({
+  labelWidth,
+  axisHeight,
+  columnWidth,
+  gridWidth,
+  buckets,
+  rule,
+  subjectLabel,
+  axisScrollRef,
+}: MatrixAxisRowProps) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <XStack
+      {...hairline.bottom}
+      borderColor="$borderColor"
+      {...{ 'data-matrix-axis-row': 'true' }}>
+      <XStack
+        width={labelWidth}
+        flexShrink={0}
+        height={axisHeight}
+        alignItems="center"
+        paddingHorizontal={knobProps.panelPadding.padding}
+        {...hairlineEnd}
+        borderColor="$borderColor"
+        {...{ backgroundColor: componentColors.surface.background }}>
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}
+          numberOfLines={1}>
+          {subjectLabel ?? t('Subject')}
+        </Text>
+      </XStack>
+      <ScrollView
+        ref={axisScrollRef}
+        horizontal
+        flex={1}
+        scrollEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        style={SCROLLER_DIRECTION}>
+        <XStack
+          width={gridWidth}
+          height={axisHeight}
+          {...{
+            backgroundColor: componentColors.surface.background,
+            'data-matrix-axis': rule,
+          }}>
+          {buckets.map((bucket, index) => (
+            <XStack
+              key={bucket.key}
+              width={columnWidth}
+              height={axisHeight}
+              alignItems="center"
+              justifyContent="center"
+              {...(index === buckets.length - 1 ? null : hairlineEnd)}
+              borderColor={componentColors.divider}
+              aria-label={bucket.name}
+              {...{ 'data-matrix-column': bucket.key }}>
+              <Text
+                {...knobProps.label}
+                color={knobProps.textAccentColor}
+                numberOfLines={1}>
+                {bucket.label}
+              </Text>
+            </XStack>
+          ))}
+        </XStack>
+      </ScrollView>
+    </XStack>
+  );
+};
+
+interface MatrixBodyProps {
+  rows: MatrixRow[];
+  buckets: MatrixBucket[];
+  summaries: Map<string, MatrixCellSummary>;
+  maxValue: number;
+  labelWidth: number;
+  columnWidth: number;
+  rowHeight: number;
+  gridWidth: number;
+  cellText: (summary: MatrixCellSummary) => string;
+  onCellPress: ((ref: MatrixCellRef) => void) | undefined;
+  onCanvasScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+}
+
+// Body: subject labels + grid share one vertical scroller so rows stay
+// aligned; the grid owns its horizontal scroller.
+const MatrixBody = ({
+  rows,
+  buckets,
+  summaries,
+  maxValue,
+  labelWidth,
+  columnWidth,
+  rowHeight,
+  gridWidth,
+  cellText,
+  onCellPress,
+  onCanvasScroll,
+}: MatrixBodyProps) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <ScrollView flex={1}>
+      <XStack {...{ 'data-matrix-scroll-body': 'true' }}>
+        <YStack
+          width={labelWidth}
+          flexShrink={0}
+          {...hairlineEnd}
+          borderColor="$borderColor"
+          {...{ 'data-matrix-labels': 'true' }}>
+          {rows.map((row, index) => (
+            <XStack
+              key={row.id}
+              height={rowHeight}
+              alignItems="center"
+              paddingHorizontal={knobProps.panelPadding.padding}
+              {...(index === rows.length - 1 ? null : hairline.bottom)}
+              borderColor={componentColors.divider}
+              {...{ 'data-matrix-row-label': row.id }}>
+              <Text
+                {...knobProps.body}
+                numberOfLines={1}
+                color="$color">
+                {row.label}
+              </Text>
+            </XStack>
+          ))}
+        </YStack>
+
+        <CanvasScroller
+          keyboardShouldPersistTaps="handled"
+          horizontal
+          {...(isWeb ? { flex: 1 } : null)}
+          showsHorizontalScrollIndicator
+          onScroll={onCanvasScroll}
+          scrollEventThrottle={16}
+          style={isWeb ? SCROLLER_DIRECTION : [{ flex: 1 }, SCROLLER_DIRECTION]}>
+          <YStack
+            width={gridWidth}
+            {...{ 'data-matrix-canvas': 'true' }}>
+            {rows.map((row, rowIndex) => (
+              <XStack
+                key={row.id}
+                height={rowHeight}
+                {...(rowIndex === rows.length - 1 ? null : hairline.bottom)}
+                borderColor={componentColors.divider}
+                {...{ 'data-matrix-row': row.id }}>
+                {buckets.map((bucket, columnIndex) => {
+                  const summary = summaries.get(matrixCellKey(row.id, bucket.key));
+                  const intensity = summary ? matrixCellIntensity(summary, maxValue) : 0;
+                  const fill = resolveFill(summary?.color, summary?.intent);
+                  const text = summary ? cellText(summary) : t('No data');
+                  const name = withInterp(t('{{subject}}, {{bucket}}: {{value}}'), {
+                    subject: row.label,
+                    bucket: bucket.name,
+                    value: text,
+                  });
+                  return (
+                    <CellIntentWrap
+                      key={bucket.key}
+                      intent={isNonEmpty(summary?.color) ? undefined : summary?.intent}>
+                      <MatrixCellBox
+                        row={row}
+                        bucket={bucket}
+                        summary={summary}
+                        intensity={intensity}
+                        fill={fill}
+                        text={text}
+                        name={name}
+                        width={columnWidth}
+                        height={rowHeight}
+                        lastColumn={columnIndex === buckets.length - 1}
+                        onPress={
+                          onCellPress
+                            ? () => {
+                                onCellPress({ row, bucket, summary });
+                              }
+                            : undefined
+                        }
+                      />
+                    </CellIntentWrap>
+                  );
+                })}
+              </XStack>
+            ))}
+          </YStack>
+        </CanvasScroller>
+      </XStack>
+    </ScrollView>
+  );
+};
+
+const MatrixLegend = ({ legendItems }: { legendItems: MatrixLegendItem[] | undefined }) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <XStack
+      {...knobProps.panelPadding}
+      alignItems="center"
+      flexWrap="wrap"
+      {...knobProps.gap}
+      {...hairline.top}
+      borderColor="$borderColor"
+      {...{ 'data-matrix-legend': 'true' }}>
+      <XStack
+        alignItems="center"
+        gap="$1.5">
+        <LegendSwatch empty />
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}>
+          {t('No data')}
+        </Text>
+      </XStack>
+      <XStack
+        alignItems="center"
+        gap="$1.5">
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}>
+          {t('Less')}
+        </Text>
+        {LEGEND_STEPS.map((step) => (
+          <LegendSwatch
+            key={step}
+            intensity={step}
+          />
+        ))}
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}>
+          {t('More')}
+        </Text>
+      </XStack>
+      {legendItems?.map((item, index) => (
+        <CellIntentWrap
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- legend items carry no id and may repeat a label; the list is positional
+          key={`${item.label}-${index}`}
+          intent={isNonEmpty(item.color) ? undefined : item.intent}>
+          <XStack
+            alignItems="center"
+            gap="$1.5">
+            <LegendSwatch fill={resolveFill(item.color, item.intent)} />
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
+              {item.label}
+            </Text>
+          </XStack>
+        </CellIntentWrap>
+      ))}
+    </XStack>
+  );
+};
 
 // ── MatrixView ────────────────────────────────────────────────
 
@@ -394,7 +763,7 @@ function MatrixSkeleton({
  * />
  * ```
  */
-export function MatrixView({
+export const MatrixView = ({
   rows,
   cells,
   rule: initialRule = 'month',
@@ -416,7 +785,7 @@ export function MatrixView({
   showLegend = true,
   legendItems,
   ...stackProps
-}: MatrixViewProps) {
+}: MatrixViewProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const [rule, setRule] = useState<MatrixBucketRule>(initialRule);
@@ -426,11 +795,12 @@ export function MatrixView({
 
   // ── Knob-derived geometry (size/space step the density) ──────────
   const sz = knobProps.sizeToken;
-  const height = heightProp ?? (sz === '$3' ? 400 : sz === '$5' ? 560 : 480);
+  const steps = SIZE_STEPS[sz === '$3' || sz === '$5' ? sz : 'default'];
+  const height = heightProp ?? steps.height;
   // Cell paint is the press target: never below 44px on either axis.
-  const rowHeight = Math.max(MIN_PRESS_TARGET, sz === '$3' ? 44 : sz === '$5' ? 56 : 48);
-  const columnWidth = Math.max(MIN_PRESS_TARGET, columnWidthProp ?? (sz === '$3' ? 56 : sz === '$5' ? 72 : 64));
-  const axisHeight = sz === '$3' ? 40 : sz === '$5' ? 52 : 46;
+  const rowHeight = Math.max(MIN_PRESS_TARGET, steps.rowHeight);
+  const columnWidth = Math.max(MIN_PRESS_TARGET, columnWidthProp ?? steps.columnWidth);
+  const { axisHeight } = steps;
 
   // ── Axis + cells ─────────────────────────────────────────────────────────
   const range = useMemo(
@@ -450,9 +820,7 @@ export function MatrixView({
     const rowIds = new Set(rows.map((row) => row.id));
     const bucketKeys = new Set(buckets.map((bucket) => bucket.key));
     return matrixMaxValue(
-      Array.from(summaries.values()).filter(
-        (summary) => rowIds.has(summary.rowId) && bucketKeys.has(summary.bucketKey),
-      ),
+      [...summaries.values()].filter((summary) => rowIds.has(summary.rowId) && bucketKeys.has(summary.bucketKey)),
     );
   }, [summaries, rows, buckets]);
   const gridWidth = buckets.length * columnWidth;
@@ -480,27 +848,29 @@ export function MatrixView({
   );
 
   // ── Pinned-axis sync (the Gantt follower) ────────────────────────────────
-  const axisScrollRef = useRef<any>(null);
-  const handleCanvasScroll = useCallback((event: any) => {
-    const x = event?.nativeEvent?.contentOffset?.x ?? 0;
+  const axisScrollRef = useRef<RNScrollView>(null);
+  const handleCanvasScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = event.nativeEvent.contentOffset?.x ?? 0;
     axisScrollRef.current?.scrollTo?.({ x, animated: false });
   }, []);
 
-  // Manual mirroring is not implemented here; force the scrollers LTR so the
-  // follower offsets stay 0-at-content-start on web.
-  const scrollerDirection = { direction: 'ltr' as const };
-  const showSkeleton = !error && isLoading && rows.length === 0;
+  const hasError = Boolean(error);
+  const showSkeleton = !hasError && isLoading && rows.length === 0;
 
   return (
     <AsyncBoundary
       loading={
         showSkeleton ? (
-          <MatrixSkeleton labelWidth={labelWidth} columnWidth={columnWidth} rowHeight={rowHeight} />
+          <MatrixSkeleton
+            labelWidth={labelWidth}
+            columnWidth={columnWidth}
+            rowHeight={rowHeight}
+          />
         ) : (
           false
         )
       }
-      empty={!error && !isLoading && rows.length === 0}
+      empty={!hasError && !isLoading && rows.length === 0}
       error={error}
       onRetry={onRetry}
       emptyTitle={emptyTitle ?? t('No subjects')}
@@ -517,205 +887,37 @@ export function MatrixView({
           'data-size': knobProps.size,
           'data-density': knobProps.density,
         }}>
-        {/* Header */}
-        <XStack
-          {...knobProps.panelPadding}
-          alignItems="center"
-          justifyContent="space-between"
-          {...knobProps.gap}
-          {...hairline.bottom}
-          borderColor="$borderColor">
-          <Text {...knobProps.heading} {...sectionHeading} numberOfLines={1}>
-            {rangeLabel}
-          </Text>
-          {showRuleSwitcher && (
-            <ViewSwitcher
-              views={[
-                { type: 'day', label: t('Day') },
-                { type: 'week', label: t('Week') },
-                { type: 'month', label: t('Month') },
-              ]}
-              currentView={rule}
-              onViewChange={(val) => {
-                changeRule(val as MatrixBucketRule);
-              }}
-            />
-          )}
-        </XStack>
-
-        {/* Pinned axis row: the subject header cell + the bucket header strip
-            stay put while rows scroll vertically. The strip follows the grid
-            scroller, so headers and cells can never drift apart. */}
-        <XStack {...hairline.bottom} borderColor="$borderColor" {...{ 'data-matrix-axis-row': 'true' }}>
-          <XStack
-            width={labelWidth}
-            flexShrink={0}
-            height={axisHeight}
-            alignItems="center"
-            paddingHorizontal={knobProps.panelPadding.padding}
-            {...hairlineEnd}
-            borderColor="$borderColor"
-            {...{ backgroundColor: componentColors.surface.background }}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
-              {subjectLabel ?? t('Subject')}
-            </Text>
-          </XStack>
-          <ScrollView
-            ref={axisScrollRef}
-            horizontal
-            flex={1}
-            scrollEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            style={scrollerDirection as any}>
-            <XStack
-              width={gridWidth}
-              height={axisHeight}
-              {...{
-                backgroundColor: componentColors.surface.background,
-                'data-matrix-axis': rule,
-              }}>
-              {buckets.map((bucket, index) => (
-                <XStack
-                  key={bucket.key}
-                  width={columnWidth}
-                  height={axisHeight}
-                  alignItems="center"
-                  justifyContent="center"
-                  {...(index === buckets.length - 1 ? null : hairlineEnd)}
-                  borderColor={componentColors.divider}
-                  aria-label={bucket.name}
-                  {...{ 'data-matrix-column': bucket.key }}>
-                  <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
-                    {bucket.label}
-                  </Text>
-                </XStack>
-              ))}
-            </XStack>
-          </ScrollView>
-        </XStack>
-
-        {/* Body: subject labels + grid share one vertical scroller so rows stay
-            aligned; the grid owns its horizontal scroller. */}
-        <ScrollView flex={1}>
-          <XStack {...{ 'data-matrix-scroll-body': 'true' }}>
-            <YStack
-              width={labelWidth}
-              flexShrink={0}
-              {...hairlineEnd}
-              borderColor="$borderColor"
-              {...{ 'data-matrix-labels': 'true' }}>
-              {rows.map((row, index) => (
-                <XStack
-                  key={row.id}
-                  height={rowHeight}
-                  alignItems="center"
-                  paddingHorizontal={knobProps.panelPadding.padding}
-                  {...(index === rows.length - 1 ? null : hairline.bottom)}
-                  borderColor={componentColors.divider}
-                  {...{ 'data-matrix-row-label': row.id }}>
-                  <Text {...knobProps.body} numberOfLines={1} color="$color">
-                    {row.label}
-                  </Text>
-                </XStack>
-              ))}
-            </YStack>
-
-            <CanvasScroller
-              keyboardShouldPersistTaps="handled"
-              horizontal
-              {...(isWeb ? { flex: 1 } : null)}
-              showsHorizontalScrollIndicator
-              onScroll={handleCanvasScroll}
-              scrollEventThrottle={16}
-              style={(isWeb ? scrollerDirection : [{ flex: 1 }, scrollerDirection]) as any}>
-              <YStack width={gridWidth} {...{ 'data-matrix-canvas': 'true' }}>
-                {rows.map((row, rowIndex) => (
-                  <XStack
-                    key={row.id}
-                    height={rowHeight}
-                    {...(rowIndex === rows.length - 1 ? null : hairline.bottom)}
-                    borderColor={componentColors.divider}
-                    {...{ 'data-matrix-row': row.id }}>
-                    {buckets.map((bucket, columnIndex) => {
-                      const summary = summaries.get(matrixCellKey(row.id, bucket.key));
-                      const intensity = summary ? matrixCellIntensity(summary, maxValue) : 0;
-                      const fill = resolveFill(summary?.color, summary?.intent);
-                      const text = summary ? cellText(summary) : t('No data');
-                      const name = withInterp(t('{{subject}}, {{bucket}}: {{value}}'), {
-                        subject: row.label,
-                        bucket: bucket.name,
-                        value: text,
-                      });
-                      return (
-                        <CellIntentWrap key={bucket.key} intent={summary?.color ? undefined : summary?.intent}>
-                          <MatrixCellBox
-                            row={row}
-                            bucket={bucket}
-                            summary={summary}
-                            intensity={intensity}
-                            fill={fill}
-                            text={text}
-                            name={name}
-                            width={columnWidth}
-                            height={rowHeight}
-                            lastColumn={columnIndex === buckets.length - 1}
-                            onPress={
-                              onCellPress
-                                ? () => {
-                                    onCellPress({ row, bucket, summary });
-                                  }
-                                : undefined
-                            }
-                          />
-                        </CellIntentWrap>
-                      );
-                    })}
-                  </XStack>
-                ))}
-              </YStack>
-            </CanvasScroller>
-          </XStack>
-        </ScrollView>
-
-        {showLegend && (
-          <XStack
-            {...knobProps.panelPadding}
-            alignItems="center"
-            flexWrap="wrap"
-            {...knobProps.gap}
-            {...hairline.top}
-            borderColor="$borderColor"
-            {...{ 'data-matrix-legend': 'true' }}>
-            <XStack alignItems="center" gap="$1.5">
-              <LegendSwatch empty />
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
-                {t('No data')}
-              </Text>
-            </XStack>
-            <XStack alignItems="center" gap="$1.5">
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
-                {t('Less')}
-              </Text>
-              {LEGEND_STEPS.map((step) => (
-                <LegendSwatch key={step} intensity={step} />
-              ))}
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
-                {t('More')}
-              </Text>
-            </XStack>
-            {legendItems?.map((item, index) => (
-              <CellIntentWrap key={`${item.label}-${index}`} intent={item.color ? undefined : item.intent}>
-                <XStack alignItems="center" gap="$1.5">
-                  <LegendSwatch fill={resolveFill(item.color, item.intent)} />
-                  <Text {...knobProps.label} color={knobProps.textAccentColor}>
-                    {item.label}
-                  </Text>
-                </XStack>
-              </CellIntentWrap>
-            ))}
-          </XStack>
-        )}
+        <MatrixHeader
+          rangeLabel={rangeLabel}
+          rule={rule}
+          showRuleSwitcher={showRuleSwitcher}
+          onRuleChange={changeRule}
+        />
+        <MatrixAxisRow
+          labelWidth={labelWidth}
+          axisHeight={axisHeight}
+          columnWidth={columnWidth}
+          gridWidth={gridWidth}
+          buckets={buckets}
+          rule={rule}
+          subjectLabel={subjectLabel}
+          axisScrollRef={axisScrollRef}
+        />
+        <MatrixBody
+          rows={rows}
+          buckets={buckets}
+          summaries={summaries}
+          maxValue={maxValue}
+          labelWidth={labelWidth}
+          columnWidth={columnWidth}
+          rowHeight={rowHeight}
+          gridWidth={gridWidth}
+          cellText={cellText}
+          onCellPress={onCellPress}
+          onCanvasScroll={handleCanvasScroll}
+        />
+        {showLegend && <MatrixLegend legendItems={legendItems} />}
       </YStack>
     </AsyncBoundary>
   );
-}
+};

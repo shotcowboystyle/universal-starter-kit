@@ -7,20 +7,25 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CONTENT_MAX_WIDTH, PageSection, Screen } from './Page';
 import { DetailPageLayout, ListPageLayout, SettingsPageLayout } from './PageTemplates';
 
-import * as Layouts from './index';
-
-afterEach(cleanup);
+import {
+  CONTENT_MAX_WIDTH as INDEX_CONTENT_MAX_WIDTH,
+  DetailPageLayout as IndexDetailPageLayout,
+  ListPageLayout as IndexListPageLayout,
+  SettingsPageLayout as IndexSettingsPageLayout,
+} from './index';
 
 describe('layouts index exports (W11 templates)', () => {
   it('exports page templates + content max-width token', () => {
-    expect(Layouts.ListPageLayout).toBe(ListPageLayout);
-    expect(Layouts.DetailPageLayout).toBe(DetailPageLayout);
-    expect(Layouts.SettingsPageLayout).toBe(SettingsPageLayout);
-    expect(Layouts.CONTENT_MAX_WIDTH).toBe(CONTENT_MAX_WIDTH);
+    expect(IndexListPageLayout).toBe(ListPageLayout);
+    expect(IndexDetailPageLayout).toBe(DetailPageLayout);
+    expect(IndexSettingsPageLayout).toBe(SettingsPageLayout);
+    expect(INDEX_CONTENT_MAX_WIDTH).toBe(CONTENT_MAX_WIDTH);
   });
 });
 
 describe('Screen content max-width', () => {
+  afterEach(cleanup);
+
   it('CONTENT_MAX_WIDTH is the canonical xl breakpoint', () => {
     expect(CONTENT_MAX_WIDTH).toBe(layoutBreakpoints.xl);
     expect(CONTENT_MAX_WIDTH).toBe(1280);
@@ -38,7 +43,9 @@ describe('Screen content max-width', () => {
   });
 });
 
-describe('ListPageLayout', () => {
+describe(ListPageLayout, () => {
+  afterEach(cleanup);
+
   it('renders header, toolbar slot, and flex content region', () => {
     renderWithProviders(
       <ListPageLayout
@@ -57,10 +64,15 @@ describe('ListPageLayout', () => {
   });
 });
 
-describe('DetailPageLayout', () => {
+describe(DetailPageLayout, () => {
+  afterEach(cleanup);
+
   it('shows main + aside side-by-side from expanded up (supporting pane)', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="expanded" title="Bulbasaur" aside={<Paragraph>Meta</Paragraph>}>
+      <DetailPageLayout
+        sizeClass="expanded"
+        title="Bulbasaur"
+        aside={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Main</Paragraph>
       </DetailPageLayout>,
     );
@@ -73,7 +85,10 @@ describe('DetailPageLayout', () => {
 
   it('stacks the aside below main content on compact (never hidden)', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="compact" title="Bulbasaur" aside={<Paragraph>Meta</Paragraph>}>
+      <DetailPageLayout
+        sizeClass="compact"
+        title="Bulbasaur"
+        aside={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Main</Paragraph>
       </DetailPageLayout>,
     );
@@ -98,7 +113,9 @@ describe('DetailPageLayout', () => {
 
   it('renders children directly when no aside is given', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="xl" title="Bulbasaur">
+      <DetailPageLayout
+        sizeClass="xl"
+        title="Bulbasaur">
         <Paragraph>Main only</Paragraph>
       </DetailPageLayout>,
     );
@@ -107,10 +124,14 @@ describe('DetailPageLayout', () => {
   });
 });
 
-describe('SettingsPageLayout', () => {
+describe(SettingsPageLayout, () => {
+  afterEach(cleanup);
+
   it('caps content at the expanded breakpoint by default', () => {
     renderWithProviders(
-      <SettingsPageLayout title="Settings" data-testid="settings-shell">
+      <SettingsPageLayout
+        title="Settings"
+        data-testid="settings-shell">
         <PageSection title="Profile">
           <Paragraph>Fields</Paragraph>
         </PageSection>
@@ -125,7 +146,9 @@ describe('SettingsPageLayout', () => {
 
   it('honors a caller max-width override', () => {
     renderWithProviders(
-      <SettingsPageLayout maxWidth={layoutBreakpoints.large} data-testid="settings-shell">
+      <SettingsPageLayout
+        maxWidth={layoutBreakpoints.large}
+        data-testid="settings-shell">
         <Paragraph>Fields</Paragraph>
       </SettingsPageLayout>,
     );

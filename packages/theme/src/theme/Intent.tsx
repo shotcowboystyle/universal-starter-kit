@@ -2,11 +2,13 @@ import type { ThemeName } from '@tamagui/web';
 import type { PropsWithChildren } from 'react';
 import { Theme } from 'tamagui';
 
-import { IntentContext } from './useResolvedKnobs';
+import { IntentContext } from './use-resolved-knobs';
+
+type IntentName = keyof { accent: true; error: true; warning: true; success: true };
 
 export interface IntentProps extends PropsWithChildren {
   /** Intent name. */
-  name: 'accent' | 'error' | 'warning' | 'success';
+  name: IntentName;
   /** Override the default Tamagui theme for this intent. */
   theme?: ThemeName;
 }
@@ -21,11 +23,11 @@ export interface IntentProps extends PropsWithChildren {
  * If both wrapper and component prop are present, component prop wins.
  * Nesting intents replaces (does not merge) — innermost wins.
  */
-export function Intent({ name, theme, children }: IntentProps) {
+export const Intent = ({ name, theme, children }: IntentProps) => {
   const themeName = theme ?? name;
   return (
     <IntentContext.Provider value={name}>
       <Theme name={themeName}>{children}</Theme>
     </IntentContext.Provider>
   );
-}
+};

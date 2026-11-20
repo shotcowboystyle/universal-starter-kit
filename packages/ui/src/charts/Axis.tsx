@@ -1,9 +1,9 @@
 import type { ScaleBand, ScaleLinear, ScalePoint } from 'd3-scale';
 
-import { formatAxisTick, getLinearTicks, truncateLabel } from './math';
+import { formatAxisTick, getLinearTicks, truncateLabel, uniqueKeys } from './math';
 import { G, Line, SvgText, chartChromeProps } from './svg';
 import type { PlotArea } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export const AXIS_TICK_LENGTH = 4;
 export const AXIS_LABEL_GAP = 3;
@@ -29,7 +29,7 @@ export interface XAxisProps {
  * (nothing overflows the surface). All chrome colors/typography come
  * from `useChartTheme`.
  */
-export function XAxis({
+export const XAxis = ({
   plot,
   scale,
   tickValues,
@@ -37,12 +37,13 @@ export function XAxis({
   showLine = true,
   showTicks = true,
   showLabels = true,
-}: XAxisProps) {
+}: XAxisProps) => {
   const { axisColor, labelColor, labelFontFamily, labelFontSize } = useChartTheme();
   const values = tickValues ?? scale.domain();
   const y = plot.y + plot.height;
   const bandwidth = scale.bandwidth();
   const step = scale.step();
+  const tickKeys = uniqueKeys(values.map(String));
 
   return (
     <G>
@@ -65,7 +66,7 @@ export function XAxis({
         const center = position + bandwidth / 2;
         const text = tickFormat ? tickFormat(value, index) : value;
         return (
-          <G key={`${value}-${index}`}>
+          <G key={tickKeys[index]}>
             {showTicks ? (
               <Line
                 {...chartChromeProps('axis')}
@@ -84,7 +85,7 @@ export function XAxis({
                 textAnchor="middle"
                 fill={labelColor}
                 fontSize={labelFontSize}
-                {...(labelFontFamily ? { fontFamily: labelFontFamily } : {})}>
+                fontFamily={labelFontFamily === '' ? undefined : labelFontFamily}>
                 {truncateLabel(text, labelFontSize, Math.max(step, bandwidth))}
               </SvgText>
             ) : null}
@@ -93,7 +94,7 @@ export function XAxis({
       })}
     </G>
   );
-}
+};
 
 export interface YAxisProps {
   plot: PlotArea;
@@ -114,7 +115,7 @@ export interface YAxisProps {
  * margin, plus optional horizontal grid lines across the plot. Grid uses the
  * divider role; labels use the muted text role (AA floor).
  */
-export function YAxis({
+export const YAxis = ({
   plot,
   scale,
   ticks = 4,
@@ -123,9 +124,10 @@ export function YAxis({
   showTicks = false,
   showLabels = true,
   showGrid = true,
-}: YAxisProps) {
+}: YAxisProps) => {
   const { axisColor, gridColor, labelColor, labelFontFamily, labelFontSize } = useChartTheme();
   const tickNumbers = getLinearTicks(scale, ticks);
+  const tickKeys = uniqueKeys(tickNumbers.map(String));
   // Axis ticks ride the charts package's own density register — the declared
   // exemption to the house number channel (see `formatAxisTick`).
   const format = tickFormat ?? ((value: number) => formatAxisTick(value));
@@ -146,7 +148,7 @@ export function YAxis({
       {tickNumbers.map((value, index) => {
         const y = scale(value);
         return (
-          <G key={`${value}-${index}`}>
+          <G key={tickKeys[index]}>
             {showGrid ? (
               <Line
                 {...chartChromeProps('grid')}
@@ -176,7 +178,7 @@ export function YAxis({
                 textAnchor="end"
                 fill={labelColor}
                 fontSize={labelFontSize}
-                {...(labelFontFamily ? { fontFamily: labelFontFamily } : {})}>
+                fontFamily={labelFontFamily === '' ? undefined : labelFontFamily}>
                 {format(value, index)}
               </SvgText>
             ) : null}
@@ -185,4 +187,4 @@ export function YAxis({
       })}
     </G>
   );
-}
+};

@@ -9,7 +9,7 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 
 type StatusKey = 'TOTAL' | 'TODO' | 'IN_PROGRESS' | 'DONE';
 
-export function TaskFilter() {
+export const TaskFilter = () => {
   const { filter, setFilter, projects } = useWorkspaceStore();
   const t = useTranslations('kanban.task');
 
@@ -25,18 +25,19 @@ export function TaskFilter() {
       return counts;
     }
 
-    projects.forEach((project) => {
+    for (const project of projects) {
       const tasks = Array.isArray(project?.tasks) ? project.tasks : [];
-      tasks.forEach((task) => {
-        if (!task) {
-          return;
+      for (const task of tasks) {
+        if (task == null) {
+          continue;
         }
-        counts.TOTAL++;
-        if (task.status && Object.hasOwn(counts, task.status)) {
-          counts[task.status as StatusKey]++;
+        counts.TOTAL += 1;
+        if (Object.hasOwn(counts, task.status)) {
+          // SAFETY: Object.hasOwn(counts, task.status) just confirmed the key exists in counts
+          counts[task.status as StatusKey] += 1;
         }
-      });
-    });
+      }
+    }
 
     return counts;
   }, [projects]);
@@ -47,40 +48,59 @@ export function TaskFilter() {
     { value: 'IN_PROGRESS', label: t('statusInProgress') },
     { value: 'DONE', label: t('statusDone') },
   ];
-  const activeStatus = filter.status || 'TOTAL';
+  const activeStatus = filter.status == null || filter.status === '' ? 'TOTAL' : filter.status;
+
+  const hasActiveFilter =
+    (filter.status != null && filter.status !== '') || (filter.search != null && filter.search !== '');
 
   return (
-    <XStack width="100%" alignItems="center" gap="$2" flexWrap="wrap" $md={{ justifyContent: 'flex-end' }}>
-      <YStack width="100%" $md={{ width: 300 }}>
+    <XStack
+      width="100%"
+      alignItems="center"
+      gap="$2"
+      flexWrap="wrap"
+      $md={{ justifyContent: 'flex-end' }}>
+      <YStack
+        width="100%"
+        $md={{ width: 300 }}>
         <Input
           placeholder={t('searchPlaceholder')}
           value={filter.search}
-          onChangeText={(search) => setFilter({ search })}
+          onChangeText={(search) => {
+            setFilter({ search });
+          }}
           aria-label={t('searchPlaceholder')}
           inputProps={{ testID: 'search-input' }}
         />
       </YStack>
-      <XStack gap="$2" flexWrap="wrap" testID="status-filter">
+      <XStack
+        gap="$2"
+        flexWrap="wrap"
+        testID="status-filter">
         {statusOptions.map(({ value, label }) => (
           <Chip
             key={value}
             variant="outline"
             selected={activeStatus === value}
-            onPress={() => setFilter({ status: value === 'TOTAL' ? null : value })}>
+            onPress={() => {
+              setFilter({ status: value === 'TOTAL' ? null : value });
+            }}>
             {`${label} ${statusCounts[value]}`}
           </Chip>
         ))}
       </XStack>
 
-      {filter.status || filter.search ? (
+      {hasActiveFilter ? (
         <Button
           chromeless
           size="$3"
-          onPress={() => setFilter({ status: null, search: '' })}
+          onPress={() => {
+            setFilter({ status: null, search: '' });
+          }}
           testID="clear-filter-button">
           {t('clearFilter')}
         </Button>
       ) : null}
     </XStack>
   );
-}
+};

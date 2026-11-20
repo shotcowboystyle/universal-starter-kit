@@ -3,6 +3,7 @@ import type { IntentOverride } from './preset.types';
 // One emphasis system (SB-E-01): every intent Button renders SOLID like
 // accent — fillStyle "filled" so the solid _Button sub-theme surface applies
 // even under outlined presets.
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- exported with an open key type on purpose: consumers index it by arbitrary intent name (`defaultIntents[intent]`)
 export const defaultIntents: Record<string, IntentOverride> = {
   accent: {
     fillStyle: 'outlined',

@@ -1,10 +1,18 @@
-import { CreateTaskInput, Task, TaskStatus } from "@repo/store";
-import type { UpdateTaskInput } from "@repo/store";
-import type { StateCreator } from "zustand";
+import type { CreateTaskInput, Project, Task, TaskStatus, UpdateTaskInput } from '@repo/store';
+import type { StateCreator } from 'zustand';
 
-import { taskApi } from "@/lib/api/taskApi";
+import { taskApi } from '@/lib/api/task-api';
 
-import type { BoardSliceState, ProjectSliceState, TaskSliceState, UserSliceState } from "./types";
+import type { BoardSliceState, ProjectSliceState, TaskSliceState, UserSliceState } from './types';
+
+const hasValue = (value: string | null | undefined): value is string =>
+  value !== null && value !== undefined && value !== '';
+
+const withoutTask = (projects: Project[], taskId: string): Project[] =>
+  projects.map((project) => ({
+    ...project,
+    tasks: project.tasks?.filter((task) => task._id !== taskId) ?? [],
+  }));
 
 export const createTaskSlice: StateCreator<
   TaskSliceState & UserSliceState & BoardSliceState & ProjectSliceState,
@@ -20,16 +28,16 @@ export const createTaskSlice: StateCreator<
     description?: string,
     dueDate?: Date,
     assigneeId?: string,
-    _orderInProject?: number
+    _orderInProject?: number,
   ) => {
     try {
       const { userId, currentBoardId, projects, fetchProjects } = get();
-      if (!userId || !currentBoardId) {
-        throw new Error("User not authenticated or no board selected");
+      if (!hasValue(userId) || !hasValue(currentBoardId)) {
+        throw new Error('User not authenticated or no board selected');
       }
 
       const currentProject = projects.find((p) => p._id === projectId);
-      const currentTasks = currentProject?.tasks || [];
+      const currentTasks = currentProject?.tasks ?? [];
       const calculatedOrderInProject = _orderInProject ?? currentTasks.length;
 
       const taskInput: CreateTaskInput = {
@@ -39,15 +47,15 @@ export const createTaskSlice: StateCreator<
         project: projectId,
         board: currentBoardId,
         orderInProject: calculatedOrderInProject,
-        ...(dueDate && { dueDate }),
-        ...(assigneeId && { assignee: assigneeId })
+        ...(dueDate !== undefined && { dueDate }),
+        ...(hasValue(assigneeId) && { assignee: assigneeId }),
       };
 
       await createTask(taskInput);
 
       await fetchProjects(currentBoardId);
     } catch (error) {
-      console.error("Error adding task:", error);
+      console.error('Error adding task:', error);
       throw error;
     }
   },
@@ -60,12 +68,12 @@ export const createTaskSlice: StateCreator<
     dueDate?: Date,
     assigneeId?: string,
     newProjectId?: string,
-    orderInProject?: number
+    orderInProject?: number,
   ) => {
     try {
       const { userId, currentBoardId, fetchProjects } = get();
-      if (!userId) {
-        throw new Error("User not authenticated");
+      if (!hasValue(userId)) {
+        throw new Error('User not authenticated');
       }
 
       const updateData: UpdateTaskInput = {
@@ -76,16 +84,16 @@ export const createTaskSlice: StateCreator<
         ...(dueDate !== undefined && { dueDate }),
         ...(assigneeId !== undefined && { assigneeId }),
         ...(orderInProject !== undefined && { orderInProject }),
-        ...(newProjectId && { projectId: newProjectId })
+        ...(hasValue(newProjectId) && { projectId: newProjectId }),
       };
 
       await taskApi.updateTask(taskId, updateData);
 
-      if (currentBoardId) {
+      if (hasValue(currentBoardId)) {
         await fetchProjects(currentBoardId);
       }
     } catch (error) {
-      console.error("Error updating task:", error);
+      console.error('Error updating task:', error);
       throw error;
     }
   },
@@ -94,20 +102,15 @@ export const createTaskSlice: StateCreator<
     try {
       const { currentBoardId, fetchProjects } = get();
 
-      set((state) => ({
-        projects: state.projects.map((project) => ({
-          ...project,
-          tasks: project.tasks?.filter((task) => task._id !== taskId) || []
-        }))
-      }));
+      set((state) => ({ projects: withoutTask(state.projects, taskId) }));
 
       await taskApi.deleteTask(taskId);
 
-      if (currentBoardId) {
+      if (hasValue(currentBoardId)) {
         await fetchProjects(currentBoardId);
       }
     } catch (error) {
-      console.error("Error in removeTask:", error);
+      console.error('Error in removeTask:', error);
       throw error;
     }
   },
@@ -115,7 +118,7 @@ export const createTaskSlice: StateCreator<
   dragTaskOnProject: async (
     taskId: string,
     newProjectId: string,
-    getTask: (taskId: string) => Promise<Task | undefined>
+    getTask: (taskId: string) => Promise<Task | undefined>,
   ) => {
     try {
       const { currentBoardId, fetchProjects, updateTask } = get();
@@ -123,25 +126,25 @@ export const createTaskSlice: StateCreator<
       const taskToMove = await getTask(taskId);
 
       if (!taskToMove) {
-        throw new Error("Task not found");
+        throw new Error('Task not found');
       }
 
       await updateTask(
         taskId,
         taskToMove.title,
         taskToMove.status,
-        taskToMove.description || undefined,
-        taskToMove.dueDate ? new Date(taskToMove.dueDate) : undefined,
-        taskToMove.assignee?._id || undefined,
-        newProjectId
+        hasValue(taskToMove.description) ? taskToMove.description : undefined,
+        taskToMove.dueDate == null ? undefined : new Date(taskToMove.dueDate),
+        hasValue(taskToMove.assignee?._id) ? taskToMove.assignee._id : undefined,
+        newProjectId,
       );
 
-      if (currentBoardId) {
+      if (hasValue(currentBoardId)) {
         await fetchProjects(currentBoardId);
       }
     } catch (error) {
-      console.error("Error moving task to project:", error);
+      console.error('Error moving task to project:', error);
       throw error;
     }
-  }
+  },
 });

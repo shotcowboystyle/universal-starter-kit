@@ -1,4 +1,5 @@
-import { type Platform, getBroadName, getPreciseName, platformBase } from './platformBase';
+import { getBroadName, getPreciseName, platformBase } from './platform-base';
+import type { Platform } from './platform-base';
 
 export const platform: Platform = {
   ...platformBase,

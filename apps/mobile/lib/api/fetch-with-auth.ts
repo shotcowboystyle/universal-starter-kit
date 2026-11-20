@@ -1,69 +1,34 @@
-import { router } from "expo-router";
+import { router } from 'expo-router';
 
-import { authService } from "@/lib/auth/auth-service";
+import { readJson } from '@/lib/api/read-json';
+import { authService } from '@/lib/auth/auth-service';
 
-export async function fetchWithAuth<T>(
-  url: string,
-  options: RequestInit = {},
-  handleEmptyResponse = false
-): Promise<T> {
-  const token = await authService.getToken();
-  const headers = getHeaders(options.headers, token);
-
-  const response = await fetch(url, {
-    ...options,
-    headers
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      await authService.logout();
-      router.replace("/(auth)/login");
-    }
-    await handleErrorResponse(response);
-  }
-
-  return handleSuccessResponse<T>(response, handleEmptyResponse);
-}
-
-function getHeaders(
-  optionHeaders: RequestInit["headers"],
-  token: string | null
-): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
+const getHeaders = (optionHeaders: RequestInit['headers'], token: string | null) => {
+  const entries: [string, string][] = [['Content-Type', 'application/json']];
 
   if (optionHeaders) {
     if (optionHeaders instanceof Headers) {
-      optionHeaders.forEach((value, key) => {
-        headers[key] = value;
-      });
+      entries.push(...optionHeaders.entries());
     } else if (Array.isArray(optionHeaders)) {
-      optionHeaders.forEach(([key, value]) => {
-        headers[key] = value;
-      });
+      entries.push(...optionHeaders);
     } else {
-      Object.entries(optionHeaders).forEach(([key, value]) => {
-        if (typeof value === "string") {
-          headers[key] = value;
-        }
-      });
+      entries.push(...Object.entries(optionHeaders));
     }
   }
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (token !== null && token !== '') {
+    entries.push(['Authorization', `Bearer ${token}`]);
   }
 
-  return headers;
-}
+  return Object.fromEntries(entries);
+};
 
-async function handleErrorResponse(response: Response): Promise<never> {
+const handleErrorResponse = async (response: Response): Promise<never> => {
   let errorMessage: string;
   try {
-    const errorData = await response.json();
-    errorMessage = errorData.message || JSON.stringify(errorData);
+    const errorData = await readJson<{ message?: string }>(response);
+    const { message } = errorData;
+    errorMessage = message === undefined || message === '' ? JSON.stringify(errorData) : message;
   } catch {
     try {
       errorMessage = await response.text();
@@ -72,16 +37,36 @@ async function handleErrorResponse(response: Response): Promise<never> {
     }
   }
   throw new Error(errorMessage);
-}
+};
 
-async function handleSuccessResponse<T>(
-  response: Response,
-  handleEmptyResponse: boolean
-): Promise<T> {
-  if (handleEmptyResponse) {
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
-      return null as unknown as T;
-    }
+const handleSuccessResponse = async <T>(response: Response, handleEmptyResponse: boolean): Promise<T> => {
+  if (handleEmptyResponse && (response.status === 204 || response.headers.get('content-length') === '0')) {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: empty bodies are only requested by callers whose T admits null (delete endpoints)
+    return null as T;
   }
-  return response.json();
-}
+  return await readJson<T>(response);
+};
+
+export const fetchWithAuth = async <T>(
+  url: string,
+  options: RequestInit = {},
+  handleEmptyResponse = false,
+): Promise<T> => {
+  const token = await authService.getToken();
+  const headers = getHeaders(options.headers, token);
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      await authService.logout();
+      router.replace('/(auth)/login');
+    }
+    await handleErrorResponse(response);
+  }
+
+  return await handleSuccessResponse<T>(response, handleEmptyResponse);
+};

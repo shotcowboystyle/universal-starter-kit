@@ -1,7 +1,7 @@
-export type { AuditReport, AuditSummary, ElementAudit, PropertyAudit, TextPropertyAudit } from './constraintAudit';
-export { runConstraintAudit } from './constraintAudit';
-export type { AuditDiff, ElementDiff, PropertyDiff } from './diffReport';
-export { diffAuditReports, formatAuditReport } from './diffReport';
+export type { AuditReport, AuditSummary, ElementAudit, PropertyAudit, TextPropertyAudit } from './constraint-audit';
+export { runConstraintAudit } from './constraint-audit';
+export type { AuditDiff, ElementDiff, PropertyDiff } from './diff-report';
+export { diffAuditReports, formatAuditReport } from './diff-report';
 export type {
   ChartKind,
   ChartProofResult,
@@ -25,7 +25,7 @@ export type {
   NoBreakageResult,
   TextContrastResult,
   TextContrastViolation,
-} from './themeMatrix';
+} from './theme-matrix';
 export {
   auditSignatures,
   captureMatrixSnapshot,
@@ -36,4 +36,4 @@ export {
   chartProofSignatures,
   iconContrastSignatures,
   evaluateTextContrast,
-} from './themeMatrix';
+} from './theme-matrix';

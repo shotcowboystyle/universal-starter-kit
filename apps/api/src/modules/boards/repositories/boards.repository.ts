@@ -1,8 +1,11 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import type { Model } from 'mongoose';
+import { Types } from 'mongoose';
 
-import { Board, BoardDocument } from "../schemas/boards.schema";
+import type { UpdateBoardDto } from '../dto/update-boards.dto';
+import type { BoardDocument } from '../schemas/boards.schema';
+import { Board } from '../schemas/boards.schema';
 
 @Injectable()
 export class BoardRepository {
@@ -10,24 +13,24 @@ export class BoardRepository {
 
   // RISK: this pipeline is used by getBoardPopulateStages() and affects every board list query.
   // Changes here impact all board listing pages. See also: getBoardProjection(), getBoardPopulateStages().
-  private getProjectPopulatePipeline() {
+  private static getProjectPopulatePipeline() {
     return [
       {
         $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "owner"
-        }
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner',
+        },
       },
-      { $unwind: "$owner" },
+      { $unwind: '$owner' },
       {
         $lookup: {
-          from: "users",
-          localField: "members",
-          foreignField: "_id",
-          as: "members"
-        }
+          from: 'users',
+          localField: 'members',
+          foreignField: '_id',
+          as: 'members',
+        },
       },
       {
         $project: {
@@ -35,15 +38,15 @@ export class BoardRepository {
           title: 1,
           description: 1,
           owner: { _id: 1, name: 1, email: 1 },
-          members: { _id: 1, name: 1, email: 1 }
-        }
-      }
+          members: { _id: 1, name: 1, email: 1 },
+        },
+      },
     ];
   }
 
   // RISK: controls which fields are returned in every board list query.
   // Changes here affect all board listing pages.
-  private getBoardProjection() {
+  private static getBoardProjection() {
     return {
       $project: {
         _id: 1,
@@ -53,42 +56,42 @@ export class BoardRepository {
         members: { _id: 1, name: 1, email: 1 },
         projects: 1,
         createdAt: 1,
-        updatedAt: 1
-      }
+        updatedAt: 1,
+      },
     };
   }
 
   // RISK: core stage builder for the board list aggregation pipeline.
   // Changes here affect all board listing pages. Called by findAll() and findOne().
-  private getBoardPopulateStages() {
+  private static getBoardPopulateStages() {
     return [
       {
         $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "owner"
-        }
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner',
+        },
       },
-      { $unwind: "$owner" },
+      { $unwind: '$owner' },
       {
         $lookup: {
-          from: "users",
-          localField: "members",
-          foreignField: "_id",
-          as: "members"
-        }
+          from: 'users',
+          localField: 'members',
+          foreignField: '_id',
+          as: 'members',
+        },
       },
       {
         $lookup: {
-          from: "projects",
-          localField: "projects",
-          foreignField: "_id",
-          as: "projects",
-          pipeline: this.getProjectPopulatePipeline()
-        }
+          from: 'projects',
+          localField: 'projects',
+          foreignField: '_id',
+          as: 'projects',
+          pipeline: BoardRepository.getProjectPopulatePipeline(),
+        },
       },
-      this.getBoardProjection()
+      BoardRepository.getBoardProjection(),
     ];
   }
 
@@ -100,43 +103,43 @@ export class BoardRepository {
     projects?: Types.ObjectId[];
   }): Promise<Board> {
     const board = new this.boardModel(data);
-    return board.save();
+    return await board.save();
   }
 
   async findByOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return this.boardModel.aggregate([
+    return await this.boardModel.aggregate<Board>([
       { $match: { owner: userId } },
-      ...this.getBoardPopulateStages()
+      ...BoardRepository.getBoardPopulateStages(),
     ]);
   }
 
   async findByMemberNotOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return this.boardModel.aggregate([
+    return await this.boardModel.aggregate<Board>([
       { $match: { members: userId, owner: { $ne: userId } } },
-      ...this.getBoardPopulateStages()
+      ...BoardRepository.getBoardPopulateStages(),
     ]);
   }
 
   async findOneWithAccess(boardId: Types.ObjectId, userId: Types.ObjectId): Promise<Board | null> {
-    const [board] = await this.boardModel.aggregate([
+    const [board] = await this.boardModel.aggregate<Board>([
       {
         $match: {
           _id: boardId,
-          $or: [{ owner: userId }, { members: userId }]
-        }
+          $or: [{ owner: userId }, { members: userId }],
+        },
       },
-      ...this.getBoardPopulateStages(),
-      { $limit: 1 }
+      ...BoardRepository.getBoardPopulateStages(),
+      { $limit: 1 },
     ]);
     return board ?? null;
   }
 
   async findById(id: string): Promise<BoardDocument | null> {
-    return this.boardModel.findById(id).exec();
+    return await this.boardModel.findById(id).exec();
   }
 
-  async updateById(id: string, updateData: Partial<Board>): Promise<BoardDocument | null> {
-    return this.boardModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).exec();
+  async updateById(id: string, updateData: UpdateBoardDto): Promise<BoardDocument | null> {
+    return await this.boardModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).exec();
   }
 
   async deleteById(id: string): Promise<{ deletedCount: number }> {
@@ -145,21 +148,21 @@ export class BoardRepository {
   }
 
   async addMember(boardId: string, ownerId: string, memberId: string): Promise<Board | null> {
-    return this.boardModel
+    return await this.boardModel
       .findOneAndUpdate(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $addToSet: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       )
       .exec();
   }
 
   async removeMember(boardId: string, ownerId: string, memberId: string): Promise<Board | null> {
-    return this.boardModel
+    return await this.boardModel
       .findOneAndUpdate(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $pull: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       )
       .exec();
   }

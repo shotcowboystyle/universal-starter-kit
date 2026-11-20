@@ -1,41 +1,42 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import React from "react";
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import React from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { boardApi } from "@/lib/api/boardApi";
 import {
   useAddBoardMember,
   useBoard,
   useBoards,
   useCreateBoard,
   useDeleteBoard,
-  useUpdateBoard
-} from "@/lib/api/boards/queries";
-import { BOARD_KEYS } from "@/types/boardApi";
+  useUpdateBoard,
+} from '@/lib/api/boards/queries';
+import { BOARD_KEYS } from '@/types/board-api';
 
 // Mock boardApi
-vi.mock("@/lib/api/boardApi", () => ({
-  boardApi: {
-    getBoards: vi.fn(),
-    getBoardById: vi.fn(),
-    createBoard: vi.fn(),
-    updateBoard: vi.fn(),
-    deleteBoard: vi.fn(),
-    addBoardMember: vi.fn()
-  }
+const boardApiMock = vi.hoisted(() => ({
+  getBoards: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  getBoardById: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  createBoard: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  updateBoard: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  deleteBoard: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  addBoardMember: vi.fn<(...args: unknown[]) => Promise<object>>(),
 }));
 
-describe("Board Query Hooks", () => {
+vi.mock(import('@/lib/api/board-api'), () => ({
+  boardApi: boardApiMock as never,
+}));
+
+describe('Board Query Hooks', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
-          retry: false
-        }
-      }
+          retry: false,
+        },
+      },
     });
     vi.clearAllMocks();
   });
@@ -44,13 +45,13 @@ describe("Board Query Hooks", () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  describe("useBoards", () => {
-    it("should fetch boards successfully", async () => {
+  describe(useBoards, () => {
+    it('should fetch boards successfully', async () => {
       const mockBoards = {
-        myBoards: [{ _id: "1", title: "Board 1" } as any],
-        teamBoards: [{ _id: "2", title: "Board 2" } as any]
+        myBoards: [{ _id: '1', title: 'Board 1' } as any],
+        teamBoards: [{ _id: '2', title: 'Board 2' } as any],
       };
-      (boardApi.getBoards as Mock).mockResolvedValue(mockBoards);
+      boardApiMock.getBoards.mockResolvedValue(mockBoards);
 
       const { result } = renderHook(() => useBoards(), { wrapper });
 
@@ -58,13 +59,13 @@ describe("Board Query Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockBoards);
-      expect(boardApi.getBoards).toHaveBeenCalledTimes(1);
+      expect(result.current.data).toStrictEqual(mockBoards);
+      expect(boardApiMock.getBoards).toHaveBeenCalledOnce();
     });
 
-    it("should handle fetch error", async () => {
-      const mockError = new Error("Failed to fetch boards");
-      (boardApi.getBoards as Mock).mockRejectedValue(mockError);
+    it('should handle fetch error', async () => {
+      const mockError = new Error('Failed to fetch boards');
+      boardApiMock.getBoards.mockRejectedValue(mockError);
 
       const { result } = renderHook(() => useBoards(), { wrapper });
 
@@ -73,138 +74,139 @@ describe("Board Query Hooks", () => {
         () => {
           expect(result.current.isError).toBe(true);
         },
-        { timeout: 60000 } // Long timeout for retries with exponential backoff
+        // Long timeout for retries with exponential backoff
+        { timeout: 60_000 },
       );
 
-      expect(result.current.error).toEqual(mockError);
+      expect(result.current.error).toStrictEqual(mockError);
       // Should have retried 3 times (4 total calls)
-      expect(boardApi.getBoards).toHaveBeenCalledTimes(4);
-    }, 70000);
+      expect(boardApiMock.getBoards).toHaveBeenCalledTimes(4);
+    }, 70_000);
   });
 
-  describe("useBoard", () => {
-    it("should fetch single board successfully", async () => {
-      const mockBoard = { _id: "1", title: "Board 1" };
-      (boardApi.getBoardById as Mock).mockResolvedValue(mockBoard);
+  describe(useBoard, () => {
+    it('should fetch single board successfully', async () => {
+      const mockBoard = { _id: '1', title: 'Board 1' };
+      boardApiMock.getBoardById.mockResolvedValue(mockBoard);
 
-      const { result } = renderHook(() => useBoard("1"), { wrapper });
+      const { result } = renderHook(() => useBoard('1'), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockBoard);
-      expect(boardApi.getBoardById).toHaveBeenCalledWith("1");
+      expect(result.current.data).toStrictEqual(mockBoard);
+      expect(boardApiMock.getBoardById).toHaveBeenCalledWith('1');
     });
 
-    it("should not fetch when boardId is undefined", () => {
-      const { result } = renderHook(() => useBoard(undefined), { wrapper });
+    it('should not fetch when boardId is undefined', () => {
+      const { result } = renderHook(() => useBoard(), { wrapper });
 
       expect(result.current.data).toBeUndefined();
-      expect(boardApi.getBoardById).not.toHaveBeenCalled();
+      expect(boardApiMock.getBoardById).not.toHaveBeenCalled();
     });
   });
 
-  describe("useCreateBoard", () => {
-    it("should create board and invalidate queries", async () => {
-      const newBoard = { _id: "3", title: "New Board" };
-      (boardApi.createBoard as Mock).mockResolvedValue(newBoard);
+  describe(useCreateBoard, () => {
+    it('should create board and invalidate queries', async () => {
+      const newBoard = { _id: '3', title: 'New Board' };
+      boardApiMock.createBoard.mockResolvedValue(newBoard);
 
       const { result } = renderHook(() => useCreateBoard(), { wrapper });
 
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       await act(async () => {
-        await result.current.mutateAsync({ title: "New Board" } as any);
+        await result.current.mutateAsync({ title: 'New Board' } as any);
       });
 
       await waitFor(() => {
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.list()
+          queryKey: BOARD_KEYS.list(),
         });
       });
 
-      const callArgs = (boardApi.createBoard as Mock).mock.calls[0];
-      expect(callArgs[0]).toEqual({ title: "New Board" });
+      const [callArgs] = boardApiMock.createBoard.mock.calls;
+      expect(callArgs[0]).toStrictEqual({ title: 'New Board' });
     });
   });
 
-  describe("useUpdateBoard", () => {
-    it("should update board and invalidate queries", async () => {
-      const updatedBoard = { _id: "1", title: "Updated Board" };
-      (boardApi.updateBoard as Mock).mockResolvedValue(updatedBoard);
+  describe(useUpdateBoard, () => {
+    it('should update board and invalidate queries', async () => {
+      const updatedBoard = { _id: '1', title: 'Updated Board' };
+      boardApiMock.updateBoard.mockResolvedValue(updatedBoard);
 
       const { result } = renderHook(() => useUpdateBoard(), { wrapper });
 
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       await act(async () => {
-        await result.current.mutateAsync({ id: "1", title: "Updated Board" });
+        await result.current.mutateAsync({ id: '1', title: 'Updated Board' });
       });
 
       await waitFor(() => {
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.list()
+          queryKey: BOARD_KEYS.list(),
         });
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.detail("1")
+          queryKey: BOARD_KEYS.detail('1'),
         });
       });
 
-      expect(boardApi.updateBoard).toHaveBeenCalledWith("1", { title: "Updated Board" });
+      expect(boardApiMock.updateBoard).toHaveBeenCalledWith('1', { title: 'Updated Board' });
     });
   });
 
-  describe("useDeleteBoard", () => {
-    it("should delete board and remove from cache", async () => {
-      (boardApi.deleteBoard as Mock).mockResolvedValue({ success: true });
+  describe(useDeleteBoard, () => {
+    it('should delete board and remove from cache', async () => {
+      boardApiMock.deleteBoard.mockResolvedValue({ success: true });
 
       const { result } = renderHook(() => useDeleteBoard(), { wrapper });
 
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-      const removeSpy = vi.spyOn(queryClient, "removeQueries");
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      const removeSpy = vi.spyOn(queryClient, 'removeQueries');
 
       await act(async () => {
-        await result.current.mutateAsync("1");
+        await result.current.mutateAsync('1');
       });
 
       await waitFor(() => {
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.list()
+          queryKey: BOARD_KEYS.list(),
         });
         expect(removeSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.detail("1")
+          queryKey: BOARD_KEYS.detail('1'),
         });
       });
 
-      const deleteCallArgs = (boardApi.deleteBoard as Mock).mock.calls[0];
-      expect(deleteCallArgs[0]).toBe("1");
+      const [deleteCallArgs] = boardApiMock.deleteBoard.mock.calls;
+      expect(deleteCallArgs[0]).toBe('1');
     });
   });
 
-  describe("useAddBoardMember", () => {
-    it("should add board member and invalidate queries", async () => {
-      const updatedBoard = { _id: "1", title: "Board 1", members: ["user1", "user2"] };
-      (boardApi.addBoardMember as Mock).mockResolvedValue(updatedBoard);
+  describe(useAddBoardMember, () => {
+    it('should add board member and invalidate queries', async () => {
+      const updatedBoard = { _id: '1', title: 'Board 1', members: ['user1', 'user2'] };
+      boardApiMock.addBoardMember.mockResolvedValue(updatedBoard);
 
       const { result } = renderHook(() => useAddBoardMember(), { wrapper });
 
-      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       await act(async () => {
-        await result.current.mutateAsync({ boardId: "1", memberId: "user2" });
+        await result.current.mutateAsync({ boardId: '1', memberId: 'user2' });
       });
 
       await waitFor(() => {
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.detail("1")
+          queryKey: BOARD_KEYS.detail('1'),
         });
         expect(invalidateSpy).toHaveBeenCalledWith({
-          queryKey: BOARD_KEYS.list()
+          queryKey: BOARD_KEYS.list(),
         });
       });
 
-      expect(boardApi.addBoardMember).toHaveBeenCalledWith("1", "user2");
+      expect(boardApiMock.addBoardMember).toHaveBeenCalledWith('1', 'user2');
     });
   });
 });

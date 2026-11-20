@@ -20,14 +20,19 @@
  * No default may emit verbose locale output with seconds.
  */
 
+import { isString } from './type-guards';
+
 export type DateInput = Date | string | number | null | undefined;
+
+/** Unparseable strings pass through unchanged (honest passthrough — never invents); anything else renders "". */
+const textOrEmpty = (value: DateInput): string => (isString(value) ? value : '');
 
 export interface AbsoluteDateFormatOptions {
   /**
    * `"auto"` (default) elides the current year — the display register for
    * tables, feeds, and system events. `"always"` keeps it — the editing
    * register for picker display values. `"never"` drops it — the axis-tick
-   * register, where a wider label would collide with its neighbours and the
+   * register, where a wider label would collide with its neighbors and the
    * period header carries the year.
    */
   year?: 'auto' | 'always' | 'never';
@@ -53,7 +58,7 @@ export interface AbsoluteDateFormatOptions {
 }
 
 /** ISO date-only shape ("YYYY-MM-DD"). */
-export const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+export const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 interface CoercedDate {
   date: Date;
@@ -64,21 +69,21 @@ interface CoercedDate {
   dateOnly: boolean;
 }
 
-function coerceDateInput(value: DateInput): CoercedDate | null {
+const coerceDateInput = (value: DateInput): CoercedDate | null => {
   if (value == null || value === '') {
     return null;
   }
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : { date: value, dateOnly: false };
   }
-  if (typeof value === 'string') {
+  if (isString(value)) {
     const dateOnly = ISO_DATE_ONLY.test(value.trim());
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : { date, dateOnly };
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : { date, dateOnly: false };
-}
+};
 
 /**
  * Parse a date value onto the LOCAL calendar day it names — the canonical
@@ -86,7 +91,7 @@ function coerceDateInput(value: DateInput): CoercedDate | null {
  * Gantt bars, date axes) rather than merely formatted.
  *
  * A date-only string ("YYYY-MM-DD") is a calendar date carrying no timezone,
- * which is how Frappe sends `Date` fields. ECMA-262 parses that form as UTC
+ * which is how many backends send date-only fields. ECMA-262 parses that form as UTC
  * midnight, so every zone west of UTC reads it as the *previous* local day,
  * and no zone but UTC lands it on the local midnight that day-grid math tests
  * for. Those are built from local parts instead.
@@ -97,14 +102,14 @@ function coerceDateInput(value: DateInput): CoercedDate | null {
  * Returns null for empty and unparseable input, and for out-of-range parts
  * ("2026-13-45") rather than silently rolling them into the next month.
  */
-export function parseCalendarDate(value: DateInput): Date | null {
+export const parseCalendarDate = (value: DateInput): Date | null => {
   if (value == null || value === '') {
     return null;
   }
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
   }
-  if (typeof value === 'number') {
+  if (!isString(value)) {
     const fromEpoch = new Date(value);
     return Number.isNaN(fromEpoch.getTime()) ? null : fromEpoch;
   }
@@ -123,9 +128,10 @@ export function parseCalendarDate(value: DateInput): Date | null {
   }
   const parsed = new Date(trimmed.replace(' ', 'T'));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
+};
 
-/** Timezone-naive wire shapes: Frappe's `Date`, `Datetime` and `Time`. */
+/** Timezone-naive wire shapes: date-only, date-time and clock-time values. */
+// oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- exported type name consumed through the package barrel; renaming it would break importers
 export type CalendarDateShape = 'date' | 'datetime' | 'time';
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -136,7 +142,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * timezone-naive wire string.
  *
  * `"date"` emits `YYYY-MM-DD`, `"datetime"` emits `YYYY-MM-DD HH:mm:ss`, and
- * `"time"` emits `HH:mm:ss` — the shapes Frappe stores, none of which carries
+ * `"time"` emits `HH:mm:ss` — common timezone-naive wire shapes, none of which carries
  * an offset. `toISOString()` renders the UTC instant instead, so it names the
  * wrong day whenever the value's local time of day sits across the UTC date
  * boundary, and shifts a wall clock by the whole offset. Reading such a string
@@ -146,18 +152,19 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * Accepts anything `parseCalendarDate` does, so a value already on the wire
  * round-trips unchanged; empty and unparseable input serialize to "".
  */
-export function formatCalendarDate(value: DateInput, shape: CalendarDateShape = 'date'): string {
+// oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- the parameter type is the exported CalendarDateShape
+export const formatCalendarDate = (value: DateInput, format: CalendarDateShape = 'date'): string => {
   const date = parseCalendarDate(value);
   if (!date) {
     return '';
   }
   const timePart = `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
-  if (shape === 'time') {
+  if (format === 'time') {
     return timePart;
   }
   const datePart = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-  return shape === 'datetime' ? `${datePart} ${timePart}` : datePart;
-}
+  return format === 'datetime' ? `${datePart} ${timePart}` : datePart;
+};
 
 /**
  * Compact absolute date — the house register for every absolute date.
@@ -165,10 +172,10 @@ export function formatCalendarDate(value: DateInput, shape: CalendarDateShape = 
  * `withTime` "Aug 9, 3:30 PM". Empty input renders "" and an unparseable
  * string passes through unchanged (honest passthrough — never invents).
  */
-export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormatOptions = {}): string {
+export const formatAbsoluteDate = (value: DateInput, options: AbsoluteDateFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const { date, dateOnly } = coerced;
   const { year = 'auto', withTime = false, seconds = false, hour12, locale, now } = options;
@@ -197,9 +204,9 @@ export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormat
   try {
     return date.toLocaleString(locale, intlOptions);
   } catch {
-    return typeof value === 'string' ? value : date.toISOString();
+    return isString(value) ? value : date.toISOString();
   }
-}
+};
 
 /**
  * Compact absolute date-time ("Aug 9, 3:30 PM"; year added when not
@@ -208,24 +215,22 @@ export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormat
  * BOTH platform halves, which is why it takes `hour12` / `seconds`: the two
  * halves used to compose their own and drifted by a comma.
  */
-export function formatAbsoluteDateTime(
+export const formatAbsoluteDateTime = (
   value: DateInput,
   options: Omit<AbsoluteDateFormatOptions, 'withTime'> = {},
-): string {
-  return formatAbsoluteDate(value, { ...options, withTime: true });
-}
+): string => formatAbsoluteDate(value, { ...options, withTime: true });
 
 /**
  * Relative timestamp ("just now", "5m ago", "2h ago", "10 days ago") — the
  * feed/social register, selected by `timestampStyle: "relative"`.
  */
-export function formatRelativeTimestamp(value: DateInput, now: number = Date.now()): string {
+export const formatRelativeTimestamp = (value: DateInput, now: number = Date.now()): string => {
   if (value == null || value === '') {
     return '';
   }
   const t = value instanceof Date ? value.getTime() : new Date(value).getTime();
   if (Number.isNaN(t)) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const sec = Math.floor(Math.max(0, now - t) / 1000);
   if (sec < 60) {
@@ -249,10 +254,10 @@ export function formatRelativeTimestamp(value: DateInput, now: number = Date.now
   }
   const yr = Math.floor(day / 365);
   return `${Math.max(1, yr)}y ago`;
-}
+};
 
-/** Clock-time shape ("HH:MM" / "HH:MM:SS") — how Frappe `Time` values arrive. */
-export const CLOCK_TIME = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+/** Clock-time shape ("HH:MM" / "HH:MM:SS") — how clock-time wire values arrive. */
+export const CLOCK_TIME = /^(?<hour>\d{1,2}):(?<minute>\d{2})(?::(?<second>\d{2}))?$/u;
 
 export interface TimeOfDayFormatOptions {
   /** BCP-47 locale forwarded to Intl. Default: system locale. */
@@ -265,15 +270,15 @@ export interface TimeOfDayFormatOptions {
 
 /**
  * Time-of-day register ("2:00 PM", or "2 PM" with `minutes: false` for
- * hour ticks) — calendar time grids, Frappe `Time` fields, and
+ * hour ticks) — calendar time grids, clock-time fields, and
  * "last updated" chrome. Accepts a clock-time string as well as a date,
  * and never emits seconds.
  */
-export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOptions = {}): string {
+export const formatTimeOfDay = (value: DateInput, options: TimeOfDayFormatOptions = {}): string => {
   const { locale, minutes = true, hour12 } = options;
   let date: Date | null = null;
-  if (typeof value === 'string') {
-    const clock = value.trim().match(CLOCK_TIME);
+  if (isString(value)) {
+    const clock = CLOCK_TIME.exec(value.trim());
     if (clock) {
       const parsed = new Date(2000, 0, 1, Number(clock[1]), Number(clock[2]));
       if (!Number.isNaN(parsed.getTime())) {
@@ -284,9 +289,9 @@ export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOption
   if (!date) {
     const coerced = coerceDateInput(value);
     if (!coerced) {
-      return typeof value === 'string' ? value : '';
+      return textOrEmpty(value);
     }
-    date = coerced.date;
+    ({ date } = coerced);
   }
   const intlOptions: Intl.DateTimeFormatOptions = { hour: 'numeric' };
   if (minutes) {
@@ -298,9 +303,9 @@ export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOption
   try {
     return date.toLocaleTimeString(locale, intlOptions);
   } catch {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
-}
+};
 
 export interface DayLongFormatOptions {
   locale?: string;
@@ -315,10 +320,10 @@ export interface DayLongFormatOptions {
  * accessible names that read a date aloud, where the compact absolute
  * register is too terse to speak.
  */
-export function formatDayLong(value: DateInput, options: DayLongFormatOptions = {}): string {
+export const formatDayLong = (value: DateInput, options: DayLongFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const { locale, weekday = true, year = false } = options;
   const intlOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
@@ -334,9 +339,9 @@ export function formatDayLong(value: DateInput, options: DayLongFormatOptions = 
   try {
     return coerced.date.toLocaleDateString(locale, intlOptions);
   } catch {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
-}
+};
 
 export interface MonthYearFormatOptions {
   locale?: string;
@@ -345,10 +350,10 @@ export interface MonthYearFormatOptions {
 }
 
 /** Month-year register ("Mar 2026") — period headers and month axis ticks. */
-export function formatMonthYear(value: DateInput, options: MonthYearFormatOptions = {}): string {
+export const formatMonthYear = (value: DateInput, options: MonthYearFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const { locale, month = 'short' } = options;
   const intlOptions: Intl.DateTimeFormatOptions = { month, year: 'numeric' };
@@ -358,15 +363,15 @@ export function formatMonthYear(value: DateInput, options: MonthYearFormatOption
   try {
     return coerced.date.toLocaleDateString(locale, intlOptions);
   } catch {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
-}
+};
 
 /** Day-of-month register ("10") — the densest date axis tick. */
-export function formatDayOfMonth(value: DateInput, options: { locale?: string } = {}): string {
+export const formatDayOfMonth = (value: DateInput, options: { locale?: string } = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const intlOptions: Intl.DateTimeFormatOptions = { day: 'numeric' };
   if (coerced.dateOnly) {
@@ -377,7 +382,7 @@ export function formatDayOfMonth(value: DateInput, options: { locale?: string } 
   } catch {
     return String(coerced.date.getDate());
   }
-}
+};
 
 export interface WeekdayNamesOptions {
   locale?: string;
@@ -388,16 +393,18 @@ export interface WeekdayNamesOptions {
 }
 
 /** Weekday names for calendar chrome, in week order from `firstDay`. */
-export function getWeekdayNames(options: WeekdayNamesOptions = {}): string[] {
+export const getWeekdayNames = (options: WeekdayNamesOptions = {}): string[] => {
   const { locale, style = 'short', firstDay = 0 } = options;
+  // oxlint-disable-next-line react-doctor/js-hoist-intl -- locale and style are call arguments, so the formatter cannot move to module scope; it is built once and reused for all 7 names
   const formatter = new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' });
   // 2004-01-04 is a Sunday, so day-of-week and offset line up.
   return Array.from({ length: 7 }, (_, i) => formatter.format(new Date(Date.UTC(2004, 0, 4 + ((firstDay + i) % 7)))));
-}
+};
 
 /** Month names for calendar chrome and picker headers, January first. */
-export function getMonthNames(options: { locale?: string; style?: 'long' | 'short' } = {}): string[] {
+export const getMonthNames = (options: { locale?: string; style?: 'long' | 'short' } = {}): string[] => {
   const { locale, style = 'long' } = options;
+  // oxlint-disable-next-line react-doctor/js-hoist-intl -- locale and style are call arguments, so the formatter cannot move to module scope; it is built once and reused for all 12 names
   const formatter = new Intl.DateTimeFormat(locale, { month: style, timeZone: 'UTC' });
   return Array.from({ length: 12 }, (_, i) => formatter.format(new Date(Date.UTC(2000, i, 1))));
-}
+};

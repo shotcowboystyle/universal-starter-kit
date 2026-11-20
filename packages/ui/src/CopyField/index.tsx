@@ -9,7 +9,8 @@
  * missing; the forms cap is implemented again (Input `copy` +
  * Input.Button `glyphRing`), so the pass is back.
  */
-import { Input, type InputProps } from '@repo/forms';
+import { Input } from '@repo/forms';
+import type { InputProps } from '@repo/forms';
 import { YStack } from 'tamagui';
 
 import { useCopyFeedback } from '../feedback/copy';
@@ -17,12 +18,21 @@ import { NotifyRegion } from '../feedback/NotifyHost';
 
 export type CopyFieldProps = Omit<InputProps, 'copy' | 'onCopyResult' | 'secureTextEntry'>;
 
-export function CopyField(props: CopyFieldProps) {
+export const CopyField = (props: CopyFieldProps) => {
   const { region, report } = useCopyFeedback();
   return (
     <YStack width="100%">
-      <Input {...props} readOnly copy onCopyResult={report} />
-      <NotifyRegion scope="field" region={region} compact />
+      <Input
+        {...props}
+        readOnly
+        copy
+        onCopyResult={report}
+      />
+      <NotifyRegion
+        scope="field"
+        region={region}
+        compact
+      />
     </YStack>
   );
-}
+};
